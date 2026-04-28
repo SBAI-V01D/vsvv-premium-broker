@@ -18,7 +18,7 @@ const RELATIONSHIPS = {
   sonstiges: 'Sonstiges',
 };
 
-export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
+function FamilyMembersSection({ familyMembers = [], onUpdate }) {
   const [showDialog, setShowDialog] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [form, setForm] = useState({
@@ -224,3 +224,5 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
     </Card>
   );
 }
+
+export default FamilyMembersSection;
