@@ -20,6 +20,8 @@ const RELATIONSHIPS = {
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 export default function CustomerForm({ customer, onSave, onCancel, saving }) {
+  const isFamilyMember = customer?.isFamilyMember;
+  
   const [form, setForm] = useState(customer || {
     customer_type: 'privat',
     salutation: 'Herr',
@@ -89,33 +91,37 @@ export default function CustomerForm({ customer, onSave, onCancel, saving }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Hauptkontakt */}
+      {/* Hauptkontakt / Familienmitglied */}
       <div className="space-y-4">
-        <h3 className="font-semibold text-sm text-foreground">Hauptkontakt</h3>
+        <h3 className="font-semibold text-sm text-foreground">
+          {isFamilyMember ? `Familienmitglied: ${customer.parentName}` : 'Hauptkontakt'}
+        </h3>
         
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>Kundentyp</Label>
-            <Select value={form.customer_type} onValueChange={v => set('customer_type', v)}>
-              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="privat">Privat</SelectItem>
-                <SelectItem value="geschaeft">Geschäft</SelectItem>
-              </SelectContent>
-            </Select>
+        {!isFamilyMember && (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Kundentyp</Label>
+              <Select value={form.customer_type} onValueChange={v => set('customer_type', v)}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="privat">Privat</SelectItem>
+                  <SelectItem value="geschaeft">Geschäft</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Anrede</Label>
+              <Select value={form.salutation} onValueChange={v => set('salutation', v)}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Herr">Herr</SelectItem>
+                  <SelectItem value="Frau">Frau</SelectItem>
+                  <SelectItem value="Firma">Firma</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div>
-            <Label>Anrede</Label>
-            <Select value={form.salutation} onValueChange={v => set('salutation', v)}>
-              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Herr">Herr</SelectItem>
-                <SelectItem value="Frau">Frau</SelectItem>
-                <SelectItem value="Firma">Firma</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -128,7 +134,7 @@ export default function CustomerForm({ customer, onSave, onCancel, saving }) {
           </div>
         </div>
 
-        {form.customer_type === 'geschaeft' && (
+        {!isFamilyMember && form.customer_type === 'geschaeft' && (
           <div>
             <Label>Firmenname</Label>
             <Input value={form.company_name} onChange={e => set('company_name', e.target.value)} className="mt-1" />
@@ -189,31 +195,36 @@ export default function CustomerForm({ customer, onSave, onCancel, saving }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>Status</Label>
-            <Select value={form.status} onValueChange={v => set('status', v)}>
-              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="aktiv">Aktiv</SelectItem>
-                <SelectItem value="inaktiv">Inaktiv</SelectItem>
-                <SelectItem value="interessent">Interessent</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Tags (kommagetrennt)</Label>
-            <Input value={form.tags} onChange={e => set('tags', e.target.value)} className="mt-1" placeholder="z.B. VIP, Familie" />
-          </div>
-        </div>
+        {!isFamilyMember && (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Status</Label>
+                <Select value={form.status} onValueChange={v => set('status', v)}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="aktiv">Aktiv</SelectItem>
+                    <SelectItem value="inaktiv">Inaktiv</SelectItem>
+                    <SelectItem value="interessent">Interessent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Tags (kommagetrennt)</Label>
+                <Input value={form.tags} onChange={e => set('tags', e.target.value)} className="mt-1" placeholder="z.B. VIP, Familie" />
+              </div>
+            </div>
 
-        <div>
-          <Label>Notizen</Label>
-          <Textarea value={form.notes} onChange={e => set('notes', e.target.value)} className="mt-1" rows={2} />
-        </div>
+            <div>
+              <Label>Notizen</Label>
+              <Textarea value={form.notes} onChange={e => set('notes', e.target.value)} className="mt-1" rows={2} />
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Familienmitglieder */}
+      {/* Familienmitglieder - nur für Hauptkontakt */}
+      {!isFamilyMember && (
       <Card className="bg-secondary/20">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center justify-between">
@@ -297,6 +308,7 @@ export default function CustomerForm({ customer, onSave, onCancel, saving }) {
           )}
         </CardContent>
       </Card>
+      )}
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>

@@ -49,15 +49,61 @@ export default function Customers() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['customers'] }),
   });
 
-  const filtered = customers.filter(c => {
-    const matchSearch = `${c.first_name} ${c.last_name} ${c.email} ${c.company_name || ''}`.toLowerCase().includes(search.toLowerCase());
+  // Erweitere Kundenliste um Familienmitglieder als separate Einträge
+  const expandedCustomers = customers.flatMap(c => {
+    const entries = [{ ...c, isMainCustomer: true, parentId: null, parentName: null }];
+    if (c.family_members && c.family_members.length > 0) {
+      c.family_members.forEach(fm => {
+        entries.push({
+          id: `${c.id}-${fm.id}`,
+          customer_id: c.id,
+          family_member_id: fm.id,
+          first_name: fm.first_name,
+          last_name: fm.last_name,
+          email: fm.email || c.email,
+          phone: c.phone,
+          mobile: c.mobile,
+          street: c.street,
+          zip_code: c.zip_code,
+          city: c.city,
+          canton: c.canton,
+          status: c.status,
+          customer_type: c.customer_type,
+          company_name: null,
+          birthdate: fm.birthdate,
+          relationship: fm.relationship,
+          isFamilyMember: true,
+          parentId: c.id,
+          parentName: `${c.first_name} ${c.last_name}`,
+          family_members: [],
+        });
+      });
+    }
+    return entries;
+  });
+
+  const filtered = expandedCustomers.filter(c => {
+    const matchSearch = `${c.first_name} ${c.last_name} ${c.email} ${c.company_name || ''} ${c.parentName || ''}`.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === 'all' || c.status === filterStatus;
     return matchSearch && matchStatus;
   });
 
   const handleSave = (data) => {
     if (editing) {
-      updateMutation.mutate({ id: editing.id, data });
+      if (editing.isFamilyMember) {
+        // Aktualisiere Familienmitglied im Hauptkunden
+        const parent = customers.find(c => c.id === editing.parentId);
+        if (parent) {
+          const updatedFamilyMembers = parent.family_members.map(m =>
+            m.id === editing.family_member_id
+              ? { id: m.id, first_name: data.first_name, last_name: data.last_name, relationship: data.relationship, birthdate: data.birthdate, email: data.email }
+              : m
+          );
+          updateMutation.mutate({ id: editing.parentId, data: { ...parent, family_members: updatedFamilyMembers } });
+        }
+      } else {
+        updateMutation.mutate({ id: editing.id, data });
+      }
     } else {
       createMutation.mutate(data);
     }
@@ -202,10 +248,13 @@ export default function Customers() {
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Keine Kunden gefunden</TableCell></TableRow>
               ) : filtered.map(customer => (
-                <TableRow key={customer.id} className="hover:bg-muted/50">
-                  <TableCell className="font-medium">
+                <TableRow key={customer.id} className={`hover:bg-muted/50 ${customer.isFamilyMember ? 'bg-slate-50' : ''}`}>
+                  <TableCell className={`font-medium ${customer.isFamilyMember ? 'pl-8' : ''}`}>
                     {customer.first_name} {customer.last_name}
                     {customer.company_name && <p className="text-xs text-muted-foreground">{customer.company_name}</p>}
+                    {customer.isFamilyMember && (
+                      <p className="text-xs text-muted-foreground">→ {customer.parentName} ({customer.relationship})</p>
+                    )}
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{customer.email}</TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
@@ -215,7 +264,7 @@ export default function Customers() {
                     {customer.customer_type === 'geschaeft' ? 'Geschäft' : 'Privat'}
                   </TableCell>
                   <TableCell className="hidden lg:table-cell text-sm">
-                    {customer.family_members?.length || 0}
+                    {!customer.isFamilyMember ? (customer.family_members?.length || 0) : '–'}
                   </TableCell>
                   <TableCell><StatusBadge status={customer.status} /></TableCell>
                   <TableCell>
@@ -229,14 +278,26 @@ export default function Customers() {
                         <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
                           <Edit className="w-4 h-4 mr-2" /> Bearbeiten
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => exportPDF(customer)}>
-                          <Download className="w-4 h-4 mr-2" /> PDF Export
-                        </DropdownMenuItem>
+                        {!customer.isFamilyMember && (
+                          <DropdownMenuItem onClick={() => exportPDF(customer)}>
+                            <Download className="w-4 h-4 mr-2" /> PDF Export
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem 
                           className="text-destructive" 
                           onClick={() => {
-                            if (confirm('Kunde löschen?')) {
-                              deleteMutation.mutate(customer.id);
+                            if (confirm(customer.isFamilyMember ? 'Familienmitglied löschen?' : 'Kunde löschen?')) {
+                              if (customer.isFamilyMember) {
+                                const parent = customers.find(c => c.id === customer.parentId);
+                                if (parent) {
+                                  updateMutation.mutate({ 
+                                    id: customer.parentId, 
+                                    data: { ...parent, family_members: parent.family_members.filter(m => m.id !== customer.family_member_id) } 
+                                  });
+                                }
+                              } else {
+                                deleteMutation.mutate(customer.id);
+                              }
                             }
                           }}
                         >
