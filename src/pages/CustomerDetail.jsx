@@ -25,7 +25,7 @@ import CustomerForm from '../components/customers/CustomerForm';
 
 export default function CustomerDetail() {
   const urlParams = new URLSearchParams(window.location.search);
-  const customerId = window.location.pathname.split('/').pop();
+  const pathId = window.location.pathname.split('/').pop();
   const queryClient = useQueryClient();
   const [showEdit, setShowEdit] = useState(false);
   const [showInteraction, setShowInteraction] = useState(false);
@@ -37,13 +37,32 @@ export default function CustomerDetail() {
     queryKey: ['customers'],
     queryFn: () => base44.entities.Customer.list(),
   });
+
+  // Bestimme ob es ein Hauptkunde oder Familienmitglied ist
+  const isPathFamilyMember = pathId && pathId.includes('-');
+  let customerId, familyMemberId;
+  if (isPathFamilyMember) {
+    const parts = pathId.split('-');
+    customerId = parts[0];
+    familyMemberId = parts.slice(1).join('-');
+  } else {
+    customerId = pathId;
+    familyMemberId = null;
+  }
+
   const customer = customers.find(c => c.id === customerId);
+  const selectedFamilyMember = familyMemberId && customer?.family_members?.find(m => m.id === familyMemberId);
 
   const { data: contracts = [] } = useQuery({
     queryKey: ['contracts', customerId],
     queryFn: () => base44.entities.Contract.filter({ customer_id: customerId }),
     enabled: !!customerId,
   });
+
+  // Filtere Verträge für Familienmitglied
+  const filteredContracts = familyMemberId 
+    ? contracts.filter(c => c.family_member_id === familyMemberId)
+    : contracts.filter(c => !c.family_member_id);
 
   const { data: interactions = [] } = useQuery({
     queryKey: ['interactions', customerId],
@@ -81,6 +100,11 @@ export default function CustomerDetail() {
     enabled: !!customerId,
   });
 
+  // Filtere Anträge für Familienmitglied
+  const filteredApplications = familyMemberId 
+    ? applications.filter(a => a.family_member_id === familyMemberId)
+    : applications.filter(a => !a.family_member_id);
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Customer.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setShowEdit(false); },
@@ -99,7 +123,9 @@ export default function CustomerDetail() {
     );
   }
 
-  const displayName = `${customer.first_name} ${customer.last_name}`;
+  const displayName = selectedFamilyMember 
+    ? `${selectedFamilyMember.first_name} ${selectedFamilyMember.last_name}`
+    : `${customer.first_name} ${customer.last_name}`;
 
   return (
     <div>
@@ -160,31 +186,33 @@ export default function CustomerDetail() {
       </div>
 
       {/* Contract Summary */}
-      <ContractSummary contracts={contracts} />
+      <ContractSummary contracts={filteredContracts} />
 
       {/* Application Summary */}
-      <ApplicationSummary applications={applications} />
+      <ApplicationSummary applications={filteredApplications} />
 
       {/* Family Members */}
-      {customer.customer_type === 'privat' && customer.family_members && customer.family_members.length > 0 && (
+      {!selectedFamilyMember && customer.customer_type === 'privat' && customer.family_members && customer.family_members.length > 0 && (
         <Card className="mt-6">
           <CardHeader className="pb-3">
             <h3 className="text-base font-semibold">Familienmitglieder</h3>
           </CardHeader>
           <CardContent className="space-y-2">
             {customer.family_members.map(member => (
-              <div key={member.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg border border-border">
-                <div>
-                  <p className="font-medium text-sm">{member.first_name} {member.last_name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
-                    <span className="bg-primary/10 text-primary px-2 py-0.5 rounded">
-                      {member.relationship}
-                    </span>
-                    {member.birthdate && <span>{format(new Date(member.birthdate), 'dd.MM.yyyy')}</span>}
-                    {member.email && <span>{member.email}</span>}
+              <Link key={member.id} to={`/kunden/${customerId}-${member.id}`} className="block hover:bg-muted/30">
+                <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg border border-border hover:border-primary transition-colors">
+                  <div>
+                    <p className="font-medium text-sm">{member.first_name} {member.last_name}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
+                      <span className="bg-primary/10 text-primary px-2 py-0.5 rounded">
+                        {member.relationship}
+                      </span>
+                      {member.birthdate && <span>{format(new Date(member.birthdate), 'dd.MM.yyyy')}</span>}
+                      {member.email && <span>{member.email}</span>}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </CardContent>
         </Card>
@@ -213,22 +241,22 @@ export default function CustomerDetail() {
           <div className="flex justify-between items-center mb-3">
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground">Versicherungsverträge</h3>
-              {contracts.filter(c => {
+              {filteredContracts.filter(c => {
                 const days = c.end_date ? Math.ceil((new Date(c.end_date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
                 return days !== null && days >= 0 && days <= 90;
               }).length > 0 && (
                 <p className="text-xs text-orange-600 mt-0.5">
-                  ⚠️ {contracts.filter(c => { const d = c.end_date ? Math.ceil((new Date(c.end_date) - new Date()) / 86400000) : null; return d !== null && d >= 0 && d <= 90; }).length} Police(n) laufen in &lt;3 Monaten ab
+                  ⚠️ {filteredContracts.filter(c => { const d = c.end_date ? Math.ceil((new Date(c.end_date) - new Date()) / 86400000) : null; return d !== null && d >= 0 && d <= 90; }).length} Police(n) laufen in &lt;3 Monaten ab
                 </p>
               )}
             </div>
             <Button size="sm" asChild><Link to={`/vertraege?customer=${customerId}`}><Plus className="w-4 h-4 mr-1" /> Vertrag</Link></Button>
           </div>
-          {contracts.length === 0 ? (
+          {filteredContracts.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4">Keine Verträge vorhanden</p>
           ) : (
             <div className="space-y-2">
-              {contracts.map(c => <ContractDetailCard key={c.id} contract={c} customerId={customerId} customerName={displayName} familyMembers={customer.family_members || []} />)}
+              {filteredContracts.map(c => <ContractDetailCard key={c.id} contract={c} customerId={customerId} customerName={displayName} familyMembers={customer.family_members || []} />)}
             </div>
           )}
         </TabsContent>
@@ -237,11 +265,11 @@ export default function CustomerDetail() {
             <h3 className="text-sm font-semibold text-muted-foreground">Versicherungsanträge</h3>
             <Button size="sm" asChild><Link to={`/antraege?customer=${customerId}`}><Plus className="w-4 h-4 mr-1" /> Antrag</Link></Button>
           </div>
-          {applications.length === 0 ? (
+          {filteredApplications.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4">Keine Anträge vorhanden</p>
           ) : (
             <div className="space-y-2">
-              {applications.map(app => (
+              {filteredApplications.map(app => (
                 <Card key={app.id} className="p-4">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
