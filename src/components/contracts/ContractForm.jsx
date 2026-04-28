@@ -14,6 +14,7 @@ const PROVIDERS = ['CSS', 'Helsana', 'Swica', 'Visana', 'Concordia', 'Sanitas', 
 export default function ContractForm({ contract, customers, onSave, onCancel, saving }) {
   const [form, setForm] = useState(contract || {
     customer_id: '',
+    family_member_id: '',
     customer_name: '',
     insurance_type: '',
     provider: '',
@@ -29,6 +30,8 @@ export default function ContractForm({ contract, customers, onSave, onCancel, sa
   const [showOCR, setShowOCR] = useState(false);
 
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+  const selectedCustomer = customers.find(c => c.id === form.customer_id);
+  const selectedFamilyMember = selectedCustomer?.family_members?.find(m => m.id === form.family_member_id);
   
   const handleOCRExtract = (extractedData) => {
     set('insurance_type', extractedData.insurance_type || form.insurance_type);
@@ -44,6 +47,7 @@ export default function ContractForm({ contract, customers, onSave, onCancel, sa
   const handleCustomerChange = (id) => {
     const c = customers.find(c => c.id === id);
     set('customer_id', id);
+    set('family_member_id', '');
     if (c) set('customer_name', `${c.first_name} ${c.last_name}`);
   };
 
@@ -67,6 +71,23 @@ export default function ContractForm({ contract, customers, onSave, onCancel, sa
           </SelectContent>
         </Select>
       </div>
+
+      {selectedCustomer?.family_members && selectedCustomer.family_members.length > 0 && (
+        <div>
+          <Label>Familienmitglied (optional)</Label>
+          <Select value={form.family_member_id} onValueChange={v => set('family_member_id', v)}>
+            <SelectTrigger><SelectValue placeholder="Für Hauptkunde auswählen" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={null}>Hauptkunde ({selectedCustomer.first_name} {selectedCustomer.last_name})</SelectItem>
+              {selectedCustomer.family_members.map(m => (
+                <SelectItem key={m.id} value={m.id}>
+                  {m.first_name} {m.last_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {form.customer_id && (
         <Button 

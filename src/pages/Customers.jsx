@@ -148,9 +148,11 @@ export default function Customers() {
                         <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
                           <Edit className="w-4 h-4 mr-2" /> Bearbeiten
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { setEditingCustomerId(customer.id); setShowFamilyMembers(true); }}>
-                          <Users className="w-4 h-4 mr-2" /> Familie
-                        </DropdownMenuItem>
+                        {customer.customer_type === 'privat' && (
+                          <DropdownMenuItem onClick={() => { setEditingCustomerId(customer.id); setShowFamilyMembers(true); }}>
+                            <Users className="w-4 h-4 mr-2" /> Familie
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem 
                           className="text-destructive" 
                           onClick={() => {
