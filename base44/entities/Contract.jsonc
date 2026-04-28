@@ -71,6 +71,10 @@
       "default": "aktiv",
       "description": "Vertragsstatus"
     },
+    "policy_document_url": {
+      "type": "string",
+      "description": "Police PDF URL"
+    },
     "notes": {
       "type": "string",
       "description": "Bemerkungen"

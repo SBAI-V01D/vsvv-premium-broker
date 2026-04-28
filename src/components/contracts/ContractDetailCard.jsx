@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronDown, ChevronUp, Calendar, Hash, AlertTriangle, TrendingUp, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ChevronDown, ChevronUp, Calendar, Hash, AlertTriangle, TrendingUp, FileText, Upload, ExternalLink } from 'lucide-react';
 import { format, differenceInDays, addMonths } from 'date-fns';
+import { useQueryClient } from '@tanstack/react-query';
 import StatusBadge from '../shared/StatusBadge';
 import ContractDocuments from './ContractDocuments';
+import PolicyUploadDialog from './PolicyUploadDialog';
 
 const insuranceIcons = {
   KVG: '🏥', VVG: '🏥', Leben: '❤️', Haftpflicht: '🛡️', Hausrat: '🏠',
@@ -14,6 +17,8 @@ const insuranceIcons = {
 
 export default function ContractDetailCard({ contract, customerId, customerName }) {
   const [expanded, setExpanded] = useState(false);
+  const [showPolicyUpload, setShowPolicyUpload] = useState(false);
+  const queryClient = useQueryClient();
 
   const today = new Date();
   const endDate = contract.end_date ? new Date(contract.end_date) : null;
@@ -60,6 +65,42 @@ export default function ContractDetailCard({ contract, customerId, customerName 
 
       {expanded && (
         <div className="border-t border-border bg-slate-50 px-4 py-4 space-y-4">
+          {/* Police Document */}
+          <div className="bg-white rounded-lg border border-border p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-primary" />
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Police (PDF)</p>
+                  {contract.policy_document_url ? (
+                    <p className="text-sm text-emerald-600 font-medium mt-0.5">✓ Hochgeladen</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mt-0.5">Keine Police hochgeladen</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {contract.policy_document_url && (
+                  <a href={contract.policy_document_url} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Ansehen
+                    </Button>
+                  </a>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPolicyUpload(true)}
+                  className="gap-2"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  {contract.policy_document_url ? 'Ersetzen' : 'Hochladen'}
+                </Button>
+              </div>
+            </div>
+          </div>
+
           {/* Prämienübersicht */}
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
@@ -139,6 +180,13 @@ export default function ContractDetailCard({ contract, customerId, customerName 
           )}
         </div>
       )}
+
+      <PolicyUploadDialog
+        open={showPolicyUpload}
+        onOpenChange={setShowPolicyUpload}
+        contractId={contract.id}
+        onUploadSuccess={() => queryClient.invalidateQueries({ queryKey: ['contracts'] })}
+      />
     </Card>
   );
 }
