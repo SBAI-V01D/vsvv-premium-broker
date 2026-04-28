@@ -8,8 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
 
-const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
 const RELATIONSHIPS = {
   ehepartner: 'Ehepartner/in',
   kind: 'Kind',
@@ -18,11 +16,13 @@ const RELATIONSHIPS = {
   sonstiges: 'Sonstiges',
 };
 
-function FamilyMembersSection({ familyMembers = [], onUpdate }) {
+const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
   const [members, setMembers] = useState(familyMembers);
-  const [showDialog, setShowDialog] = useState(false);
-  const [editingMember, setEditingMember] = useState(null);
-  const [form, setForm] = useState({
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
     relationship: '',
@@ -30,10 +30,21 @@ function FamilyMembersSection({ familyMembers = [], onUpdate }) {
     email: '',
   });
 
-  const handleOpen = (member = null) => {
+  const resetForm = () => {
+    setFormData({
+      first_name: '',
+      last_name: '',
+      relationship: '',
+      birthdate: '',
+      email: '',
+    });
+    setEditingId(null);
+  };
+
+  const openDialog = (member = null) => {
     if (member) {
-      setEditingMember(member);
-      setForm({
+      setEditingId(member.id);
+      setFormData({
         first_name: member.first_name,
         last_name: member.last_name,
         relationship: member.relationship,
@@ -41,45 +52,43 @@ function FamilyMembersSection({ familyMembers = [], onUpdate }) {
         email: member.email || '',
       });
     } else {
-      setEditingMember(null);
-      setForm({ first_name: '', last_name: '', relationship: '', birthdate: '', email: '' });
+      resetForm();
     }
-    setShowDialog(true);
+    setIsDialogOpen(true);
+  };
+
+  const closeDialog = () => {
+    setIsDialogOpen(false);
+    resetForm();
   };
 
   const handleSave = (e) => {
     e.preventDefault();
-    if (!form.first_name || !form.last_name || !form.relationship) {
+
+    if (!formData.first_name || !formData.last_name || !formData.relationship) {
       alert('Vorname, Nachname und Verwandtschaftsverhältnis sind erforderlich');
       return;
     }
 
-    let updated;
-    if (editingMember) {
-      updated = members.map(m =>
-        m.id === editingMember.id
-          ? { ...m, ...form }
-          : m
+    let updatedMembers;
+    if (editingId) {
+      updatedMembers = members.map(m =>
+        m.id === editingId ? { id: editingId, ...formData } : m
       );
     } else {
-      updated = [
-        ...members,
-        { id: generateId(), ...form },
-      ];
+      updatedMembers = [...members, { id: generateId(), ...formData }];
     }
 
-    setMembers(updated);
-    onUpdate(updated);
-    setShowDialog(false);
-    setForm({ first_name: '', last_name: '', relationship: '', birthdate: '', email: '' });
-    setEditingMember(null);
+    setMembers(updatedMembers);
+    onUpdate(updatedMembers);
+    closeDialog();
   };
 
   const handleDelete = (id) => {
     if (confirm('Familienmitglied löschen?')) {
-      const updated = members.filter(m => m.id !== id);
-      setMembers(updated);
-      onUpdate(updated);
+      const updatedMembers = members.filter(m => m.id !== id);
+      setMembers(updatedMembers);
+      onUpdate(updatedMembers);
     }
   };
 
@@ -90,11 +99,12 @@ function FamilyMembersSection({ familyMembers = [], onUpdate }) {
           <CardTitle className="text-base flex items-center gap-2">
             <Users className="w-4 h-4" /> Familienmitglieder
           </CardTitle>
-          <Button size="sm" onClick={() => handleOpen()} className="gap-1">
+          <Button size="sm" onClick={() => openDialog()} className="gap-1">
             <Plus className="w-4 h-4" /> Hinzufügen
           </Button>
         </div>
       </CardHeader>
+
       <CardContent>
         {members.length === 0 ? (
           <p className="text-sm text-muted-foreground">Keine Familienmitglieder eingetragen</p>
@@ -125,7 +135,7 @@ function FamilyMembersSection({ familyMembers = [], onUpdate }) {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleOpen(member)}
+                    onClick={() => openDialog(member)}
                     className="w-9 h-9 p-0"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
@@ -145,23 +155,21 @@ function FamilyMembersSection({ familyMembers = [], onUpdate }) {
         )}
       </CardContent>
 
-      <Dialog open={showDialog} onOpenChange={(open) => !open && setShowDialog(false)}>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingMember ? 'Familienmitglied bearbeiten' : 'Familienmitglied hinzufügen'}
+              {editingId ? 'Familienmitglied bearbeiten' : 'Familienmitglied hinzufügen'}
             </DialogTitle>
           </DialogHeader>
-          <form
-            onSubmit={handleSave}
-            className="space-y-4"
-          >
+
+          <form onSubmit={handleSave} className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Vorname *</Label>
                 <Input
-                  value={form.first_name}
-                  onChange={(e) => setForm(p => ({ ...p, first_name: e.target.value }))}
+                  value={formData.first_name}
+                  onChange={(e) => setFormData(p => ({ ...p, first_name: e.target.value }))}
                   className="mt-1"
                   required
                 />
@@ -169,8 +177,8 @@ function FamilyMembersSection({ familyMembers = [], onUpdate }) {
               <div>
                 <Label className="text-xs">Nachname *</Label>
                 <Input
-                  value={form.last_name}
-                  onChange={(e) => setForm(p => ({ ...p, last_name: e.target.value }))}
+                  value={formData.last_name}
+                  onChange={(e) => setFormData(p => ({ ...p, last_name: e.target.value }))}
                   className="mt-1"
                   required
                 />
@@ -180,8 +188,8 @@ function FamilyMembersSection({ familyMembers = [], onUpdate }) {
             <div>
               <Label className="text-xs">Verwandtschaftsverhältnis *</Label>
               <Select
-                value={form.relationship}
-                onValueChange={(v) => setForm(p => ({ ...p, relationship: v }))}
+                value={formData.relationship}
+                onValueChange={(v) => setFormData(p => ({ ...p, relationship: v }))}
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Auswählen..." />
@@ -200,8 +208,8 @@ function FamilyMembersSection({ familyMembers = [], onUpdate }) {
               <Label className="text-xs">Geburtsdatum</Label>
               <Input
                 type="date"
-                value={form.birthdate}
-                onChange={(e) => setForm(p => ({ ...p, birthdate: e.target.value }))}
+                value={formData.birthdate}
+                onChange={(e) => setFormData(p => ({ ...p, birthdate: e.target.value }))}
                 className="mt-1"
               />
             </div>
@@ -210,14 +218,14 @@ function FamilyMembersSection({ familyMembers = [], onUpdate }) {
               <Label className="text-xs">E-Mail (optional)</Label>
               <Input
                 type="email"
-                value={form.email}
-                onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))}
+                value={formData.email}
+                onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))}
                 className="mt-1"
               />
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={closeDialog}>
                 Abbrechen
               </Button>
               <Button type="submit">Speichern</Button>
@@ -228,5 +236,3 @@ function FamilyMembersSection({ familyMembers = [], onUpdate }) {
     </Card>
   );
 }
-
-export default React.memo(FamilyMembersSection);
