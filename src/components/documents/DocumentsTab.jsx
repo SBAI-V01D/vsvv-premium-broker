@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Plus, Upload, FileText, Trash2, ExternalLink, Tag } from 'lucide-react';
+import { Upload, FileText, Trash2, ExternalLink, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,8 +12,11 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 const CATEGORIES = [
-  { value: 'vertrag', label: 'Vertrag', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-  { value: 'schaden', label: 'Schaden', color: 'bg-red-50 text-red-700 border-red-200' },
+  { value: 'police', label: 'Police', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  { value: 'rechnung', label: 'Rechnung', color: 'bg-green-50 text-green-700 border-green-200' },
+  { value: 'schadenfall', label: 'Schadenfall', color: 'bg-red-50 text-red-700 border-red-200' },
+  { value: 'vertrag', label: 'Vertrag', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  { value: 'schaden', label: 'Schaden', color: 'bg-orange-50 text-orange-700 border-orange-200' },
   { value: 'ausweis', label: 'Ausweis', color: 'bg-purple-50 text-purple-700 border-purple-200' },
   { value: 'korrespondenz', label: 'Korrespondenz', color: 'bg-amber-50 text-amber-700 border-amber-200' },
   { value: 'sonstiges', label: 'Sonstiges', color: 'bg-slate-100 text-slate-600 border-slate-200' },
@@ -32,8 +35,9 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
   const queryClient = useQueryClient();
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [form, setForm] = useState({ name: '', category: 'sonstiges', linked_contract_id: '', linked_claim_id: '', notes: '' });
+  const [form, setForm] = useState({ name: '', category: 'police', linked_contract_id: '', linked_claim_id: '', notes: '' });
   const [file, setFile] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
 
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ['documents', customerId],
@@ -46,12 +50,19 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['documents', customerId] }),
   });
 
-  const handleFileChange = (e) => {
-    const f = e.target.files[0];
-    if (f) {
-      setFile(f);
-      if (!form.name) setForm(p => ({ ...p, name: f.name.replace(/\.[^.]+$/, '') }));
-    }
+  const applyFile = (f) => {
+    if (!f) return;
+    setFile(f);
+    setForm(p => ({ ...p, name: p.name || f.name.replace(/\.[^.]+$/, '') }));
+  };
+
+  const handleFileChange = (e) => applyFile(e.target.files[0]);
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    applyFile(e.dataTransfer.files[0]);
+    setShowUpload(true);
   };
 
   const handleUpload = async (e) => {
@@ -74,7 +85,7 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
     setUploading(false);
     setShowUpload(false);
     setFile(null);
-    setForm({ name: '', category: 'sonstiges', linked_contract_id: '', linked_claim_id: '', notes: '' });
+    setForm({ name: '', category: 'police', linked_contract_id: '', linked_claim_id: '', notes: '' });
   };
 
   const linkedContractName = (id) => {
@@ -93,6 +104,23 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
         <Button size="sm" onClick={() => setShowUpload(true)}>
           <Upload className="w-4 h-4 mr-1" /> Hochladen
         </Button>
+      </div>
+
+      {/* Drag & Drop Zone */}
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        onClick={() => setShowUpload(true)}
+        className={`mb-4 border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${dragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/40'}`}
+      >
+        <Upload className={`w-7 h-7 ${dragOver ? 'text-primary' : 'text-muted-foreground'}`} />
+        <p className="text-sm font-medium text-muted-foreground">PDF hierher ziehen oder klicken zum Hochladen</p>
+        <div className="flex gap-1.5 flex-wrap justify-center">
+          {['Police', 'Rechnung', 'Schadenfall'].map(cat => (
+            <span key={cat} className="text-xs bg-muted text-muted-foreground border border-border px-2 py-0.5 rounded-full">{cat}</span>
+          ))}
+        </div>
       </div>
 
       {isLoading ? (
