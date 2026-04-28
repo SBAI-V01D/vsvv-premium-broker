@@ -12,17 +12,17 @@
     },
     "body": {
       "type": "string",
-      "description": "E-Mail-Inhalt (HTML oder Text)"
+      "description": "E-Mail-Body (HTML oder Text)"
     },
     "status": {
       "type": "string",
       "enum": [
-        "entwurf",
-        "geplant",
-        "gesendet",
-        "abgebrochen"
+        "draft",
+        "scheduled",
+        "sent",
+        "cancelled"
       ],
-      "default": "entwurf",
+      "default": "draft",
       "description": "Status"
     },
     "scheduled_at": {
@@ -38,27 +38,17 @@
     "filter_status": {
       "type": "string",
       "enum": [
-        "alle",
-        "aktiv",
-        "inaktiv",
-        "interessent"
+        "all",
+        "active",
+        "inactive",
+        "prospect"
       ],
-      "default": "alle",
+      "default": "all",
       "description": "Kundenfilter nach Status"
     },
     "filter_canton": {
       "type": "string",
       "description": "Kundenfilter nach Kanton (optional)"
-    },
-    "filter_customer_type": {
-      "type": "string",
-      "enum": [
-        "alle",
-        "privat",
-        "geschaeft"
-      ],
-      "default": "alle",
-      "description": "Kundenfilter nach Typ"
     },
     "recipients_count": {
       "type": "number",
@@ -73,27 +63,6 @@
       "type": "number",
       "default": 0,
       "description": "Fehlgeschlagen"
-    },
-    "is_template": {
-      "type": "boolean",
-      "default": false,
-      "description": "Als Vorlage speichern"
-    },
-    "template_name": {
-      "type": "string",
-      "description": "Vorlagenname"
-    },
-    "template_category": {
-      "type": "string",
-      "enum": [
-        "newsletter",
-        "information",
-        "aktion",
-        "erinnerung",
-        "sonstiges"
-      ],
-      "default": "newsletter",
-      "description": "Vorlagenkategorie"
     }
   },
   "required": [

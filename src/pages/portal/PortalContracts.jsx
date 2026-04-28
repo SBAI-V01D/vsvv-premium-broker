@@ -1,174 +1,74 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useOutletContext } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
-import { Shield, ChevronDown, ChevronUp, Download, FileText, Calendar, Hash, ExternalLink } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { format } from 'date-fns';
-import PortalStatusBadge from '../../components/portal/PortalStatusBadge';
-import PortalPageHeader from '../../components/portal/PortalPageHeader';
-
-const insuranceIcons = {
-  KVG: '🏥', VVG: '🏥', Leben: '❤️', Haftpflicht: '🛡️', Hausrat: '🏠',
-  Rechtsschutz: '⚖️', Motorfahrzeug: '🚗', Gebäude: '🏢', Unfall: '🩺',
-  Krankentaggeld: '📋', BVG: '💼', 'Säule 3a': '💰', Sonstige: '📄',
-};
-
-function ContractCard({ contract, linkedDocs, familyMembers = [] }) {
-  const [expanded, setExpanded] = useState(false);
-
-  const familyMemberName = contract.family_member_id && familyMembers.length > 0
-    ? (() => {
-        const member = familyMembers.find(m => m.id === contract.family_member_id);
-        return member ? `${member.first_name} ${member.last_name}` : null;
-      })()
-    : null;
-
-  // Merge contract-embedded docs + Document entity docs
-  const allDocs = [
-    ...(contract.documents || []),
-    ...linkedDocs.map(d => ({ name: d.name, url: d.file_url })),
-  ];
-
-  return (
-    <Card className="overflow-hidden">
-      <button className="w-full text-left" onClick={() => setExpanded(!expanded)}>
-        <CardContent className="p-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-2xl flex-shrink-0">
-                {insuranceIcons[contract.insurance_type] || '📄'}
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-foreground">{contract.insurance_type} {familyMemberName && `(${familyMemberName})`}</h3>
-                  <PortalStatusBadge status={contract.status} />
-                </div>
-                <p className="text-sm text-muted-foreground mt-0.5">{contract.provider}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right hidden sm:block">
-                <p className="font-bold text-foreground">CHF {contract.premium_monthly?.toLocaleString('de-CH')}</p>
-                <p className="text-xs text-muted-foreground">pro Monat</p>
-              </div>
-              {expanded ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
-            </div>
-          </div>
-        </CardContent>
-      </button>
-
-      {expanded && (
-        <div className="border-t border-border bg-slate-50 px-5 py-4 space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground flex items-center gap-1"><Hash className="w-3 h-3" /> Policen-Nr.</p>
-              <p className="text-sm font-medium mt-0.5">{contract.policy_number || '–'}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" /> Beginn</p>
-              <p className="text-sm font-medium mt-0.5">{contract.start_date ? format(new Date(contract.start_date), 'dd.MM.yyyy') : '–'}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" /> Ende</p>
-              <p className="text-sm font-medium mt-0.5">{contract.end_date ? format(new Date(contract.end_date), 'dd.MM.yyyy') : 'Unbefristet'}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Jahresprämie</p>
-              <p className="text-sm font-medium mt-0.5">CHF {contract.premium_yearly?.toLocaleString('de-CH') || '–'}</p>
-            </div>
-          </div>
-
-          {contract.cancellation_deadline && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm">
-              <span className="font-medium text-amber-800">⚠️ Kündigungsfrist:</span>
-              <span className="text-amber-700 ml-2">{format(new Date(contract.cancellation_deadline), 'dd.MM.yyyy')}</span>
-            </div>
-          )}
-
-          {allDocs.length > 0 && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2">DOKUMENTE</p>
-              <div className="space-y-1.5">
-                {allDocs.map((doc, i) => (
-                  <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-primary hover:underline bg-white border border-border rounded-lg px-3 py-2">
-                    <Download className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="flex-1 truncate">{doc.name}</span>
-                    <ExternalLink className="w-3 h-3 opacity-50" />
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {contract.notes && (
-            <div className="text-sm text-muted-foreground bg-white border border-border rounded-lg p-3">
-              {contract.notes}
-            </div>
-          )}
-        </div>
-      )}
-    </Card>
-  );
-}
+import React from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { base44 } from '@/api/base44Client'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { format } from 'date-fns'
 
 export default function PortalContracts() {
-  const { user } = useOutletContext();
-  const [filter, setFilter] = useState('all');
+  const { data: user } = useQuery({
+    queryKey: ['portal-user'],
+    queryFn: () => base44.auth.me(),
+  })
 
-  const { data: contracts = [], isLoading } = useQuery({
+  const { data: contracts = [] } = useQuery({
     queryKey: ['portal-contracts', user?.id],
     queryFn: () => base44.entities.Contract.filter({ customer_id: user?.id }),
     enabled: !!user?.id,
-  });
+  })
 
-  const { data: documents = [] } = useQuery({
-    queryKey: ['portal-documents', user?.id],
-    queryFn: () => base44.entities.Document.filter({ customer_id: user?.id }),
-    enabled: !!user?.id,
-  });
-
-  const { data: customer } = useQuery({
-    queryKey: ['portal-customer', user?.id],
-    queryFn: () => base44.entities.Customer.filter({ id: user?.id }),
-    enabled: !!user?.id,
-  });
-
-  const filtered = filter === 'all' ? contracts : contracts.filter(c => c.status === filter);
-  const getContractDocs = (contractId) => documents.filter(d => d.linked_contract_id === contractId);
+  if (contracts.length === 0) {
+    return (
+      <div>
+        <h1 className="text-3xl font-bold mb-6">Meine Verträge</h1>
+        <Card>
+          <CardContent className="p-6 text-center text-muted-foreground">
+            Keine Verträge vorhanden
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div>
-      <PortalPageHeader
-        icon={<FileText className="w-5 h-5 text-primary" />}
-        title="Meine Verträge"
-        subtitle={`${contracts.filter(c => c.status === 'aktiv').length} aktive Verträge`}
-      />
+      <h1 className="text-3xl font-bold mb-6">Meine Verträge</h1>
+      <div className="space-y-4">
+        {contracts.map(contract => (
+          <Card key={contract.id} className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="font-bold text-lg">{contract.insurance_type}</h3>
+                    <Badge>{contract.status}</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">{contract.insurer}</p>
 
-      <div className="flex gap-2 mb-6 flex-wrap">
-        {['all', 'aktiv', 'pendent', 'gekündigt', 'abgelaufen'].map(s => (
-          <button key={s} onClick={() => setFilter(s)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${filter === s ? 'bg-primary text-white' : 'bg-white border border-border text-slate-600 hover:bg-slate-50'}`}>
-            {s === 'all' ? 'Alle' : s.charAt(0).toUpperCase() + s.slice(1)}
-          </button>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Policen-Nr.</span>
+                      <p className="font-medium">{contract.policy_number || '–'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Monatsprämie</span>
+                      <p className="font-medium">CHF {contract.premium_monthly?.toLocaleString('de-CH', { minimumFractionDigits: 2 }) || '–'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Vertragsbeginn</span>
+                      <p className="font-medium">{contract.start_date ? format(new Date(contract.start_date), 'dd.MM.yyyy') : '–'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Vertragsende</span>
+                      <p className="font-medium">{contract.end_date ? format(new Date(contract.end_date), 'dd.MM.yyyy') : 'Unbefristet'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
-
-      {isLoading ? (
-        <div className="space-y-3">
-          {[1,2,3].map(i => <div key={i} className="h-24 bg-slate-200 animate-pulse rounded-xl" />)}
-        </div>
-      ) : filtered.length === 0 ? (
-        <Card className="p-12 text-center">
-          <Shield className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-          <p className="text-muted-foreground">Keine Verträge vorhanden</p>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map(c => <ContractCard key={c.id} contract={c} linkedDocs={getContractDocs(c.id)} familyMembers={customer?.[0]?.family_members || []} />)}
-        </div>
-      )}
     </div>
-  );
+  )
 }

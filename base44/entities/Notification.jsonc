@@ -5,10 +5,10 @@
     "type": {
       "type": "string",
       "enum": [
-        "claim_status",
         "contract_expiry",
-        "new_document",
-        "manual"
+        "application_update",
+        "missing_document",
+        "task_reminder"
       ],
       "description": "Benachrichtigungstyp"
     },
@@ -30,15 +30,11 @@
     },
     "reference_id": {
       "type": "string",
-      "description": "Bezug-ID (Vertrag/Schaden)"
+      "description": "Bezug-ID (Vertrag/Antrag/Aufgabe)"
     },
     "reference_type": {
       "type": "string",
       "description": "Bezugstyp"
-    },
-    "sent_by": {
-      "type": "string",
-      "description": "Gesendet von (Broker E-Mail)"
     },
     "status": {
       "type": "string",

@@ -1,36 +1,76 @@
-import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
-import Sidebar from './Sidebar';
-import { Menu } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React from 'react'
+import { Outlet, Link, useLocation } from 'react-router-dom'
+import { LayoutDashboard, Users, FileText, CheckCircle2, ClipboardList, FileCheck, Mail, Send, LogOut } from 'lucide-react'
+import { base44 } from '@/api/base44Client'
+import { Button } from '@/components/ui/button'
 
 export default function AppLayout() {
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation()
+
+  const navItems = [
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/kunden', label: 'Kunden', icon: Users },
+    { path: '/vertraege', label: 'Verträge', icon: FileText },
+    { path: '/antraege', label: 'Anträge', icon: CheckCircle2 },
+    { path: '/aufgaben', label: 'Aufgaben', icon: ClipboardList },
+    { path: '/dokumente', label: 'Dokumente', icon: FileCheck },
+    { path: '/email-templates', label: 'E-Mail Vorlagen', icon: Mail },
+    { path: '/email-kampagnen', label: 'Kampagnen', icon: Send },
+  ]
+
+  const handleLogout = async () => {
+    await base44.auth.logout('/')
+  }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Mobile header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-card border-b border-border flex items-center px-4 z-40">
-        <Button variant="ghost" size="icon" onClick={() => setMobileOpen(!mobileOpen)}>
-          <Menu className="w-5 h-5" />
-        </Button>
-        <span className="ml-2 font-bold text-foreground">BrokerCRM</span>
+    <div className="min-h-screen bg-background flex">
+      {/* Sidebar */}
+      <div className="w-64 bg-card border-r border-border p-4 flex flex-col">
+        <div className="mb-8">
+          <h2 className="text-xl font-bold">CRM Broker</h2>
+          <p className="text-xs text-muted-foreground">Verwaltungspanel</p>
+        </div>
+
+        <nav className="space-y-2 flex-1">
+          {navItems.map(item => {
+            const Icon = item.icon
+            const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm ${
+                  isActive
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="font-medium">{item.label}</span>
+              </Link>
+            )
+          })}
+        </nav>
+
+        <div className="border-t border-border pt-4 space-y-2">
+          <Button variant="outline" className="w-full justify-start gap-2" asChild>
+            <a href="/portal" target="_blank" rel="noopener noreferrer">
+              Kundenportal
+            </a>
+          </Button>
+          <Button variant="outline" className="w-full justify-start gap-2 text-destructive" onClick={handleLogout}>
+            <LogOut className="w-4 h-4" />
+            Abmelden
+          </Button>
+        </div>
       </div>
 
-      {/* Overlay */}
-      {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black/40 z-40" onClick={() => setMobileOpen(false)} />
-      )}
-
-      <div className={`lg:block ${mobileOpen ? 'block' : 'hidden'}`}>
-        <Sidebar onNavigate={() => setMobileOpen(false)} />
-      </div>
-
-      <main className="lg:ml-60 min-h-screen pt-14 lg:pt-0">
-        <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        <div className="p-8">
           <Outlet />
         </div>
-      </main>
+      </div>
     </div>
-  );
+  )
 }

@@ -15,6 +15,17 @@ import Applications from './pages/Applications'
 import Tasks from './pages/Tasks'
 import Documents from './pages/Documents'
 import EmailTemplates from './pages/EmailTemplates'
+import EmailCampaigns from './pages/EmailCampaigns'
+
+// Portal
+import PortalRoot from './pages/portal/PortalRoot'
+import PortalDashboard from './pages/portal/PortalDashboard'
+import PortalContracts from './pages/portal/PortalContracts'
+import PortalApplications from './pages/portal/PortalApplications'
+import PortalDocuments from './pages/portal/PortalDocuments'
+import PortalProfile from './pages/portal/PortalProfile'
+import PortalSetup from './pages/portal/PortalSetup'
+import PortalResetPassword from './pages/portal/PortalResetPassword'
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth()
@@ -50,7 +61,20 @@ const AuthenticatedApp = () => {
         <Route path="/aufgaben" element={<Tasks />} />
         <Route path="/dokumente" element={<Documents />} />
         <Route path="/email-templates" element={<EmailTemplates />} />
+        <Route path="/email-kampagnen" element={<EmailCampaigns />} />
       </Route>
+
+      {/* Portal */}
+      <Route path="/portal/setup" element={<PortalSetup />} />
+      <Route path="/portal/reset-password" element={<PortalResetPassword />} />
+      <Route path="/portal" element={<PortalRoot />}>
+        <Route index element={<PortalDashboard />} />
+        <Route path="vertraege" element={<PortalContracts />} />
+        <Route path="antraege" element={<PortalApplications />} />
+        <Route path="dokumente" element={<PortalDocuments />} />
+        <Route path="profil" element={<PortalProfile />} />
+      </Route>
+
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   )
