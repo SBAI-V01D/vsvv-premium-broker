@@ -160,6 +160,7 @@ export default function CustomerForm({ customer, onSave, onCancel, saving }) {
 
       {form.customer_type === 'privat' && (
         <FamilyMembersSection 
+          key="family-members"
           familyMembers={form.family_members} 
           onUpdate={(members) => set('family_members', members)} 
         />

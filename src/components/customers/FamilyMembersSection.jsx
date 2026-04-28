@@ -229,4 +229,4 @@ function FamilyMembersSection({ familyMembers = [], onUpdate }) {
   );
 }
 
-export default FamilyMembersSection;
+export default React.memo(FamilyMembersSection);
