@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Filter, MoreHorizontal, Trash2, Edit, Eye } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Trash2, Edit, Eye, Users } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,10 +13,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import PageHeader from '../components/shared/PageHeader';
 import StatusBadge from '../components/shared/StatusBadge';
 import CustomerForm from '../components/customers/CustomerForm';
+import FamilyMembersSection from '../components/customers/FamilyMembersSection';
 
 export default function Customers() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [showFamilyMembers, setShowFamilyMembers] = useState(false);
+  const [editingCustomerId, setEditingCustomerId] = useState(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const queryClient = useQueryClient();
@@ -62,6 +65,21 @@ export default function Customers() {
           <Plus className="w-4 h-4 mr-2" /> Neuer Kunde
         </Button>
       </PageHeader>
+
+      {/* Family Members Dialog */}
+      <Dialog open={showFamilyMembers} onOpenChange={setShowFamilyMembers}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Familienmitglieder verwalten</DialogTitle>
+          </DialogHeader>
+          {editingCustomerId && (
+            <FamilyMembersSection
+              customerId={editingCustomerId}
+              familyMembers={customers.find(c => c.id === editingCustomerId)?.family_members || []}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -129,6 +147,9 @@ export default function Customers() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
                           <Edit className="w-4 h-4 mr-2" /> Bearbeiten
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setEditingCustomerId(customer.id); setShowFamilyMembers(true); }}>
+                          <Users className="w-4 h-4 mr-2" /> Familie
                         </DropdownMenuItem>
                         <DropdownMenuItem 
                           className="text-destructive" 
