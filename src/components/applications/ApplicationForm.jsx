@@ -14,6 +14,7 @@ const INSURANCE_TYPES = [
 export default function ApplicationForm({ application, customers = [], onSave, onCancel, saving }) {
   const [form, setForm] = useState({
     customer_id: application?.customer_id || '',
+    family_member_id: application?.family_member_id || '',
     insurance_type: application?.insurance_type || '',
     provider: application?.provider || '',
     estimated_premium_monthly: application?.estimated_premium_monthly || '',
@@ -24,12 +25,23 @@ export default function ApplicationForm({ application, customers = [], onSave, o
   });
 
   const selectedCustomer = customers.find(c => c.id === form.customer_id);
+  const selectedFamilyMember = selectedCustomer?.family_members?.find(m => m.id === form.family_member_id);
+
+  const getDisplayName = () => {
+    if (selectedFamilyMember) {
+      return `${selectedFamilyMember.first_name} ${selectedFamilyMember.last_name}`;
+    }
+    if (selectedCustomer) {
+      return `${selectedCustomer.first_name} ${selectedCustomer.last_name}`;
+    }
+    return '';
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave({
       ...form,
-      customer_name: selectedCustomer?.first_name + ' ' + selectedCustomer?.last_name,
+      customer_name: getDisplayName(),
       customer_email: selectedCustomer?.email,
       estimated_premium_monthly: form.estimated_premium_monthly ? parseFloat(form.estimated_premium_monthly) : null,
       estimated_premium_yearly: form.estimated_premium_yearly ? parseFloat(form.estimated_premium_yearly) : null,
@@ -40,7 +52,7 @@ export default function ApplicationForm({ application, customers = [], onSave, o
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <Label>Kunde *</Label>
-        <Select value={form.customer_id} onValueChange={(v) => setForm(p => ({ ...p, customer_id: v }))}>
+        <Select value={form.customer_id} onValueChange={(v) => setForm(p => ({ ...p, customer_id: v, family_member_id: '' }))}>
           <SelectTrigger className="mt-1"><SelectValue placeholder="Kunde auswählen" /></SelectTrigger>
           <SelectContent>
             {customers.map(c => (
@@ -51,6 +63,23 @@ export default function ApplicationForm({ application, customers = [], onSave, o
           </SelectContent>
         </Select>
       </div>
+
+      {selectedCustomer?.family_members && selectedCustomer.family_members.length > 0 && (
+        <div>
+          <Label>Familienmitglied (optional)</Label>
+          <Select value={form.family_member_id} onValueChange={(v) => setForm(p => ({ ...p, family_member_id: v }))}>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Für Hauptkunde auswählen" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={null}>Hauptkunde ({selectedCustomer.first_name} {selectedCustomer.last_name})</SelectItem>
+              {selectedCustomer.family_members.map(m => (
+                <SelectItem key={m.id} value={m.id}>
+                  {m.first_name} {m.last_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -136,7 +165,7 @@ export default function ApplicationForm({ application, customers = [], onSave, o
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
           Abbrechen
         </Button>
-        <Button type="submit" disabled={saving || !form.customer_id || !form.insurance_type || !form.provider}>
+        <Button type="submit" disabled={saving || !form.customer_id || !form.insurance_type || !form.provider || (selectedFamilyMember && !form.family_member_id)}>
           {saving ? 'Speichern...' : 'Speichern'}
         </Button>
       </div>
