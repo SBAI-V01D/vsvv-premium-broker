@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Phone, Mail, MapPin, Calendar, FileText, MessageSquare, Edit, Folder, Activity, ClipboardList } from 'lucide-react';
+import { ArrowLeft, Plus, Phone, Mail, MapPin, Calendar, FileText, MessageSquare, Edit, Folder, Activity, ClipboardList, Send } from 'lucide-react';
 import DocumentsTab from '../components/documents/DocumentsTab';
 import CustomerFormulare from '../components/customers/CustomerFormulare';
+import EmailTemplateSender from '../components/email/EmailTemplateSender';
 import ContractDetailCard from '../components/contracts/ContractDetailCard';
 import ActivityFeed from '../components/customers/ActivityFeed';
 import ContractSummary from '../components/customers/ContractSummary';
@@ -26,6 +27,7 @@ export default function CustomerDetail() {
   const queryClient = useQueryClient();
   const [showEdit, setShowEdit] = useState(false);
   const [showInteraction, setShowInteraction] = useState(false);
+  const [showEmailSender, setShowEmailSender] = useState(false);
   const [interactionForm, setInteractionForm] = useState({ type: 'notiz', subject: '', content: '', date: format(new Date(), 'yyyy-MM-dd') });
 
   const { data: customers = [] } = useQuery({
@@ -111,6 +113,9 @@ export default function CustomerDetail() {
         </div>
         <div className="flex gap-2">
           <StatusBadge status={customer.status} />
+          <Button variant="outline" size="sm" onClick={() => setShowEmailSender(true)}>
+            <Send className="w-4 h-4 mr-1" /> E-Mail
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>
             <Edit className="w-4 h-4 mr-1" /> Bearbeiten
           </Button>
@@ -231,6 +236,19 @@ export default function CustomerDetail() {
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>Kunde bearbeiten</DialogTitle></DialogHeader>
           <CustomerForm customer={customer} onSave={(data) => updateMutation.mutate({ id: customer.id, data })} onCancel={() => setShowEdit(false)} saving={updateMutation.isPending} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Sender Dialog */}
+      <Dialog open={showEmailSender} onOpenChange={setShowEmailSender}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>E-Mail an {customer.first_name} versenden</DialogTitle></DialogHeader>
+          <EmailTemplateSender 
+            customerId={customer.id}
+            customer={customer}
+            contracts={contracts}
+            onClose={() => setShowEmailSender(false)}
+          />
         </DialogContent>
       </Dialog>
 
