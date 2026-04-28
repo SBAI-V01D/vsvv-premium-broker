@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { base44 } from '@/api/base44Client'
 import { useNavigate, Outlet } from 'react-router-dom'
-import PortalLayout from '../components/portal/PortalLayout'
+import PortalLayout from '@/components/portal/PortalLayout'
 
 export default function PortalRoot() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
