@@ -9,6 +9,7 @@ import EmailTemplateSender from '../components/email/EmailTemplateSender';
 import ContractDetailCard from '../components/contracts/ContractDetailCard';
 import ActivityFeed from '../components/customers/ActivityFeed';
 import ContractSummary from '../components/customers/ContractSummary';
+import ApplicationSummary from '../components/customers/ApplicationSummary';
 import PortalAccessDialog from '../components/customers/PortalAccessDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -72,6 +73,12 @@ export default function CustomerDetail() {
     queryKey: ['deals', customerId],
     queryFn: () => base44.entities.Deal.filter({ customer_email: customer?.email }),
     enabled: !!customer?.email,
+  });
+
+  const { data: applications = [] } = useQuery({
+    queryKey: ['applications', customerId],
+    queryFn: () => base44.entities.Application.filter({ customer_id: customerId }),
+    enabled: !!customerId,
   });
 
   const updateMutation = useMutation({
@@ -154,6 +161,9 @@ export default function CustomerDetail() {
 
       {/* Contract Summary */}
       <ContractSummary contracts={contracts} />
+
+      {/* Application Summary */}
+      <ApplicationSummary applications={applications} />
 
       {/* Family Members */}
       {customer.customer_type === 'privat' && customer.family_members && customer.family_members.length > 0 && (
