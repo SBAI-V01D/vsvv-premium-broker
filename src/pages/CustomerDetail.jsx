@@ -66,6 +66,9 @@ export default function CustomerDetail() {
   const filteredContracts = familyMemberId 
     ? contracts.filter(c => c.family_member_id === familyMemberId)
     : contracts.filter(c => !c.family_member_id);
+  
+  // Zeige auch Verträge von Familienmitgliedern im ContractSummary
+  const allContracts = contracts;
 
   const { data: interactions = [] } = useQuery({
     queryKey: ['interactions', customerId],
@@ -194,7 +197,7 @@ export default function CustomerDetail() {
       </div>
 
       {/* Contract Summary */}
-      <ContractSummary contracts={filteredContracts} />
+      <ContractSummary contracts={selectedFamilyMember ? filteredContracts : allContracts} />
 
       {/* Application Summary */}
       <ApplicationSummary applications={filteredApplications} />
@@ -230,7 +233,7 @@ export default function CustomerDetail() {
       <Tabs defaultValue="activity">
         <TabsList className="mb-2">
           <TabsTrigger value="activity"><Activity className="w-3.5 h-3.5 mr-1" />Aktivitäten</TabsTrigger>
-          <TabsTrigger value="contracts">Verträge ({contracts.length})</TabsTrigger>
+          <TabsTrigger value="contracts">Verträge ({selectedFamilyMember ? filteredContracts.length : contracts.length})</TabsTrigger>
           <TabsTrigger value="applications">Anträge ({applications.length})</TabsTrigger>
           <TabsTrigger value="interactions">Interaktionen ({interactions.length})</TabsTrigger>
           <TabsTrigger value="documents">Dokumente</TabsTrigger>
