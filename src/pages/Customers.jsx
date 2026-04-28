@@ -1,234 +1,86 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
-import { Plus, Search, Filter, MoreHorizontal, Trash2, Edit, Download } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import jsPDF from 'jspdf';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import PageHeader from '../components/shared/PageHeader';
-import StatusBadge from '../components/shared/StatusBadge';
-import CustomerForm from '../components/customers/CustomerForm';
+import React, { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { base44 } from '@/api/base44Client'
+import { Plus, Search, MoreHorizontal, Edit, Trash2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import CustomerForm from '../components/customers/CustomerForm'
 
 export default function Customers() {
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const queryClient = useQueryClient();
+  const [showForm, setShowForm] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [search, setSearch] = useState('')
+  const queryClient = useQueryClient()
 
-  const { data: customers = [], isLoading } = useQuery({
+  const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
     queryFn: () => base44.entities.Customer.list('-created_date'),
-  });
+  })
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Customer.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
-      setShowForm(false);
-      setEditing(null);
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+      setShowForm(false)
+      setEditing(null)
     },
-  });
+  })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Customer.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
-      setShowForm(false);
-      setEditing(null);
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+      setShowForm(false)
+      setEditing(null)
     },
-  });
+  })
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Customer.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['customers'] }),
-  });
+  })
 
-  // Erweitere Kundenliste um Familienmitglieder als separate Einträge
-  const expandedCustomers = customers.flatMap(c => {
-    const entries = [{ ...c, isMainCustomer: true, parentId: null, parentName: null }];
-    if (c.family_members && c.family_members.length > 0) {
-      c.family_members.forEach(fm => {
-        entries.push({
-          id: `${c.id}-${fm.id}`,
-          customer_id: c.id,
-          family_member_id: fm.id,
-          first_name: fm.first_name,
-          last_name: fm.last_name,
-          email: fm.email || c.email,
-          phone: c.phone,
-          mobile: c.mobile,
-          street: c.street,
-          zip_code: c.zip_code,
-          city: c.city,
-          canton: c.canton,
-          status: c.status,
-          customer_type: c.customer_type,
-          company_name: null,
-          birthdate: fm.birthdate,
-          relationship: fm.relationship,
-          isFamilyMember: true,
-          parentId: c.id,
-          parentName: `${c.first_name} ${c.last_name}`,
-          family_members: [],
-        });
-      });
-    }
-    return entries;
-  });
-
-  const filtered = expandedCustomers.filter(c => {
-    const matchSearch = `${c.first_name} ${c.last_name} ${c.email} ${c.company_name || ''} ${c.parentName || ''}`.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = filterStatus === 'all' || c.status === filterStatus;
-    return matchSearch && matchStatus;
-  });
+  const filtered = customers.filter(c =>
+    `${c.first_name} ${c.last_name} ${c.email}`.toLowerCase().includes(search.toLowerCase())
+  )
 
   const handleSave = (data) => {
     if (editing) {
-      if (editing.isFamilyMember) {
-        // Aktualisiere Familienmitglied im Hauptkunden
-        const parent = customers.find(c => c.id === editing.parentId);
-        if (parent) {
-          const updatedFamilyMembers = parent.family_members.map(m =>
-            m.id === editing.family_member_id
-              ? { id: m.id, first_name: data.first_name, last_name: data.last_name, relationship: data.relationship, birthdate: data.birthdate, email: data.email }
-              : m
-          );
-          updateMutation.mutate({ id: editing.parentId, data: { ...parent, family_members: updatedFamilyMembers } });
-        }
-      } else {
-        updateMutation.mutate({ id: editing.id, data });
-      }
+      updateMutation.mutate({ id: editing.id, data })
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(data)
     }
-  };
-
-  const exportPDF = (customer) => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
-    let yPos = margin;
-
-    // Titel
-    doc.setFontSize(16);
-    doc.setFont(undefined, 'bold');
-    doc.text('Kundenübersicht', margin, yPos);
-    yPos += 12;
-
-    // Hauptdaten
-    doc.setFontSize(11);
-    doc.setFont(undefined, 'bold');
-    doc.text('Hauptkontakt', margin, yPos);
-    yPos += 8;
-
-    doc.setFont(undefined, 'normal');
-    doc.setFontSize(10);
-    const mainData = [
-      [`Name:`, `${customer.first_name} ${customer.last_name}`],
-      [`E-Mail:`, customer.email],
-      [`Telefon:`, customer.phone || '–'],
-      [`Mobil:`, customer.mobile || '–'],
-      [`Adresse:`, `${customer.street || '–'}, ${customer.zip_code || '–'} ${customer.city || '–'}`],
-      [`Kanton:`, customer.canton || '–'],
-      [`Geburtsdatum:`, customer.birthdate || '–'],
-      [`AHV-Nummer:`, customer.ahv_number || '–'],
-      [`Typ:`, customer.customer_type === 'geschaeft' ? 'Geschäft' : 'Privat'],
-      [`Status:`, customer.status],
-      [`Tags:`, customer.tags || '–'],
-    ];
-
-    mainData.forEach(([label, value]) => {
-      doc.text(`${label} ${value}`, margin + 2, yPos);
-      yPos += 6;
-    });
-
-    // Familienmitglieder
-    if (customer.family_members && customer.family_members.length > 0) {
-      yPos += 8;
-      if (yPos > pageHeight - 30) {
-        doc.addPage();
-        yPos = margin;
-      }
-
-      doc.setFontSize(11);
-      doc.setFont(undefined, 'bold');
-      doc.text('Familienmitglieder', margin, yPos);
-      yPos += 8;
-
-      doc.setFont(undefined, 'normal');
-      doc.setFontSize(9);
-
-      customer.family_members.forEach((fm, idx) => {
-        if (yPos > pageHeight - 30) {
-          doc.addPage();
-          yPos = margin;
-        }
-
-        doc.setFont(undefined, 'bold');
-        doc.text(`${idx + 1}. ${fm.first_name} ${fm.last_name}`, margin, yPos);
-        yPos += 6;
-
-        doc.setFont(undefined, 'normal');
-        const fmData = [
-          [`Verhältnis:`, fm.relationship || '–'],
-          [`Geburtsdatum:`, fm.birthdate || '–'],
-          [`E-Mail:`, fm.email || '–'],
-        ];
-
-        fmData.forEach(([label, value]) => {
-          doc.text(`${label} ${value}`, margin + 5, yPos);
-          yPos += 5;
-        });
-
-        yPos += 4;
-      });
-    }
-
-    // Footer
-    doc.setFontSize(8);
-    doc.setFont(undefined, 'normal');
-    doc.text(`Erstellt: ${new Date().toLocaleDateString('de-CH')}`, margin, pageHeight - 10);
-
-    doc.save(`Kunde_${customer.first_name}_${customer.last_name}.pdf`);
-  };
+  }
 
   return (
     <div>
-      <PageHeader title="Kunden" subtitle={`${customers.length} Kunden insgesamt`}>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">Kunden</h1>
+          <p className="text-muted-foreground mt-1">{customers.length} Kunden insgesamt</p>
+        </div>
         <Button onClick={() => { setEditing(null); setShowForm(true); }}>
           <Plus className="w-4 h-4 mr-2" /> Neuer Kunde
         </Button>
-      </PageHeader>
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Suchen..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
-        </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-40">
-            <Filter className="w-4 h-4 mr-2" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Alle Status</SelectItem>
-            <SelectItem value="aktiv">Aktiv</SelectItem>
-            <SelectItem value="inaktiv">Inaktiv</SelectItem>
-            <SelectItem value="interessent">Interessent</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
-      {/* Table */}
+      <div className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Kunden suchen..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -236,89 +88,67 @@ export default function Customers() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead className="hidden md:table-cell">E-Mail</TableHead>
-                <TableHead className="hidden md:table-cell">Ort</TableHead>
-                <TableHead className="hidden lg:table-cell">Typ</TableHead>
-                <TableHead className="hidden lg:table-cell">Familie</TableHead>
+                <TableHead className="hidden md:table-cell">Stadt</TableHead>
+                <TableHead className="hidden lg:table-cell">Rolle</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Laden...</TableCell></TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Keine Kunden gefunden</TableCell></TableRow>
-              ) : filtered.map(customer => (
-                <TableRow key={customer.id} className={`hover:bg-muted/50 cursor-pointer ${customer.isFamilyMember ? 'bg-slate-50' : ''}`}>
-                  <TableCell className={`font-medium ${customer.isFamilyMember ? 'pl-8' : ''}`}>
-                    <Link to={`/kunden/${customer.id}`} className="hover:text-primary">
-                      {customer.first_name} {customer.last_name}
-                      {customer.company_name && <p className="text-xs text-muted-foreground">{customer.company_name}</p>}
-                      {customer.isFamilyMember && (
-                        <p className="text-xs text-muted-foreground">→ {customer.parentName} ({customer.relationship})</p>
-                      )}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{customer.email}</TableCell>
-                  <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                    {customer.zip_code} {customer.city}
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell text-sm">
-                    {customer.customer_type === 'geschaeft' ? 'Geschäft' : 'Privat'}
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell text-sm">
-                    {!customer.isFamilyMember ? (customer.family_members?.length || 0) : '–'}
-                  </TableCell>
-                  <TableCell><StatusBadge status={customer.status} /></TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
-                          <Edit className="w-4 h-4 mr-2" /> Bearbeiten
-                        </DropdownMenuItem>
-                        {!customer.isFamilyMember && (
-                          <DropdownMenuItem onClick={() => exportPDF(customer)}>
-                            <Download className="w-4 h-4 mr-2" /> PDF Export
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem 
-                          className="text-destructive" 
-                          onClick={() => {
-                            if (confirm(customer.isFamilyMember ? 'Familienmitglied löschen?' : 'Kunde löschen?')) {
-                              if (customer.isFamilyMember) {
-                                const parent = customers.find(c => c.id === customer.parentId);
-                                if (parent) {
-                                  updateMutation.mutate({ 
-                                    id: customer.parentId, 
-                                    data: { ...parent, family_members: parent.family_members.filter(m => m.id !== customer.family_member_id) } 
-                                  });
-                                }
-                              } else {
-                                deleteMutation.mutate(customer.id);
-                              }
-                            }
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" /> Löschen
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {filtered.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    Keine Kunden gefunden
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filtered.map(customer => (
+                  <TableRow key={customer.id} className="hover:bg-muted/50">
+                    <TableCell className="font-medium">
+                      <Link to={`/kunden/${customer.id}`} className="hover:text-primary">
+                        {customer.first_name} {customer.last_name}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-sm">{customer.email}</TableCell>
+                    <TableCell className="hidden md:table-cell text-sm">{customer.city || '–'}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm capitalize">
+                      {customer.family_role === 'primary' ? 'Hauptkunde' : 'Familienmitglied'}
+                    </TableCell>
+                    <TableCell className="text-sm capitalize">{customer.status}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
+                            <Edit className="w-4 h-4 mr-2" /> Bearbeiten
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => {
+                              if (confirm('Kunde wirklich löschen?')) {
+                                deleteMutation.mutate(customer.id)
+                              }
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" /> Löschen
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? 'Kunde bearbeiten' : 'Neuer Kunde'}</DialogTitle>
           </DialogHeader>
@@ -331,5 +161,5 @@ export default function Customers() {
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }

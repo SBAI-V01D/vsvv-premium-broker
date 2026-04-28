@@ -2,24 +2,6 @@
   "name": "Customer",
   "type": "object",
   "properties": {
-    "customer_type": {
-      "type": "string",
-      "enum": [
-        "privat",
-        "geschaeft"
-      ],
-      "default": "privat",
-      "description": "Kundentyp"
-    },
-    "salutation": {
-      "type": "string",
-      "enum": [
-        "Herr",
-        "Frau",
-        "Firma"
-      ],
-      "description": "Anrede"
-    },
     "first_name": {
       "type": "string",
       "description": "Vorname"
@@ -28,13 +10,9 @@
       "type": "string",
       "description": "Nachname"
     },
-    "company_name": {
-      "type": "string",
-      "description": "Firmenname (nur bei Gesch\u00e4ftskunden)"
-    },
     "email": {
       "type": "string",
-      "description": "E-Mail-Adresse"
+      "description": "E-Mail Adresse"
     },
     "phone": {
       "type": "string",
@@ -46,15 +24,15 @@
     },
     "street": {
       "type": "string",
-      "description": "Strasse"
+      "description": "Stra\u00dfe"
     },
     "zip_code": {
       "type": "string",
-      "description": "PLZ"
+      "description": "Postleitzahl"
     },
     "city": {
       "type": "string",
-      "description": "Ort"
+      "description": "Stadt"
     },
     "canton": {
       "type": "string",
@@ -95,83 +73,72 @@
     },
     "ahv_number": {
       "type": "string",
-      "description": "AHV-Nummer"
+      "description": "AHV-Nummer (Format: 756.1234.5678.90)"
     },
-    "employer": {
+    "civil_status": {
       "type": "string",
-      "description": "Arbeitgeber"
+      "enum": [
+        "single",
+        "married",
+        "divorced",
+        "widowed"
+      ],
+      "description": "Zivilstand"
     },
-    "income": {
-      "type": "number",
-      "description": "Jahreseinkommen (CHF)"
-    },
-    "tags": {
+    "profession": {
       "type": "string",
-      "description": "Tags (kommagetrennt)"
+      "description": "Beruf"
+    },
+    "risk_profile": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "description": "Risikoprofil"
+    },
+    "customer_type": {
+      "type": "string",
+      "enum": [
+        "private",
+        "business"
+      ],
+      "default": "private",
+      "description": "Kundentyp"
     },
     "status": {
       "type": "string",
       "enum": [
-        "aktiv",
-        "inaktiv",
-        "interessent"
+        "active",
+        "inactive",
+        "prospect"
       ],
-      "default": "aktiv",
+      "default": "active",
       "description": "Status"
     },
-    "assigned_broker": {
+    "family_role": {
       "type": "string",
-      "description": "Zust\u00e4ndiger Broker (E-Mail)"
+      "enum": [
+        "primary",
+        "spouse",
+        "child",
+        "parent"
+      ],
+      "default": "primary",
+      "description": "Familienrolle"
+    },
+    "primary_customer_id": {
+      "type": "string",
+      "description": "ID des Hauptkunden (falls Familienmitglied)"
     },
     "notes": {
       "type": "string",
       "description": "Notizen"
     },
-    "family_members": {
-      "type": "array",
-      "description": "Familienmitglieder (nur f\u00fcr Privatkunden)",
-      "items": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Eindeutige ID des Familienmitglieds"
-          },
-          "first_name": {
-            "type": "string",
-            "description": "Vorname"
-          },
-          "last_name": {
-            "type": "string",
-            "description": "Nachname"
-          },
-          "relationship": {
-            "type": "string",
-            "enum": [
-              "ehepartner",
-              "kind",
-              "parent",
-              "sibling",
-              "sonstiges"
-            ],
-            "description": "Verwandtschaftsverh\u00e4ltnis"
-          },
-          "birthdate": {
-            "type": "string",
-            "format": "date",
-            "description": "Geburtsdatum"
-          },
-          "email": {
-            "type": "string",
-            "description": "E-Mail-Adresse (optional)"
-          }
-        },
-        "required": [
-          "id",
-          "first_name",
-          "last_name"
-        ]
-      }
+    "assigned_broker": {
+      "type": "string",
+      "description": "Zust\u00e4ndiger Broker (E-Mail)"
     }
   },
   "required": [

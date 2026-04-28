@@ -1,174 +1,127 @@
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format } from 'date-fns';
+import React, { useState } from 'react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { DialogFooter } from '@/components/ui/dialog'
 
-const INSURANCE_TYPES = [
-  'KVG', 'VVG', 'Leben', 'Haftpflicht', 'Hausrat', 'Rechtsschutz',
-  'Motorfahrzeug', 'Gebäude', 'Unfall', 'Krankentaggeld', 'BVG', 'Säule 3a', 'Sonstige'
-];
+const INSURANCE_TYPES = ['life', 'health', 'property', 'liability', 'motor', 'other']
 
-export default function ApplicationForm({ application, customers = [], onSave, onCancel, saving }) {
-  const [form, setForm] = useState({
-    customer_id: application?.customer_id || '',
-    family_member_id: application?.family_member_id || '',
-    insurance_type: application?.insurance_type || '',
-    provider: application?.provider || '',
-    estimated_premium_monthly: application?.estimated_premium_monthly || '',
-    estimated_premium_yearly: application?.estimated_premium_yearly || '',
-    requested_start_date: application?.requested_start_date || format(new Date(), 'yyyy-MM-dd'),
-    status: application?.status || 'neu',
-    notes: application?.notes || '',
-  });
+export default function ApplicationForm({ application, customers, onSave, onCancel, saving }) {
+  const [form, setForm] = useState(application || {
+    customer_id: '',
+    insurance_type: '',
+    product: '',
+    insurer: '',
+    status: 'draft',
+    estimated_premium_monthly: '',
+    estimated_premium_yearly: '',
+    requested_start_date: '',
+    commission_estimate: '',
+    notes: '',
+  })
 
-  const selectedCustomer = customers.find(c => c.id === form.customer_id);
-  const selectedFamilyMember = selectedCustomer?.family_members?.find(m => m.id === form.family_member_id);
-
-  const getDisplayName = () => {
-    if (selectedFamilyMember) {
-      return `${selectedFamilyMember.first_name} ${selectedFamilyMember.last_name}`;
-    }
-    if (selectedCustomer) {
-      return `${selectedCustomer.first_name} ${selectedCustomer.last_name}`;
-    }
-    return '';
-  };
+  const selectedCustomer = customers.find(c => c.id === form.customer_id)
+  const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    e.preventDefault()
     onSave({
       ...form,
-      customer_name: getDisplayName(),
-      customer_email: selectedCustomer?.email,
-      estimated_premium_monthly: form.estimated_premium_monthly ? parseFloat(form.estimated_premium_monthly) : null,
-      estimated_premium_yearly: form.estimated_premium_yearly ? parseFloat(form.estimated_premium_yearly) : null,
-    });
-  };
+      customer_name: selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : '',
+      estimated_premium_monthly: form.estimated_premium_monthly ? Number(form.estimated_premium_monthly) : undefined,
+      estimated_premium_yearly: form.estimated_premium_yearly ? Number(form.estimated_premium_yearly) : undefined,
+      commission_estimate: form.commission_estimate ? Number(form.commission_estimate) : undefined,
+    })
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <Label>Kunde *</Label>
-        <Select value={form.customer_id} onValueChange={(v) => setForm(p => ({ ...p, customer_id: v, family_member_id: '' }))}>
+        <Select value={form.customer_id} onValueChange={v => set('customer_id', v)}>
           <SelectTrigger className="mt-1"><SelectValue placeholder="Kunde auswählen" /></SelectTrigger>
           <SelectContent>
             {customers.map(c => (
               <SelectItem key={c.id} value={c.id}>
-                {c.first_name} {c.last_name} ({c.email})
+                {c.first_name} {c.last_name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      {selectedCustomer?.family_members && selectedCustomer.family_members.length > 0 && (
-        <div>
-          <Label>Familienmitglied (optional)</Label>
-          <Select value={form.family_member_id} onValueChange={(v) => setForm(p => ({ ...p, family_member_id: v }))}>
-            <SelectTrigger className="mt-1"><SelectValue placeholder="Für Hauptkunde auswählen" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={null}>Hauptkunde ({selectedCustomer.first_name} {selectedCustomer.last_name})</SelectItem>
-              {selectedCustomer.family_members.map(m => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.first_name} {m.last_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label>Versicherungsart *</Label>
-          <Select value={form.insurance_type} onValueChange={(v) => setForm(p => ({ ...p, insurance_type: v }))}>
-            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {INSURANCE_TYPES.map(t => (
-                <SelectItem key={t} value={t}>{t}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Versicherungsgesellschaft *</Label>
-          <Input
-            value={form.provider}
-            onChange={(e) => setForm(p => ({ ...p, provider: e.target.value }))}
-            placeholder="z.B. Allianz"
-            className="mt-1"
-            required
-          />
-        </div>
+      <div>
+        <Label>Versicherungsgesellschaft *</Label>
+        <Input value={form.insurer} onChange={e => set('insurer', e.target.value)} required className="mt-1" />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Monatsprämie (CHF)</Label>
-          <Input
-            type="number"
-            step="0.01"
-            value={form.estimated_premium_monthly}
-            onChange={(e) => setForm(p => ({ ...p, estimated_premium_monthly: e.target.value }))}
-            className="mt-1"
-          />
+          <Label>Versicherungsart *</Label>
+          <Select value={form.insurance_type} onValueChange={v => set('insurance_type', v)}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {INSURANCE_TYPES.map(t => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <Label>Jahresprämie (CHF)</Label>
-          <Input
-            type="number"
-            step="0.01"
-            value={form.estimated_premium_yearly}
-            onChange={(e) => setForm(p => ({ ...p, estimated_premium_yearly: e.target.value }))}
-            className="mt-1"
-          />
+          <Label>Produkt/Sparte</Label>
+          <Input value={form.product} onChange={e => set('product', e.target.value)} className="mt-1" />
+        </div>
+      </div>
+
+      <div>
+        <Label>Status</Label>
+        <Select value={form.status} onValueChange={v => set('status', v)}>
+          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="draft">Entwurf</SelectItem>
+            <SelectItem value="submitted">Eingereicht</SelectItem>
+            <SelectItem value="under_review">In Prüfung</SelectItem>
+            <SelectItem value="approved">Genehmigt</SelectItem>
+            <SelectItem value="rejected">Abgelehnt</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Geschätzte Monatsprämie (CHF)</Label>
+          <Input type="number" step="0.01" value={form.estimated_premium_monthly} onChange={e => set('estimated_premium_monthly', e.target.value)} className="mt-1" />
+        </div>
+        <div>
+          <Label>Geschätzte Jahresprämie (CHF)</Label>
+          <Input type="number" step="0.01" value={form.estimated_premium_yearly} onChange={e => set('estimated_premium_yearly', e.target.value)} className="mt-1" />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Gewünschtes Startdatum</Label>
-          <Input
-            type="date"
-            value={form.requested_start_date}
-            onChange={(e) => setForm(p => ({ ...p, requested_start_date: e.target.value }))}
-            className="mt-1"
-          />
+          <Input type="date" value={form.requested_start_date} onChange={e => set('requested_start_date', e.target.value)} className="mt-1" />
         </div>
         <div>
-          <Label>Status</Label>
-          <Select value={form.status} onValueChange={(v) => setForm(p => ({ ...p, status: v }))}>
-            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="neu">Neu</SelectItem>
-              <SelectItem value="in_bearbeitung">In Bearbeitung</SelectItem>
-              <SelectItem value="abgelehnt">Abgelehnt</SelectItem>
-            </SelectContent>
-          </Select>
+          <Label>Geschätzte Provision (CHF)</Label>
+          <Input type="number" step="0.01" value={form.commission_estimate} onChange={e => set('commission_estimate', e.target.value)} className="mt-1" />
         </div>
       </div>
 
       <div>
-        <Label>Anmerkungen</Label>
-        <Textarea
-          value={form.notes}
-          onChange={(e) => setForm(p => ({ ...p, notes: e.target.value }))}
-          rows={2}
-          className="mt-1"
-        />
+        <Label>Notizen</Label>
+        <Textarea value={form.notes} onChange={e => set('notes', e.target.value)} className="mt-1" rows={2} />
       </div>
 
-      <div className="flex justify-end gap-2 pt-4">
+      <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
           Abbrechen
         </Button>
-        <Button type="submit" disabled={saving || !form.customer_id || !form.insurance_type || !form.provider || (selectedFamilyMember && !form.family_member_id)}>
-          {saving ? 'Speichern...' : 'Speichern'}
+        <Button type="submit" disabled={saving}>
+          {saving ? 'Speichern...' : (application ? 'Aktualisieren' : 'Erstellen')}
         </Button>
-      </div>
+      </DialogFooter>
     </form>
-  );
+  )
 }

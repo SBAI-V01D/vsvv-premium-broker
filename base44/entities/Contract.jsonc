@@ -8,38 +8,31 @@
     },
     "customer_name": {
       "type": "string",
-      "description": "Kundenname (Anzeige)"
+      "description": "Kundenname (Display)"
     },
-    "family_member_id": {
-      "type": "string",
-      "description": "Familienmitglied-ID (optional, f\u00fcr Vertr\u00e4ge von Familienmitgliedern)"
-    },
-    "insurance_type": {
-      "type": "string",
-      "enum": [
-        "KVG",
-        "VVG",
-        "Leben",
-        "Haftpflicht",
-        "Hausrat",
-        "Rechtsschutz",
-        "Motorfahrzeug",
-        "Geb\u00e4ude",
-        "Unfall",
-        "Krankentaggeld",
-        "BVG",
-        "S\u00e4ule 3a",
-        "Sonstige"
-      ],
-      "description": "Versicherungsart"
-    },
-    "provider": {
+    "insurer": {
       "type": "string",
       "description": "Versicherungsgesellschaft"
     },
     "policy_number": {
       "type": "string",
       "description": "Policen-Nummer"
+    },
+    "insurance_type": {
+      "type": "string",
+      "enum": [
+        "life",
+        "health",
+        "property",
+        "liability",
+        "motor",
+        "other"
+      ],
+      "description": "Versicherungsart"
+    },
+    "product": {
+      "type": "string",
+      "description": "Produkt/Sparte"
     },
     "premium_monthly": {
       "type": "number",
@@ -67,41 +60,38 @@
     "status": {
       "type": "string",
       "enum": [
-        "aktiv",
-        "pendent",
-        "gek\u00fcndigt",
-        "abgelaufen"
+        "active",
+        "cancelled",
+        "paused",
+        "expired"
       ],
-      "default": "aktiv",
-      "description": "Vertragsstatus"
+      "default": "active",
+      "description": "Status"
+    },
+    "commission_rate": {
+      "type": "number",
+      "description": "Provisionsquote (%)"
+    },
+    "commission_amount": {
+      "type": "number",
+      "description": "Provisionsbetrag (CHF)"
+    },
+    "assigned_broker": {
+      "type": "string",
+      "description": "Zust\u00e4ndiger Broker (E-Mail)"
     },
     "policy_document_url": {
       "type": "string",
-      "description": "Police PDF URL"
+      "description": "URL zum Policy-Dokument"
     },
     "notes": {
       "type": "string",
-      "description": "Bemerkungen"
-    },
-    "documents": {
-      "type": "array",
-      "description": "Dokumente",
-      "items": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "url": {
-            "type": "string"
-          }
-        }
-      }
+      "description": "Notizen"
     }
   },
   "required": [
     "customer_id",
-    "insurance_type",
-    "provider"
+    "insurer",
+    "insurance_type"
   ]
 }

@@ -9,14 +9,14 @@
     "category": {
       "type": "string",
       "enum": [
-        "kundigung",
-        "erneuerung",
-        "termin",
-        "dokumentanfrage",
-        "schadenmeldung",
-        "allgemein"
+        "cancellation",
+        "renewal",
+        "appointment",
+        "document_request",
+        "claim",
+        "general"
       ],
-      "default": "allgemein",
+      "default": "general",
       "description": "Kategorie"
     },
     "subject": {
@@ -27,21 +27,14 @@
       "type": "string",
       "description": "E-Mail-Body (mit Platzhaltern m\u00f6glich)"
     },
-    "placeholders": {
-      "type": "array",
-      "description": "Verf\u00fcgbare Platzhalter",
-      "items": {
-        "type": "string"
-      }
-    },
     "description": {
       "type": "string",
       "description": "Beschreibung der Vorlage"
     },
-    "is_default": {
+    "is_active": {
       "type": "boolean",
-      "default": false,
-      "description": "Standard-Vorlage"
+      "default": true,
+      "description": "Vorlage ist aktiv"
     }
   },
   "required": [

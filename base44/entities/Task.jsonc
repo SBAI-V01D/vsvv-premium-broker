@@ -12,7 +12,7 @@
     },
     "customer_id": {
       "type": "string",
-      "description": "Kunden-ID (optional)"
+      "description": "Verkn\u00fcpfte Kunden-ID (optional)"
     },
     "customer_name": {
       "type": "string",
@@ -20,7 +20,7 @@
     },
     "contract_id": {
       "type": "string",
-      "description": "Vertrags-ID (optional)"
+      "description": "Verkn\u00fcpfte Vertrags-ID (optional)"
     },
     "assigned_to": {
       "type": "string",
@@ -29,22 +29,22 @@
     "priority": {
       "type": "string",
       "enum": [
-        "niedrig",
-        "mittel",
-        "hoch",
-        "dringend"
+        "low",
+        "medium",
+        "high",
+        "urgent"
       ],
-      "default": "mittel",
+      "default": "medium",
       "description": "Priorit\u00e4t"
     },
     "status": {
       "type": "string",
       "enum": [
-        "offen",
-        "in_bearbeitung",
-        "erledigt"
+        "open",
+        "in_progress",
+        "completed"
       ],
-      "default": "offen",
+      "default": "open",
       "description": "Status"
     },
     "due_date": {
@@ -56,12 +56,12 @@
       "type": "string",
       "enum": [
         "onboarding",
-        "erneuerung",
+        "renewal",
         "follow_up",
-        "beratung",
-        "allgemein"
+        "consultation",
+        "general"
       ],
-      "default": "allgemein",
+      "default": "general",
       "description": "Aufgabentyp"
     }
   },

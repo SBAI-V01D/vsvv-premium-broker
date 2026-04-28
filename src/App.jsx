@@ -1,42 +1,23 @@
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import PageNotFound from './lib/PageNotFound';
-import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
+import PageNotFound from './lib/PageNotFound'
+import { AuthProvider, useAuth } from '@/lib/AuthContext'
+import UserNotRegisteredError from '@/components/UserNotRegisteredError'
 
-import AppLayout from './components/layout/AppLayout';
-import Dashboard from './pages/Dashboard';
-import Customers from './pages/Customers';
-import CustomerDetail from './pages/CustomerDetail';
-import Contracts from './pages/Contracts';
-import Tasks from './pages/Tasks';
-import Commissions from './pages/Commissions';
-import Messages from './pages/Messages';
-import Claims from './pages/Claims';
-import Notifications from './pages/Notifications';
-import Marketing from './pages/Marketing';
-import Pipeline from './pages/Pipeline';
-import PipelinePerformance from './pages/PipelinePerformance';
-import Wiedervorlage from './pages/Wiedervorlage';
-import EmailTemplates from './pages/EmailTemplates';
-import CommissionRates from './pages/CommissionRates';
-import Applications from './pages/Applications';
-
-// Customer Portal
-import PortalRoot from './pages/portal/PortalRoot';
-import PortalOverview from './pages/portal/PortalOverview';
-import PortalContracts from './pages/portal/PortalContracts';
-import PortalClaims from './pages/portal/PortalClaims';
-import PortalDocuments from './pages/portal/PortalDocuments';
-import PortalMessages from './pages/portal/PortalMessages';
-import PortalProfile from './pages/portal/PortalProfile';
-import PortalSetup from './pages/portal/PortalSetup';
-import PortalResetPassword from './pages/portal/PortalResetPassword';
+import AppLayout from './components/layout/AppLayout'
+import Dashboard from './pages/Dashboard'
+import Customers from './pages/Customers'
+import CustomerDetail from './pages/CustomerDetail'
+import Contracts from './pages/Contracts'
+import Applications from './pages/Applications'
+import Tasks from './pages/Tasks'
+import Documents from './pages/Documents'
+import EmailTemplates from './pages/EmailTemplates'
 
 const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
+  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth()
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -46,15 +27,15 @@ const AuthenticatedApp = () => {
           <p className="text-sm text-muted-foreground">Laden...</p>
         </div>
       </div>
-    );
+    )
   }
 
   if (authError) {
     if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
+      return <UserNotRegisteredError />
     } else if (authError.type === 'auth_required') {
-      navigateToLogin();
-      return null;
+      navigateToLogin()
+      return null
     }
   }
 
@@ -65,37 +46,15 @@ const AuthenticatedApp = () => {
         <Route path="/kunden" element={<Customers />} />
         <Route path="/kunden/:id" element={<CustomerDetail />} />
         <Route path="/vertraege" element={<Contracts />} />
-        <Route path="/aufgaben" element={<Tasks />} />
-        <Route path="/provisionen" element={<Commissions />} />
-        <Route path="/nachrichten" element={<Messages />} />
-        <Route path="/schaden" element={<Claims />} />
-        <Route path="/benachrichtigungen" element={<Notifications />} />
-        <Route path="/marketing" element={<Marketing />} />
-        <Route path="/pipeline" element={<Pipeline />} />
-        <Route path="/pipeline-performance" element={<PipelinePerformance />} />
-        <Route path="/wiedervorlage" element={<Wiedervorlage />} />
-        <Route path="/email-templates" element={<EmailTemplates />} />
-        <Route path="/provisionsstaetze" element={<CommissionRates />} />
         <Route path="/antraege" element={<Applications />} />
+        <Route path="/aufgaben" element={<Tasks />} />
+        <Route path="/dokumente" element={<Documents />} />
+        <Route path="/email-templates" element={<EmailTemplates />} />
       </Route>
-      {/* Portal Setup & Password Reset – public pages */}
-      <Route path="/portal/setup" element={<PortalSetup />} />
-      <Route path="/portal/reset-password" element={<PortalResetPassword />} />
-
-      {/* Customer Portal – separate layout, no broker sidebar */}
-      <Route path="/portal" element={<PortalRoot />}>
-        <Route index element={<PortalOverview />} />
-        <Route path="vertraege" element={<PortalContracts />} />
-        <Route path="schaden" element={<PortalClaims />} />
-        <Route path="dokumente" element={<PortalDocuments />} />
-        <Route path="nachrichten" element={<PortalMessages />} />
-        <Route path="profil" element={<PortalProfile />} />
-      </Route>
-
       <Route path="*" element={<PageNotFound />} />
     </Routes>
-  );
-};
+  )
+}
 
 function App() {
   return (
