@@ -11,6 +11,7 @@ const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { label: 'Kunden', icon: Users, path: '/kunden' },
   { label: 'Verträge', icon: FileText, path: '/vertraege' },
+  { label: 'Anträge', icon: FileText, path: '/antraege' },
   { label: 'Aufgaben', icon: CheckSquare, path: '/aufgaben' },
   { label: 'Provisionen', icon: Wallet, path: '/provisionen' },
   { label: 'Nachrichten', icon: MessageSquare, path: '/nachrichten' },

@@ -22,6 +22,7 @@ import PipelinePerformance from './pages/PipelinePerformance';
 import Wiedervorlage from './pages/Wiedervorlage';
 import EmailTemplates from './pages/EmailTemplates';
 import CommissionRates from './pages/CommissionRates';
+import Applications from './pages/Applications';
 
 // Customer Portal
 import PortalRoot from './pages/portal/PortalRoot';
@@ -73,6 +74,7 @@ const AuthenticatedApp = () => {
         <Route path="/wiedervorlage" element={<Wiedervorlage />} />
         <Route path="/email-templates" element={<EmailTemplates />} />
         <Route path="/provisionsstaetze" element={<CommissionRates />} />
+        <Route path="/antraege" element={<Applications />} />
       </Route>
       {/* Customer Portal – separate layout, no broker sidebar */}
       <Route path="/portal" element={<PortalRoot />}>
