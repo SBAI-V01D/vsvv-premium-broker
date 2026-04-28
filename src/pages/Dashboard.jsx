@@ -12,6 +12,8 @@ import PageHeader from '../components/shared/PageHeader';
 import StatusBadge from '../components/shared/StatusBadge';
 import CustomerRequestsWidget from '../components/dashboard/CustomerRequestsWidget';
 import CommissionWidget from '../components/dashboard/CommissionWidget';
+import RenewalWidget from '../components/dashboard/RenewalWidget';
+import PipelineWidget from '../components/dashboard/PipelineWidget';
 
 const COLORS = ['hsl(215, 80%, 48%)', 'hsl(160, 60%, 45%)', 'hsl(30, 80%, 55%)', 'hsl(280, 65%, 60%)', 'hsl(340, 75%, 55%)'];
 
@@ -250,6 +252,12 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Renewal & Pipeline Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <RenewalWidget />
+        <PipelineWidget />
       </div>
 
       {/* Commission Widget */}
