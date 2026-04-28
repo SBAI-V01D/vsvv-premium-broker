@@ -53,6 +53,9 @@ export default function CustomerDetail() {
   const customer = customers.find(c => c.id === customerId);
   const selectedFamilyMember = familyMemberId && customer?.family_members?.find(m => m.id === familyMemberId);
 
+  // Wenn Familienmitglied angewählt, zeige deren Daten
+  const displayCustomer = selectedFamilyMember ? { ...customer, ...selectedFamilyMember, isFamilyMember: true, parentName: `${customer.first_name} ${customer.last_name}` } : customer;
+
   const { data: contracts = [] } = useQuery({
     queryKey: ['contracts', customerId],
     queryFn: () => base44.entities.Contract.filter({ customer_id: customerId }),
@@ -115,7 +118,7 @@ export default function CustomerDetail() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['interactions', customerId] }); setShowInteraction(false); setInteractionForm({ type: 'notiz', subject: '', content: '', date: format(new Date(), 'yyyy-MM-dd') }); },
   });
 
-  if (!customer) {
+  if (!customer || (selectedFamilyMember && !selectedFamilyMember)) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">Kunde wird geladen...</p>
@@ -138,22 +141,27 @@ export default function CustomerDetail() {
         <div>
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
-              {customer.first_name?.[0]}{customer.last_name?.[0]}
+              {displayCustomer.first_name?.[0]}{displayCustomer.last_name?.[0]}
             </div>
             <div>
               <h1 className="text-2xl font-bold">{displayName}</h1>
-              {customer.company_name && <p className="text-sm text-muted-foreground">{customer.company_name}</p>}
+              {selectedFamilyMember && <p className="text-sm text-muted-foreground">→ {displayCustomer.parentName}</p>}
+              {displayCustomer.company_name && <p className="text-sm text-muted-foreground">{displayCustomer.company_name}</p>}
             </div>
           </div>
         </div>
         <div className="flex gap-2">
-          <StatusBadge status={customer.status} />
-          <Button variant="outline" size="sm" onClick={() => setShowPortalAccess(true)}>
-            <Lock className="w-4 h-4 mr-1" /> Portal
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowEmailSender(true)}>
-            <Send className="w-4 h-4 mr-1" /> E-Mail
-          </Button>
+          <StatusBadge status={displayCustomer.status} />
+          {!selectedFamilyMember && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => setShowPortalAccess(true)}>
+                <Lock className="w-4 h-4 mr-1" /> Portal
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowEmailSender(true)}>
+                <Send className="w-4 h-4 mr-1" /> E-Mail
+              </Button>
+            </>
+          )}
           <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>
             <Edit className="w-4 h-4 mr-1" /> Bearbeiten
           </Button>
@@ -164,23 +172,23 @@ export default function CustomerDetail() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>
           <CardContent className="p-4 space-y-2">
-            <div className="flex items-center gap-2 text-sm"><Mail className="w-4 h-4 text-muted-foreground" /> {customer.email}</div>
-            {customer.phone && <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-muted-foreground" /> {customer.phone}</div>}
-            {customer.mobile && <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-muted-foreground" /> {customer.mobile}</div>}
+            <div className="flex items-center gap-2 text-sm"><Mail className="w-4 h-4 text-muted-foreground" /> {displayCustomer.email}</div>
+            {displayCustomer.phone && <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-muted-foreground" /> {displayCustomer.phone}</div>}
+            {displayCustomer.mobile && <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-muted-foreground" /> {displayCustomer.mobile}</div>}
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 space-y-2">
-            {customer.street && <div className="flex items-center gap-2 text-sm"><MapPin className="w-4 h-4 text-muted-foreground" /> {customer.street}, {customer.zip_code} {customer.city}</div>}
-            {customer.canton && <div className="text-sm text-muted-foreground ml-6">Kanton {customer.canton}</div>}
+            {displayCustomer.street && <div className="flex items-center gap-2 text-sm"><MapPin className="w-4 h-4 text-muted-foreground" /> {displayCustomer.street}, {displayCustomer.zip_code} {displayCustomer.city}</div>}
+            {displayCustomer.canton && <div className="text-sm text-muted-foreground ml-6">Kanton {displayCustomer.canton}</div>}
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 space-y-2">
-            {customer.birthdate && <div className="flex items-center gap-2 text-sm"><Calendar className="w-4 h-4 text-muted-foreground" /> {format(new Date(customer.birthdate), 'dd.MM.yyyy')}</div>}
-            {customer.ahv_number && <div className="text-sm text-muted-foreground">AHV: {customer.ahv_number}</div>}
-            <div className="text-sm text-muted-foreground">{customer.customer_type === 'geschaeft' ? 'Geschäftskunde' : 'Privatkunde'}</div>
-            {customer.tags && <div className="flex flex-wrap gap-1 mt-1">{customer.tags.split(',').map((t, i) => <span key={i} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{t.trim()}</span>)}</div>}
+            {displayCustomer.birthdate && <div className="flex items-center gap-2 text-sm"><Calendar className="w-4 h-4 text-muted-foreground" /> {format(new Date(displayCustomer.birthdate), 'dd.MM.yyyy')}</div>}
+            {displayCustomer.ahv_number && <div className="text-sm text-muted-foreground">AHV: {displayCustomer.ahv_number}</div>}
+            <div className="text-sm text-muted-foreground">{displayCustomer.customer_type === 'geschaeft' ? 'Geschäftskunde' : 'Privatkunde'}</div>
+            {!selectedFamilyMember && displayCustomer.tags && <div className="flex flex-wrap gap-1 mt-1">{displayCustomer.tags.split(',').map((t, i) => <span key={i} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{t.trim()}</span>)}</div>}
           </CardContent>
         </Card>
       </div>
@@ -335,23 +343,41 @@ export default function CustomerDetail() {
       {/* Edit Dialog */}
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>Kunde bearbeiten</DialogTitle></DialogHeader>
-          <CustomerForm customer={customer} onSave={(data) => updateMutation.mutate({ id: customer.id, data })} onCancel={() => setShowEdit(false)} saving={updateMutation.isPending} />
+          <DialogHeader><DialogTitle>{selectedFamilyMember ? 'Familienmitglied bearbeiten' : 'Kunde bearbeiten'}</DialogTitle></DialogHeader>
+          <CustomerForm 
+            customer={selectedFamilyMember ? { ...selectedFamilyMember, isFamilyMember: true, parentName: `${customer.first_name} ${customer.last_name}` } : customer} 
+            onSave={(data) => {
+              if (selectedFamilyMember) {
+                const updatedFamilyMembers = customer.family_members.map(m =>
+                  m.id === selectedFamilyMember.id
+                    ? { id: m.id, first_name: data.first_name, last_name: data.last_name, relationship: data.relationship, birthdate: data.birthdate, email: data.email }
+                    : m
+                );
+                updateMutation.mutate({ id: customer.id, data: { ...customer, family_members: updatedFamilyMembers } });
+              } else {
+                updateMutation.mutate({ id: customer.id, data });
+              }
+            }} 
+            onCancel={() => setShowEdit(false)} 
+            saving={updateMutation.isPending} 
+          />
         </DialogContent>
       </Dialog>
 
       {/* Email Sender Dialog */}
-      <Dialog open={showEmailSender} onOpenChange={setShowEmailSender}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>E-Mail an {customer.first_name} versenden</DialogTitle></DialogHeader>
-          <EmailTemplateSender 
-            customerId={customer.id}
-            customer={customer}
-            contracts={contracts}
-            onClose={() => setShowEmailSender(false)}
-          />
-        </DialogContent>
-      </Dialog>
+      {!selectedFamilyMember && (
+        <Dialog open={showEmailSender} onOpenChange={setShowEmailSender}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader><DialogTitle>E-Mail an {customer.first_name} versenden</DialogTitle></DialogHeader>
+            <EmailTemplateSender 
+              customerId={customer.id}
+              customer={customer}
+              contracts={contracts}
+              onClose={() => setShowEmailSender(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Interaction Dialog */}
       <Dialog open={showInteraction} onOpenChange={setShowInteraction}>
@@ -392,7 +418,9 @@ export default function CustomerDetail() {
       </Dialog>
 
       {/* Portal Access Dialog */}
-      <PortalAccessDialog open={showPortalAccess} onOpenChange={setShowPortalAccess} customer={customer} />
+      {!selectedFamilyMember && (
+        <PortalAccessDialog open={showPortalAccess} onOpenChange={setShowPortalAccess} customer={customer} />
+      )}
     </div>
   );
 }
