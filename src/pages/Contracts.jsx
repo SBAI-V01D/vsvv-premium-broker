@@ -105,6 +105,7 @@ export default function Contracts() {
                 <TableHead>Art</TableHead>
                 <TableHead className="hidden md:table-cell">Anbieter</TableHead>
                 <TableHead className="hidden lg:table-cell">Prämie/Mt.</TableHead>
+                <TableHead className="hidden xl:table-cell">Prämie/Jahr</TableHead>
                 <TableHead className="hidden lg:table-cell">Laufzeit</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-10"></TableHead>
@@ -112,15 +113,20 @@ export default function Contracts() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Laden...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Laden...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Keine Verträge gefunden</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Keine Verträge gefunden</TableCell></TableRow>
               ) : filtered.map(contract => (
-                <TableRow key={contract.id}>
-                  <TableCell className="font-medium">{contract.customer_name || '–'}</TableCell>
-                  <TableCell className="text-sm">{contract.insurance_type}</TableCell>
-                  <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{contract.provider}</TableCell>
-                  <TableCell className="hidden lg:table-cell text-sm">CHF {contract.premium_monthly?.toLocaleString('de-CH') || '–'}</TableCell>
+                 <TableRow key={contract.id}>
+                   <TableCell className="font-medium">{contract.customer_name || '–'}</TableCell>
+                   <TableCell className="text-sm">{contract.insurance_type}</TableCell>
+                   <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{contract.provider}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm">
+                    {contract.premium_monthly ? `CHF ${contract.premium_monthly.toLocaleString('de-CH')}` : '–'}
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell text-sm">
+                    {contract.premium_yearly ? `CHF ${contract.premium_yearly.toLocaleString('de-CH')}` : '–'}
+                  </TableCell>
                   <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
                     {contract.start_date ? format(new Date(contract.start_date), 'dd.MM.yy') : '–'} – {contract.end_date ? format(new Date(contract.end_date), 'dd.MM.yy') : '–'}
                   </TableCell>
