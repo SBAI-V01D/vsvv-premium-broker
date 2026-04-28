@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Plus, Trash2, Edit2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,10 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
     birthdate: '',
     email: '',
   });
+
+  useEffect(() => {
+    setMembers(familyMembers || []);
+  }, [familyMembers]);
 
   const resetForm = () => {
     setFormData({
