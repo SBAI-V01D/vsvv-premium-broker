@@ -122,10 +122,10 @@ export default function Contracts() {
                    <TableCell className="text-sm">{contract.insurance_type}</TableCell>
                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{contract.provider}</TableCell>
                   <TableCell className="hidden lg:table-cell text-sm">
-                    {contract.premium_monthly ? `CHF ${contract.premium_monthly.toLocaleString('de-CH')}` : '–'}
+                    {contract.premium_monthly ? `CHF ${contract.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '–'}
                   </TableCell>
                   <TableCell className="hidden xl:table-cell text-sm">
-                    {contract.premium_yearly ? `CHF ${contract.premium_yearly.toLocaleString('de-CH')}` : '–'}
+                    {contract.premium_yearly ? `CHF ${contract.premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '–'}
                   </TableCell>
                   <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
                     {contract.start_date ? format(new Date(contract.start_date), 'dd.MM.yy') : '–'} – {contract.end_date ? format(new Date(contract.end_date), 'dd.MM.yy') : '–'}
