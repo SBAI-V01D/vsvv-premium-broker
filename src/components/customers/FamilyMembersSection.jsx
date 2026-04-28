@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
-import { v4 as uuidv4 } from 'crypto';
+
+const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 const RELATIONSHIPS = {
   ehepartner: 'Ehepartner/in',
@@ -61,7 +62,7 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
     } else {
       updated = [
         ...familyMembers,
-        { id: uuidv4(), ...form },
+        { id: generateId(), ...form },
       ];
     }
 
