@@ -35,6 +35,8 @@ export default function PortalProfile() {
       subject: 'Adressänderungsantrag',
       content: `Neue Adresse: ${form.street}, ${form.zip_code} ${form.city}${form.notes ? `\nBemerkungen: ${form.notes}` : ''}`,
       date: format(new Date(), 'yyyy-MM-dd'),
+      is_customer_request: true,
+      request_status: 'offen',
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['interactions'] });

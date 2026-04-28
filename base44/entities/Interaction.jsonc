@@ -33,6 +33,21 @@
       "type": "string",
       "format": "date",
       "description": "Datum"
+    },
+    "request_status": {
+      "type": "string",
+      "enum": [
+        "offen",
+        "in_bearbeitung",
+        "erledigt"
+      ],
+      "default": "offen",
+      "description": "Status der Kundenanfrage"
+    },
+    "is_customer_request": {
+      "type": "boolean",
+      "default": false,
+      "description": "Vom Kunden eingereichte Anfrage"
     }
   },
   "required": [

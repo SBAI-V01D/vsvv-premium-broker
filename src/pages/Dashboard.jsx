@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom';
 import StatCard from '../components/shared/StatCard';
 import PageHeader from '../components/shared/PageHeader';
 import StatusBadge from '../components/shared/StatusBadge';
+import CustomerRequestsWidget from '../components/dashboard/CustomerRequestsWidget';
 
 const COLORS = ['hsl(215, 80%, 48%)', 'hsl(160, 60%, 45%)', 'hsl(30, 80%, 55%)', 'hsl(280, 65%, 60%)', 'hsl(340, 75%, 55%)'];
 
@@ -248,6 +249,11 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Customer Requests */}
+      <div className="mb-6">
+        <CustomerRequestsWidget />
       </div>
 
       {/* Recent Tasks */}
