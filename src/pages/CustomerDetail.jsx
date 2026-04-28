@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Plus, Phone, Mail, MapPin, Calendar, FileText, MessageSquare, Edit, Folder } from 'lucide-react';
 import DocumentsTab from '../components/documents/DocumentsTab';
+import ContractDetailCard from '../components/contracts/ContractDetailCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -121,26 +122,31 @@ export default function CustomerDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="contracts">
+        <TabsList className="mb-2">
+          <TabsTrigger value="contracts">Verträge ({contracts.length})</TabsTrigger>
+          <TabsTrigger value="interactions">Interaktionen ({interactions.length})</TabsTrigger>
+          <TabsTrigger value="documents">Dokumente</TabsTrigger>
+        </TabsList>
         <TabsContent value="contracts" className="mt-4">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="text-sm font-semibold text-muted-foreground">Versicherungsverträge</h3>
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground">Versicherungsverträge</h3>
+              {contracts.filter(c => {
+                const days = c.end_date ? Math.ceil((new Date(c.end_date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+                return days !== null && days >= 0 && days <= 90;
+              }).length > 0 && (
+                <p className="text-xs text-orange-600 mt-0.5">
+                  ⚠️ {contracts.filter(c => { const d = c.end_date ? Math.ceil((new Date(c.end_date) - new Date()) / 86400000) : null; return d !== null && d >= 0 && d <= 90; }).length} Police(n) laufen in &lt;3 Monaten ab
+                </p>
+              )}
+            </div>
             <Button size="sm" asChild><Link to={`/vertraege?customer=${customerId}`}><Plus className="w-4 h-4 mr-1" /> Vertrag</Link></Button>
           </div>
           {contracts.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4">Keine Verträge vorhanden</p>
           ) : (
             <div className="space-y-2">
-              {contracts.map(c => (
-                <Card key={c.id} className="p-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium text-sm">{c.insurance_type} – {c.provider}</p>
-                      <p className="text-xs text-muted-foreground">Policen-Nr: {c.policy_number || '–'} | CHF {c.premium_monthly?.toLocaleString('de-CH') || '–'}/Mt.</p>
-                    </div>
-                    <StatusBadge status={c.status} />
-                  </div>
-                </Card>
-              ))}
+              {contracts.map(c => <ContractDetailCard key={c.id} contract={c} />)}
             </div>
           )}
         </TabsContent>
