@@ -51,12 +51,18 @@ export default function PortalAccessDialog({ open, onOpenChange, customer }) {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-              <p className="text-blue-800 font-medium">Automatische Einladung</p>
-              <p className="text-blue-700 text-xs mt-1">
-                Eine Einladungs-E-Mail wird an <strong>{customer.email}</strong> versendet. 
-                Der Kunde kann dann sein Passwort selbst setzen.
-              </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm space-y-2">
+              <div>
+                <p className="text-blue-800 font-medium">Einladungs-E-Mail</p>
+                <p className="text-blue-700 text-xs mt-1">
+                  Eine Einladungs-E-Mail wird an <strong>{customer.email}</strong> versendet mit:
+                </p>
+              </div>
+              <ul className="text-blue-700 text-xs space-y-1 ml-3">
+                <li>✓ Link zum Passwort-Setup (gültig 24h)</li>
+                <li>✓ Link zum Passwort-Reset</li>
+                <li>✓ Zugang zu Verträgen, Dokumenten & mehr</li>
+              </ul>
             </div>
 
             {error && (

@@ -17,12 +17,34 @@ Deno.serve(async (req) => {
     // Invite customer as user
     await base44.users.inviteUser(customer_email, 'user');
 
-    // Send welcome email
+    // Send welcome email with password setup link
+    const appUrl = Deno.env.get('APP_URL') || 'https://app.example.com';
+    const setupLink = `${appUrl}/portal/setup?email=${encodeURIComponent(customer_email)}`;
+    
     await base44.integrations.Core.SendEmail({
       to: customer_email,
-      subject: 'Willkommen im Kundenportal',
-      body: `Hallo ${customer_name || 'Kunde'},\n\nwir freuen uns, Sie ins Kundenportal einzuladen. Sie können dort Ihre Verträge, Schadensmeldungen und Dokumente einsehen.\n\nBitte folgen Sie dem Link in der Einladungs-E-Mail, um Ihren Zugang einzurichten.\n\nBest regards,\nIhren Versicherungsmakler`,
-      from_name: 'Versicherungsmakler'
+      subject: 'Kundenportal-Zugang einrichten',
+      body: `Hallo ${customer_name || 'Kunde'},
+
+wir freuen uns, Sie ins Kundenportal einzuladen. Dort können Sie Ihre Verträge, Schadensmeldungen, Dokumente und mehr einsehen.
+
+PASSWORT EINRICHTEN:
+Bitte klicken Sie auf den Link unten, um Ihr Passwort zu setzen und auf das Portal zuzugreifen:
+
+${setupLink}
+
+Der Link ist 24 Stunden lang gültig.
+
+PASSWORT ZURÜCKSETZEN:
+Falls Sie Ihr Passwort vergessen haben, können Sie es jederzeit unter folgender Adresse zurücksetzen:
+${appUrl}/portal/reset-password
+
+FRAGEN?
+Bei Fragen wenden Sie sich bitte an Ihren Versicherungsmakler.
+
+Viele Grüße,
+Ihr Versicherungsmakler-Team`,
+      from_name: 'Kundenportal'
     });
 
     return Response.json({

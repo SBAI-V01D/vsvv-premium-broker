@@ -32,6 +32,8 @@ import PortalClaims from './pages/portal/PortalClaims';
 import PortalDocuments from './pages/portal/PortalDocuments';
 import PortalMessages from './pages/portal/PortalMessages';
 import PortalProfile from './pages/portal/PortalProfile';
+import PortalSetup from './pages/portal/PortalSetup';
+import PortalResetPassword from './pages/portal/PortalResetPassword';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -76,6 +78,10 @@ const AuthenticatedApp = () => {
         <Route path="/provisionsstaetze" element={<CommissionRates />} />
         <Route path="/antraege" element={<Applications />} />
       </Route>
+      {/* Portal Setup & Password Reset – public pages */}
+      <Route path="/portal/setup" element={<PortalSetup />} />
+      <Route path="/portal/reset-password" element={<PortalResetPassword />} />
+
       {/* Customer Portal – separate layout, no broker sidebar */}
       <Route path="/portal" element={<PortalRoot />}>
         <Route index element={<PortalOverview />} />
