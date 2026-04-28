@@ -117,20 +117,26 @@
       "default": "active",
       "description": "Status"
     },
+    "is_family_member": {
+      "type": "boolean",
+      "default": false,
+      "description": "Ist Familienmitglied (true = Familienmitglied, false = Hauptkunde)"
+    },
+    "primary_customer_id": {
+      "type": "string",
+      "description": "ID des Hauptkunden (wenn Familienmitglied)"
+    },
     "family_role": {
       "type": "string",
       "enum": [
         "primary",
         "spouse",
         "child",
-        "parent"
+        "parent",
+        "other"
       ],
       "default": "primary",
-      "description": "Familienrolle"
-    },
-    "primary_customer_id": {
-      "type": "string",
-      "description": "ID des Hauptkunden (falls Familienmitglied)"
+      "description": "Rolle in der Familie"
     },
     "notes": {
       "type": "string",

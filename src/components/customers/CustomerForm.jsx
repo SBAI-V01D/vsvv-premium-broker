@@ -7,8 +7,15 @@ import { Textarea } from '@/components/ui/textarea'
 import { DialogFooter } from '@/components/ui/dialog'
 
 const CANTONS = ["AG","AI","AR","BE","BL","BS","FR","GE","GL","GR","JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG","TI","UR","VD","VS","ZG","ZH"]
+const FAMILY_ROLES = {
+  primary: 'Hauptkunde',
+  spouse: 'Ehepartner/in',
+  child: 'Kind',
+  parent: 'Eltern',
+  other: 'Sonstiges',
+}
 
-export default function CustomerForm({ customer, onSave, onCancel, saving }) {
+export default function CustomerForm({ customer, primaryCustomers = [], onSave, onCancel, saving }) {
   const [form, setForm] = useState(customer || {
     first_name: '',
     last_name: '',
@@ -26,6 +33,9 @@ export default function CustomerForm({ customer, onSave, onCancel, saving }) {
     risk_profile: 'medium',
     customer_type: 'private',
     status: 'active',
+    is_family_member: false,
+    primary_customer_id: '',
+    family_role: 'primary',
     notes: '',
   })
 
@@ -38,6 +48,56 @@ export default function CustomerForm({ customer, onSave, onCancel, saving }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Family Member Selection */}
+      <div>
+        <Label>Kundentyp</Label>
+        <Select
+          value={form.is_family_member ? 'member' : 'primary'}
+          onValueChange={(v) => {
+            set('is_family_member', v === 'member')
+            if (v === 'primary') {
+              set('primary_customer_id', '')
+              set('family_role', 'primary')
+            }
+          }}
+        >
+          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="primary">Hauptkunde</SelectItem>
+            <SelectItem value="member">Familienmitglied</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {form.is_family_member && (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Hauptkunde *</Label>
+            <Select value={form.primary_customer_id} onValueChange={v => set('primary_customer_id', v)}>
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {primaryCustomers.map(c => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.first_name} {c.last_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Rolle in Familie</Label>
+            <Select value={form.family_role} onValueChange={v => set('family_role', v)}>
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(FAMILY_ROLES).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Vorname *</Label>

@@ -4,11 +4,20 @@
   "properties": {
     "customer_id": {
       "type": "string",
-      "description": "Kunden-ID"
+      "description": "Kunden-ID (Hauptkunde oder Familienmitglied)"
     },
     "customer_name": {
       "type": "string",
       "description": "Kundenname (Display)"
+    },
+    "primary_customer_id": {
+      "type": "string",
+      "description": "ID des Hauptkunden (f\u00fcr \u00dcbersicht)"
+    },
+    "is_family_member": {
+      "type": "boolean",
+      "default": false,
+      "description": "Vertrag geh\u00f6rt zu Familienmitglied"
     },
     "insurer": {
       "type": "string",

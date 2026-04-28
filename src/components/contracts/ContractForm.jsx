@@ -8,7 +8,7 @@ import { DialogFooter } from '@/components/ui/dialog'
 
 const INSURANCE_TYPES = ['life', 'health', 'property', 'liability', 'motor', 'other']
 
-export default function ContractForm({ contract, customers, onSave, onCancel, saving }) {
+export default function ContractForm({ contract, customers = [], onSave, onCancel, saving }) {
   const [form, setForm] = useState(contract || {
     customer_id: '',
     insurer: '',
@@ -28,11 +28,16 @@ export default function ContractForm({ contract, customers, onSave, onCancel, sa
   const selectedCustomer = customers.find(c => c.id === form.customer_id)
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
 
+  // Gruppiere Kunden (Hauptkunden mit ihren Familienmitgliedern)
+  const primaryCustomers = customers.filter(c => !c.is_family_member)
+
   const handleSubmit = (e) => {
     e.preventDefault()
     onSave({
       ...form,
       customer_name: selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : '',
+      primary_customer_id: selectedCustomer?.is_family_member ? selectedCustomer.primary_customer_id : selectedCustomer?.id,
+      is_family_member: selectedCustomer?.is_family_member || false,
       premium_monthly: form.premium_monthly ? Number(form.premium_monthly) : undefined,
       premium_yearly: form.premium_yearly ? Number(form.premium_yearly) : undefined,
       commission_rate: form.commission_rate ? Number(form.commission_rate) : undefined,
@@ -46,11 +51,23 @@ export default function ContractForm({ contract, customers, onSave, onCancel, sa
         <Select value={form.customer_id} onValueChange={v => set('customer_id', v)}>
           <SelectTrigger className="mt-1"><SelectValue placeholder="Kunde auswählen" /></SelectTrigger>
           <SelectContent>
-            {customers.map(c => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.first_name} {c.last_name}
-              </SelectItem>
-            ))}
+            {primaryCustomers.map(primary => {
+              const isMember = customers.some(c => c.primary_customer_id === primary.id)
+              const familyMembers = customers.filter(c => c.primary_customer_id === primary.id)
+
+              return (
+                <div key={primary.id}>
+                  <SelectItem value={primary.id}>
+                    {primary.first_name} {primary.last_name} (Hauptkunde)
+                  </SelectItem>
+                  {familyMembers.map(member => (
+                    <SelectItem key={member.id} value={member.id} className="pl-8">
+                      └ {member.first_name} {member.last_name} ({member.family_role})
+                    </SelectItem>
+                  ))}
+                </div>
+              )
+            })}
           </SelectContent>
         </Select>
       </div>

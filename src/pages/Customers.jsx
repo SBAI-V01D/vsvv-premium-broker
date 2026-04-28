@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Search, MoreHorizontal, Edit, Trash2 } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, Edit, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,7 @@ export default function Customers() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
+  const [expandedFamily, setExpandedFamily] = useState(null)
   const queryClient = useQueryClient()
 
   const { data: customers = [] } = useQuery({
@@ -45,9 +46,14 @@ export default function Customers() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['customers'] }),
   })
 
-  const filtered = customers.filter(c =>
+  // Filtere nur Hauptkunden
+  const primaryCustomers = customers.filter(c => !c.is_family_member)
+  
+  const filtered = primaryCustomers.filter(c =>
     `${c.first_name} ${c.last_name} ${c.email}`.toLowerCase().includes(search.toLowerCase())
   )
+
+  const getFamilyMembers = (primaryId) => customers.filter(c => c.primary_customer_id === primaryId)
 
   const handleSave = (data) => {
     if (editing) {
@@ -62,7 +68,7 @@ export default function Customers() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold">Kunden</h1>
-          <p className="text-muted-foreground mt-1">{customers.length} Kunden insgesamt</p>
+          <p className="text-muted-foreground mt-1">{primaryCustomers.length} Hauptkunden</p>
         </div>
         <Button onClick={() => { setEditing(null); setShowForm(true); }}>
           <Plus className="w-4 h-4 mr-2" /> Neuer Kunde
@@ -83,77 +89,126 @@ export default function Customers() {
 
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead className="hidden md:table-cell">E-Mail</TableHead>
-                <TableHead className="hidden md:table-cell">Stadt</TableHead>
-                <TableHead className="hidden lg:table-cell">Rolle</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-10"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    Keine Kunden gefunden
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map(customer => (
-                  <TableRow key={customer.id} className="hover:bg-muted/50">
-                    <TableCell className="font-medium">
-                      <Link to={`/kunden/${customer.id}`} className="hover:text-primary">
-                        {customer.first_name} {customer.last_name}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">{customer.email}</TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">{customer.city || '–'}</TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm capitalize">
-                      {customer.family_role === 'primary' ? 'Hauptkunde' : 'Familienmitglied'}
-                    </TableCell>
-                    <TableCell className="text-sm capitalize">{customer.status}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
-                            <Edit className="w-4 h-4 mr-2" /> Bearbeiten
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => {
-                              if (confirm('Kunde wirklich löschen?')) {
-                                deleteMutation.mutate(customer.id)
-                              }
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" /> Löschen
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <div className="space-y-0">
+            {filtered.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Keine Kunden gefunden
+              </div>
+            ) : (
+              filtered.map(customer => {
+                const familyMembers = getFamilyMembers(customer.id)
+                const isExpanded = expandedFamily === customer.id
+
+                return (
+                  <div key={customer.id}>
+                    <div className="border-b border-border last:border-0 hover:bg-muted/50">
+                      <div className="p-4 flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0 flex items-center gap-3">
+                          {familyMembers.length > 0 && (
+                            <button
+                              onClick={() => setExpandedFamily(isExpanded ? null : customer.id)}
+                              className="flex-shrink-0 p-1"
+                            >
+                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </button>
+                          )}
+                          <Link to={`/kunden/${customer.id}`} className="flex-1 min-w-0 hover:text-primary">
+                            <p className="font-medium">{customer.first_name} {customer.last_name}</p>
+                            <p className="text-xs text-muted-foreground">{customer.email}</p>
+                          </Link>
+                        </div>
+
+                        <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground flex-shrink-0">
+                          <span>{customer.city}</span>
+                        </div>
+
+                        {familyMembers.length > 0 && (
+                          <div className="hidden lg:flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded flex-shrink-0">
+                            {familyMembers.length} Familienmitglieder
+                          </div>
+                        )}
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
+                              <Edit className="w-4 h-4 mr-2" /> Bearbeiten
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => {
+                                if (confirm('Kunde und alle Familienmitglieder löschen?')) {
+                                  deleteMutation.mutate(customer.id)
+                                }
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" /> Löschen
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+
+                      {/* Family Members */}
+                      {isExpanded && familyMembers.length > 0 && (
+                        <div className="bg-slate-50 border-t border-border">
+                          {familyMembers.map(member => (
+                            <div key={member.id} className="p-4 pl-12 border-b border-border last:border-0 flex items-center justify-between gap-4 hover:bg-slate-100">
+                              <Link to={`/kunden/${member.id}`} className="flex-1 min-w-0 hover:text-primary">
+                                <p className="font-medium text-sm">{member.first_name} {member.last_name}</p>
+                                <p className="text-xs text-muted-foreground">{member.family_role}</p>
+                              </Link>
+
+                              <div className="hidden md:flex text-sm text-muted-foreground flex-shrink-0">
+                                {member.city}
+                              </div>
+
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => { setEditing(member); setShowForm(true); }}>
+                                    <Edit className="w-4 h-4 mr-2" /> Bearbeiten
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-destructive"
+                                    onClick={() => {
+                                      if (confirm('Familienmitglied löschen?')) {
+                                        deleteMutation.mutate(member.id)
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" /> Löschen
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
         </CardContent>
       </Card>
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing ? 'Kunde bearbeiten' : 'Neuer Kunde'}</DialogTitle>
+            <DialogTitle>{editing ? (editing.is_family_member ? 'Familienmitglied bearbeiten' : 'Kunde bearbeiten') : 'Neuer Kunde'}</DialogTitle>
           </DialogHeader>
           <CustomerForm
             customer={editing}
+            primaryCustomers={primaryCustomers}
             onSave={handleSave}
             onCancel={() => { setShowForm(false); setEditing(null); }}
             saving={createMutation.isPending || updateMutation.isPending}
