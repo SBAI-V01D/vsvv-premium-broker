@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Phone, Mail, MapPin, Calendar, FileText, MessageSquare, Edit } from 'lucide-react';
+import { ArrowLeft, Plus, Phone, Mail, MapPin, Calendar, FileText, MessageSquare, Edit, Folder } from 'lucide-react';
+import DocumentsTab from '../components/documents/DocumentsTab';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -38,6 +39,12 @@ export default function CustomerDetail() {
   const { data: interactions = [] } = useQuery({
     queryKey: ['interactions', customerId],
     queryFn: () => base44.entities.Interaction.filter({ customer_id: customerId }, '-created_date'),
+    enabled: !!customerId,
+  });
+
+  const { data: claims = [] } = useQuery({
+    queryKey: ['claims', customerId],
+    queryFn: () => base44.entities.Claim.filter({ customer_id: customerId }),
     enabled: !!customerId,
   });
 
@@ -114,10 +121,6 @@ export default function CustomerDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="contracts">
-        <TabsList>
-          <TabsTrigger value="contracts"><FileText className="w-4 h-4 mr-1" /> Verträge ({contracts.length})</TabsTrigger>
-          <TabsTrigger value="interactions"><MessageSquare className="w-4 h-4 mr-1" /> Verlauf ({interactions.length})</TabsTrigger>
-        </TabsList>
         <TabsContent value="contracts" className="mt-4">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-sm font-semibold text-muted-foreground">Versicherungsverträge</h3>
@@ -166,6 +169,15 @@ export default function CustomerDetail() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="documents" className="mt-4">
+          <DocumentsTab
+            customerId={customerId}
+            customerName={displayName}
+            contracts={contracts}
+            claims={claims}
+          />
         </TabsContent>
       </Tabs>
 
