@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Plus, Search, Filter, MoreHorizontal, Trash2, Edit, Download, FileText } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Trash2, Edit, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,7 +64,7 @@ export default function Customers() {
   };
 
   const exportPDF = (customer) => {
-    const doc = new (window.jsPDF || require('jspdf')).jsPDF();
+    const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
