@@ -31,6 +31,21 @@ export default function CustomerDetail() {
     enabled: !!id,
   })
 
+  const { data: messages = [] } = useQuery({
+    queryKey: ['messages', id],
+    queryFn: () => base44.entities.Message.filter({ customer_id: id }),
+    enabled: !!id,
+  })
+
+  const { data: allCustomers = [] } = useQuery({
+    queryKey: ['customers'],
+    queryFn: () => base44.entities.Customer.list(),
+  })
+
+  const familyMembers = allCustomers.filter(c => 
+    c.primary_customer_id === id || (c.is_family_member === false && c.id === id)
+  )
+
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Customer.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setShowEdit(false); },
@@ -88,6 +103,8 @@ export default function CustomerDetail() {
         <TabsList className="mb-4">
           <TabsTrigger value="contracts">Verträge ({contracts.length})</TabsTrigger>
           <TabsTrigger value="applications">Anträge ({applications.length})</TabsTrigger>
+          <TabsTrigger value="family">Familie ({familyMembers.length - 1})</TabsTrigger>
+          <TabsTrigger value="messages">Kommunikation ({messages.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="contracts">
@@ -141,6 +158,62 @@ export default function CustomerDetail() {
                         <p className="text-sm text-muted-foreground capitalize">{a.status}</p>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="family">
+          {familyMembers.length <= 1 ? (
+            <Card>
+              <CardContent className="p-6 text-center text-muted-foreground">
+                Keine Familienmitglieder vorhanden
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {familyMembers.filter(m => m.id !== id).map(member => (
+                <Card key={member.id}>
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-medium">{member.first_name} {member.last_name}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{member.email} • {member.family_role}</p>
+                        <p className="text-xs text-muted-foreground mt-2">{member.city}, {member.canton}</p>
+                      </div>
+                      <a href={`/kunden/${member.id}`} className="text-primary hover:underline text-sm font-medium">
+                        Öffnen →
+                      </a>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="messages">
+          {messages.length === 0 ? (
+            <Card>
+              <CardContent className="p-6 text-center text-muted-foreground">
+                Keine Kommunikation vorhanden
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {messages.map(msg => (
+                <Card key={msg.id}>
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="font-medium text-sm">{msg.sender_name}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(msg.created_date).toLocaleDateString('de-CH')}</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">{msg.content}</p>
+                    {msg.reference_title && (
+                      <p className="text-xs bg-muted p-2 rounded">📎 Bezug: {msg.reference_title}</p>
+                    )}
                   </CardContent>
                 </Card>
               ))}
