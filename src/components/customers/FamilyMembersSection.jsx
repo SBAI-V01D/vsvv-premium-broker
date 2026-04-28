@@ -162,14 +162,14 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
       </CardContent>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" onPointerDown={(e) => e.stopPropagation()}>
           <DialogHeader>
             <DialogTitle>
               {editingId ? 'Familienmitglied bearbeiten' : 'Familienmitglied hinzufügen'}
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSave} className="space-y-4">
+          <form onSubmit={handleSave} className="space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Vorname *</Label>
