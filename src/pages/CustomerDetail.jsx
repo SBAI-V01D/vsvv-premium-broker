@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Phone, Mail, MapPin, Calendar, FileText, MessageSquare, Edit, Folder, Activity } from 'lucide-react';
+import { ArrowLeft, Plus, Phone, Mail, MapPin, Calendar, FileText, MessageSquare, Edit, Folder, Activity, ClipboardList } from 'lucide-react';
 import DocumentsTab from '../components/documents/DocumentsTab';
+import CustomerFormulare from '../components/customers/CustomerFormulare';
 import ContractDetailCard from '../components/contracts/ContractDetailCard';
 import ActivityFeed from '../components/customers/ActivityFeed';
 import ContractSummary from '../components/customers/ContractSummary';
@@ -150,6 +151,7 @@ export default function CustomerDetail() {
           <TabsTrigger value="contracts">Verträge ({contracts.length})</TabsTrigger>
           <TabsTrigger value="interactions">Interaktionen ({interactions.length})</TabsTrigger>
           <TabsTrigger value="documents">Dokumente</TabsTrigger>
+          <TabsTrigger value="formulare"><ClipboardList className="w-3.5 h-3.5 mr-1" />Formulare</TabsTrigger>
         </TabsList>
         <TabsContent value="activity" className="mt-4">
           <ActivityFeed
@@ -179,7 +181,7 @@ export default function CustomerDetail() {
             <p className="text-sm text-muted-foreground py-4">Keine Verträge vorhanden</p>
           ) : (
             <div className="space-y-2">
-              {contracts.map(c => <ContractDetailCard key={c.id} contract={c} />)}
+              {contracts.map(c => <ContractDetailCard key={c.id} contract={c} customerId={customerId} customerName={displayName} />)}
             </div>
           )}
         </TabsContent>
@@ -217,6 +219,10 @@ export default function CustomerDetail() {
             contracts={contracts}
             claims={claims}
           />
+        </TabsContent>
+
+        <TabsContent value="formulare" className="mt-4">
+          <CustomerFormulare customerId={customerId} customerName={displayName} />
         </TabsContent>
       </Tabs>
 

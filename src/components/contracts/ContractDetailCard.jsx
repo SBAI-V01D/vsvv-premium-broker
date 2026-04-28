@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronUp, Calendar, Hash, AlertTriangle, TrendingUp, FileText } from 'lucide-react';
 import { format, differenceInDays, addMonths } from 'date-fns';
 import StatusBadge from '../shared/StatusBadge';
+import ContractDocuments from './ContractDocuments';
 
 const insuranceIcons = {
   KVG: '🏥', VVG: '🏥', Leben: '❤️', Haftpflicht: '🛡️', Hausrat: '🏠',
@@ -11,7 +12,7 @@ const insuranceIcons = {
   Krankentaggeld: '📋', BVG: '💼', 'Säule 3a': '💰', Sonstige: '📄',
 };
 
-export default function ContractDetailCard({ contract }) {
+export default function ContractDetailCard({ contract, customerId, customerName }) {
   const [expanded, setExpanded] = useState(false);
 
   const today = new Date();
@@ -125,22 +126,11 @@ export default function ContractDetailCard({ contract }) {
           )}
 
           {/* Dokumente */}
-          {contract.documents?.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
-                <FileText className="w-3.5 h-3.5" /> Dokumente
-              </p>
-              <div className="space-y-1.5">
-                {contract.documents.map((doc, i) => (
-                  <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-primary hover:underline bg-white border border-border rounded-lg px-3 py-2">
-                    <FileText className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="flex-1 truncate">{doc.name}</span>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
+          <ContractDocuments
+            contractId={contract.id}
+            customerId={customerId || contract.customer_id}
+            customerName={customerName || contract.customer_name}
+          />
 
           {contract.notes && (
             <div className="bg-white border border-border rounded-lg p-3 text-sm text-muted-foreground">
