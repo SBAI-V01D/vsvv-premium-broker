@@ -11,6 +11,7 @@ import StatCard from '../components/shared/StatCard';
 import PageHeader from '../components/shared/PageHeader';
 import StatusBadge from '../components/shared/StatusBadge';
 import CustomerRequestsWidget from '../components/dashboard/CustomerRequestsWidget';
+import CommissionWidget from '../components/dashboard/CommissionWidget';
 
 const COLORS = ['hsl(215, 80%, 48%)', 'hsl(160, 60%, 45%)', 'hsl(30, 80%, 55%)', 'hsl(280, 65%, 60%)', 'hsl(340, 75%, 55%)'];
 
@@ -249,6 +250,12 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Commission Widget */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-4">Provisionsübersicht</h2>
+        <CommissionWidget />
       </div>
 
       {/* Customer Requests */}

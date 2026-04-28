@@ -1,0 +1,49 @@
+{
+  "name": "CommissionRate",
+  "type": "object",
+  "properties": {
+    "provider": {
+      "type": "string",
+      "description": "Versicherungsgesellschaft"
+    },
+    "insurance_type": {
+      "type": "string",
+      "enum": [
+        "KVG",
+        "VVG",
+        "Leben",
+        "Haftpflicht",
+        "Hausrat",
+        "Rechtsschutz",
+        "Motorfahrzeug",
+        "Geb\u00e4ude",
+        "Unfall",
+        "Krankentaggeld",
+        "BVG",
+        "S\u00e4ule 3a",
+        "Sonstige"
+      ],
+      "description": "Versicherungsart"
+    },
+    "commission_percentage": {
+      "type": "number",
+      "description": "Provisionssatz (%)",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Aktiv"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Bemerkungen"
+    }
+  },
+  "required": [
+    "provider",
+    "insurance_type",
+    "commission_percentage"
+  ]
+}

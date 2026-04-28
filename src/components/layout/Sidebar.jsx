@@ -21,6 +21,7 @@ const navItems = [
   { label: 'Performance', icon: TrendingUp, path: '/pipeline-performance' },
   { label: 'Wiedervorlage', icon: CalendarClock, path: '/wiedervorlage' },
   { label: 'E-Mail-Vorlagen', icon: Mail, path: '/email-templates' },
+  { label: 'Provisionssätze', icon: Wallet, path: '/provisionsstaetze' },
 ];
 
 export default function Sidebar({ onNavigate }) {
