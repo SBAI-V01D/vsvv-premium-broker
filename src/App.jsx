@@ -24,6 +24,7 @@ import PortalContracts from './pages/portal/PortalContracts';
 import PortalClaims from './pages/portal/PortalClaims';
 import PortalDocuments from './pages/portal/PortalDocuments';
 import PortalMessages from './pages/portal/PortalMessages';
+import PortalProfile from './pages/portal/PortalProfile';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -68,6 +69,7 @@ const AuthenticatedApp = () => {
         <Route path="schaden" element={<PortalClaims />} />
         <Route path="dokumente" element={<PortalDocuments />} />
         <Route path="nachrichten" element={<PortalMessages />} />
+        <Route path="profil" element={<PortalProfile />} />
       </Route>
 
       <Route path="*" element={<PageNotFound />} />

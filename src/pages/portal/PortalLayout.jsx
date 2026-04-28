@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Shield, FileText, AlertCircle, FolderOpen, MessageSquare, LogOut, Menu, X } from 'lucide-react';
+import { Shield, FileText, AlertCircle, FolderOpen, MessageSquare, LogOut, Menu, X, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 
 const navItems = [
   { label: 'Übersicht', icon: Shield, path: '/portal' },
+  { label: 'Mein Profil', icon: User, path: '/portal/profil' },
   { label: 'Meine Verträge', icon: FileText, path: '/portal/vertraege' },
   { label: 'Schadensmeldungen', icon: AlertCircle, path: '/portal/schaden' },
   { label: 'Dokumente', icon: FolderOpen, path: '/portal/dokumente' },

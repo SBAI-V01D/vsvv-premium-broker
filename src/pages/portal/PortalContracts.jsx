@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { Shield, ChevronDown, ChevronUp, Download, FileText, Calendar, Hash } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Shield, ChevronDown, ChevronUp, Download, FileText, Calendar, Hash, ExternalLink } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
 import PortalStatusBadge from '../../components/portal/PortalStatusBadge';
 import PortalPageHeader from '../../components/portal/PortalPageHeader';
@@ -14,15 +14,18 @@ const insuranceIcons = {
   Krankentaggeld: '📋', BVG: '💼', 'Säule 3a': '💰', Sonstige: '📄',
 };
 
-function ContractCard({ contract }) {
+function ContractCard({ contract, linkedDocs }) {
   const [expanded, setExpanded] = useState(false);
+
+  // Merge contract-embedded docs + Document entity docs
+  const allDocs = [
+    ...(contract.documents || []),
+    ...linkedDocs.map(d => ({ name: d.name, url: d.file_url })),
+  ];
 
   return (
     <Card className="overflow-hidden">
-      <button
-        className="w-full text-left"
-        onClick={() => setExpanded(!expanded)}
-      >
+      <button className="w-full text-left" onClick={() => setExpanded(!expanded)}>
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -76,15 +79,16 @@ function ContractCard({ contract }) {
             </div>
           )}
 
-          {contract.documents?.length > 0 && (
+          {allDocs.length > 0 && (
             <div>
               <p className="text-xs font-medium text-muted-foreground mb-2">DOKUMENTE</p>
-              <div className="space-y-1">
-                {contract.documents.map((doc, i) => (
+              <div className="space-y-1.5">
+                {allDocs.map((doc, i) => (
                   <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-primary hover:underline">
-                    <Download className="w-3.5 h-3.5" />
-                    {doc.name}
+                    className="flex items-center gap-2 text-sm text-primary hover:underline bg-white border border-border rounded-lg px-3 py-2">
+                    <Download className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="flex-1 truncate">{doc.name}</span>
+                    <ExternalLink className="w-3 h-3 opacity-50" />
                   </a>
                 ))}
               </div>
@@ -112,7 +116,14 @@ export default function PortalContracts() {
     enabled: !!user?.id,
   });
 
+  const { data: documents = [] } = useQuery({
+    queryKey: ['portal-documents', user?.id],
+    queryFn: () => base44.entities.Document.filter({ customer_id: user?.id }),
+    enabled: !!user?.id,
+  });
+
   const filtered = filter === 'all' ? contracts : contracts.filter(c => c.status === filter);
+  const getContractDocs = (contractId) => documents.filter(d => d.linked_contract_id === contractId);
 
   return (
     <div>
@@ -142,7 +153,7 @@ export default function PortalContracts() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {filtered.map(c => <ContractCard key={c.id} contract={c} />)}
+          {filtered.map(c => <ContractCard key={c.id} contract={c} linkedDocs={getContractDocs(c.id)} />)}
         </div>
       )}
     </div>
