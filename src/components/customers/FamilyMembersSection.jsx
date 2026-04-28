@@ -46,7 +46,8 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
     setShowDialog(true);
   };
 
-  const handleSave = () => {
+  const handleSave = (e) => {
+    e?.preventDefault();
     if (!form.first_name || !form.last_name || !form.relationship) {
       alert('Vorname, Nachname und Verwandtschaftsverhältnis sind erforderlich');
       return;
@@ -68,6 +69,8 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
 
     onUpdate(updated);
     setShowDialog(false);
+    setForm({ first_name: '', last_name: '', relationship: '', birthdate: '', email: '' });
+    setEditingMember(null);
   };
 
   const handleDelete = (id) => {
@@ -138,9 +141,7 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
         )}
       </CardContent>
 
-      <Dialog open={showDialog} onOpenChange={(open) => {
-        if (!open) setShowDialog(false);
-      }}>
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -148,10 +149,7 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
             </DialogTitle>
           </DialogHeader>
           <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSave();
-            }}
+            onSubmit={handleSave}
             className="space-y-4"
           >
             <div className="grid grid-cols-2 gap-3">
