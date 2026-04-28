@@ -49,7 +49,7 @@ export default function ContractDetailCard({ contract, customerId, customerName 
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
               <div className="text-right hidden sm:block">
-                <p className="font-bold text-sm">CHF {contract.premium_monthly?.toLocaleString('de-CH') ?? '–'}</p>
+                <p className="font-bold text-sm">CHF {contract.premium_monthly != null ? contract.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '–'}</p>
                 <p className="text-xs text-muted-foreground">/ Monat</p>
               </div>
               {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
@@ -68,11 +68,11 @@ export default function ContractDetailCard({ contract, customerId, customerName 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-white rounded-lg border border-border p-3">
                 <p className="text-xs text-muted-foreground">Monatsprämie</p>
-                <p className="font-semibold text-sm mt-0.5">CHF {contract.premium_monthly?.toLocaleString('de-CH') ?? '–'}</p>
+                <p className="font-semibold text-sm mt-0.5">CHF {contract.premium_monthly != null ? contract.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '–'}</p>
               </div>
               <div className="bg-white rounded-lg border border-border p-3">
                 <p className="text-xs text-muted-foreground">Jahresprämie</p>
-                <p className="font-semibold text-sm mt-0.5">CHF {contract.premium_yearly?.toLocaleString('de-CH') ?? '–'}</p>
+                <p className="font-semibold text-sm mt-0.5">CHF {contract.premium_yearly != null ? contract.premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '–'}</p>
               </div>
               <div className="bg-white rounded-lg border border-border p-3 col-span-2 sm:col-span-2">
                 <p className="text-xs text-muted-foreground flex items-center gap-1"><Hash className="w-3 h-3" /> Policen-Nummer</p>
