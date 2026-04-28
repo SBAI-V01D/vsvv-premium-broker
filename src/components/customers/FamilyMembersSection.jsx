@@ -19,7 +19,7 @@ const RELATIONSHIPS = {
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
-  const [members, setMembers] = useState(familyMembers);
+  const [members, setMembers] = useState(familyMembers || []);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
@@ -45,9 +45,9 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
     if (member) {
       setEditingId(member.id);
       setFormData({
-        first_name: member.first_name,
-        last_name: member.last_name,
-        relationship: member.relationship,
+        first_name: member.first_name || '',
+        last_name: member.last_name || '',
+        relationship: member.relationship || '',
         birthdate: member.birthdate || '',
         email: member.email || '',
       });
@@ -59,13 +59,13 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
 
   const closeDialog = () => {
     setIsDialogOpen(false);
-    resetForm();
+    setTimeout(resetForm, 100);
   };
 
   const handleSave = (e) => {
     e.preventDefault();
 
-    if (!formData.first_name || !formData.last_name || !formData.relationship) {
+    if (!formData.first_name.trim() || !formData.last_name.trim() || !formData.relationship.trim()) {
       alert('Vorname, Nachname und Verwandtschaftsverhältnis sind erforderlich');
       return;
     }
@@ -99,7 +99,7 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
           <CardTitle className="text-base flex items-center gap-2">
             <Users className="w-4 h-4" /> Familienmitglieder
           </CardTitle>
-          <Button size="sm" onClick={() => openDialog()} className="gap-1">
+          <Button size="sm" onClick={() => openDialog()} type="button" className="gap-1">
             <Plus className="w-4 h-4" /> Hinzufügen
           </Button>
         </div>
@@ -119,7 +119,7 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
                   <p className="font-medium text-sm">
                     {member.first_name} {member.last_name}
                   </p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
                     <span className="bg-primary/10 text-primary px-2 py-0.5 rounded">
                       {RELATIONSHIPS[member.relationship] || member.relationship}
                     </span>
@@ -136,6 +136,7 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
                     size="sm"
                     variant="outline"
                     onClick={() => openDialog(member)}
+                    type="button"
                     className="w-9 h-9 p-0"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
@@ -144,6 +145,7 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
                     size="sm"
                     variant="outline"
                     onClick={() => handleDelete(member.id)}
+                    type="button"
                     className="w-9 h-9 p-0 text-destructive"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -156,7 +158,7 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
       </CardContent>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {editingId ? 'Familienmitglied bearbeiten' : 'Familienmitglied hinzufügen'}
@@ -171,6 +173,7 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
                   value={formData.first_name}
                   onChange={(e) => setFormData(p => ({ ...p, first_name: e.target.value }))}
                   className="mt-1"
+                  type="text"
                   required
                 />
               </div>
@@ -180,6 +183,7 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
                   value={formData.last_name}
                   onChange={(e) => setFormData(p => ({ ...p, last_name: e.target.value }))}
                   className="mt-1"
+                  type="text"
                   required
                 />
               </div>
@@ -224,7 +228,7 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={closeDialog}>
                 Abbrechen
               </Button>
