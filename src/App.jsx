@@ -18,6 +18,7 @@ import Claims from './pages/Claims';
 import Notifications from './pages/Notifications';
 import Marketing from './pages/Marketing';
 import Pipeline from './pages/Pipeline';
+import PipelinePerformance from './pages/PipelinePerformance';
 
 // Customer Portal
 import PortalRoot from './pages/portal/PortalRoot';
@@ -65,6 +66,7 @@ const AuthenticatedApp = () => {
         <Route path="/benachrichtigungen" element={<Notifications />} />
         <Route path="/marketing" element={<Marketing />} />
         <Route path="/pipeline" element={<Pipeline />} />
+        <Route path="/pipeline-performance" element={<PipelinePerformance />} />
       </Route>
       {/* Customer Portal – separate layout, no broker sidebar */}
       <Route path="/portal" element={<PortalRoot />}>
