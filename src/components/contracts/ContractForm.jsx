@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { DialogFooter } from '@/components/ui/dialog';
+import { FileUp } from 'lucide-react';
+import ContractOCRUploader from './ContractOCRUploader';
 
 const INSURANCE_TYPES = ['KVG', 'VVG', 'Leben', 'Haftpflicht', 'Hausrat', 'Rechtsschutz', 'Motorfahrzeug', 'Gebäude', 'Unfall', 'Krankentaggeld', 'BVG', 'Säule 3a', 'Sonstige'];
 const PROVIDERS = ['CSS', 'Helsana', 'Swica', 'Visana', 'Concordia', 'Sanitas', 'Groupe Mutuel', 'Sympany', 'Zurich', 'AXA', 'Helvetia', 'Mobiliar', 'Allianz', 'Generali', 'Baloise', 'Swiss Life', 'Vaudoise', 'Andere'];
@@ -24,8 +26,20 @@ export default function ContractForm({ contract, customers, onSave, onCancel, sa
     status: 'aktiv',
     notes: '',
   });
+  const [showOCR, setShowOCR] = useState(false);
 
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
+  
+  const handleOCRExtract = (extractedData) => {
+    set('insurance_type', extractedData.insurance_type || form.insurance_type);
+    set('provider', extractedData.provider || form.provider);
+    set('policy_number', extractedData.policy_number || form.policy_number);
+    set('premium_monthly', extractedData.premium_monthly || form.premium_monthly);
+    set('premium_yearly', extractedData.premium_yearly || form.premium_yearly);
+    set('start_date', extractedData.start_date || form.start_date);
+    set('end_date', extractedData.end_date || form.end_date);
+    set('cancellation_deadline', extractedData.cancellation_deadline || form.cancellation_deadline);
+  };
 
   const handleCustomerChange = (id) => {
     const c = customers.find(c => c.id === id);
@@ -53,6 +67,18 @@ export default function ContractForm({ contract, customers, onSave, onCancel, sa
           </SelectContent>
         </Select>
       </div>
+
+      {form.customer_id && (
+        <Button 
+          type="button" 
+          variant="outline" 
+          className="w-full"
+          onClick={() => setShowOCR(true)}
+        >
+          <FileUp className="w-4 h-4 mr-2" />
+          Daten aus PDF auslesen
+        </Button>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -128,6 +154,14 @@ export default function ContractForm({ contract, customers, onSave, onCancel, sa
         <Button type="button" variant="outline" onClick={onCancel}>Abbrechen</Button>
         <Button type="submit" disabled={saving}>{saving ? 'Speichern...' : (contract ? 'Aktualisieren' : 'Erstellen')}</Button>
       </DialogFooter>
+
+      {showOCR && (
+        <ContractOCRUploader 
+          customerId={form.customer_id}
+          onExtractedData={handleOCRExtract}
+          onClose={() => setShowOCR(false)}
+        />
+      )}
     </form>
   );
 }
