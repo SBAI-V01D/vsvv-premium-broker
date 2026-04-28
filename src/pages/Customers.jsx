@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Link } from 'react-router-dom';
-import { Plus, Search, Filter, MoreHorizontal, Trash2, Edit, Eye, Users } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, Trash2, Edit, Download, FileText } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,13 +12,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import PageHeader from '../components/shared/PageHeader';
 import StatusBadge from '../components/shared/StatusBadge';
 import CustomerForm from '../components/customers/CustomerForm';
-import FamilyMembersSection from '../components/customers/FamilyMembersSection';
 
 export default function Customers() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [showFamilyMembers, setShowFamilyMembers] = useState(false);
-  const [editingCustomerId, setEditingCustomerId] = useState(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const queryClient = useQueryClient();
@@ -31,52 +27,29 @@ export default function Customers() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Customer.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setShowForm(false); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      setShowForm(false);
+      setEditing(null);
+    },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Customer.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setShowForm(false); setEditing(null); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      setShowForm(false);
+      setEditing(null);
+    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.functions.invoke('deleteCustomerWithContracts', { customer_id: id }),
+    mutationFn: (id) => base44.entities.Customer.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['customers'] }),
   });
 
-  // Erweitere Kundenliste um Familienmitglieder als separate Einträge
-  const expandedCustomers = customers.flatMap(c => {
-    const entries = [{ ...c, isMainCustomer: true, parentId: null }];
-    if (c.family_members && c.family_members.length > 0) {
-      c.family_members.forEach(fm => {
-        entries.push({
-          id: `${c.id}-${fm.id}`,
-          customer_id: c.id,
-          family_member_id: fm.id,
-          first_name: fm.first_name,
-          last_name: fm.last_name,
-          email: fm.email || c.email,
-          phone: c.phone,
-          mobile: c.mobile,
-          street: c.street,
-          zip_code: c.zip_code,
-          city: c.city,
-          canton: c.canton,
-          status: c.status,
-          customer_type: c.customer_type,
-          company_name: null,
-          isFamilyMember: true,
-          parentId: c.id,
-          parentName: `${c.first_name} ${c.last_name}`,
-          relationship: fm.relationship,
-        });
-      });
-    }
-    return entries;
-  });
-
-  const filtered = expandedCustomers.filter(c => {
-    const matchSearch = `${c.first_name} ${c.last_name} ${c.email} ${c.parentName || ''}`.toLowerCase().includes(search.toLowerCase());
+  const filtered = customers.filter(c => {
+    const matchSearch = `${c.first_name} ${c.last_name} ${c.email} ${c.company_name || ''}`.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === 'all' || c.status === filterStatus;
     return matchSearch && matchStatus;
   });
@@ -89,6 +62,96 @@ export default function Customers() {
     }
   };
 
+  const exportPDF = (customer) => {
+    const doc = new (window.jsPDF || require('jspdf')).jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    let yPos = margin;
+
+    // Titel
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text('Kundenübersicht', margin, yPos);
+    yPos += 12;
+
+    // Hauptdaten
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.text('Hauptkontakt', margin, yPos);
+    yPos += 8;
+
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(10);
+    const mainData = [
+      [`Name:`, `${customer.first_name} ${customer.last_name}`],
+      [`E-Mail:`, customer.email],
+      [`Telefon:`, customer.phone || '–'],
+      [`Mobil:`, customer.mobile || '–'],
+      [`Adresse:`, `${customer.street || '–'}, ${customer.zip_code || '–'} ${customer.city || '–'}`],
+      [`Kanton:`, customer.canton || '–'],
+      [`Geburtsdatum:`, customer.birthdate || '–'],
+      [`AHV-Nummer:`, customer.ahv_number || '–'],
+      [`Typ:`, customer.customer_type === 'geschaeft' ? 'Geschäft' : 'Privat'],
+      [`Status:`, customer.status],
+      [`Tags:`, customer.tags || '–'],
+    ];
+
+    mainData.forEach(([label, value]) => {
+      doc.text(`${label} ${value}`, margin + 2, yPos);
+      yPos += 6;
+    });
+
+    // Familienmitglieder
+    if (customer.family_members && customer.family_members.length > 0) {
+      yPos += 8;
+      if (yPos > pageHeight - 30) {
+        doc.addPage();
+        yPos = margin;
+      }
+
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('Familienmitglieder', margin, yPos);
+      yPos += 8;
+
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(9);
+
+      customer.family_members.forEach((fm, idx) => {
+        if (yPos > pageHeight - 30) {
+          doc.addPage();
+          yPos = margin;
+        }
+
+        doc.setFont(undefined, 'bold');
+        doc.text(`${idx + 1}. ${fm.first_name} ${fm.last_name}`, margin, yPos);
+        yPos += 6;
+
+        doc.setFont(undefined, 'normal');
+        const fmData = [
+          [`Verhältnis:`, fm.relationship || '–'],
+          [`Geburtsdatum:`, fm.birthdate || '–'],
+          [`E-Mail:`, fm.email || '–'],
+        ];
+
+        fmData.forEach(([label, value]) => {
+          doc.text(`${label} ${value}`, margin + 5, yPos);
+          yPos += 5;
+        });
+
+        yPos += 4;
+      });
+    }
+
+    // Footer
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Erstellt: ${new Date().toLocaleDateString('de-CH')}`, margin, pageHeight - 10);
+
+    doc.save(`Kunde_${customer.first_name}_${customer.last_name}.pdf`);
+  };
+
   return (
     <div>
       <PageHeader title="Kunden" subtitle={`${customers.length} Kunden insgesamt`}>
@@ -96,21 +159,6 @@ export default function Customers() {
           <Plus className="w-4 h-4 mr-2" /> Neuer Kunde
         </Button>
       </PageHeader>
-
-      {/* Family Members Dialog */}
-      <Dialog open={showFamilyMembers} onOpenChange={setShowFamilyMembers}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Familienmitglieder verwalten</DialogTitle>
-          </DialogHeader>
-          {editingCustomerId && (
-            <FamilyMembersSection
-              customerId={editingCustomerId}
-              familyMembers={customers.find(c => c.id === editingCustomerId)?.family_members || []}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -142,38 +190,31 @@ export default function Customers() {
                 <TableHead className="hidden md:table-cell">E-Mail</TableHead>
                 <TableHead className="hidden md:table-cell">Ort</TableHead>
                 <TableHead className="hidden lg:table-cell">Typ</TableHead>
+                <TableHead className="hidden lg:table-cell">Familie</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Laden...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Laden...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Keine Kunden gefunden</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Keine Kunden gefunden</TableCell></TableRow>
               ) : filtered.map(customer => (
-                <TableRow key={customer.id} className={`cursor-pointer hover:bg-muted/50 ${customer.isFamilyMember ? 'bg-slate-50' : ''}`}>
-                  <TableCell>
-                    <div className={customer.isFamilyMember ? 'pl-4' : ''}>
-                      {customer.isMainCustomer ? (
-                        <Link to={`/kunden/${customer.id}`} className="font-medium text-foreground hover:text-primary">
-                          {customer.first_name} {customer.last_name}
-                        </Link>
-                      ) : (
-                        <Link to={`/kunden/${customer.customer_id}`} className="font-medium text-foreground hover:text-primary">
-                          {customer.first_name} {customer.last_name}
-                        </Link>
-                      )}
-                      {customer.company_name && <p className="text-xs text-muted-foreground">{customer.company_name}</p>}
-                      {customer.isFamilyMember && (
-                        <p className="text-xs text-muted-foreground">→ {customer.parentName}</p>
-                      )}
-                    </div>
+                <TableRow key={customer.id} className="hover:bg-muted/50">
+                  <TableCell className="font-medium">
+                    {customer.first_name} {customer.last_name}
+                    {customer.company_name && <p className="text-xs text-muted-foreground">{customer.company_name}</p>}
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{customer.email}</TableCell>
-                  <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{customer.zip_code} {customer.city}</TableCell>
+                  <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+                    {customer.zip_code} {customer.city}
+                  </TableCell>
                   <TableCell className="hidden lg:table-cell text-sm">
                     {customer.customer_type === 'geschaeft' ? 'Geschäft' : 'Privat'}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm">
+                    {customer.family_members?.length || 0}
                   </TableCell>
                   <TableCell><StatusBadge status={customer.status} /></TableCell>
                   <TableCell>
@@ -184,31 +225,22 @@ export default function Customers() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link to={`/kunden/${customer.isMainCustomer ? customer.id : customer.customer_id}`}><Eye className="w-4 h-4 mr-2" /> Anzeigen</Link>
+                        <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
+                          <Edit className="w-4 h-4 mr-2" /> Bearbeiten
                         </DropdownMenuItem>
-                        {customer.isMainCustomer && (
-                          <>
-                            <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
-                              <Edit className="w-4 h-4 mr-2" /> Bearbeiten
-                            </DropdownMenuItem>
-                            {customer.customer_type === 'privat' && (
-                              <DropdownMenuItem onClick={() => { setEditingCustomerId(customer.id); setShowFamilyMembers(true); }}>
-                                <Users className="w-4 h-4 mr-2" /> Familie
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem 
-                              className="text-destructive" 
-                              onClick={() => {
-                                if (confirm('Kunde und alle zugehörigen Verträge löschen?')) {
-                                  deleteMutation.mutate(customer.id);
-                                }
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" /> Löschen
-                            </DropdownMenuItem>
-                          </>
-                        )}
+                        <DropdownMenuItem onClick={() => exportPDF(customer)}>
+                          <Download className="w-4 h-4 mr-2" /> PDF Export
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="text-destructive" 
+                          onClick={() => {
+                            if (confirm('Kunde löschen?')) {
+                              deleteMutation.mutate(customer.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" /> Löschen
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -221,7 +253,7 @@ export default function Customers() {
 
       {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? 'Kunde bearbeiten' : 'Neuer Kunde'}</DialogTitle>
           </DialogHeader>
