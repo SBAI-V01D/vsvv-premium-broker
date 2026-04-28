@@ -44,8 +44,39 @@ export default function Customers() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['customers'] }),
   });
 
-  const filtered = customers.filter(c => {
-    const matchSearch = `${c.first_name} ${c.last_name} ${c.email} ${c.company_name || ''}`.toLowerCase().includes(search.toLowerCase());
+  // Erweitere Kundenliste um Familienmitglieder als separate Einträge
+  const expandedCustomers = customers.flatMap(c => {
+    const entries = [{ ...c, isMainCustomer: true, parentId: null }];
+    if (c.family_members && c.family_members.length > 0) {
+      c.family_members.forEach(fm => {
+        entries.push({
+          id: `${c.id}-${fm.id}`,
+          customer_id: c.id,
+          family_member_id: fm.id,
+          first_name: fm.first_name,
+          last_name: fm.last_name,
+          email: fm.email || c.email,
+          phone: c.phone,
+          mobile: c.mobile,
+          street: c.street,
+          zip_code: c.zip_code,
+          city: c.city,
+          canton: c.canton,
+          status: c.status,
+          customer_type: c.customer_type,
+          company_name: null,
+          isFamilyMember: true,
+          parentId: c.id,
+          parentName: `${c.first_name} ${c.last_name}`,
+          relationship: fm.relationship,
+        });
+      });
+    }
+    return entries;
+  });
+
+  const filtered = expandedCustomers.filter(c => {
+    const matchSearch = `${c.first_name} ${c.last_name} ${c.email} ${c.parentName || ''}`.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === 'all' || c.status === filterStatus;
     return matchSearch && matchStatus;
   });
@@ -121,12 +152,23 @@ export default function Customers() {
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Keine Kunden gefunden</TableCell></TableRow>
               ) : filtered.map(customer => (
-                <TableRow key={customer.id} className="cursor-pointer hover:bg-muted/50">
+                <TableRow key={customer.id} className={`cursor-pointer hover:bg-muted/50 ${customer.isFamilyMember ? 'bg-slate-50' : ''}`}>
                   <TableCell>
-                    <Link to={`/kunden/${customer.id}`} className="font-medium text-foreground hover:text-primary">
-                      {customer.first_name} {customer.last_name}
-                    </Link>
-                    {customer.company_name && <p className="text-xs text-muted-foreground">{customer.company_name}</p>}
+                    <div className={customer.isFamilyMember ? 'pl-4' : ''}>
+                      {customer.isMainCustomer ? (
+                        <Link to={`/kunden/${customer.id}`} className="font-medium text-foreground hover:text-primary">
+                          {customer.first_name} {customer.last_name}
+                        </Link>
+                      ) : (
+                        <Link to={`/kunden/${customer.customer_id}`} className="font-medium text-foreground hover:text-primary">
+                          {customer.first_name} {customer.last_name}
+                        </Link>
+                      )}
+                      {customer.company_name && <p className="text-xs text-muted-foreground">{customer.company_name}</p>}
+                      {customer.isFamilyMember && (
+                        <p className="text-xs text-muted-foreground">→ {customer.parentName}</p>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{customer.email}</TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{customer.zip_code} {customer.city}</TableCell>
@@ -143,26 +185,30 @@ export default function Customers() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild>
-                          <Link to={`/kunden/${customer.id}`}><Eye className="w-4 h-4 mr-2" /> Anzeigen</Link>
+                          <Link to={`/kunden/${customer.isMainCustomer ? customer.id : customer.customer_id}`}><Eye className="w-4 h-4 mr-2" /> Anzeigen</Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
-                          <Edit className="w-4 h-4 mr-2" /> Bearbeiten
-                        </DropdownMenuItem>
-                        {customer.customer_type === 'privat' && (
-                          <DropdownMenuItem onClick={() => { setEditingCustomerId(customer.id); setShowFamilyMembers(true); }}>
-                            <Users className="w-4 h-4 mr-2" /> Familie
-                          </DropdownMenuItem>
+                        {customer.isMainCustomer && (
+                          <>
+                            <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
+                              <Edit className="w-4 h-4 mr-2" /> Bearbeiten
+                            </DropdownMenuItem>
+                            {customer.customer_type === 'privat' && (
+                              <DropdownMenuItem onClick={() => { setEditingCustomerId(customer.id); setShowFamilyMembers(true); }}>
+                                <Users className="w-4 h-4 mr-2" /> Familie
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem 
+                              className="text-destructive" 
+                              onClick={() => {
+                                if (confirm('Kunde und alle zugehörigen Verträge löschen?')) {
+                                  deleteMutation.mutate(customer.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" /> Löschen
+                            </DropdownMenuItem>
+                          </>
                         )}
-                        <DropdownMenuItem 
-                          className="text-destructive" 
-                          onClick={() => {
-                            if (confirm('Kunde und alle zugehörigen Verträge löschen?')) {
-                              deleteMutation.mutate(customer.id);
-                            }
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" /> Löschen
-                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
