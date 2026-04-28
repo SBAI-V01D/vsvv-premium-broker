@@ -195,6 +195,7 @@ export default function CustomerDetail() {
         <TabsList className="mb-2">
           <TabsTrigger value="activity"><Activity className="w-3.5 h-3.5 mr-1" />Aktivitäten</TabsTrigger>
           <TabsTrigger value="contracts">Verträge ({contracts.length})</TabsTrigger>
+          <TabsTrigger value="applications">Anträge ({applications.length})</TabsTrigger>
           <TabsTrigger value="interactions">Interaktionen ({interactions.length})</TabsTrigger>
           <TabsTrigger value="documents">Dokumente</TabsTrigger>
           <TabsTrigger value="formulare"><ClipboardList className="w-3.5 h-3.5 mr-1" />Formulare</TabsTrigger>
@@ -228,6 +229,37 @@ export default function CustomerDetail() {
           ) : (
             <div className="space-y-2">
               {contracts.map(c => <ContractDetailCard key={c.id} contract={c} customerId={customerId} customerName={displayName} familyMembers={customer.family_members || []} />)}
+            </div>
+          )}
+        </TabsContent>
+        <TabsContent value="applications" className="mt-4">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-semibold text-muted-foreground">Versicherungsanträge</h3>
+            <Button size="sm" asChild><Link to={`/antraege?customer=${customerId}`}><Plus className="w-4 h-4 mr-1" /> Antrag</Link></Button>
+          </div>
+          {applications.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">Keine Anträge vorhanden</p>
+          ) : (
+            <div className="space-y-2">
+              {applications.map(app => (
+                <Card key={app.id} className="p-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{app.insurance_type} - {app.provider}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Gew. Startdatum: {app.requested_start_date ? format(new Date(app.requested_start_date), 'dd.MM.yyyy') : '–'}
+                      </p>
+                      {app.notes && <p className="text-xs text-muted-foreground mt-1">{app.notes}</p>}
+                    </div>
+                    <div className="text-right">
+                      <StatusBadge status={app.status} />
+                      {app.estimated_premium_yearly && (
+                        <p className="text-xs text-muted-foreground mt-1">CHF {app.estimated_premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/J.</p>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))}
             </div>
           )}
         </TabsContent>
