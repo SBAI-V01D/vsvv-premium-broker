@@ -10,6 +10,10 @@
       "type": "string",
       "description": "Kundenname (Anzeige)"
     },
+    "family_member_id": {
+      "type": "string",
+      "description": "Familienmitglied-ID (optional, f\u00fcr Vertr\u00e4ge von Familienmitgliedern)"
+    },
     "insurance_type": {
       "type": "string",
       "enum": [

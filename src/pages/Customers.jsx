@@ -37,7 +37,7 @@ export default function Customers() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Customer.delete(id),
+    mutationFn: (id) => base44.functions.invoke('deleteCustomerWithContracts', { customer_id: id }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['customers'] }),
   });
 
@@ -130,7 +130,14 @@ export default function Customers() {
                         <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
                           <Edit className="w-4 h-4 mr-2" /> Bearbeiten
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate(customer.id)}>
+                        <DropdownMenuItem 
+                          className="text-destructive" 
+                          onClick={() => {
+                            if (confirm('Kunde und alle zugehörigen Verträge löschen?')) {
+                              deleteMutation.mutate(customer.id);
+                            }
+                          }}
+                        >
                           <Trash2 className="w-4 h-4 mr-2" /> Löschen
                         </DropdownMenuItem>
                       </DropdownMenuContent>

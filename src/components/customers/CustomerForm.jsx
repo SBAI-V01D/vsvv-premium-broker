@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { DialogFooter } from '@/components/ui/dialog';
+import FamilyMembersSection from './FamilyMembersSection';
 
 const CANTONS = ["AG","AI","AR","BE","BL","BS","FR","GE","GL","GR","JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG","TI","UR","VD","VS","ZG","ZH"];
 
@@ -29,13 +30,17 @@ export default function CustomerForm({ customer, onSave, onCancel, saving }) {
     tags: '',
     status: 'aktiv',
     notes: '',
+    family_members: customer?.family_members || [],
   });
-
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave({ ...form, income: form.income ? Number(form.income) : undefined });
+    onSave({ 
+      ...form, 
+      income: form.income ? Number(form.income) : undefined,
+      family_members: form.family_members
+    });
   };
 
   return (
@@ -152,6 +157,13 @@ export default function CustomerForm({ customer, onSave, onCancel, saving }) {
         <Label>Notizen</Label>
         <Textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={3} />
       </div>
+
+      {form.customer_type === 'privat' && (
+        <FamilyMembersSection 
+          familyMembers={form.family_members} 
+          onUpdate={(members) => set('family_members', members)} 
+        />
+      )}
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>Abbrechen</Button>

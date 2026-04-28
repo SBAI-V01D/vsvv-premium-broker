@@ -126,6 +126,52 @@
     "notes": {
       "type": "string",
       "description": "Notizen"
+    },
+    "family_members": {
+      "type": "array",
+      "description": "Familienmitglieder (nur f\u00fcr Privatkunden)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Eindeutige ID des Familienmitglieds"
+          },
+          "first_name": {
+            "type": "string",
+            "description": "Vorname"
+          },
+          "last_name": {
+            "type": "string",
+            "description": "Nachname"
+          },
+          "relationship": {
+            "type": "string",
+            "enum": [
+              "ehepartner",
+              "kind",
+              "parent",
+              "sibling",
+              "sonstiges"
+            ],
+            "description": "Verwandtschaftsverh\u00e4ltnis"
+          },
+          "birthdate": {
+            "type": "string",
+            "format": "date",
+            "description": "Geburtsdatum"
+          },
+          "email": {
+            "type": "string",
+            "description": "E-Mail-Adresse (optional)"
+          }
+        },
+        "required": [
+          "id",
+          "first_name",
+          "last_name"
+        ]
+      }
     }
   },
   "required": [
