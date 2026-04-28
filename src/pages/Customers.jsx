@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Plus, Search, Filter, MoreHorizontal, Trash2, Edit, Download } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -248,13 +249,15 @@ export default function Customers() {
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Keine Kunden gefunden</TableCell></TableRow>
               ) : filtered.map(customer => (
-                <TableRow key={customer.id} className={`hover:bg-muted/50 ${customer.isFamilyMember ? 'bg-slate-50' : ''}`}>
+                <TableRow key={customer.id} className={`hover:bg-muted/50 cursor-pointer ${customer.isFamilyMember ? 'bg-slate-50' : ''}`}>
                   <TableCell className={`font-medium ${customer.isFamilyMember ? 'pl-8' : ''}`}>
-                    {customer.first_name} {customer.last_name}
-                    {customer.company_name && <p className="text-xs text-muted-foreground">{customer.company_name}</p>}
-                    {customer.isFamilyMember && (
-                      <p className="text-xs text-muted-foreground">→ {customer.parentName} ({customer.relationship})</p>
-                    )}
+                    <Link to={`/kunden/${customer.id}`} className="hover:text-primary">
+                      {customer.first_name} {customer.last_name}
+                      {customer.company_name && <p className="text-xs text-muted-foreground">{customer.company_name}</p>}
+                      {customer.isFamilyMember && (
+                        <p className="text-xs text-muted-foreground">→ {customer.parentName} ({customer.relationship})</p>
+                      )}
+                    </Link>
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{customer.email}</TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
