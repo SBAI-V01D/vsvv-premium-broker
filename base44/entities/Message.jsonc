@@ -27,6 +27,24 @@
       "type": "boolean",
       "default": false,
       "description": "Gelesen"
+    },
+    "reference_id": {
+      "type": "string",
+      "description": "Bezug-ID (Vertrag / Anfrage)"
+    },
+    "reference_type": {
+      "type": "string",
+      "enum": [
+        "contract",
+        "interaction",
+        "general"
+      ],
+      "default": "general",
+      "description": "Bezugstyp"
+    },
+    "reference_title": {
+      "type": "string",
+      "description": "Anzeigename des Bezugs"
     }
   },
   "required": [
