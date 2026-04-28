@@ -19,6 +19,7 @@ const RELATIONSHIPS = {
 };
 
 function FamilyMembersSection({ familyMembers = [], onUpdate }) {
+  const [members, setMembers] = useState(familyMembers);
   const [showDialog, setShowDialog] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [form, setForm] = useState({
@@ -47,7 +48,7 @@ function FamilyMembersSection({ familyMembers = [], onUpdate }) {
   };
 
   const handleSave = (e) => {
-    e?.preventDefault();
+    e.preventDefault();
     if (!form.first_name || !form.last_name || !form.relationship) {
       alert('Vorname, Nachname und Verwandtschaftsverhältnis sind erforderlich');
       return;
@@ -55,18 +56,19 @@ function FamilyMembersSection({ familyMembers = [], onUpdate }) {
 
     let updated;
     if (editingMember) {
-      updated = familyMembers.map(m =>
+      updated = members.map(m =>
         m.id === editingMember.id
           ? { ...m, ...form }
           : m
       );
     } else {
       updated = [
-        ...familyMembers,
+        ...members,
         { id: generateId(), ...form },
       ];
     }
 
+    setMembers(updated);
     onUpdate(updated);
     setShowDialog(false);
     setForm({ first_name: '', last_name: '', relationship: '', birthdate: '', email: '' });
@@ -75,7 +77,9 @@ function FamilyMembersSection({ familyMembers = [], onUpdate }) {
 
   const handleDelete = (id) => {
     if (confirm('Familienmitglied löschen?')) {
-      onUpdate(familyMembers.filter(m => m.id !== id));
+      const updated = members.filter(m => m.id !== id);
+      setMembers(updated);
+      onUpdate(updated);
     }
   };
 
@@ -92,11 +96,11 @@ function FamilyMembersSection({ familyMembers = [], onUpdate }) {
         </div>
       </CardHeader>
       <CardContent>
-        {familyMembers.length === 0 ? (
+        {members.length === 0 ? (
           <p className="text-sm text-muted-foreground">Keine Familienmitglieder eingetragen</p>
         ) : (
           <div className="space-y-2">
-            {familyMembers.map(member => (
+            {members.map(member => (
               <div
                 key={member.id}
                 className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg border border-border"
