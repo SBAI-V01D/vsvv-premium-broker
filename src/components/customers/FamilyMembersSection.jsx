@@ -138,7 +138,9 @@ export default function FamilyMembersSection({ familyMembers = [], onUpdate }) {
         )}
       </CardContent>
 
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+      <Dialog open={showDialog} onOpenChange={(open) => {
+        if (!open) setShowDialog(false);
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
