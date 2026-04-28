@@ -136,6 +136,13 @@ export default function CustomerForm({ customer, onSave, onCancel, saving }) {
           <Input type="date" value={form.birthdate} onChange={e => set('birthdate', e.target.value)} />
         </div>
         <div>
+          <Label>AHV-Nummer</Label>
+          <Input value={form.ahv_number} onChange={e => set('ahv_number', e.target.value)} placeholder="z.B. 756.1234.5678.90" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
           <Label>Status</Label>
           <Select value={form.status} onValueChange={v => set('status', v)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
