@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Phone, Mail, MapPin, Calendar, FileText, MessageSquare, Edit, Folder } from 'lucide-react';
+import { ArrowLeft, Plus, Phone, Mail, MapPin, Calendar, FileText, MessageSquare, Edit, Folder, Activity } from 'lucide-react';
 import DocumentsTab from '../components/documents/DocumentsTab';
 import ContractDetailCard from '../components/contracts/ContractDetailCard';
+import ActivityFeed from '../components/customers/ActivityFeed';
+import ContractSummary from '../components/customers/ContractSummary';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -47,6 +49,24 @@ export default function CustomerDetail() {
     queryKey: ['claims', customerId],
     queryFn: () => base44.entities.Claim.filter({ customer_id: customerId }),
     enabled: !!customerId,
+  });
+
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['tasks', customerId],
+    queryFn: () => base44.entities.Task.filter({ customer_id: customerId }),
+    enabled: !!customerId,
+  });
+
+  const { data: messages = [] } = useQuery({
+    queryKey: ['messages', customerId],
+    queryFn: () => base44.entities.Message.filter({ customer_id: customerId }, '-created_date'),
+    enabled: !!customerId,
+  });
+
+  const { data: deals = [] } = useQuery({
+    queryKey: ['deals', customerId],
+    queryFn: () => base44.entities.Deal.filter({ customer_email: customer?.email }),
+    enabled: !!customer?.email,
   });
 
   const updateMutation = useMutation({
@@ -120,13 +140,26 @@ export default function CustomerDetail() {
         </Card>
       </div>
 
+      {/* Contract Summary */}
+      <ContractSummary contracts={contracts} />
+
       {/* Tabs */}
-      <Tabs defaultValue="contracts">
+      <Tabs defaultValue="activity">
         <TabsList className="mb-2">
+          <TabsTrigger value="activity"><Activity className="w-3.5 h-3.5 mr-1" />Aktivitäten</TabsTrigger>
           <TabsTrigger value="contracts">Verträge ({contracts.length})</TabsTrigger>
           <TabsTrigger value="interactions">Interaktionen ({interactions.length})</TabsTrigger>
           <TabsTrigger value="documents">Dokumente</TabsTrigger>
         </TabsList>
+        <TabsContent value="activity" className="mt-4">
+          <ActivityFeed
+            interactions={interactions}
+            tasks={tasks}
+            deals={deals}
+            messages={messages}
+            claims={claims}
+          />
+        </TabsContent>
         <TabsContent value="contracts" className="mt-4">
           <div className="flex justify-between items-center mb-3">
             <div>
