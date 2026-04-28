@@ -17,6 +17,7 @@ import Messages from './pages/Messages';
 import Claims from './pages/Claims';
 import Notifications from './pages/Notifications';
 import Marketing from './pages/Marketing';
+import Pipeline from './pages/Pipeline';
 
 // Customer Portal
 import PortalRoot from './pages/portal/PortalRoot';
@@ -63,6 +64,7 @@ const AuthenticatedApp = () => {
         <Route path="/schaden" element={<Claims />} />
         <Route path="/benachrichtigungen" element={<Notifications />} />
         <Route path="/marketing" element={<Marketing />} />
+        <Route path="/pipeline" element={<Pipeline />} />
       </Route>
       {/* Customer Portal – separate layout, no broker sidebar */}
       <Route path="/portal" element={<PortalRoot />}>

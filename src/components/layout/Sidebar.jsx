@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
-  MessageSquare, ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink, AlertCircle, Bell, Megaphone
+  MessageSquare, ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink, AlertCircle, Bell, Megaphone, Kanban
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -17,6 +17,7 @@ const navItems = [
   { label: 'Schadensmeldungen', icon: AlertCircle, path: '/schaden' },
   { label: 'Benachrichtigungen', icon: Bell, path: '/benachrichtigungen' },
   { label: 'Marketing', icon: Megaphone, path: '/marketing' },
+  { label: 'Pipeline', icon: Kanban, path: '/pipeline' },
 ];
 
 export default function Sidebar({ onNavigate }) {

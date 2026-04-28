@@ -1,0 +1,98 @@
+{
+  "name": "Deal",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Titel / Kurzbezeichnung"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Name des Interessenten / Kunden"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "E-Mail"
+    },
+    "customer_phone": {
+      "type": "string",
+      "description": "Telefon"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "erstkontakt",
+        "bedarfsanalyse",
+        "angebot_versendet",
+        "verhandlung",
+        "abschluss",
+        "verloren"
+      ],
+      "default": "erstkontakt",
+      "description": "Pipeline-Phase"
+    },
+    "insurance_type": {
+      "type": "string",
+      "enum": [
+        "KVG",
+        "VVG",
+        "Leben",
+        "Haftpflicht",
+        "Hausrat",
+        "Rechtsschutz",
+        "Motorfahrzeug",
+        "Geb\u00e4ude",
+        "Unfall",
+        "Krankentaggeld",
+        "BVG",
+        "S\u00e4ule 3a",
+        "Sonstige"
+      ],
+      "description": "Gew\u00fcnschte Versicherungsart"
+    },
+    "estimated_premium": {
+      "type": "number",
+      "description": "Gesch\u00e4tzte Jahrespr\u00e4mie (CHF)"
+    },
+    "probability": {
+      "type": "number",
+      "description": "Abschlusswahrscheinlichkeit (%)",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "assigned_broker": {
+      "type": "string",
+      "description": "Zust\u00e4ndiger Broker (E-Mail)"
+    },
+    "next_action": {
+      "type": "string",
+      "description": "N\u00e4chste Aktion"
+    },
+    "next_action_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Datum n\u00e4chste Aktion"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notizen"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "empfehlung",
+        "website",
+        "kaltakquise",
+        "event",
+        "marketing",
+        "sonstiges"
+      ],
+      "default": "sonstiges",
+      "description": "Quelle"
+    }
+  },
+  "required": [
+    "title",
+    "customer_name"
+  ]
+}
