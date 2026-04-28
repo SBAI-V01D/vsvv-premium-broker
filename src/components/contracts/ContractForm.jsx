@@ -35,11 +35,9 @@ export default function ContractForm({ contract, customers, onSave, onCancel, sa
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave({
-      ...form,
-      premium_monthly: form.premium_monthly ? Number(form.premium_monthly) : undefined,
-      premium_yearly: form.premium_yearly ? Number(form.premium_yearly) : undefined,
-    });
+    const monthly = form.premium_monthly ? Number(form.premium_monthly) : undefined;
+    const yearly = form.premium_yearly ? Number(form.premium_yearly) : (monthly ? Math.round(monthly * 12 * 100) / 100 : undefined);
+    onSave({ ...form, premium_monthly: monthly, premium_yearly: yearly });
   };
 
   return (
