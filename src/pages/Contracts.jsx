@@ -32,6 +32,27 @@ export default function Contracts() {
     queryFn: () => base44.entities.Customer.list(),
   });
 
+  // Erweitere Kundenliste um Familienmitglieder als separate Einträge
+  const expandedCustomers = customers.flatMap(c => {
+    const entries = [{ ...c, isMainCustomer: true, parentId: null }];
+    if (c.family_members && c.family_members.length > 0) {
+      c.family_members.forEach(fm => {
+        entries.push({
+          id: `${c.id}-${fm.id}`,
+          customer_id: c.id,
+          family_member_id: fm.id,
+          first_name: fm.first_name,
+          last_name: fm.last_name,
+          email: fm.email || c.email,
+          isFamilyMember: true,
+          parentId: c.id,
+          parentName: `${c.first_name} ${c.last_name}`,
+        });
+      });
+    }
+    return entries;
+  });
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Contract.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contracts'] }); setShowForm(false); },
@@ -157,11 +178,11 @@ export default function Contracts() {
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{editing ? 'Vertrag bearbeiten' : 'Neuer Vertrag'}</DialogTitle></DialogHeader>
           <ContractForm
-            contract={editing}
-            customers={customers}
-            onSave={handleSave}
-            onCancel={() => { setShowForm(false); setEditing(null); }}
-            saving={createMutation.isPending || updateMutation.isPending}
+           contract={editing}
+           customers={expandedCustomers}
+           onSave={handleSave}
+           onCancel={() => { setShowForm(false); setEditing(null); }}
+           saving={createMutation.isPending || updateMutation.isPending}
           />
         </DialogContent>
       </Dialog>

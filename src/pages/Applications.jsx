@@ -48,6 +48,27 @@ export default function Applications() {
     queryFn: () => base44.entities.Customer.list(),
   });
 
+  // Erweitere Kundenliste um Familienmitglieder als separate Einträge
+  const expandedCustomers = customers.flatMap(c => {
+    const entries = [{ ...c, isMainCustomer: true, parentId: null }];
+    if (c.family_members && c.family_members.length > 0) {
+      c.family_members.forEach(fm => {
+        entries.push({
+          id: `${c.id}-${fm.id}`,
+          customer_id: c.id,
+          family_member_id: fm.id,
+          first_name: fm.first_name,
+          last_name: fm.last_name,
+          email: fm.email || c.email,
+          isFamilyMember: true,
+          parentId: c.id,
+          parentName: `${c.first_name} ${c.last_name}`,
+        });
+      });
+    }
+    return entries;
+  });
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Application.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['applications'] }); setShowForm(false); },
@@ -68,6 +89,7 @@ export default function Applications() {
       const app = applications.find(a => a.id === appId);
       const newContract = {
         customer_id: app.customer_id,
+        family_member_id: app.family_member_id || undefined,
         customer_name: app.customer_name,
         insurance_type: app.insurance_type,
         provider: app.provider,
@@ -221,17 +243,17 @@ export default function Applications() {
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{editingApp ? 'Antrag bearbeiten' : 'Neuer Antrag'}</DialogTitle></DialogHeader>
           <ApplicationForm
-            application={editingApp}
-            customers={customers}
-            onSave={(data) => {
-              if (editingApp) {
-                updateMutation.mutate({ id: editingApp.id, data });
-              } else {
-                createMutation.mutate(data);
-              }
-            }}
-            onCancel={() => { setShowForm(false); setEditingApp(null); }}
-            saving={createMutation.isPending || updateMutation.isPending}
+           application={editingApp}
+           customers={expandedCustomers}
+           onSave={(data) => {
+             if (editingApp) {
+               updateMutation.mutate({ id: editingApp.id, data });
+             } else {
+               createMutation.mutate(data);
+             }
+           }}
+           onCancel={() => { setShowForm(false); setEditingApp(null); }}
+           saving={createMutation.isPending || updateMutation.isPending}
           />
         </DialogContent>
       </Dialog>
