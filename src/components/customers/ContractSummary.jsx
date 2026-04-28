@@ -30,8 +30,8 @@ export default function ContractSummary({ contracts = [] }) {
         {[
           { label: 'Aktive Verträge', value: active.length, icon: CheckCircle2, color: 'text-emerald-500 bg-emerald-50' },
           { label: 'Verträge total', value: contracts.length, icon: Shield, color: 'text-primary bg-primary/10' },
-          { label: 'Monatsprämie', value: totalMonthly > 0 ? `CHF ${totalMonthly.toLocaleString('de-CH')}` : '–', icon: Clock, color: 'text-blue-500 bg-blue-50' },
-          { label: 'Jahresprämie', value: totalYearly > 0 ? `CHF ${totalYearly.toLocaleString('de-CH')}` : '–', icon: Shield, color: 'text-amber-500 bg-amber-50' },
+          { label: 'Monatsprämie', value: totalMonthly > 0 ? `CHF ${totalMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '–', icon: Clock, color: 'text-blue-500 bg-blue-50' },
+          { label: 'Jahresprämie', value: totalYearly > 0 ? `CHF ${totalYearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '–', icon: Shield, color: 'text-amber-500 bg-amber-50' },
         ].map(({ label, value, icon: Icon, color }) => (
           <Card key={label}>
             <CardContent className="p-3 flex items-center gap-3">
@@ -69,7 +69,7 @@ export default function ContractSummary({ contracts = [] }) {
             <span className="text-muted-foreground text-xs">{c.provider}</span>
             {c.premium_monthly > 0 && (
               <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">
-                CHF {c.premium_monthly.toLocaleString('de-CH')}/Mt.
+                CHF {c.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/Mt.
               </span>
             )}
           </div>
