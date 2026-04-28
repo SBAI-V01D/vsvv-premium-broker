@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
-  MessageSquare, Settings, ChevronLeft, ChevronRight, Shield, LogOut
+  MessageSquare, ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink, AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -14,6 +14,7 @@ const navItems = [
   { label: 'Aufgaben', icon: CheckSquare, path: '/aufgaben' },
   { label: 'Provisionen', icon: Wallet, path: '/provisionen' },
   { label: 'Nachrichten', icon: MessageSquare, path: '/nachrichten' },
+  { label: 'Schadensmeldungen', icon: AlertCircle, path: '/schaden' },
 ];
 
 export default function Sidebar({ onNavigate }) {
@@ -60,6 +61,19 @@ export default function Sidebar({ onNavigate }) {
           );
         })}
       </nav>
+
+      {/* Portal Link */}
+      <div className="px-2 pb-2">
+        <a
+          href="/portal"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all border border-sidebar-border"
+        >
+          <ExternalLink className="w-4 h-4 flex-shrink-0" />
+          {!collapsed && <span>Kundenportal</span>}
+        </a>
+      </div>
 
       {/* Bottom */}
       <div className="p-2 border-t border-sidebar-border space-y-1">

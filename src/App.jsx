@@ -14,6 +14,15 @@ import Contracts from './pages/Contracts';
 import Tasks from './pages/Tasks';
 import Commissions from './pages/Commissions';
 import Messages from './pages/Messages';
+import Claims from './pages/Claims';
+
+// Customer Portal
+import PortalRoot from './pages/portal/PortalRoot';
+import PortalOverview from './pages/portal/PortalOverview';
+import PortalContracts from './pages/portal/PortalContracts';
+import PortalClaims from './pages/portal/PortalClaims';
+import PortalDocuments from './pages/portal/PortalDocuments';
+import PortalMessages from './pages/portal/PortalMessages';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -48,7 +57,17 @@ const AuthenticatedApp = () => {
         <Route path="/aufgaben" element={<Tasks />} />
         <Route path="/provisionen" element={<Commissions />} />
         <Route path="/nachrichten" element={<Messages />} />
+        <Route path="/schaden" element={<Claims />} />
       </Route>
+      {/* Customer Portal – separate layout, no broker sidebar */}
+      <Route path="/portal" element={<PortalRoot />}>
+        <Route index element={<PortalOverview />} />
+        <Route path="vertraege" element={<PortalContracts />} />
+        <Route path="schaden" element={<PortalClaims />} />
+        <Route path="dokumente" element={<PortalDocuments />} />
+        <Route path="nachrichten" element={<PortalMessages />} />
+      </Route>
+
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );

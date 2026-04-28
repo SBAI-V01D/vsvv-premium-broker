@@ -1,0 +1,91 @@
+{
+  "name": "Claim",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Kunden-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Kundenname"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "Kunden-E-Mail"
+    },
+    "contract_id": {
+      "type": "string",
+      "description": "Vertrags-ID"
+    },
+    "insurance_type": {
+      "type": "string",
+      "description": "Versicherungsart"
+    },
+    "provider": {
+      "type": "string",
+      "description": "Versicherungsgesellschaft"
+    },
+    "title": {
+      "type": "string",
+      "description": "Schadenstitel"
+    },
+    "description": {
+      "type": "string",
+      "description": "Schadensbeschreibung"
+    },
+    "incident_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Schadendatum"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "eingereicht",
+        "in_pruefung",
+        "genehmigt",
+        "abgelehnt",
+        "ausbezahlt"
+      ],
+      "default": "eingereicht",
+      "description": "Schadensstatus"
+    },
+    "claim_number": {
+      "type": "string",
+      "description": "Schadennummer"
+    },
+    "amount_claimed": {
+      "type": "number",
+      "description": "Geforderter Betrag (CHF)"
+    },
+    "amount_approved": {
+      "type": "number",
+      "description": "Genehmigter Betrag (CHF)"
+    },
+    "documents": {
+      "type": "array",
+      "description": "Dokumente",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "broker_notes": {
+      "type": "string",
+      "description": "Notizen des Brokers"
+    }
+  },
+  "required": [
+    "customer_id",
+    "title",
+    "incident_date"
+  ]
+}
