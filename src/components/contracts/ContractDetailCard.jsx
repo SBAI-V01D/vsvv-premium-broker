@@ -15,10 +15,17 @@ const insuranceIcons = {
   Krankentaggeld: '📋', BVG: '💼', 'Säule 3a': '💰', Sonstige: '📄',
 };
 
-export default function ContractDetailCard({ contract, customerId, customerName }) {
+export default function ContractDetailCard({ contract, customerId, customerName, familyMembers = [] }) {
   const [expanded, setExpanded] = useState(false);
   const [showPolicyUpload, setShowPolicyUpload] = useState(false);
   const queryClient = useQueryClient();
+
+  const familyMemberName = contract.family_member_id && familyMembers.length > 0
+    ? (() => {
+        const member = familyMembers.find(m => m.id === contract.family_member_id);
+        return member ? `${member.first_name} ${member.last_name}` : null;
+      })()
+    : null;
 
   const today = new Date();
   const endDate = contract.end_date ? new Date(contract.end_date) : null;
@@ -35,7 +42,7 @@ export default function ContractDetailCard({ contract, customerId, customerName 
               <span className="text-2xl flex-shrink-0">{insuranceIcons[contract.insurance_type] || '📄'}</span>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold text-sm">{contract.insurance_type}</p>
+                  <p className="font-semibold text-sm">{contract.insurance_type} {familyMemberName && `(${familyMemberName})`}</p>
                   <StatusBadge status={contract.status} />
                   {expiresInThreeMonths && (
                     <Badge variant="outline" className="border-orange-300 text-orange-600 bg-orange-50 text-xs">

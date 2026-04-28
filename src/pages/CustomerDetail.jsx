@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Phone, Mail, MapPin, Calendar, FileText, MessageSquare, Edit, Folder, Activity, ClipboardList, Send, Lock } from 'lucide-react';
+import { ArrowLeft, Plus, Phone, Mail, MapPin, Calendar, FileText, MessageSquare, Edit, Folder, Activity, ClipboardList, Send, Lock, Users } from 'lucide-react';
 import DocumentsTab from '../components/documents/DocumentsTab';
 import CustomerFormulare from '../components/customers/CustomerFormulare';
 import EmailTemplateSender from '../components/email/EmailTemplateSender';
@@ -145,6 +145,7 @@ export default function CustomerDetail() {
         <Card>
           <CardContent className="p-4 space-y-2">
             {customer.birthdate && <div className="flex items-center gap-2 text-sm"><Calendar className="w-4 h-4 text-muted-foreground" /> {format(new Date(customer.birthdate), 'dd.MM.yyyy')}</div>}
+            {customer.ahv_number && <div className="text-sm text-muted-foreground">AHV: {customer.ahv_number}</div>}
             <div className="text-sm text-muted-foreground">{customer.customer_type === 'geschaeft' ? 'Geschäftskunde' : 'Privatkunde'}</div>
             {customer.tags && <div className="flex flex-wrap gap-1 mt-1">{customer.tags.split(',').map((t, i) => <span key={i} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">{t.trim()}</span>)}</div>}
           </CardContent>
@@ -153,6 +154,31 @@ export default function CustomerDetail() {
 
       {/* Contract Summary */}
       <ContractSummary contracts={contracts} />
+
+      {/* Family Members */}
+      {customer.customer_type === 'privat' && customer.family_members && customer.family_members.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader className="pb-3">
+            <h3 className="text-base font-semibold">Familienmitglieder</h3>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {customer.family_members.map(member => (
+              <div key={member.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg border border-border">
+                <div>
+                  <p className="font-medium text-sm">{member.first_name} {member.last_name}</p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
+                    <span className="bg-primary/10 text-primary px-2 py-0.5 rounded">
+                      {member.relationship}
+                    </span>
+                    {member.birthdate && <span>{format(new Date(member.birthdate), 'dd.MM.yyyy')}</span>}
+                    {member.email && <span>{member.email}</span>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabs */}
       <Tabs defaultValue="activity">
@@ -191,7 +217,7 @@ export default function CustomerDetail() {
             <p className="text-sm text-muted-foreground py-4">Keine Verträge vorhanden</p>
           ) : (
             <div className="space-y-2">
-              {contracts.map(c => <ContractDetailCard key={c.id} contract={c} customerId={customerId} customerName={displayName} />)}
+              {contracts.map(c => <ContractDetailCard key={c.id} contract={c} customerId={customerId} customerName={displayName} familyMembers={customer.family_members || []} />)}
             </div>
           )}
         </TabsContent>

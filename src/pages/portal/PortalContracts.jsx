@@ -14,8 +14,15 @@ const insuranceIcons = {
   Krankentaggeld: '📋', BVG: '💼', 'Säule 3a': '💰', Sonstige: '📄',
 };
 
-function ContractCard({ contract, linkedDocs }) {
+function ContractCard({ contract, linkedDocs, familyMembers = [] }) {
   const [expanded, setExpanded] = useState(false);
+
+  const familyMemberName = contract.family_member_id && familyMembers.length > 0
+    ? (() => {
+        const member = familyMembers.find(m => m.id === contract.family_member_id);
+        return member ? `${member.first_name} ${member.last_name}` : null;
+      })()
+    : null;
 
   // Merge contract-embedded docs + Document entity docs
   const allDocs = [
@@ -34,7 +41,7 @@ function ContractCard({ contract, linkedDocs }) {
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-foreground">{contract.insurance_type}</h3>
+                  <h3 className="font-semibold text-foreground">{contract.insurance_type} {familyMemberName && `(${familyMemberName})`}</h3>
                   <PortalStatusBadge status={contract.status} />
                 </div>
                 <p className="text-sm text-muted-foreground mt-0.5">{contract.provider}</p>
@@ -122,6 +129,12 @@ export default function PortalContracts() {
     enabled: !!user?.id,
   });
 
+  const { data: customer } = useQuery({
+    queryKey: ['portal-customer', user?.id],
+    queryFn: () => base44.entities.Customer.filter({ id: user?.id }),
+    enabled: !!user?.id,
+  });
+
   const filtered = filter === 'all' ? contracts : contracts.filter(c => c.status === filter);
   const getContractDocs = (contractId) => documents.filter(d => d.linked_contract_id === contractId);
 
@@ -153,7 +166,7 @@ export default function PortalContracts() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {filtered.map(c => <ContractCard key={c.id} contract={c} linkedDocs={getContractDocs(c.id)} />)}
+          {filtered.map(c => <ContractCard key={c.id} contract={c} linkedDocs={getContractDocs(c.id)} familyMembers={customer?.[0]?.family_members || []} />)}
         </div>
       )}
     </div>
