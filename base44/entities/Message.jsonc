@@ -1,0 +1,36 @@
+{
+  "name": "Message",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Kunden-ID"
+    },
+    "sender_email": {
+      "type": "string",
+      "description": "Absender E-Mail"
+    },
+    "sender_name": {
+      "type": "string",
+      "description": "Absender Name"
+    },
+    "content": {
+      "type": "string",
+      "description": "Nachricht"
+    },
+    "is_from_customer": {
+      "type": "boolean",
+      "default": false,
+      "description": "Vom Kunden gesendet"
+    },
+    "read": {
+      "type": "boolean",
+      "default": false,
+      "description": "Gelesen"
+    }
+  },
+  "required": [
+    "customer_id",
+    "content"
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "name": "Customer",
+  "type": "object",
+  "properties": {
+    "customer_type": {
+      "type": "string",
+      "enum": [
+        "privat",
+        "geschaeft"
+      ],
+      "default": "privat",
+      "description": "Kundentyp"
+    },
+    "salutation": {
+      "type": "string",
+      "enum": [
+        "Herr",
+        "Frau",
+        "Firma"
+      ],
+      "description": "Anrede"
+    },
+    "first_name": {
+      "type": "string",
+      "description": "Vorname"
+    },
+    "last_name": {
+      "type": "string",
+      "description": "Nachname"
+    },
+    "company_name": {
+      "type": "string",
+      "description": "Firmenname (nur bei Gesch\u00e4ftskunden)"
+    },
+    "email": {
+      "type": "string",
+      "description": "E-Mail-Adresse"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefonnummer"
+    },
+    "mobile": {
+      "type": "string",
+      "description": "Mobilnummer"
+    },
+    "street": {
+      "type": "string",
+      "description": "Strasse"
+    },
+    "zip_code": {
+      "type": "string",
+      "description": "PLZ"
+    },
+    "city": {
+      "type": "string",
+      "description": "Ort"
+    },
+    "canton": {
+      "type": "string",
+      "enum": [
+        "AG",
+        "AI",
+        "AR",
+        "BE",
+        "BL",
+        "BS",
+        "FR",
+        "GE",
+        "GL",
+        "GR",
+        "JU",
+        "LU",
+        "NE",
+        "NW",
+        "OW",
+        "SG",
+        "SH",
+        "SO",
+        "SZ",
+        "TG",
+        "TI",
+        "UR",
+        "VD",
+        "VS",
+        "ZG",
+        "ZH"
+      ],
+      "description": "Kanton"
+    },
+    "birthdate": {
+      "type": "string",
+      "format": "date",
+      "description": "Geburtsdatum"
+    },
+    "ahv_number": {
+      "type": "string",
+      "description": "AHV-Nummer"
+    },
+    "employer": {
+      "type": "string",
+      "description": "Arbeitgeber"
+    },
+    "income": {
+      "type": "number",
+      "description": "Jahreseinkommen (CHF)"
+    },
+    "tags": {
+      "type": "string",
+      "description": "Tags (kommagetrennt)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "aktiv",
+        "inaktiv",
+        "interessent"
+      ],
+      "default": "aktiv",
+      "description": "Status"
+    },
+    "assigned_broker": {
+      "type": "string",
+      "description": "Zust\u00e4ndiger Broker (E-Mail)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notizen"
+    }
+  },
+  "required": [
+    "first_name",
+    "last_name",
+    "email"
+  ]
+}

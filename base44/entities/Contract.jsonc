@@ -1,0 +1,99 @@
+{
+  "name": "Contract",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Kunden-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Kundenname (Anzeige)"
+    },
+    "insurance_type": {
+      "type": "string",
+      "enum": [
+        "KVG",
+        "VVG",
+        "Leben",
+        "Haftpflicht",
+        "Hausrat",
+        "Rechtsschutz",
+        "Motorfahrzeug",
+        "Geb\u00e4ude",
+        "Unfall",
+        "Krankentaggeld",
+        "BVG",
+        "S\u00e4ule 3a",
+        "Sonstige"
+      ],
+      "description": "Versicherungsart"
+    },
+    "provider": {
+      "type": "string",
+      "description": "Versicherungsgesellschaft"
+    },
+    "policy_number": {
+      "type": "string",
+      "description": "Policen-Nummer"
+    },
+    "premium_monthly": {
+      "type": "number",
+      "description": "Monatspr\u00e4mie (CHF)"
+    },
+    "premium_yearly": {
+      "type": "number",
+      "description": "Jahrespr\u00e4mie (CHF)"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Vertragsbeginn"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Vertragsende"
+    },
+    "cancellation_deadline": {
+      "type": "string",
+      "format": "date",
+      "description": "K\u00fcndigungsfrist"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "aktiv",
+        "pendent",
+        "gek\u00fcndigt",
+        "abgelaufen"
+      ],
+      "default": "aktiv",
+      "description": "Vertragsstatus"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Bemerkungen"
+    },
+    "documents": {
+      "type": "array",
+      "description": "Dokumente",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "customer_id",
+    "insurance_type",
+    "provider"
+  ]
+}

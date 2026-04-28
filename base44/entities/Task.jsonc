@@ -1,0 +1,71 @@
+{
+  "name": "Task",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Aufgabe"
+    },
+    "description": {
+      "type": "string",
+      "description": "Beschreibung"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Kunden-ID (optional)"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Kundenname"
+    },
+    "contract_id": {
+      "type": "string",
+      "description": "Vertrags-ID (optional)"
+    },
+    "assigned_to": {
+      "type": "string",
+      "description": "Zugewiesen an (E-Mail)"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "niedrig",
+        "mittel",
+        "hoch",
+        "dringend"
+      ],
+      "default": "mittel",
+      "description": "Priorit\u00e4t"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "offen",
+        "in_bearbeitung",
+        "erledigt"
+      ],
+      "default": "offen",
+      "description": "Status"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "F\u00e4lligkeitsdatum"
+    },
+    "task_type": {
+      "type": "string",
+      "enum": [
+        "onboarding",
+        "erneuerung",
+        "follow_up",
+        "beratung",
+        "allgemein"
+      ],
+      "default": "allgemein",
+      "description": "Aufgabentyp"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "name": "Interaction",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Kunden-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Kundenname"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "anruf",
+        "meeting",
+        "email",
+        "notiz",
+        "dokument"
+      ],
+      "description": "Interaktionstyp"
+    },
+    "subject": {
+      "type": "string",
+      "description": "Betreff"
+    },
+    "content": {
+      "type": "string",
+      "description": "Inhalt / Notizen"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Datum"
+    }
+  },
+  "required": [
+    "customer_id",
+    "type",
+    "subject"
+  ]
+}

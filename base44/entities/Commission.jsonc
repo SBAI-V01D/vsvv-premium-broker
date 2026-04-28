@@ -1,0 +1,66 @@
+{
+  "name": "Commission",
+  "type": "object",
+  "properties": {
+    "contract_id": {
+      "type": "string",
+      "description": "Vertrags-ID"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Kunden-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Kundenname"
+    },
+    "broker_email": {
+      "type": "string",
+      "description": "Broker E-Mail"
+    },
+    "broker_name": {
+      "type": "string",
+      "description": "Broker Name"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "einmalig",
+        "wiederkehrend"
+      ],
+      "description": "Provisionstyp"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Betrag (CHF)"
+    },
+    "insurance_type": {
+      "type": "string",
+      "description": "Versicherungsart"
+    },
+    "provider": {
+      "type": "string",
+      "description": "Versicherungsgesellschaft"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Provisionsdatum"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "offen",
+        "bezahlt",
+        "storniert"
+      ],
+      "default": "offen",
+      "description": "Status"
+    }
+  },
+  "required": [
+    "contract_id",
+    "amount",
+    "type"
+  ]
+}
