@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { AlertCircle, Search, Edit, ChevronDown } from 'lucide-react';
+import { AlertCircle, Search, Edit, Bell } from 'lucide-react';
+import { sendNotification, claimStatusEmailBody } from '@/lib/notifications';
+import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +27,8 @@ const statusLabels = {
 export default function Claims() {
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState(null);
+  const [sendEmail, setSendEmail] = useState(true);
+  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: claims = [], isLoading } = useQuery({
@@ -33,8 +37,28 @@ export default function Claims() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Claim.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['claims'] }); setEditing(null); },
+    mutationFn: async ({ id, data, originalStatus, sendMail }) => {
+      await base44.entities.Claim.update(id, data);
+      // Send email if status changed and customer email is available and broker opted in
+      if (sendMail && data.customer_email && data.status !== originalStatus) {
+        await sendNotification({
+          type: 'claim_status',
+          recipientEmail: data.customer_email,
+          recipientName: data.customer_name,
+          subject: `Aktualisierung Ihres Schadensfalls – ${data.title || ''}`,
+          body: claimStatusEmailBody({
+            customerName: data.customer_name,
+            claimTitle: data.title,
+            newStatus: data.status,
+            brokerNotes: data.broker_notes,
+            claimNumber: data.claim_number,
+          }),
+          referenceId: id,
+          referenceType: 'claim',
+        });
+      }
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['claims'] }); setEditing(null); toast({ title: 'Gespeichert' }); },
   });
 
   const filtered = claims.filter(c =>
@@ -98,7 +122,7 @@ export default function Claims() {
                   </TableCell>
                   <TableCell><StatusBadge status={claim.status} /></TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditing(claim)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditing({ ...claim, _originalStatus: claim.status })}>
                       <Edit className="w-4 h-4" />
                     </Button>
                   </TableCell>
@@ -114,7 +138,7 @@ export default function Claims() {
         <DialogContent>
           <DialogHeader><DialogTitle>Schadensmeldung bearbeiten</DialogTitle></DialogHeader>
           {editing && (
-            <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate({ id: editing.id, data: { status: editing.status, amount_approved: editing.amount_approved ? Number(editing.amount_approved) : undefined, claim_number: editing.claim_number, broker_notes: editing.broker_notes } }); }} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate({ id: editing.id, originalStatus: editing._originalStatus, sendMail: sendEmail, data: { status: editing.status, amount_approved: editing.amount_approved ? Number(editing.amount_approved) : undefined, claim_number: editing.claim_number, broker_notes: editing.broker_notes, customer_email: editing.customer_email, customer_name: editing.customer_name, title: editing.title } }); }} className="space-y-4">
               <div>
                 <Label>Schadennummer</Label>
                 <Input value={editing.claim_number || ''} onChange={e => setEditing(p => ({ ...p, claim_number: e.target.value }))} placeholder="z.B. SCH-2024-001" />
@@ -139,6 +163,10 @@ export default function Claims() {
                 <Textarea value={editing.broker_notes || ''} onChange={e => setEditing(p => ({ ...p, broker_notes: e.target.value }))} rows={3} placeholder="Diese Notiz wird dem Kunden im Portal angezeigt." />
               </div>
               <DialogFooter>
+                <div className="flex items-center gap-2 mr-auto">
+                  <input type="checkbox" id="sendEmail" checked={sendEmail} onChange={e => setSendEmail(e.target.checked)} className="rounded" />
+                  <label htmlFor="sendEmail" className="text-sm text-muted-foreground cursor-pointer">E-Mail bei Statusänderung</label>
+                </div>
                 <Button type="button" variant="outline" onClick={() => setEditing(null)}>Abbrechen</Button>
                 <Button type="submit" disabled={updateMutation.isPending}>Speichern</Button>
               </DialogFooter>

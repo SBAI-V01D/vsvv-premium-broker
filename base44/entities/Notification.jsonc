@@ -1,0 +1,58 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "claim_status",
+        "contract_expiry",
+        "new_document",
+        "manual"
+      ],
+      "description": "Benachrichtigungstyp"
+    },
+    "recipient_email": {
+      "type": "string",
+      "description": "Empf\u00e4nger E-Mail"
+    },
+    "recipient_name": {
+      "type": "string",
+      "description": "Empf\u00e4nger Name"
+    },
+    "subject": {
+      "type": "string",
+      "description": "Betreff"
+    },
+    "body": {
+      "type": "string",
+      "description": "Nachricht"
+    },
+    "reference_id": {
+      "type": "string",
+      "description": "Bezug-ID (Vertrag/Schaden)"
+    },
+    "reference_type": {
+      "type": "string",
+      "description": "Bezugstyp"
+    },
+    "sent_by": {
+      "type": "string",
+      "description": "Gesendet von (Broker E-Mail)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "sent",
+        "failed"
+      ],
+      "default": "sent",
+      "description": "Status"
+    }
+  },
+  "required": [
+    "type",
+    "recipient_email",
+    "subject"
+  ]
+}
