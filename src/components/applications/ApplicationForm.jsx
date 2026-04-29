@@ -60,6 +60,8 @@ export default function ApplicationForm({ application, customers = [], onSave, o
     e.preventDefault()
     onSave({
       ...form,
+      sparte: form.sparte,
+      insurance_type: form.sparte || form.insurance_type,
       customer_name: selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : '',
       primary_customer_id: selectedCustomer?.is_family_member ? selectedCustomer.primary_customer_id : selectedCustomer?.id,
       is_family_member: selectedCustomer?.is_family_member || false,
@@ -67,7 +69,7 @@ export default function ApplicationForm({ application, customers = [], onSave, o
       estimated_premium_yearly: form.estimated_premium_yearly ? Number(form.estimated_premium_yearly) : undefined,
       commission_estimate: form.commission_estimate ? Number(form.commission_estimate) : undefined,
       notes: form.notes,
-      product: form.product || form.sparte,
+      product: form.product,
       policy_number: form.policy_number,
       contract_start_date: form.contract_start_date,
       contract_end_date: form.contract_end_date,
