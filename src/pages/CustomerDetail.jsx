@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import CustomerForm from '../components/customers/CustomerForm'
+import DocumentsTab from '../components/documents/DocumentsTab'
 import { STATUS_LABELS, INSURANCE_TYPE_LABELS, FAMILY_ROLE_LABELS, label } from '@/lib/labels'
 
 export default function CustomerDetail() {
@@ -105,6 +106,7 @@ export default function CustomerDetail() {
           <TabsTrigger value="vertraege">Verträge ({contracts.length})</TabsTrigger>
           <TabsTrigger value="antraege">Anträge ({applications.length})</TabsTrigger>
           <TabsTrigger value="familie">Familie ({familyMembers.length - 1})</TabsTrigger>
+          <TabsTrigger value="dokumente">Dokumente</TabsTrigger>
           <TabsTrigger value="kommunikation">Kommunikation ({messages.length})</TabsTrigger>
         </TabsList>
 
@@ -193,6 +195,14 @@ export default function CustomerDetail() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="dokumente">
+          <DocumentsTab
+            customerId={id}
+            customerName={`${customer.first_name} ${customer.last_name}`}
+            contracts={contracts}
+          />
         </TabsContent>
 
         <TabsContent value="kommunikation">

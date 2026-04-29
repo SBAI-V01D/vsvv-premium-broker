@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import ContractForm from '../components/contracts/ContractForm'
+import ContractDocumentsPanel from '../components/contracts/ContractDocumentsPanel'
 import { INSURANCE_TYPE_LABELS, label } from '@/lib/labels'
 import StatusBadge from '@/components/status/StatusBadge'
 import StatusChangeDialog from '@/components/status/StatusChangeDialog'
@@ -138,8 +139,11 @@ export default function Contracts() {
                 </TableRow>
               ) : (
                 filtered.map(contract => (
-                  <TableRow key={contract.id} className="hover:bg-muted/50">
-                    <TableCell className="font-medium">{contract.customer_name}</TableCell>
+                  <TableRow key={contract.id} className="hover:bg-muted/50 align-top">
+                    <TableCell className="font-medium">
+                      <div>{contract.customer_name}</div>
+                      <ContractDocumentsPanel contract={contract} />
+                    </TableCell>
                     <TableCell className="hidden md:table-cell text-sm">{contract.insurer}</TableCell>
                     <TableCell className="hidden lg:table-cell text-sm">{contract.policy_number || '–'}</TableCell>
                     <TableCell className="font-medium">
