@@ -320,7 +320,7 @@ export default function Applications() {
                         ) : null
                       })()}
                       {app.assigned_broker && (
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">{getBrokerName(app.assigned_broker)}</p>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">Berater: {getBrokerName(app.assigned_broker)}</p>
                       )}
                     </div>
 
