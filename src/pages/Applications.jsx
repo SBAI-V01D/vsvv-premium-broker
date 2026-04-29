@@ -104,7 +104,7 @@ export default function Applications() {
   const handleStatusChange = async ({ status, statusDef, note, metadata }) => {
     const app = statusChanging
     const prevStatus = app.custom_status || app.status
-    const ACCEPTED_STATUSES = ['angenommen', 'policiert', 'approved']
+    const ACCEPTED_STATUSES = ['angenommen', 'policiert', 'approved', 'angenommen_vorbehalt', 'bewilligung_erteilt']
 
     await base44.entities.StatusHistory.create({
       entity_type: 'application',
