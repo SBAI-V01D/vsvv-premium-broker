@@ -116,41 +116,42 @@ export default function ContractDocumentsPanel({ contract }) {
               )
             })
           )}
-
-          <Dialog open={showUpload} onOpenChange={setShowUpload}>
-            <DialogContent className="max-w-md">
-              <DialogHeader><DialogTitle>Dokument für Vertrag hochladen</DialogTitle></DialogHeader>
-              <form onSubmit={handleUpload} className="space-y-4">
-                <div>
-                  <Label>Datei</Label>
-                  <Input type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" onChange={handleFileChange} required className="mt-1" />
-                </div>
-                <div>
-                  <Label>Name</Label>
-                  <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required placeholder="Dokumentname" className="mt-1" />
-                </div>
-                <div>
-                  <Label>Kategorie</Label>
-                  <Select value={form.category} onValueChange={v => setForm(p => ({ ...p, category: v }))}>
-                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Bemerkungen (optional)</Label>
-                  <Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="mt-1" />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setShowUpload(false)}>Abbrechen</Button>
-                  <Button type="submit" disabled={uploading}>{uploading ? 'Hochladen...' : 'Hochladen'}</Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
         </div>
       )}
+
+      {/* Dialog ausserhalb des open-Blocks damit er immer im DOM ist */}
+      <Dialog open={showUpload} onOpenChange={setShowUpload}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Dokument für Vertrag hochladen</DialogTitle></DialogHeader>
+          <form onSubmit={handleUpload} className="space-y-4">
+            <div>
+              <Label>Datei</Label>
+              <Input type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" onChange={handleFileChange} required className="mt-1" />
+            </div>
+            <div>
+              <Label>Name</Label>
+              <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required placeholder="Dokumentname" className="mt-1" />
+            </div>
+            <div>
+              <Label>Kategorie</Label>
+              <Select value={form.category} onValueChange={v => setForm(p => ({ ...p, category: v }))}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Bemerkungen (optional)</Label>
+              <Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="mt-1" />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setShowUpload(false)}>Abbrechen</Button>
+              <Button type="submit" disabled={uploading}>{uploading ? 'Hochladen...' : 'Hochladen'}</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
