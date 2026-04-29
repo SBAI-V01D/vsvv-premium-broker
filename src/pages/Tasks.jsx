@@ -1,17 +1,59 @@
 import React, { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Upload, FileText, ExternalLink } from 'lucide-react'
 
 export default function Tasks() {
+  const queryClient = useQueryClient()
+  const [selectedTask, setSelectedTask] = useState(null)
+  const [formData, setFormData] = useState({ status: '', notes: '', file: null })
+  const [uploading, setUploading] = useState(false)
+
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => base44.entities.Task.list('-due_date'),
   })
 
+  const updateMutation = useMutation({
+    mutationFn: async (data) => {
+      const updateData = {
+        status: data.status || selectedTask.status,
+        notes: data.notes || selectedTask.notes,
+      }
+      
+      if (data.file) {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file: data.file })
+        updateData.document_url = file_url
+      }
+      
+      return base44.entities.Task.update(selectedTask.id, updateData)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      setSelectedTask(null)
+      setFormData({ status: '', notes: '', file: null })
+    },
+  })
+
   const openTasks = tasks.filter(t => t.status === 'open')
   const inProgressTasks = tasks.filter(t => t.status === 'in_progress')
   const completedTasks = tasks.filter(t => t.status === 'completed')
+
+  const handleTaskClick = (task) => {
+    setSelectedTask(task)
+    setFormData({ status: task.status, notes: task.notes || '', file: null })
+  }
+
+  const handleSave = () => {
+    updateMutation.mutate(formData)
+  }
 
   return (
     <div>
@@ -30,10 +72,14 @@ export default function Tasks() {
               <p className="text-sm text-muted-foreground">Keine offenen Aufgaben</p>
             ) : (
               openTasks.map(t => (
-                <div key={t.id} className="p-3 bg-slate-50 rounded border border-border">
+                <button
+                  key={t.id}
+                  onClick={() => handleTaskClick(t)}
+                  className="p-3 bg-slate-50 rounded border border-border hover:border-primary hover:bg-slate-100 text-left transition-colors w-full"
+                >
                   <p className="text-sm font-medium">{t.title}</p>
                   {t.due_date && <p className="text-xs text-muted-foreground mt-1">Fällig: {t.due_date}</p>}
-                </div>
+                </button>
               ))
             )}
           </CardContent>
@@ -48,10 +94,14 @@ export default function Tasks() {
               <p className="text-sm text-muted-foreground">Keine Aufgaben in Bearbeitung</p>
             ) : (
               inProgressTasks.map(t => (
-                <div key={t.id} className="p-3 bg-blue-50 rounded border border-blue-200">
+                <button
+                  key={t.id}
+                  onClick={() => handleTaskClick(t)}
+                  className="p-3 bg-blue-50 rounded border border-blue-200 hover:border-blue-400 hover:bg-blue-100 text-left transition-colors w-full"
+                >
                   <p className="text-sm font-medium">{t.title}</p>
                   {t.due_date && <p className="text-xs text-muted-foreground mt-1">Fällig: {t.due_date}</p>}
-                </div>
+                </button>
               ))
             )}
           </CardContent>
@@ -66,14 +116,81 @@ export default function Tasks() {
               <p className="text-sm text-muted-foreground">Keine erledigten Aufgaben</p>
             ) : (
               completedTasks.slice(0, 5).map(t => (
-                <div key={t.id} className="p-3 bg-green-50 rounded border border-green-200 line-through opacity-75">
+                <button
+                  key={t.id}
+                  onClick={() => handleTaskClick(t)}
+                  className="p-3 bg-green-50 rounded border border-green-200 hover:border-green-400 hover:bg-green-100 text-left transition-colors w-full line-through opacity-75"
+                >
                   <p className="text-sm font-medium">{t.title}</p>
-                </div>
+                </button>
               ))
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Task Detail Dialog */}
+      <Dialog open={!!selectedTask} onOpenChange={(open) => { if (!open) setSelectedTask(null) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{selectedTask?.title}</DialogTitle>
+          </DialogHeader>
+          {selectedTask && (
+            <div className="space-y-4">
+              <div>
+                <Label>Status</Label>
+                <Select value={formData.status} onValueChange={(v) => setFormData(p => ({ ...p, status: v }))}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Pendent</SelectItem>
+                    <SelectItem value="in_progress">In Bearbeitung</SelectItem>
+                    <SelectItem value="completed">Erledigt</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Notizen</Label>
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData(p => ({ ...p, notes: e.target.value }))}
+                  placeholder="Prozessnotizen und Angaben..."
+                  className="mt-1"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <Label>Dokument hochladen</Label>
+                <Input
+                  type="file"
+                  onChange={(e) => setFormData(p => ({ ...p, file: e.target.files?.[0] || null }))}
+                  className="mt-1"
+                />
+                {selectedTask.document_url && (
+                  <a href={selectedTask.document_url} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="sm" className="mt-2 w-full">
+                      <FileText className="w-4 h-4 mr-1" /> Dokument öffnen
+                    </Button>
+                  </a>
+                )}
+              </div>
+
+              {selectedTask.due_date && (
+                <p className="text-xs text-muted-foreground">Fällig: {selectedTask.due_date}</p>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedTask(null)}>Schliessen</Button>
+            <Button onClick={handleSave} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? 'Speichern...' : 'Speichern'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
