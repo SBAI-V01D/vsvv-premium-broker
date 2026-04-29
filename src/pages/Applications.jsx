@@ -12,6 +12,7 @@ import ApplicationForm from '../components/applications/ApplicationForm'
 import ApplicationDocumentsPanel from '../components/applications/ApplicationDocumentsPanel'
 import StatusBadge from '@/components/status/StatusBadge'
 import StatusChangeDialog from '@/components/status/StatusChangeDialog'
+import SparteFilterButtons from '../components/applications/SparteFilterButtons'
 import { getSparteLabel, ALL_SPARTEN } from '@/lib/insuranceSparten'
 
 export default function Applications() {
@@ -68,20 +69,19 @@ export default function Applications() {
   })
 
   // KPIs
-  const CLOSED_POSITIVE = ['angenommen', 'policiert', 'approved']
-  const CLOSED_NEGATIVE = ['abgelehnt', 'rejected']
+  const STORNIERT_ABGELEHNT = ['abgelehnt', 'rejected', 'storniert', 'cancelled']
+  const ACCEPTED_KEYS = ['angenommen', 'policiert', 'approved', 'angenommen_vorbehalt', 'bewilligung_erteilt']
+  const OPEN_KEYS = ['neu', 'draft', 'submitted', 'in_bearbeitung', 'under_review', 'eingereicht', 'in_pruefung', 'rueckfrage', 'risikopruefung', 'vorbehalt']
   const getStatus = (a) => a.custom_status || a.status
 
-  const openApps = applications.filter(a => ![...CLOSED_POSITIVE, ...CLOSED_NEGATIVE].includes(getStatus(a)))
-  const approvedApps = applications.filter(a => CLOSED_POSITIVE.includes(getStatus(a)))
-  const rejectedApps = applications.filter(a => CLOSED_NEGATIVE.includes(getStatus(a)))
-  const closedTotal = approvedApps.length + rejectedApps.length
-  const closureRate = closedTotal > 0
-    ? Math.round((approvedApps.length / closedTotal) * 100)
-    : 0
+  const activeApps = applications.filter(a => !STORNIERT_ABGELEHNT.includes(getStatus(a)))
+  const openApps = applications.filter(a => OPEN_KEYS.includes(getStatus(a)))
+  const approvedApps = applications.filter(a => ACCEPTED_KEYS.includes(getStatus(a)))
+  const closureRate = activeApps.length > 0
+    ? ((approvedApps.length / activeApps.length) * 100).toFixed(1)
+    : '0.0'
   const uniqueBrokers = [...new Set(applications.map(a => a.assigned_broker).filter(Boolean))]
-  // resolve broker display names
-  
+
 
   // Filtering
   const filtered = applications.filter(a => {
@@ -164,8 +164,8 @@ export default function Applications() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Versicherungsanträge</h1>
-          <p className="text-muted-foreground mt-1">{applications.length} Anträge insgesamt</p>
+          <h1 className="text-3xl font-bold">Versicherungsanträge ({applications.length})</h1>
+          <p className="text-muted-foreground mt-1">{activeApps.length} aktive Anträge</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setShowStats(true)}>
@@ -186,8 +186,8 @@ export default function Applications() {
                 <FileText className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{applications.length}</p>
-                <p className="text-xs text-muted-foreground">Total Anträge</p>
+                <p className="text-2xl font-bold">{activeApps.length}</p>
+                <p className="text-xs text-muted-foreground">Total Anträge (aktiv)</p>
               </div>
             </div>
           </CardContent>
@@ -213,7 +213,7 @@ export default function Applications() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{approvedApps.length}</p>
-                <p className="text-xs text-muted-foreground">Genehmigt / Policiert</p>
+                <p className="text-xs text-muted-foreground">Angenommen / Policiert</p>
               </div>
             </div>
           </CardContent>
@@ -232,6 +232,13 @@ export default function Applications() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Sparten Filter Buttons */}
+      <SparteFilterButtons
+        applications={applications}
+        activeSparte={filterSparte}
+        onSelect={setFilterSparte}
+      />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
@@ -399,12 +406,10 @@ export default function Applications() {
                     </div>
                   )}
 
-                  {/* Documents panel */}
-                  {docsOpen && (
-                    <div className="px-4 pb-4 border-t border-border bg-muted/20">
-                      <ApplicationDocumentsPanel application={app} />
-                    </div>
-                  )}
+                  {/* Documents panel – always mounted so upload dialog works */}
+                  <div className={`px-4 pb-4 border-t border-border bg-muted/20 ${docsOpen ? '' : 'hidden'}`}>
+                    <ApplicationDocumentsPanel application={app} />
+                  </div>
                 </div>
               )
             })
