@@ -39,11 +39,33 @@ export default function Dashboard() {
   const openTasks = tasks.filter(t => t.status !== 'completed')
 
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.Task.update(selectedTask.id, data),
+    mutationFn: async (data) => {
+      const updateData = {
+        status: data.status || selectedTask.status,
+        notes: data.notes || selectedTask.notes,
+        due_date: data.due_date || selectedTask.due_date,
+        completion_date: data.completion_date || selectedTask.completion_date,
+      }
+      
+      if (data.file) {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file: data.file })
+        updateData.document_url = file_url
+      }
+      
+      return base44.entities.Task.update(selectedTask.id, updateData)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       setSelectedTask(null)
-      setFormData({ status: '', notes: '', due_date: '' })
+      setFormData({ status: '', notes: '', due_date: '', completion_date: '', file: null })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Task.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      setSelectedTask(null)
     },
   })
 
@@ -58,16 +80,11 @@ export default function Dashboard() {
 
   const handleTaskClick = (task) => {
     setSelectedTask(task)
-    setFormData({ status: task.status, notes: task.notes || '', due_date: task.due_date || '', completion_date: task.completion_date || '' })
+    setFormData({ status: task.status, notes: task.notes || '', due_date: task.due_date || '', completion_date: task.completion_date || '', file: null })
   }
 
   const handleSave = () => {
-    updateMutation.mutate({
-      status: formData.status || selectedTask.status,
-      notes: formData.notes || selectedTask.notes,
-      due_date: formData.due_date || selectedTask.due_date,
-      completion_date: formData.completion_date || selectedTask.completion_date,
-    })
+    updateMutation.mutate(formData)
   }
 
   const stats = [
@@ -192,6 +209,15 @@ export default function Dashboard() {
               </div>
 
               <div>
+                <Label>Dokument hochladen</Label>
+                <Input
+                  type="file"
+                  onChange={(e) => setFormData(p => ({ ...p, file: e.target.files?.[0] || null }))}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
                 <Label>Notizen</Label>
                 <Textarea
                   value={formData.notes}
@@ -203,11 +229,24 @@ export default function Dashboard() {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedTask(null)}>Schliessen</Button>
-            <Button onClick={handleSave} disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? 'Speichern...' : 'Speichern'}
+          <DialogFooter className="flex justify-between">
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (confirm('Aufgabe wirklich löschen?')) {
+                  deleteMutation.mutate(selectedTask.id)
+                }
+              }}
+              disabled={deleteMutation.isPending}
+            >
+              Löschen
             </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setSelectedTask(null)}>Schliessen</Button>
+              <Button onClick={handleSave} disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? 'Speichern...' : 'Speichern'}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
