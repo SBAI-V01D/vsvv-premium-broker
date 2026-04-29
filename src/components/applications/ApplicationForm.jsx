@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { DialogFooter } from '@/components/ui/dialog'
-import { ALL_SPARTEN, SPARTEN_PRIVAT, SPARTEN_FIRMA, getFieldsForSparte } from '@/lib/insuranceSparten'
+import { ALL_SPARTEN, SPARTEN_PRIVAT, SPARTEN_FIRMA, getFieldsForSparte, FRANCHISE_OPTIONS } from '@/lib/insuranceSparten'
 
 const SWISS_INSURERS = [
   'Allianz','Axa','Baloise','CSS','Concordia','Die Mobiliar','Elvia','Generali',
@@ -35,6 +35,7 @@ export default function ApplicationForm({ application, customers = [], onSave, o
     product: '',
     insurer: '',
     status: 'draft',
+    kundentyp: 'privat',
     estimated_premium_monthly: '',
     estimated_premium_yearly: '',
     requested_start_date: '',
@@ -53,6 +54,7 @@ export default function ApplicationForm({ application, customers = [], onSave, o
 
   const primaryCustomers = customers.filter(c => !c.is_family_member)
   const sparteFields = getFieldsForSparte(form.sparte)
+  const franchiseOptions = FRANCHISE_OPTIONS[form.sparte_data?.age_group] || FRANCHISE_OPTIONS.default
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -99,6 +101,26 @@ export default function ApplicationForm({ application, customers = [], onSave, o
         </Select>
       </div>
 
+      {/* Kundentyp */}
+      <div>
+        <Label>Kundentyp *</Label>
+        <Select value={form.kundentyp || 'privat'} onValueChange={v => set('kundentyp', v)}>
+          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="privat">Privatkunde</SelectItem>
+            <SelectItem value="firma">Firmenkunde / KMU</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* AHV-Nummer des gewählten Kunden anzeigen */}
+      {selectedCustomer?.ahv_number && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+          <span className="text-blue-600 font-medium">AHV-Nummer: </span>
+          <span className="font-mono">{selectedCustomer.ahv_number}</span>
+        </div>
+      )}
+
       {/* Sparte */}
       <div>
         <Label>Versicherungssparte *</Label>
@@ -140,9 +162,19 @@ export default function ApplicationForm({ application, customers = [], onSave, o
           <p className="text-sm font-semibold text-foreground">Spartenspezifische Angaben</p>
           <div className="grid grid-cols-2 gap-3">
             {sparteFields.map(field => (
-              <div key={field.key} className={field.type === 'text' && !field.placeholder?.includes('756') ? '' : ''}>
+              <div key={field.key}>
                 <Label>{field.label}</Label>
-                {field.type === 'select' ? (
+                {field.type === 'franchise' ? (
+                  <Select
+                    value={form.sparte_data?.[field.key] || ''}
+                    onValueChange={v => setSparteData(field.key, v)}
+                  >
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Franchise wählen" /></SelectTrigger>
+                    <SelectContent>
+                      {franchiseOptions.map(o => <SelectItem key={o} value={o}>CHF {o}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                ) : field.type === 'select' ? (
                   <Select
                     value={form.sparte_data?.[field.key] || ''}
                     onValueChange={v => setSparteData(field.key, v)}

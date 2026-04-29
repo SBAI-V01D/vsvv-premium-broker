@@ -288,7 +288,7 @@ export default function Applications() {
           <div className="hidden md:grid grid-cols-[2fr_2fr_1.5fr_1fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             <div>Kunde / Berater</div>
             <div>Sparte / Versicherer</div>
-            <div>Produkt / Police</div>
+            <div>Versicherungssparte</div>
             <div>Vertragsbeginn</div>
             <div>Jahresprämie</div>
             <div>Status</div>
@@ -307,6 +307,9 @@ export default function Applications() {
                     {/* Kunde */}
                     <div className="min-w-0">
                       <p className="font-semibold text-sm truncate">{app.customer_name || '–'}</p>
+                      {app.sparte_data?.ahv_number && (
+                        <p className="text-xs font-mono text-muted-foreground truncate mt-0.5">{app.sparte_data.ahv_number}</p>
+                      )}
                       {app.assigned_broker && (
                         <p className="text-xs text-muted-foreground truncate mt-0.5">{getBrokerName(app.assigned_broker)}</p>
                       )}
@@ -326,13 +329,36 @@ export default function Applications() {
                       )}
                     </div>
 
-                    {/* Produkt / Police */}
+                    {/* Versicherungssparte / Spartendetails */}
                     <div className="min-w-0">
-                      {app.product && <p className="text-sm truncate">{app.product}</p>}
-                      {app.policy_number && (
-                        <p className="text-xs text-muted-foreground mt-0.5">Police: {app.policy_number}</p>
+                      {/* KVG/VVG: Kassenmodell + Franchise */}
+                      {['kvg','vvg_zusatz','kvg_vvg_kombi'].includes(app.sparte || app.insurance_type) ? (
+                        <>
+                          {app.sparte_data?.model && (
+                            <p className="text-sm truncate">{app.sparte_data.model}</p>
+                          )}
+                          {app.sparte_data?.franchise && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Franchise: CHF {app.sparte_data.franchise}
+                              {app.sparte_data?.age_group && ` (${app.sparte_data.age_group})`}
+                            </p>
+                          )}
+                          {app.sparte_data?.zusatz_type && (
+                            <p className="text-xs text-muted-foreground mt-0.5">{app.sparte_data.zusatz_type}</p>
+                          )}
+                          {!app.sparte_data?.model && !app.sparte_data?.franchise && (
+                            <span className="text-sm text-muted-foreground">–</span>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {app.product && <p className="text-sm truncate">{app.product}</p>}
+                          {app.policy_number && (
+                            <p className="text-xs text-muted-foreground mt-0.5">Police: {app.policy_number}</p>
+                          )}
+                          {!app.product && !app.policy_number && <span className="text-sm text-muted-foreground">–</span>}
+                        </>
                       )}
-                      {!app.product && !app.policy_number && <span className="text-sm text-muted-foreground">–</span>}
                     </div>
 
                     {/* Startdatum */}
@@ -369,6 +395,11 @@ export default function Applications() {
                       <button onClick={() => setStatusChanging(app)} className="hover:opacity-80 transition-opacity">
                         <StatusBadge statusDef={getStatusDef(app)} label={getStatusLabel(app)} />
                       </button>
+                      {app.sparte_data?.health_declaration && (
+                        <p className={`text-xs mt-1 font-medium ${app.sparte_data.health_declaration === 'Ja' ? 'text-orange-600' : 'text-green-600'}`}>
+                          GD: {app.sparte_data.health_declaration}
+                        </p>
+                      )}
                     </div>
 
                     {/* Actions */}

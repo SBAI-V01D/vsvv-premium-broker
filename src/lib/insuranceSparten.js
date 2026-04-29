@@ -60,7 +60,8 @@ export const SPARTE_FIELDS = {
   kvg: [
     { key: 'ahv_number', label: 'AHV-Nummer', type: 'text', placeholder: '756.1234.5678.90' },
     { key: 'birth_date', label: 'Geburtsdatum', type: 'date' },
-    { key: 'franchise', label: 'Franchise (CHF)', type: 'select', options: ['300','500','1000','1500','2000','2500'] },
+    { key: 'age_group', label: 'Altersgruppe', type: 'select', options: ['Kind (0–18 Jahre)','Jugendliche (19–25 Jahre)','Erwachsene (ab 26 Jahre)'] },
+    { key: 'franchise', label: 'Franchise (CHF)', type: 'franchise' },
     { key: 'model', label: 'Kassenmodell', type: 'select', options: ['Standardmodell','HMO','Hausarztmodell','Telemed','Flexmed'] },
     { key: 'current_insurer', label: 'Aktuelle Krankenkasse', type: 'text' },
   ],
@@ -136,11 +137,20 @@ export const SPARTE_FIELDS = {
   ],
 }
 
+// Franchise-Optionen nach Altersgruppe
+export const FRANCHISE_OPTIONS = {
+  'Kind (0–18 Jahre)':        ['0','100','200','300','400','500','600'],
+  'Jugendliche (19–25 Jahre)':['300','500','1000','1500','2000','2500'],
+  'Erwachsene (ab 26 Jahre)': ['300','500','1000','1500','2000','2500'],
+  default:                    ['300','500','1000','1500','2000','2500'],
+}
+
 // Kombi KVG+VVG uses combined fields
 SPARTE_FIELDS['kvg_vvg_kombi'] = [
   { key: 'ahv_number', label: 'AHV-Nummer', type: 'text', placeholder: '756.1234.5678.90' },
   { key: 'birth_date', label: 'Geburtsdatum', type: 'date' },
-  { key: 'franchise', label: 'Franchise KVG (CHF)', type: 'select', options: ['300','500','1000','1500','2000','2500'] },
+  { key: 'age_group', label: 'Altersgruppe', type: 'select', options: ['Kind (0–18 Jahre)','Jugendliche (19–25 Jahre)','Erwachsene (ab 26 Jahre)'] },
+  { key: 'franchise', label: 'Franchise KVG (CHF)', type: 'franchise' },
   { key: 'model', label: 'Kassenmodell', type: 'select', options: ['Standardmodell','HMO','Hausarztmodell','Telemed','Flexmed'] },
   { key: 'current_insurer', label: 'Aktuelle Krankenkasse', type: 'text' },
   { key: 'zusatz_type', label: 'Zusatzversicherungstyp', type: 'select', options: ['Spital allgemein','Spital halbprivat','Spital privat','Ambulant','Dental','Alternativ'] },
