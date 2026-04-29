@@ -20,7 +20,7 @@ function isFirma(app) {
   return FIRMA_VALUES.includes(app.sparte || app.insurance_type)
 }
 
-export default function SparteFilterButtons({ applications, activeKundentyp, onSelectKundentyp }) {
+export default function SparteFilterButtons({ applications, activeKundentyp, onSelectKundentyp, filterSparte, onSelectSparte }) {
   const privatCount = applications.filter(isPrivat).length
   const firmaCount = applications.filter(isFirma).length
 
@@ -31,7 +31,7 @@ export default function SparteFilterButtons({ applications, activeKundentyp, onS
     ? applications.filter(isFirma)
     : applications
 
-  // Zähle Sparten
+  // Zähle Sparten - Bei Krankenversicherung, gruppiere nach KVG/VVG/Kombi
   const sparteCounts = {}
   relevantApps.forEach(a => {
     const key = a.sparte || a.insurance_type || 'Unbekannt'
@@ -39,6 +39,9 @@ export default function SparteFilterButtons({ applications, activeKundentyp, onS
   })
   const sortedSparten = Object.entries(sparteCounts).sort((a, b) => b[1] - a[1])
   const total = relevantApps.length
+  
+  // Check if we should show KVG/VVG sub-filter
+  const healthInsCount = relevantApps.filter(a => ['kvg', 'vvg_zusatz', 'kvg_vvg_kombi'].includes(a.sparte || a.insurance_type)).length
 
   return (
     <div className="mb-6 space-y-4">
@@ -76,6 +79,53 @@ export default function SparteFilterButtons({ applications, activeKundentyp, onS
           Firmenkunden ({firmaCount})
         </button>
       </div>
+
+      {/* KVG/VVG Sub-Filter (wenn Krankenversicherung vorhanden) */}
+      {healthInsCount > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mr-1">Krankenversicherung:</span>
+          <button
+            onClick={() => onSelectSparte('all')}
+            className={`text-xs px-3 py-1.5 rounded-full border transition-colors font-medium ${
+              filterSparte === 'all'
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background border-border text-foreground hover:border-primary hover:text-primary'
+            }`}
+          >
+            Alle
+          </button>
+          <button
+            onClick={() => onSelectSparte(filterSparte === 'kvg' ? 'all' : 'kvg')}
+            className={`text-xs px-3 py-1.5 rounded-full border transition-colors font-medium ${
+              filterSparte === 'kvg'
+                ? 'bg-green-600 text-white border-green-600'
+                : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+            }`}
+          >
+            KVG
+          </button>
+          <button
+            onClick={() => onSelectSparte(filterSparte === 'vvg_zusatz' ? 'all' : 'vvg_zusatz')}
+            className={`text-xs px-3 py-1.5 rounded-full border transition-colors font-medium ${
+              filterSparte === 'vvg_zusatz'
+                ? 'bg-teal-600 text-white border-teal-600'
+                : 'bg-teal-50 border-teal-200 text-teal-700 hover:bg-teal-100'
+            }`}
+          >
+            VVG
+          </button>
+          <button
+            onClick={() => onSelectSparte(filterSparte === 'kvg_vvg_kombi' ? 'all' : 'kvg_vvg_kombi')}
+            className={`text-xs px-3 py-1.5 rounded-full border transition-colors font-medium ${
+              filterSparte === 'kvg_vvg_kombi'
+                ? 'bg-indigo-600 text-white border-indigo-600'
+                : 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100'
+            }`}
+          >
+            KVG + VVG
+          </button>
+        </div>
+      )}
 
       {/* Auswertung: Anträge nach Sparte (immer sichtbar) */}
       {sortedSparten.length > 0 && (

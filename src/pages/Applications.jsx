@@ -246,6 +246,8 @@ export default function Applications() {
         applications={applications}
         activeKundentyp={filterKundentyp}
         onSelectKundentyp={setFilterKundentyp}
+        filterSparte={filterSparte}
+        onSelectSparte={setFilterSparte}
       />
 
       {/* Filters */}
@@ -324,12 +326,15 @@ export default function Applications() {
                       )}
                     </div>
 
-                    {/* Sparte / Versicherer */}
+                    {/* Sparte / Versicherer / Produkt */}
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <Tag className="w-3 h-3 text-primary flex-shrink-0" />
                         <p className="text-sm font-medium truncate">{getSparteLabel(app.sparte || app.insurance_type)}</p>
                       </div>
+                      {app.product && (
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">{app.product}</p>
+                      )}
                       {app.insurer && (
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <Building2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />

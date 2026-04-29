@@ -1,9 +1,9 @@
 // Vollständige Schweizer Versicherungssparten
 
 export const SPARTEN_PRIVAT = [
-  { value: 'kvg', label: 'Krankenversicherung KVG (Grundversicherung)', group: 'Privat' },
-  { value: 'vvg_zusatz', label: 'Krankenversicherung VVG (Zusatzversicherung)', group: 'Privat' },
-  { value: 'kvg_vvg_kombi', label: 'Krankenversicherung KVG und VVG', group: 'Privat' },
+  { value: 'kvg', label: 'Krankenversicherung', group: 'Privat' },
+  { value: 'vvg_zusatz', label: 'Krankenversicherung', group: 'Privat' },
+  { value: 'kvg_vvg_kombi', label: 'Krankenversicherung', group: 'Privat' },
   { value: 'leben_3a', label: 'Lebensversicherung Säule 3a', group: 'Privat' },
   { value: 'leben_3b', label: 'Lebensversicherung Säule 3b', group: 'Privat' },
   { value: 'unfall_privat', label: 'Unfallversicherung', group: 'Privat' },
