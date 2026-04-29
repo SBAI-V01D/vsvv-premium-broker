@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Users, FileText, ClipboardList, CheckCircle2 } from 'lucide-react'
+import { Users, FileText, ClipboardList, CheckCircle2, Download } from 'lucide-react'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -132,6 +132,92 @@ export default function Dashboard() {
     setFormData({ title: '', status: 'open', notes: '', due_date: '', completion_date: '', file: null })
   }
 
+  const handleExportPDF = () => {
+    const { jsPDF } = window.jspdf
+    const doc = new jsPDF()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    let yPos = 10
+
+    // Header
+    doc.setFontSize(16)
+    doc.text('Export: Geburtstage & Kommende Aufgaben', pageWidth / 2, yPos, { align: 'center' })
+    yPos += 15
+
+    // Geburtstage
+    doc.setFontSize(12)
+    doc.text('🎂 Kommende Geburtstage', 10, yPos)
+    yPos += 8
+    doc.setFontSize(10)
+    if (upcomingBirthdays.length === 0) {
+      doc.text('Keine Geburtstage in den nächsten 30 Tagen', 10, yPos)
+      yPos += 8
+    } else {
+      upcomingBirthdays.forEach(b => {
+        const daysText = b.daysUntil === 0 ? 'Heute' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`
+        doc.text(`${b.customer.first_name} ${b.customer.last_name} - ${daysText}`, 10, yPos)
+        yPos += 6
+        if (yPos > pageHeight - 20) {
+          doc.addPage()
+          yPos = 10
+        }
+      })
+    }
+
+    yPos += 5
+    // Aufgaben
+    doc.setFontSize(12)
+    doc.text('Kommende Aufgaben', 10, yPos)
+    yPos += 8
+    doc.setFontSize(10)
+    if (pendingTasks.length === 0) {
+      doc.text('Keine ausstehenden Aufgaben', 10, yPos)
+    } else {
+      pendingTasks.forEach(t => {
+        const dueText = t.due_date ? ` (Fällig: ${formatDate(t.due_date)})` : ''
+        const text = `${t.title}${dueText}`
+        const splitText = doc.splitTextToSize(text, pageWidth - 20)
+        splitText.forEach(line => {
+          doc.text(line, 10, yPos)
+          yPos += 6
+          if (yPos > pageHeight - 10) {
+            doc.addPage()
+            yPos = 10
+          }
+        })
+      })
+    }
+
+    doc.save('Geburtstage_Aufgaben.pdf')
+  }
+
+  const handleExportExcel = () => {
+    const csvContent = [
+      ['GEBURTSTAGE'],
+      ['Name', 'Tage bis Geburtstag'],
+      ...upcomingBirthdays.map(b => [
+        `${b.customer.first_name} ${b.customer.last_name}`,
+        b.daysUntil === 0 ? 'Heute' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`
+      ]),
+      [],
+      ['KOMMENDE AUFGABEN'],
+      ['Aufgabentitel', 'Fälligkeitsdatum', 'Status'],
+      ...pendingTasks.map(t => [
+        t.title,
+        t.due_date ? formatDate(t.due_date) : '-',
+        t.status
+      ])
+    ]
+
+    const csvString = csvContent.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', 'Geburtstage_Aufgaben.csv')
+    link.click()
+  }
+
   const stats = [
     { label: 'Kunden', value: customers.length, icon: Users, color: 'bg-blue-50 text-blue-600', path: '/kunden' },
     { label: 'Aktive Verträge', value: activeContracts.length, icon: FileText, color: 'bg-green-50 text-green-600', path: '/vertraege' },
@@ -141,9 +227,19 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Willkommen in deinem CRM</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Willkommen in deinem CRM</p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={handleExportPDF} variant="outline" size="sm">
+            <Download className="w-4 h-4 mr-2" /> PDF
+          </Button>
+          <Button onClick={handleExportExcel} variant="outline" size="sm">
+            <Download className="w-4 h-4 mr-2" /> Excel
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
