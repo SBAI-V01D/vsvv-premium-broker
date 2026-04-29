@@ -16,7 +16,7 @@ export default function ContractSummary({ contracts = [] }) {
   const [sortBy, setSortBy] = useState('name');
   const [showChart, setShowChart] = useState(false);
 
-  const active = contracts.filter(c => c.status === 'aktiv');
+  const active = contracts.filter(c => c.status === 'active' || c.status === 'aktiv' || c.custom_status === 'aktiv');
   const totalMonthly = active.reduce((s, c) => s + (c.premium_monthly || 0), 0);
   const totalYearly = active.reduce((s, c) => s + (c.premium_yearly || 0), 0);
 

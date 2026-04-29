@@ -40,6 +40,17 @@ export default function Applications() {
     queryFn: () => base44.entities.Customer.list(),
   })
 
+  const { data: brokers = [] } = useQuery({
+    queryKey: ['brokers'],
+    queryFn: () => base44.entities.Broker.filter({ is_active: true }),
+  })
+
+  const getBrokerName = (brokerValue) => {
+    if (!brokerValue) return null
+    const found = brokers.find(b => b.name === brokerValue || b.email === brokerValue)
+    return found?.name || brokerValue
+  }
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Application.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['applications'] }); setShowForm(false); setEditing(null) },
@@ -68,6 +79,8 @@ export default function Applications() {
     ? Math.round((approvedApps.length / closedTotal) * 100)
     : 0
   const uniqueBrokers = [...new Set(applications.map(a => a.assigned_broker).filter(Boolean))]
+  // resolve broker display names
+  
 
   // Filtering
   const filtered = applications.filter(a => {
@@ -244,7 +257,7 @@ export default function Applications() {
             <SelectTrigger className="w-44"><SelectValue placeholder="Alle Berater" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Alle Berater</SelectItem>
-              {uniqueBrokers.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+              {uniqueBrokers.map(b => <SelectItem key={b} value={b}>{getBrokerName(b)}</SelectItem>)}
             </SelectContent>
           </Select>
         )}
@@ -255,10 +268,10 @@ export default function Applications() {
         <CardContent className="p-0">
           {/* Table Header */}
           <div className="hidden md:grid grid-cols-[2fr_2fr_1.5fr_1fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            <div>Kunde</div>
+            <div>Kunde / Berater</div>
             <div>Sparte / Versicherer</div>
             <div>Produkt / Police</div>
-            <div>Startdatum</div>
+            <div>Vertragsbeginn</div>
             <div>Jahresprämie</div>
             <div>Status</div>
             <div className="w-20"></div>
@@ -277,7 +290,7 @@ export default function Applications() {
                     <div className="min-w-0">
                       <p className="font-semibold text-sm truncate">{app.customer_name || '–'}</p>
                       {app.assigned_broker && (
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">{app.assigned_broker}</p>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">{getBrokerName(app.assigned_broker)}</p>
                       )}
                     </div>
 
@@ -322,11 +335,11 @@ export default function Applications() {
                     <div>
                       {app.estimated_premium_yearly ? (
                         <p className="text-sm font-semibold text-foreground">
-                          CHF {app.estimated_premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}
+                          CHF {app.estimated_premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                       ) : app.estimated_premium_monthly ? (
                         <p className="text-sm font-medium text-foreground">
-                          CHF {app.estimated_premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}/M.
+                          CHF {app.estimated_premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/M.
                         </p>
                       ) : (
                         <span className="text-sm text-muted-foreground">–</span>
@@ -410,8 +423,9 @@ export default function Applications() {
             <DialogTitle>{editing ? 'Antrag bearbeiten' : 'Neuer Antrag'}</DialogTitle>
           </DialogHeader>
           <ApplicationForm
-            application={editing}
-            customers={customers}
+          application={editing}
+          customers={customers}
+          brokers={brokers}
             onSave={handleSave}
             onCancel={() => { setShowForm(false); setEditing(null) }}
             saving={createMutation.isPending || updateMutation.isPending}

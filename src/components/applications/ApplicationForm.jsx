@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { base44 } from '@/api/base44Client'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -21,6 +23,11 @@ const grouped = ALL_SPARTEN.reduce((acc, s) => {
 }, {})
 
 export default function ApplicationForm({ application, customers = [], onSave, onCancel, saving }) {
+  const { data: brokers = [] } = useQuery({
+    queryKey: ['brokers'],
+    queryFn: () => base44.entities.Broker.filter({ is_active: true }),
+  })
+
   const [form, setForm] = useState(application || {
     customer_id: '',
     insurance_type: 'other',
@@ -208,8 +215,15 @@ export default function ApplicationForm({ application, customers = [], onSave, o
 
       {/* Berater */}
       <div>
-        <Label>Zuständiger Berater (E-Mail)</Label>
-        <Input type="email" value={form.assigned_broker} onChange={e => set('assigned_broker', e.target.value)} className="mt-1" placeholder="berater@firma.ch" />
+        <Label>Zuständiger Berater</Label>
+        <Select value={form.assigned_broker} onValueChange={v => set('assigned_broker', v)}>
+          <SelectTrigger className="mt-1"><SelectValue placeholder="Berater auswählen" /></SelectTrigger>
+          <SelectContent>
+            {brokers.map(b => (
+              <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Notizen */}

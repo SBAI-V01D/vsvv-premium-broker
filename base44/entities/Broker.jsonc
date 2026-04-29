@@ -1,0 +1,22 @@
+{
+  "name": "Broker",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Vollst\u00e4ndiger Name des Beraters"
+    },
+    "email": {
+      "type": "string",
+      "description": "E-Mail-Adresse"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Aktiv"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}
