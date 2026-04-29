@@ -163,28 +163,6 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/kunden')}>
-          <CardHeader>
-            <CardTitle>Kürzlich hinzugefügte Kunden</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {customers.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Keine Kunden vorhanden</p>
-            ) : (
-              <div className="space-y-3">
-                {customers.slice(0, 5).map(c => (
-                  <div key={c.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                    <div>
-                      <p className="text-sm font-medium">{c.first_name} {c.last_name}</p>
-                      <p className="text-xs text-muted-foreground">{c.email}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/vertraege')}>
           <CardHeader>
             <CardTitle>Verträge - Status</CardTitle>
@@ -206,7 +184,7 @@ export default function Dashboard() {
 
         <Card onClick={() => navigate('/aufgaben')} className="cursor-pointer hover:shadow-lg transition-shadow">
           <CardHeader className="flex justify-between items-center">
-            <CardTitle>Ausstehende Aufgaben</CardTitle>
+            <CardTitle>Kommende Aufgaben</CardTitle>
             <Button size="sm" onClick={(e) => { e.stopPropagation(); handleNewTask() }}>+ Neue Aufgabe</Button>
           </CardHeader>
           <CardContent>
@@ -249,6 +227,28 @@ export default function Dashboard() {
                       </p>
                     </div>
                     <span className="text-lg">🎉</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/kunden')}>
+          <CardHeader>
+            <CardTitle>Kürzlich hinzugefügte Kunden</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {customers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Keine Kunden vorhanden</p>
+            ) : (
+              <div className="space-y-3">
+                {customers.slice(0, 5).map(c => (
+                  <div key={c.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
+                    <div>
+                      <p className="text-sm font-medium">{c.first_name} {c.last_name}</p>
+                      <p className="text-xs text-muted-foreground">{c.email}</p>
+                    </div>
                   </div>
                 ))}
               </div>
