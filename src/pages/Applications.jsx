@@ -393,16 +393,16 @@ export default function Applications() {
                     <div>
                       {(app.contract_start_date || app.requested_start_date) && (
                         <div className="flex items-center gap-1.5 mb-1">
-                          <Calendar className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                          <span className="text-sm">
+                          <Calendar className="w-3 h-3 text-green-600 flex-shrink-0" />
+                          <span className="text-sm text-green-600 font-medium">
                             {new Date(app.contract_start_date || app.requested_start_date).toLocaleDateString('de-CH')}
                           </span>
                         </div>
                       )}
                       {app.contract_end_date && (
                         <div className="flex items-center gap-1.5">
-                          <Calendar className="w-3 h-3 text-destructive flex-shrink-0" />
-                          <span className="text-sm text-destructive font-medium">
+                          <Calendar className="w-3 h-3 text-green-600 flex-shrink-0" />
+                          <span className="text-sm text-green-600 font-medium">
                             {new Date(app.contract_end_date).toLocaleDateString('de-CH')}
                           </span>
                         </div>
