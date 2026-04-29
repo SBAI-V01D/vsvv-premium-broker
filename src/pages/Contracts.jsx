@@ -125,6 +125,8 @@ export default function Contracts() {
                 <TableHead>Kunde</TableHead>
                 <TableHead className="hidden md:table-cell">Versicherer</TableHead>
                 <TableHead className="hidden lg:table-cell">Policen-Nr</TableHead>
+                <TableHead className="hidden lg:table-cell">Beginn</TableHead>
+                <TableHead className="hidden lg:table-cell">Ende</TableHead>
                 <TableHead>Prämie/J.</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-10"></TableHead>
@@ -146,6 +148,12 @@ export default function Contracts() {
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm">{contract.insurer}</TableCell>
                     <TableCell className="hidden lg:table-cell text-sm">{contract.policy_number || '–'}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm">
+                      {contract.start_date ? new Date(contract.start_date).toLocaleDateString('de-CH') : '–'}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm">
+                      {contract.end_date ? new Date(contract.end_date).toLocaleDateString('de-CH') : '–'}
+                    </TableCell>
                     <TableCell className="font-medium">
                       CHF {contract.premium_yearly?.toLocaleString('de-CH', { minimumFractionDigits: 0 }) || '–'}
                     </TableCell>

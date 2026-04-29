@@ -31,6 +31,9 @@ export default function ApplicationForm({ application, customers = [], onSave, o
     estimated_premium_monthly: '',
     estimated_premium_yearly: '',
     requested_start_date: '',
+    policy_number: '',
+    contract_start_date: '',
+    contract_end_date: '',
     commission_estimate: '',
     assigned_broker: '',
     notes: '',
@@ -54,9 +57,11 @@ export default function ApplicationForm({ application, customers = [], onSave, o
       estimated_premium_monthly: form.estimated_premium_monthly ? Number(form.estimated_premium_monthly) : undefined,
       estimated_premium_yearly: form.estimated_premium_yearly ? Number(form.estimated_premium_yearly) : undefined,
       commission_estimate: form.commission_estimate ? Number(form.commission_estimate) : undefined,
-      // Store sparte_data as JSON string in notes extension or as product field supplement
       notes: form.notes,
       product: form.product || form.sparte,
+      policy_number: form.policy_number,
+      contract_start_date: form.contract_start_date,
+      contract_end_date: form.contract_end_date,
     })
   }
 
@@ -176,6 +181,28 @@ export default function ApplicationForm({ application, customers = [], onSave, o
         <div>
           <Label>Geschätzte Provision (CHF)</Label>
           <Input type="number" step="0.01" value={form.commission_estimate} onChange={e => set('commission_estimate', e.target.value)} className="mt-1" />
+        </div>
+      </div>
+
+      {/* Police & Vertragsdaten */}
+      <div className="p-4 bg-muted/30 rounded-lg border border-border space-y-3">
+        <p className="text-sm font-semibold text-foreground">Police & Vertragsdaten</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Policennummer</Label>
+            <Input value={form.policy_number} onChange={e => set('policy_number', e.target.value)} className="mt-1" placeholder="z.B. POL-2024-001" />
+          </div>
+          <div />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Vertragsbeginn</Label>
+            <Input type="date" value={form.contract_start_date} onChange={e => set('contract_start_date', e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <Label>Vertragsende</Label>
+            <Input type="date" value={form.contract_end_date} onChange={e => set('contract_end_date', e.target.value)} className="mt-1" />
+          </div>
         </div>
       </div>
 

@@ -68,6 +68,20 @@
       "format": "date",
       "description": "Gew\u00fcnschtes Startdatum"
     },
+    "policy_number": {
+      "type": "string",
+      "description": "Policennummer (nach Annahme)"
+    },
+    "contract_start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Vertragsbeginn"
+    },
+    "contract_end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Vertragsende"
+    },
     "commission_estimate": {
       "type": "number",
       "description": "Gesch\u00e4tzte Provision (CHF)"

@@ -89,23 +89,53 @@ export default function Applications() {
 
   const handleStatusChange = async ({ status, statusDef, note, metadata }) => {
     const app = statusChanging
+    const prevStatus = app.custom_status || app.status
+    const ACCEPTED_STATUSES = ['angenommen', 'policiert', 'approved']
+
     await base44.entities.StatusHistory.create({
       entity_type: 'application',
       entity_id: app.id,
       customer_id: app.customer_id,
-      from_status: app.custom_status || app.status,
+      from_status: prevStatus,
       to_status: status,
       to_status_label: statusDef?.label || status,
       note,
       metadata: JSON.stringify(metadata),
     })
+
+    // Auto-create contract if newly accepted and no contract linked yet
+    let linkedContractId = app.linked_contract_id
+    if (ACCEPTED_STATUSES.includes(status) && !ACCEPTED_STATUSES.includes(prevStatus) && !app.linked_contract_id) {
+      const newContract = await base44.entities.Contract.create({
+        customer_id: app.customer_id,
+        customer_name: app.customer_name,
+        primary_customer_id: app.primary_customer_id,
+        is_family_member: app.is_family_member || false,
+        insurer: app.insurer,
+        insurance_type: app.insurance_type,
+        product: app.product,
+        policy_number: app.policy_number || '',
+        premium_yearly: app.estimated_premium_yearly,
+        premium_monthly: app.estimated_premium_monthly,
+        start_date: app.contract_start_date || app.requested_start_date || '',
+        end_date: app.contract_end_date || '',
+        assigned_broker: app.assigned_broker,
+        custom_status: 'aktiv',
+        status: 'active',
+        notes: `Automatisch erstellt aus Antrag. ${app.notes || ''}`.trim(),
+      })
+      linkedContractId = newContract.id
+    }
+
     await base44.entities.Application.update(app.id, {
       custom_status: status,
       insurer: app.insurer || '–',
       insurance_type: app.insurance_type,
       customer_id: app.customer_id,
+      linked_contract_id: linkedContractId,
     })
     queryClient.invalidateQueries({ queryKey: ['applications'] })
+    queryClient.invalidateQueries({ queryKey: ['contracts'] })
     setStatusChanging(null)
   }
 
