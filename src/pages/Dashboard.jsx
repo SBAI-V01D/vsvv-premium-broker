@@ -16,7 +16,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [selectedTask, setSelectedTask] = useState(null)
   const [formData, setFormData] = useState({ status: '', notes: '', due_date: '' })
-  const [activeView, setActiveView] = useState('contracts')
+  const [exportFilter, setExportFilter] = useState('all')
   const queryClient = useQueryClient()
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
@@ -140,82 +140,119 @@ export default function Dashboard() {
     const pageWidth = doc.internal.pageSize.getWidth()
     let yPos = 10
 
-    // Header
-    doc.setFontSize(16)
-    doc.text('Export: Geburtstage & Kommende Aufgaben', pageWidth / 2, yPos, { align: 'center' })
-    yPos += 15
-
-    // Geburtstage
-    doc.setFontSize(12)
-    doc.text('🎂 Kommende Geburtstage', 10, yPos)
-    yPos += 8
-    doc.setFontSize(10)
-    if (upcomingBirthdays.length === 0) {
-      doc.text('Keine Geburtstage in den nächsten 30 Tagen', 10, yPos)
-      yPos += 8
-    } else {
-      upcomingBirthdays.forEach(b => {
-        const daysText = b.daysUntil === 0 ? 'Heute' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`
-        doc.text(`${b.customer.first_name} ${b.customer.last_name} - ${daysText}`, 10, yPos)
-        yPos += 6
-        if (yPos > pageHeight - 20) {
-          doc.addPage()
-          yPos = 10
-        }
-      })
-    }
-
-    yPos += 5
-    // Aufgaben
-    doc.setFontSize(12)
-    doc.text('Kommende Aufgaben', 10, yPos)
-    yPos += 8
-    doc.setFontSize(10)
-    if (pendingTasks.length === 0) {
-      doc.text('Keine ausstehenden Aufgaben', 10, yPos)
-    } else {
-      pendingTasks.forEach(t => {
-        const dueText = t.due_date ? ` (Fällig: ${formatDate(t.due_date)})` : ''
-        const text = `${t.title}${dueText}`
-        const splitText = doc.splitTextToSize(text, pageWidth - 20)
-        splitText.forEach(line => {
-          doc.text(line, 10, yPos)
+    if (exportFilter === 'all' || exportFilter === 'birthdays') {
+      doc.setFontSize(16)
+      doc.text('🎂 Kommende Geburtstage', pageWidth / 2, yPos, { align: 'center' })
+      yPos += 15
+      doc.setFontSize(10)
+      if (upcomingBirthdays.length === 0) {
+        doc.text('Keine Geburtstage in den nächsten 30 Tagen', 10, yPos)
+        yPos += 8
+      } else {
+        upcomingBirthdays.forEach(b => {
+          const daysText = b.daysUntil === 0 ? 'Heute' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`
+          doc.text(`${b.customer.first_name} ${b.customer.last_name} - ${daysText}`, 10, yPos)
           yPos += 6
-          if (yPos > pageHeight - 10) {
+          if (yPos > pageHeight - 20) {
             doc.addPage()
             yPos = 10
           }
         })
-      })
+      }
     }
 
-    doc.save('Geburtstage_Aufgaben.pdf')
+    if (exportFilter === 'all') {
+      yPos += 10
+    }
+
+    if (exportFilter === 'all' || exportFilter === 'tasks') {
+      doc.setFontSize(16)
+      doc.text('Kommende Aufgaben', pageWidth / 2, yPos, { align: 'center' })
+      yPos += 15
+      doc.setFontSize(10)
+      if (pendingTasks.length === 0) {
+        doc.text('Keine ausstehenden Aufgaben', 10, yPos)
+      } else {
+        pendingTasks.forEach(t => {
+          const dueText = t.due_date ? ` (Fällig: ${formatDate(t.due_date)})` : ''
+          const text = `${t.title}${dueText}`
+          const splitText = doc.splitTextToSize(text, pageWidth - 20)
+          splitText.forEach(line => {
+            doc.text(line, 10, yPos)
+            yPos += 6
+            if (yPos > pageHeight - 10) {
+              doc.addPage()
+              yPos = 10
+            }
+          })
+        })
+      }
+    }
+
+    if (exportFilter === 'all' || exportFilter === 'contracts') {
+      if (exportFilter === 'all') {
+        yPos += 10
+      }
+      doc.setFontSize(16)
+      doc.text('Verträge - Status', pageWidth / 2, yPos, { align: 'center' })
+      yPos += 15
+      doc.setFontSize(10)
+      doc.text(`Aktive Verträge: ${activeContracts.length}`, 10, yPos)
+      yPos += 6
+      doc.text(`Inaktive Verträge: ${inactiveContracts.length}`, 10, yPos)
+      yPos += 6
+      doc.text(`Total: ${contracts.length} Verträge`, 10, yPos)
+    }
+
+    const fileName = exportFilter === 'all' ? 'Auswertung_Gesamt.pdf' : `Auswertung_${exportFilter}.pdf`
+    doc.save(fileName)
   }
 
   const handleExportExcel = () => {
-    const csvContent = [
-      ['GEBURTSTAGE'],
-      ['Name', 'Tage bis Geburtstag'],
-      ...upcomingBirthdays.map(b => [
+    const csvContent = []
+
+    if (exportFilter === 'all' || exportFilter === 'birthdays') {
+      csvContent.push(['GEBURTSTAGE'])
+      csvContent.push(['Name', 'Tage bis Geburtstag'])
+      csvContent.push(...upcomingBirthdays.map(b => [
         `${b.customer.first_name} ${b.customer.last_name}`,
         b.daysUntil === 0 ? 'Heute' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`
-      ]),
-      [],
-      ['KOMMENDE AUFGABEN'],
-      ['Aufgabentitel', 'Fälligkeitsdatum', 'Status'],
-      ...pendingTasks.map(t => [
+      ]))
+    }
+
+    if (exportFilter === 'all') {
+      csvContent.push([])
+    }
+
+    if (exportFilter === 'all' || exportFilter === 'tasks') {
+      csvContent.push(['KOMMENDE AUFGABEN'])
+      csvContent.push(['Aufgabentitel', 'Fälligkeitsdatum', 'Status'])
+      csvContent.push(...pendingTasks.map(t => [
         t.title,
         t.due_date ? formatDate(t.due_date) : '-',
         t.status
-      ])
-    ]
+      ]))
+    }
+
+    if (exportFilter === 'all') {
+      csvContent.push([])
+    }
+
+    if (exportFilter === 'all' || exportFilter === 'contracts') {
+      csvContent.push(['VERTRÄGE - STATUS'])
+      csvContent.push(['Status', 'Anzahl'])
+      csvContent.push(['Aktive Verträge', activeContracts.length])
+      csvContent.push(['Inaktive Verträge', inactiveContracts.length])
+      csvContent.push(['Total', contracts.length])
+    }
 
     const csvString = csvContent.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
     link.setAttribute('href', url)
-    link.setAttribute('download', 'Geburtstage_Aufgaben.csv')
+    const fileName = exportFilter === 'all' ? 'Auswertung_Gesamt.csv' : `Auswertung_${exportFilter}.csv`
+    link.setAttribute('download', fileName)
     link.click()
   }
 
@@ -233,7 +270,18 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground mt-1">Willkommen in deinem CRM</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <Select value={exportFilter} onValueChange={setExportFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Was exportieren?" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Auswertungen</SelectItem>
+              <SelectItem value="contracts">Verträge - Status</SelectItem>
+              <SelectItem value="tasks">Kommende Aufgaben</SelectItem>
+              <SelectItem value="birthdays">Geburtstage</SelectItem>
+            </SelectContent>
+          </Select>
           <Button onClick={handleExportPDF} variant="outline" size="sm">
             <Download className="w-4 h-4 mr-2" /> PDF
           </Button>
@@ -259,104 +307,77 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="space-y-6">
-        <div className="flex gap-2">
-          <Button
-            variant={activeView === 'contracts' ? 'default' : 'outline'}
-            onClick={() => setActiveView('contracts')}
-          >
-            Verträge - Status
-          </Button>
-          <Button
-            variant={activeView === 'tasks' ? 'default' : 'outline'}
-            onClick={() => setActiveView('tasks')}
-          >
-            Kommende Aufgaben
-          </Button>
-          <Button
-            variant={activeView === 'birthdays' ? 'default' : 'outline'}
-            onClick={() => setActiveView('birthdays')}
-          >
-            🎂 Geburtstage
-          </Button>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/vertraege')}>
+          <CardHeader>
+            <CardTitle>Verträge - Status</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between p-2 bg-green-50 rounded">
+              <span className="text-sm font-medium">Aktive Verträge</span>
+              <span className="text-lg font-bold text-green-600">{activeContracts.length}</span>
+            </div>
+            <div className="flex justify-between p-2 bg-red-50 rounded">
+              <span className="text-sm font-medium">Inaktive Verträge</span>
+              <span className="text-lg font-bold text-red-600">{inactiveContracts.length}</span>
+            </div>
+            <div className="text-sm text-muted-foreground border-t pt-2 mt-2">
+              Total: {contracts.length} Verträge
+            </div>
+          </CardContent>
+        </Card>
 
-        {activeView === 'contracts' && (
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/vertraege')}>
-            <CardHeader>
-              <CardTitle>Verträge - Status</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between p-2 bg-green-50 rounded">
-                <span className="text-sm font-medium">Aktive Verträge</span>
-                <span className="text-lg font-bold text-green-600">{activeContracts.length}</span>
-              </div>
-              <div className="flex justify-between p-2 bg-red-50 rounded">
-                <span className="text-sm font-medium">Inaktive Verträge</span>
-                <span className="text-lg font-bold text-red-600">{inactiveContracts.length}</span>
-              </div>
-              <div className="text-sm text-muted-foreground border-t pt-2 mt-2">
-                Total: {contracts.length} Verträge
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {activeView === 'tasks' && (
-          <Card onClick={() => navigate('/aufgaben')} className="cursor-pointer hover:shadow-lg transition-shadow">
-            <CardHeader className="flex justify-between items-center">
-              <CardTitle>Kommende Aufgaben</CardTitle>
-              <Button size="sm" onClick={(e) => { e.stopPropagation(); handleNewTask() }}>+ Neue Aufgabe</Button>
-            </CardHeader>
-            <CardContent>
-              {pendingTasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Keine ausstehenden Aufgaben</p>
-              ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {pendingTasks.map(t => (
-                    <button
-                      key={t.id}
-                      onClick={(e) => { e.stopPropagation(); handleTaskClick(t) }}
-                      className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded transition-colors text-left"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{t.title}</p>
-                        {t.due_date && <p className="text-xs text-muted-foreground">Fällig: {formatDate(t.due_date)}</p>}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {activeView === 'birthdays' && (
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/kunden')}>
-            <CardHeader>
-              <CardTitle>🎂 Kommende Geburtstage</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {upcomingBirthdays.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Keine Geburtstage in den nächsten 30 Tagen</p>
-              ) : (
-                <div className="space-y-3">
-                  {upcomingBirthdays.map(b => (
-                    <div key={b.customer.id} className="flex items-center justify-between p-2 bg-pink-50 rounded">
-                      <div>
-                        <p className="text-sm font-medium">{b.customer.first_name} {b.customer.last_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {b.daysUntil === 0 ? 'Heute' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`}
-                        </p>
-                      </div>
-                      <span className="text-lg">🎉</span>
+        <Card onClick={() => navigate('/aufgaben')} className="cursor-pointer hover:shadow-lg transition-shadow">
+          <CardHeader className="flex justify-between items-center">
+            <CardTitle>Kommende Aufgaben</CardTitle>
+            <Button size="sm" onClick={(e) => { e.stopPropagation(); handleNewTask() }}>+ Neue Aufgabe</Button>
+          </CardHeader>
+          <CardContent>
+            {pendingTasks.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Keine ausstehenden Aufgaben</p>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {pendingTasks.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={(e) => { e.stopPropagation(); handleTaskClick(t) }}
+                    className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded transition-colors text-left"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{t.title}</p>
+                      {t.due_date && <p className="text-xs text-muted-foreground">Fällig: {formatDate(t.due_date)}</p>}
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/kunden')}>
+          <CardHeader>
+            <CardTitle>🎂 Kommende Geburtstage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {upcomingBirthdays.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Keine Geburtstage in den nächsten 30 Tagen</p>
+            ) : (
+              <div className="space-y-3">
+                {upcomingBirthdays.map(b => (
+                  <div key={b.customer.id} className="flex items-center justify-between p-2 bg-pink-50 rounded">
+                    <div>
+                      <p className="text-sm font-medium">{b.customer.first_name} {b.customer.last_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {b.daysUntil === 0 ? 'Heute' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`}
+                      </p>
+                    </div>
+                    <span className="text-lg">🎉</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/kunden')}>
           <CardHeader>
