@@ -54,7 +54,11 @@ export default function Tasks() {
   const isOverdue = (dueDate) => new Date(dueDate) < new Date()
   const formatDate = (dateStr) => {
     if (!dateStr) return '–'
-    return new Date(dateStr + 'T00:00:00Z').toLocaleDateString('de-CH')
+    const date = new Date(dateStr + 'T00:00:00Z')
+    const day = String(date.getUTCDate()).padStart(2, '0')
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+    const year = date.getUTCFullYear()
+    return `${day}.${month}.${year}`
   }
 
   const openTasks = tasks.filter(t => t.status === 'open')
