@@ -1,10 +1,19 @@
-import React from 'react'
-import { useQuery } from '@tanstack/react-query'
+import React, { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Users, FileText, ClipboardList, CheckCircle2 } from 'lucide-react'
 
 export default function Dashboard() {
+  const [selectedTask, setSelectedTask] = useState(null)
+  const [formData, setFormData] = useState({ status: '', notes: '', due_date: '' })
+  const queryClient = useQueryClient()
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
     queryFn: () => base44.entities.Customer.list(),
@@ -28,6 +37,37 @@ export default function Dashboard() {
   const activeContracts = contracts.filter(c => c.status === 'active')
   const openApplications = applications.filter(a => a.status !== 'approved' && a.status !== 'rejected')
   const openTasks = tasks.filter(t => t.status !== 'completed')
+
+  const updateMutation = useMutation({
+    mutationFn: (data) => base44.entities.Task.update(selectedTask.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      setSelectedTask(null)
+      setFormData({ status: '', notes: '', due_date: '' })
+    },
+  })
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '–'
+    const date = new Date(dateStr + 'T00:00:00Z')
+    const day = String(date.getUTCDate()).padStart(2, '0')
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+    const year = date.getUTCFullYear()
+    return `${day}.${month}.${year}`
+  }
+
+  const handleTaskClick = (task) => {
+    setSelectedTask(task)
+    setFormData({ status: task.status, notes: task.notes || '', due_date: task.due_date || '' })
+  }
+
+  const handleSave = () => {
+    updateMutation.mutate({
+      status: formData.status || selectedTask.status,
+      notes: formData.notes || selectedTask.notes,
+      due_date: formData.due_date || selectedTask.due_date,
+    })
+  }
 
   const stats = [
     { label: 'Kunden', value: customers.length, icon: Users, color: 'bg-blue-50 text-blue-600' },
@@ -92,18 +132,74 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-3">
                 {openTasks.slice(0, 5).map(t => (
-                  <div key={t.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{t.title}</p>
-                      {t.due_date && <p className="text-xs text-muted-foreground">Fällig: {t.due_date}</p>}
+                  <button
+                    key={t.id}
+                    onClick={() => handleTaskClick(t)}
+                    className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded transition-colors text-left"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{t.title}</p>
+                      {t.due_date && <p className="text-xs text-muted-foreground">Fällig: {formatDate(t.due_date)}</p>}
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={!!selectedTask} onOpenChange={(open) => { if (!open) setSelectedTask(null) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{selectedTask?.title}</DialogTitle>
+          </DialogHeader>
+          {selectedTask && (
+            <div className="space-y-4">
+              <div>
+                <Label>Status</Label>
+                <Select value={formData.status} onValueChange={(v) => setFormData(p => ({ ...p, status: v }))}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Pendent</SelectItem>
+                    <SelectItem value="in_progress">In Bearbeitung</SelectItem>
+                    <SelectItem value="completed">Erledigt</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Fälligkeitsdatum</Label>
+                <Input
+                  type="date"
+                  value={formData.due_date || ''}
+                  onChange={(e) => setFormData(p => ({ ...p, due_date: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label>Notizen</Label>
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData(p => ({ ...p, notes: e.target.value }))}
+                  placeholder="Prozessnotizen..."
+                  className="mt-1"
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedTask(null)}>Schliessen</Button>
+            <Button onClick={handleSave} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? 'Speichern...' : 'Speichern'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
