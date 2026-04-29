@@ -5,13 +5,26 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { DialogFooter } from '@/components/ui/dialog'
+import { ALL_SPARTEN, SPARTEN_PRIVAT, SPARTEN_FIRMA, getFieldsForSparte } from '@/lib/insuranceSparten'
 
-const INSURANCE_TYPES = ['life', 'health', 'property', 'liability', 'motor', 'other']
+const SWISS_INSURERS = [
+  'Allianz','Axa','Baloise','CSS','Concordia','Die Mobiliar','Elvia','Generali',
+  'Helvetia','Helsana','Mutuel','ÖKK','SWICA','Sanitas','Smile','Suva',
+  'Swiss Life','Swiss Re','TCS','Visana','Zurich','Andere',
+]
+
+// Group sparten by group label
+const grouped = ALL_SPARTEN.reduce((acc, s) => {
+  if (!acc[s.group]) acc[s.group] = []
+  acc[s.group].push(s)
+  return acc
+}, {})
 
 export default function ApplicationForm({ application, customers = [], onSave, onCancel, saving }) {
   const [form, setForm] = useState(application || {
     customer_id: '',
-    insurance_type: '',
+    insurance_type: 'other',
+    sparte: '',
     product: '',
     insurer: '',
     status: 'draft',
@@ -19,13 +32,17 @@ export default function ApplicationForm({ application, customers = [], onSave, o
     estimated_premium_yearly: '',
     requested_start_date: '',
     commission_estimate: '',
+    assigned_broker: '',
     notes: '',
+    sparte_data: {},
   })
 
   const selectedCustomer = customers.find(c => c.id === form.customer_id)
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
+  const setSparteData = (k, v) => setForm(prev => ({ ...prev, sparte_data: { ...prev.sparte_data, [k]: v } }))
 
   const primaryCustomers = customers.filter(c => !c.is_family_member)
+  const sparteFields = getFieldsForSparte(form.sparte)
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -37,11 +54,15 @@ export default function ApplicationForm({ application, customers = [], onSave, o
       estimated_premium_monthly: form.estimated_premium_monthly ? Number(form.estimated_premium_monthly) : undefined,
       estimated_premium_yearly: form.estimated_premium_yearly ? Number(form.estimated_premium_yearly) : undefined,
       commission_estimate: form.commission_estimate ? Number(form.commission_estimate) : undefined,
+      // Store sparte_data as JSON string in notes extension or as product field supplement
+      notes: form.notes,
+      product: form.product || form.sparte,
     })
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Kunde */}
       <div>
         <Label>Kunde *</Label>
         <Select value={form.customer_id} onValueChange={v => set('customer_id', v)}>
@@ -49,7 +70,6 @@ export default function ApplicationForm({ application, customers = [], onSave, o
           <SelectContent>
             {primaryCustomers.map(primary => {
               const familyMembers = customers.filter(c => c.primary_customer_id === primary.id)
-
               return (
                 <div key={primary.id}>
                   <SelectItem value={primary.id}>
@@ -67,41 +87,75 @@ export default function ApplicationForm({ application, customers = [], onSave, o
         </Select>
       </div>
 
+      {/* Sparte */}
       <div>
-        <Label>Versicherungsgesellschaft *</Label>
-        <Input value={form.insurer} onChange={e => set('insurer', e.target.value)} required className="mt-1" />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label>Versicherungsart *</Label>
-          <Select value={form.insurance_type} onValueChange={v => set('insurance_type', v)}>
-            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {INSURANCE_TYPES.map(t => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Produkt/Sparte</Label>
-          <Input value={form.product} onChange={e => set('product', e.target.value)} className="mt-1" />
-        </div>
-      </div>
-
-      <div>
-        <Label>Status</Label>
-        <Select value={form.status} onValueChange={v => set('status', v)}>
-          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+        <Label>Versicherungssparte *</Label>
+        <Select value={form.sparte} onValueChange={v => set('sparte', v)}>
+          <SelectTrigger className="mt-1"><SelectValue placeholder="Sparte wählen" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="draft">Entwurf</SelectItem>
-            <SelectItem value="submitted">Eingereicht</SelectItem>
-            <SelectItem value="under_review">In Prüfung</SelectItem>
-            <SelectItem value="approved">Genehmigt</SelectItem>
-            <SelectItem value="rejected">Abgelehnt</SelectItem>
+            {Object.entries(grouped).map(([group, items]) => (
+              <div key={group}>
+                <div className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-muted/50 sticky top-0">{group}</div>
+                {items.map(s => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </div>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
+      {/* Versicherer */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Versicherungsgesellschaft *</Label>
+          <Select value={form.insurer} onValueChange={v => set('insurer', v)}>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Gesellschaft wählen" /></SelectTrigger>
+            <SelectContent>
+              {SWISS_INSURERS.map(ins => <SelectItem key={ins} value={ins}>{ins}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Produkt / Tarif</Label>
+          <Input value={form.product} onChange={e => set('product', e.target.value)} className="mt-1" placeholder="z.B. myFlex, 3a-Protect..." />
+        </div>
+      </div>
+
+      {/* Dynamische Sparten-Felder */}
+      {sparteFields.length > 0 && (
+        <div className="p-4 bg-muted/30 rounded-lg border border-border space-y-4">
+          <p className="text-sm font-semibold text-foreground">Spartenspezifische Angaben</p>
+          <div className="grid grid-cols-2 gap-3">
+            {sparteFields.map(field => (
+              <div key={field.key} className={field.type === 'text' && !field.placeholder?.includes('756') ? '' : ''}>
+                <Label>{field.label}</Label>
+                {field.type === 'select' ? (
+                  <Select
+                    value={form.sparte_data?.[field.key] || ''}
+                    onValueChange={v => setSparteData(field.key, v)}
+                  >
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {field.options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    type={field.type}
+                    value={form.sparte_data?.[field.key] || ''}
+                    onChange={e => setSparteData(field.key, e.target.value)}
+                    placeholder={field.placeholder || ''}
+                    className="mt-1"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Prämien */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Geschätzte Monatsprämie (CHF)</Label>
@@ -113,6 +167,7 @@ export default function ApplicationForm({ application, customers = [], onSave, o
         </div>
       </div>
 
+      {/* Dates & Commission */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Gewünschtes Startdatum</Label>
@@ -124,15 +179,20 @@ export default function ApplicationForm({ application, customers = [], onSave, o
         </div>
       </div>
 
+      {/* Berater */}
+      <div>
+        <Label>Zuständiger Berater (E-Mail)</Label>
+        <Input type="email" value={form.assigned_broker} onChange={e => set('assigned_broker', e.target.value)} className="mt-1" placeholder="berater@firma.ch" />
+      </div>
+
+      {/* Notizen */}
       <div>
         <Label>Notizen</Label>
-        <Textarea value={form.notes} onChange={e => set('notes', e.target.value)} className="mt-1" rows={2} />
+        <Textarea value={form.notes} onChange={e => set('notes', e.target.value)} className="mt-1" rows={3} placeholder="Interne Notizen, Besonderheiten, Vorbehalte..." />
       </div>
 
       <DialogFooter>
-        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-          Abbrechen
-        </Button>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>Abbrechen</Button>
         <Button type="submit" disabled={saving}>
           {saving ? 'Speichern...' : (application ? 'Aktualisieren' : 'Erstellen')}
         </Button>
