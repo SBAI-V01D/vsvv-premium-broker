@@ -41,10 +41,10 @@ export default function Dashboard() {
   const updateMutation = useMutation({
     mutationFn: async (data) => {
       const updateData = {
-        status: data.status || selectedTask.status,
-        notes: data.notes || selectedTask.notes,
-        due_date: data.due_date || selectedTask.due_date,
-        completion_date: data.completion_date || selectedTask.completion_date,
+        status: data.status !== undefined ? data.status : selectedTask.status,
+        notes: data.notes !== undefined ? data.notes : selectedTask.notes,
+        due_date: data.due_date !== undefined ? data.due_date : selectedTask.due_date,
+        completion_date: data.completion_date !== undefined ? data.completion_date : selectedTask.completion_date,
       }
       
       if (data.file) {
