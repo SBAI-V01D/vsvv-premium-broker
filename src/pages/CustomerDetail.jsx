@@ -93,7 +93,7 @@ export default function CustomerDetail() {
         </Card>
         <Card>
           <CardContent className="p-4 space-y-2">
-            {customer.birthdate && <div className="text-sm"><span className="text-muted-foreground">Geburtsdatum:</span> {customer.birthdate}</div>}
+            {customer.birthdate && <div className="text-sm"><span className="text-muted-foreground">Geburtsdatum:</span> {new Date(customer.birthdate).toLocaleDateString('de-CH')}</div>}
             {customer.profession && <div className="text-sm"><span className="text-muted-foreground">Beruf:</span> {customer.profession}</div>}
             <div className="text-sm"><span className="text-muted-foreground">Status:</span> {label(STATUS_LABELS, customer.status)}</div>
           </CardContent>
