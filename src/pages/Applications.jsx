@@ -169,6 +169,10 @@ export default function Applications() {
     return statusDefs.find(s => s.key === key)
   }
   const getStatusLabel = (app) => getStatusDef(app)?.label || app.status
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '–'
+    return new Date(dateStr).toLocaleDateString('de-CH')
+  }
 
   return (
     <div>
@@ -393,7 +397,7 @@ export default function Applications() {
                         <div className="flex items-center gap-1.5 mb-1">
                           <Calendar className="w-3 h-3 text-green-600 flex-shrink-0" />
                           <span className="text-sm text-green-600 font-medium">
-                            {new Date(app.contract_start_date || app.requested_start_date).toLocaleDateString('de-CH')}
+                            {formatDate(app.contract_start_date || app.requested_start_date)}
                           </span>
                         </div>
                       )}
@@ -401,7 +405,7 @@ export default function Applications() {
                         <div className="flex items-center gap-1.5">
                           <Calendar className="w-3 h-3 text-green-600 flex-shrink-0" />
                           <span className="text-sm text-green-600 font-medium">
-                            {new Date(app.contract_end_date).toLocaleDateString('de-CH')}
+                            {formatDate(app.contract_end_date)}
                           </span>
                         </div>
                       )}
