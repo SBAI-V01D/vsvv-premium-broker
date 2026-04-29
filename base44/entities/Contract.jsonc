@@ -75,7 +75,11 @@
         "expired"
       ],
       "default": "active",
-      "description": "Status"
+      "description": "Status (Legacy)"
+    },
+    "custom_status": {
+      "type": "string",
+      "description": "Dynamischer Status-Schl\u00fcssel (aus StatusDefinition)"
     },
     "commission_rate": {
       "type": "number",

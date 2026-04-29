@@ -16,6 +16,7 @@ import Tasks from './pages/Tasks'
 import Documents from './pages/Documents'
 import EmailTemplates from './pages/EmailTemplates'
 import EmailCampaigns from './pages/EmailCampaigns'
+import StatusVerwaltung from './pages/StatusVerwaltung'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -62,6 +63,7 @@ const AuthenticatedApp = () => {
         <Route path="/dokumente" element={<Documents />} />
         <Route path="/email-templates" element={<EmailTemplates />} />
         <Route path="/email-kampagnen" element={<EmailCampaigns />} />
+        <Route path="/status-verwaltung" element={<StatusVerwaltung />} />
       </Route>
 
       {/* Portal */}

@@ -49,7 +49,11 @@
         "rejected"
       ],
       "default": "draft",
-      "description": "Status"
+      "description": "Status (Legacy)"
+    },
+    "custom_status": {
+      "type": "string",
+      "description": "Dynamischer Status-Schl\u00fcssel (aus StatusDefinition)"
     },
     "estimated_premium_monthly": {
       "type": "number",

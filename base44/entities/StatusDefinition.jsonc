@@ -1,0 +1,67 @@
+{
+  "name": "StatusDefinition",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "application",
+        "contract"
+      ],
+      "description": "Zu welchem Bereich geh\u00f6rt dieser Status"
+    },
+    "key": {
+      "type": "string",
+      "description": "Interner Schl\u00fcssel (z.B. 'eingereicht')"
+    },
+    "label": {
+      "type": "string",
+      "description": "Anzeigename (z.B. 'Antrag eingereicht')"
+    },
+    "color": {
+      "type": "string",
+      "enum": [
+        "gray",
+        "blue",
+        "yellow",
+        "orange",
+        "green",
+        "red",
+        "purple",
+        "teal"
+      ],
+      "default": "gray",
+      "description": "Farbe f\u00fcr das Status-Badge"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "offen",
+        "positiv",
+        "negativ",
+        "abgeschlossen"
+      ],
+      "default": "offen",
+      "description": "Status-Kategorie"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Status ist aktiv/sichtbar"
+    },
+    "sort_order": {
+      "type": "number",
+      "default": 0,
+      "description": "Reihenfolge im Dropdown"
+    },
+    "metadata_fields": {
+      "type": "string",
+      "description": "Zus\u00e4tzliche Metadaten-Felder (JSON, z.B. Datum, Grund)"
+    }
+  },
+  "required": [
+    "type",
+    "key",
+    "label"
+  ]
+}

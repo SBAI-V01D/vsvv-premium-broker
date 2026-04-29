@@ -9,13 +9,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import ContractForm from '../components/contracts/ContractForm'
-import { STATUS_LABELS, INSURANCE_TYPE_LABELS, label } from '@/lib/labels'
+import { INSURANCE_TYPE_LABELS, label } from '@/lib/labels'
+import StatusBadge from '@/components/status/StatusBadge'
+import StatusChangeDialog from '@/components/status/StatusChangeDialog'
 
 export default function Contracts() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
+  const [statusChanging, setStatusChanging] = useState(null)
   const queryClient = useQueryClient()
+
+  const { data: statusDefs = [] } = useQuery({
+    queryKey: ['statusDefinitions'],
+    queryFn: () => base44.entities.StatusDefinition.filter({ type: 'contract' }),
+  })
 
   const { data: contracts = [] } = useQuery({
     queryKey: ['contracts'],
@@ -60,6 +68,28 @@ export default function Contracts() {
     } else {
       createMutation.mutate(data)
     }
+  }
+
+  const handleStatusChange = async ({ status, statusDef, note, metadata }) => {
+    const contract = statusChanging
+    await base44.entities.StatusHistory.create({
+      entity_type: 'contract',
+      entity_id: contract.id,
+      customer_id: contract.customer_id,
+      from_status: contract.custom_status || contract.status,
+      to_status: status,
+      to_status_label: statusDef?.label || status,
+      note,
+      metadata: JSON.stringify(metadata),
+    })
+    await base44.entities.Contract.update(contract.id, { custom_status: status })
+    queryClient.invalidateQueries({ queryKey: ['contracts'] })
+    setStatusChanging(null)
+  }
+
+  const getStatusDef = (contract) => {
+    const key = contract.custom_status || contract.status
+    return statusDefs.find(s => s.key === key)
   }
 
   return (
@@ -115,7 +145,11 @@ export default function Contracts() {
                     <TableCell className="font-medium">
                       CHF {contract.premium_yearly?.toLocaleString('de-CH', { minimumFractionDigits: 0 }) || '–'}
                     </TableCell>
-                    <TableCell className="text-sm">{label(STATUS_LABELS, contract.status)}</TableCell>
+                    <TableCell>
+                      <button onClick={() => setStatusChanging(contract)} className="hover:opacity-80 transition-opacity">
+                        <StatusBadge statusDef={getStatusDef(contract)} label={getStatusDef(contract)?.label || contract.status} />
+                      </button>
+                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -124,6 +158,9 @@ export default function Contracts() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setStatusChanging(contract)}>
+                            Status ändern
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => { setEditing(contract); setShowForm(true); }}>
                             <Edit className="w-4 h-4 mr-2" /> Bearbeiten
                           </DropdownMenuItem>
@@ -147,6 +184,15 @@ export default function Contracts() {
           </Table>
         </CardContent>
       </Card>
+
+      <StatusChangeDialog
+        open={!!statusChanging}
+        onOpenChange={(open) => { if (!open) setStatusChanging(null) }}
+        statusDefinitions={statusDefs}
+        currentStatus={statusChanging?.custom_status || statusChanging?.status}
+        onSave={handleStatusChange}
+        title="Vertragsstatus ändern"
+      />
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

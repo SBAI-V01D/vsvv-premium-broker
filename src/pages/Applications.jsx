@@ -9,13 +9,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import ApplicationForm from '../components/applications/ApplicationForm'
-import { STATUS_LABELS, INSURANCE_TYPE_LABELS, label } from '@/lib/labels'
+import { INSURANCE_TYPE_LABELS, label } from '@/lib/labels'
+import StatusBadge from '@/components/status/StatusBadge'
+import StatusChangeDialog from '@/components/status/StatusChangeDialog'
 
 export default function Applications() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
+  const [statusChanging, setStatusChanging] = useState(null)
   const queryClient = useQueryClient()
+
+  const { data: statusDefs = [] } = useQuery({
+    queryKey: ['statusDefinitions'],
+    queryFn: () => base44.entities.StatusDefinition.filter({ type: 'application' }),
+  })
 
   const { data: applications = [] } = useQuery({
     queryKey: ['applications'],
@@ -60,6 +68,32 @@ export default function Applications() {
     } else {
       createMutation.mutate(data)
     }
+  }
+
+  const handleStatusChange = async ({ status, statusDef, note, metadata }) => {
+    const app = statusChanging
+    await base44.entities.StatusHistory.create({
+      entity_type: 'application',
+      entity_id: app.id,
+      customer_id: app.customer_id,
+      from_status: app.custom_status || app.status,
+      to_status: status,
+      to_status_label: statusDef?.label || status,
+      note,
+      metadata: JSON.stringify(metadata),
+    })
+    await base44.entities.Application.update(app.id, { custom_status: status })
+    queryClient.invalidateQueries({ queryKey: ['applications'] })
+    setStatusChanging(null)
+  }
+
+  const getStatusDef = (app) => {
+    const key = app.custom_status || app.status
+    return statusDefs.find(s => s.key === key)
+  }
+  const getStatusLabel = (app) => {
+    const def = getStatusDef(app)
+    return def?.label || app.status
   }
 
   return (
@@ -115,7 +149,11 @@ export default function Applications() {
                     <TableCell className="font-medium">
                       CHF {app.estimated_premium_yearly?.toLocaleString('de-CH', { minimumFractionDigits: 0 }) || '–'}
                     </TableCell>
-                    <TableCell className="text-sm">{label(STATUS_LABELS, app.status)}</TableCell>
+                    <TableCell>
+                      <button onClick={() => setStatusChanging(app)} className="hover:opacity-80 transition-opacity">
+                        <StatusBadge statusDef={getStatusDef(app)} label={getStatusLabel(app)} />
+                      </button>
+                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -124,6 +162,9 @@ export default function Applications() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setStatusChanging(app)}>
+                            Status ändern
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => { setEditing(app); setShowForm(true); }}>
                             <Edit className="w-4 h-4 mr-2" /> Bearbeiten
                           </DropdownMenuItem>
@@ -147,6 +188,15 @@ export default function Applications() {
           </Table>
         </CardContent>
       </Card>
+
+      <StatusChangeDialog
+        open={!!statusChanging}
+        onOpenChange={(open) => { if (!open) setStatusChanging(null) }}
+        statusDefinitions={statusDefs}
+        currentStatus={statusChanging?.custom_status || statusChanging?.status}
+        onSave={handleStatusChange}
+        title="Antragsstatus ändern"
+      />
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

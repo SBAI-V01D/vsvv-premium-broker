@@ -1,0 +1,51 @@
+{
+  "name": "StatusHistory",
+  "type": "object",
+  "properties": {
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "application",
+        "contract"
+      ],
+      "description": "Art des Eintrags"
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "ID des Antrags oder Vertrags"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Kunden-ID (f\u00fcr schnellen Zugriff)"
+    },
+    "from_status": {
+      "type": "string",
+      "description": "Vorheriger Status (key)"
+    },
+    "to_status": {
+      "type": "string",
+      "description": "Neuer Status (key)"
+    },
+    "to_status_label": {
+      "type": "string",
+      "description": "Anzeigename des neuen Status"
+    },
+    "changed_by_email": {
+      "type": "string",
+      "description": "E-Mail des Benutzers der die \u00c4nderung vorgenommen hat"
+    },
+    "note": {
+      "type": "string",
+      "description": "Optionale Notiz / Grund zur Status\u00e4nderung"
+    },
+    "metadata": {
+      "type": "string",
+      "description": "Zus\u00e4tzliche Daten als JSON (z.B. K\u00fcndigungsdatum)"
+    }
+  },
+  "required": [
+    "entity_type",
+    "entity_id",
+    "to_status"
+  ]
+}
