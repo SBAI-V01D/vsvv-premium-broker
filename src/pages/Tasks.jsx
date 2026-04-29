@@ -42,6 +42,8 @@ export default function Tasks() {
     },
   })
 
+  const isOverdue = (dueDate) => new Date(dueDate) < new Date()
+
   const openTasks = tasks.filter(t => t.status === 'open')
   const inProgressTasks = tasks.filter(t => t.status === 'in_progress')
   const completedTasks = tasks.filter(t => t.status === 'completed')
@@ -75,10 +77,18 @@ export default function Tasks() {
                 <button
                   key={t.id}
                   onClick={() => handleTaskClick(t)}
-                  className="p-3 bg-slate-50 rounded border border-border hover:border-primary hover:bg-slate-100 text-left transition-colors w-full"
+                  className={`p-3 rounded border text-left transition-colors w-full ${
+                    t.due_date && isOverdue(t.due_date)
+                      ? 'bg-red-50 border-red-300 hover:bg-red-100 hover:border-red-400'
+                      : 'bg-slate-50 border-border hover:border-primary hover:bg-slate-100'
+                  }`}
                 >
                   <p className="text-sm font-medium">{t.title}</p>
-                  {t.due_date && <p className="text-xs text-muted-foreground mt-1">Fällig: {t.due_date}</p>}
+                  {t.due_date && (
+                    <p className={`text-xs mt-1 ${isOverdue(t.due_date) ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
+                      Fällig: {t.due_date}
+                    </p>
+                  )}
                 </button>
               ))
             )}
@@ -97,10 +107,18 @@ export default function Tasks() {
                 <button
                   key={t.id}
                   onClick={() => handleTaskClick(t)}
-                  className="p-3 bg-blue-50 rounded border border-blue-200 hover:border-blue-400 hover:bg-blue-100 text-left transition-colors w-full"
+                  className={`p-3 rounded border text-left transition-colors w-full ${
+                    t.due_date && isOverdue(t.due_date)
+                      ? 'bg-red-50 border-red-300 hover:bg-red-100 hover:border-red-400'
+                      : 'bg-blue-50 border-blue-200 hover:border-blue-400 hover:bg-blue-100'
+                  }`}
                 >
                   <p className="text-sm font-medium">{t.title}</p>
-                  {t.due_date && <p className="text-xs text-muted-foreground mt-1">Fällig: {t.due_date}</p>}
+                  {t.due_date && (
+                    <p className={`text-xs mt-1 ${isOverdue(t.due_date) ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
+                      Fällig: {t.due_date}
+                    </p>
+                  )}
                 </button>
               ))
             )}

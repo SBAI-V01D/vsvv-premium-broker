@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
       priority: 'high',
       status: 'open',
       task_type: 'health_declaration',
-      due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     });
 
     return Response.json({ 
