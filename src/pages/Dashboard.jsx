@@ -69,6 +69,15 @@ export default function Dashboard() {
     },
   })
 
+  const createMutation = useMutation({
+    mutationFn: (data) => base44.entities.Task.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      setSelectedTask(null)
+      setFormData({ status: 'open', notes: '', due_date: '', completion_date: '', file: null })
+    },
+  })
+
   const formatDate = (dateStr) => {
     if (!dateStr) return '–'
     const date = new Date(dateStr + 'T00:00:00Z')
@@ -84,7 +93,22 @@ export default function Dashboard() {
   }
 
   const handleSave = () => {
-    updateMutation.mutate(formData)
+    if (selectedTask?.id) {
+      updateMutation.mutate(formData)
+    } else {
+      createMutation.mutate({
+        title: formData.title || 'Neue Aufgabe',
+        status: formData.status || 'open',
+        notes: formData.notes,
+        due_date: formData.due_date,
+        completion_date: formData.completion_date,
+      })
+    }
+  }
+
+  const handleNewTask = () => {
+    setSelectedTask({ id: null, title: '', status: 'open' })
+    setFormData({ title: '', status: 'open', notes: '', due_date: '', completion_date: '', file: null })
   }
 
   const stats = [
@@ -141,8 +165,9 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex justify-between items-center">
             <CardTitle>Ausstehende Aufgaben</CardTitle>
+            <Button size="sm" onClick={handleNewTask}>+ Neue Aufgabe</Button>
           </CardHeader>
           <CardContent>
             {openTasks.length === 0 ? (
@@ -170,10 +195,21 @@ export default function Dashboard() {
       <Dialog open={!!selectedTask} onOpenChange={(open) => { if (!open) setSelectedTask(null) }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{selectedTask?.title}</DialogTitle>
+            <DialogTitle>{selectedTask?.id ? selectedTask?.title : 'Neue Aufgabe erstellen'}</DialogTitle>
           </DialogHeader>
           {selectedTask && (
             <div className="space-y-4">
+              {!selectedTask.id && (
+                <div>
+                  <Label>Aufgabentitel *</Label>
+                  <Input
+                    value={formData.title || ''}
+                    onChange={(e) => setFormData(p => ({ ...p, title: e.target.value }))}
+                    placeholder="Aufgabentitel eingeben"
+                    className="mt-1"
+                  />
+                </div>
+              )}
               <div>
                 <Label>Status</Label>
                 <Select value={formData.status} onValueChange={(v) => setFormData(p => ({ ...p, status: v }))}>
@@ -243,8 +279,8 @@ export default function Dashboard() {
             </Button>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setSelectedTask(null)}>Schliessen</Button>
-              <Button onClick={handleSave} disabled={updateMutation.isPending}>
-                {updateMutation.isPending ? 'Speichern...' : 'Speichern'}
+              <Button onClick={handleSave} disabled={updateMutation.isPending || createMutation.isPending}>
+                {updateMutation.isPending || createMutation.isPending ? 'Speichern...' : 'Speichern'}
               </Button>
             </div>
           </DialogFooter>
