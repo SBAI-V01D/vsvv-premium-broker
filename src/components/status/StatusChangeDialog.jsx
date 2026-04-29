@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -11,6 +11,14 @@ export default function StatusChangeDialog({ open, onOpenChange, statusDefinitio
   const [note, setNote] = useState('')
   const [metadata, setMetadata] = useState({ date: '', reason: '' })
 
+  useEffect(() => {
+    if (open) {
+      setNewStatus(currentStatus || '')
+      setNote('')
+      setMetadata({ date: '', reason: '' })
+    }
+  }, [open, currentStatus])
+
   const selectedDef = statusDefinitions.find(s => s.key === newStatus)
   const needsDate = selectedDef?.metadata_fields?.includes('date')
   const needsReason = selectedDef?.metadata_fields?.includes('reason')
@@ -22,9 +30,6 @@ export default function StatusChangeDialog({ open, onOpenChange, statusDefinitio
       note,
       metadata,
     })
-    onOpenChange(false)
-    setNote('')
-    setMetadata({ date: '', reason: '' })
   }
 
   return (
