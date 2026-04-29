@@ -148,8 +148,8 @@ export default function Dashboard() {
             {openTasks.length === 0 ? (
               <p className="text-sm text-muted-foreground">Keine ausstehenden Aufgaben</p>
             ) : (
-              <div className="space-y-3">
-                {openTasks.slice(0, 5).map(t => (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {openTasks.map(t => (
                   <button
                     key={t.id}
                     onClick={() => handleTaskClick(t)}
