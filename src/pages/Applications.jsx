@@ -56,10 +56,16 @@ export default function Applications() {
   })
 
   // KPIs
-  const openApps = applications.filter(a => !['approved', 'rejected', 'policiert'].includes(a.custom_status || a.status))
-  const approvedApps = applications.filter(a => ['approved', 'policiert'].includes(a.custom_status || a.status))
-  const closureRate = applications.length > 0
-    ? Math.round((approvedApps.length / applications.length) * 100)
+  const CLOSED_POSITIVE = ['angenommen', 'policiert', 'approved']
+  const CLOSED_NEGATIVE = ['abgelehnt', 'rejected']
+  const getStatus = (a) => a.custom_status || a.status
+
+  const openApps = applications.filter(a => ![...CLOSED_POSITIVE, ...CLOSED_NEGATIVE].includes(getStatus(a)))
+  const approvedApps = applications.filter(a => CLOSED_POSITIVE.includes(getStatus(a)))
+  const rejectedApps = applications.filter(a => CLOSED_NEGATIVE.includes(getStatus(a)))
+  const closedTotal = approvedApps.length + rejectedApps.length
+  const closureRate = closedTotal > 0
+    ? Math.round((approvedApps.length / closedTotal) * 100)
     : 0
   const uniqueBrokers = [...new Set(applications.map(a => a.assigned_broker).filter(Boolean))]
 
