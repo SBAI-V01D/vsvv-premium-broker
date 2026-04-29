@@ -41,9 +41,18 @@ export const SPARTEN_FIRMA = [
 
 export const ALL_SPARTEN = [...SPARTEN_PRIVAT, ...SPARTEN_FIRMA]
 
+const LEGACY_LABELS = {
+  health: 'Krankenversicherung',
+  life: 'Lebensversicherung',
+  property: 'Sachversicherung',
+  liability: 'Haftpflichtversicherung',
+  motor: 'Motorfahrzeugversicherung',
+  other: 'Sonstige',
+}
+
 export const getSparteLabel = (value) => {
   const s = ALL_SPARTEN.find(s => s.value === value)
-  return s?.label || value
+  return s?.label || LEGACY_LABELS[value] || value
 }
 
 // Dynamische Pflichtfelder je Sparte
