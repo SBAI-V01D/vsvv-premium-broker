@@ -84,6 +84,10 @@ export default function Applications() {
     ? ((approvedApps.length / activeApps.length) * 100).toFixed(1)
     : '0.0'
   const uniqueBrokers = [...new Set(applications.map(a => a.assigned_broker).filter(Boolean))]
+  
+  // Provision berechnen
+  const totalCommission = activeApps.reduce((sum, a) => sum + (a.commission_estimate || 0), 0)
+  const avgCommission = activeApps.length > 0 ? (totalCommission / activeApps.length).toFixed(2) : 0
 
 
   // Filtering
@@ -239,6 +243,32 @@ export default function Applications() {
               <div>
                 <p className="text-2xl font-bold">{closureRate}%</p>
                 <p className="text-xs text-muted-foreground">Abschlussquote</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">CHF {totalCommission.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                <p className="text-xs text-muted-foreground">Gesamte erwartete Provision</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-cyan-50 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-cyan-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">CHF {avgCommission.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-xs text-muted-foreground">Durchschnittliche Provision pro Antrag</p>
               </div>
             </div>
           </CardContent>
