@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { base44 } from '@/api/base44Client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -11,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Users, FileText, ClipboardList, CheckCircle2 } from 'lucide-react'
 
 export default function Dashboard() {
+  const navigate = useNavigate()
   const [selectedTask, setSelectedTask] = useState(null)
   const [formData, setFormData] = useState({ status: '', notes: '', due_date: '' })
   const queryClient = useQueryClient()
@@ -35,6 +37,7 @@ export default function Dashboard() {
   })
 
   const activeContracts = contracts.filter(c => c.status === 'active')
+  const inactiveContracts = contracts.filter(c => c.status !== 'active')
   const openApplications = applications.filter(a => a.status !== 'approved' && a.status !== 'rejected')
   const openTasks = tasks.filter(t => t.status === 'open')
   const inProgressTasks = tasks.filter(t => t.status === 'in_progress')
@@ -114,10 +117,10 @@ export default function Dashboard() {
   }
 
   const stats = [
-    { label: 'Kunden', value: customers.length, icon: Users, color: 'bg-blue-50 text-blue-600' },
-    { label: 'Aktive Verträge', value: activeContracts.length, icon: FileText, color: 'bg-green-50 text-green-600' },
-    { label: 'Offene Anträge', value: openApplications.length, icon: ClipboardList, color: 'bg-amber-50 text-amber-600' },
-    { label: 'Ausstehende Aufgaben', value: pendingTasks.length, icon: CheckCircle2, color: 'bg-purple-50 text-purple-600' },
+    { label: 'Kunden', value: customers.length, icon: Users, color: 'bg-blue-50 text-blue-600', path: '/kunden' },
+    { label: 'Aktive Verträge', value: activeContracts.length, icon: FileText, color: 'bg-green-50 text-green-600', path: '/vertraege' },
+    { label: 'Offene Anträge', value: openApplications.length, icon: ClipboardList, color: 'bg-amber-50 text-amber-600', path: '/antraege' },
+    { label: 'Ausstehende Aufgaben', value: pendingTasks.length, icon: CheckCircle2, color: 'bg-purple-50 text-purple-600', path: '/aufgaben' },
   ]
 
   return (
@@ -128,8 +131,8 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map(({ label, value, icon: Icon, color }) => (
-          <Card key={label}>
+        {stats.map(({ label, value, icon: Icon, color, path }) => (
+          <Card key={label} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(path)}>
             <CardContent className="p-6 flex items-center gap-4">
               <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${color}`}>
                 <Icon className="w-6 h-6" />
@@ -143,8 +146,8 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/kunden')}>
           <CardHeader>
             <CardTitle>Kürzlich hinzugefügte Kunden</CardTitle>
           </CardHeader>
@@ -163,6 +166,25 @@ export default function Dashboard() {
                 ))}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/vertraege')}>
+          <CardHeader>
+            <CardTitle>Verträge - Status</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between p-2 bg-green-50 rounded">
+              <span className="text-sm font-medium">Aktive Verträge</span>
+              <span className="text-lg font-bold text-green-600">{activeContracts.length}</span>
+            </div>
+            <div className="flex justify-between p-2 bg-red-50 rounded">
+              <span className="text-sm font-medium">Inaktive Verträge</span>
+              <span className="text-lg font-bold text-red-600">{inactiveContracts.length}</span>
+            </div>
+            <div className="text-sm text-muted-foreground border-t pt-2 mt-2">
+              Total: {contracts.length} Verträge
+            </div>
           </CardContent>
         </Card>
 
