@@ -16,6 +16,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [selectedTask, setSelectedTask] = useState(null)
   const [formData, setFormData] = useState({ status: '', notes: '', due_date: '' })
+  const [activeView, setActiveView] = useState('contracts')
   const queryClient = useQueryClient()
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
@@ -258,77 +259,104 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/vertraege')}>
-          <CardHeader>
-            <CardTitle>Verträge - Status</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between p-2 bg-green-50 rounded">
-              <span className="text-sm font-medium">Aktive Verträge</span>
-              <span className="text-lg font-bold text-green-600">{activeContracts.length}</span>
-            </div>
-            <div className="flex justify-between p-2 bg-red-50 rounded">
-              <span className="text-sm font-medium">Inaktive Verträge</span>
-              <span className="text-lg font-bold text-red-600">{inactiveContracts.length}</span>
-            </div>
-            <div className="text-sm text-muted-foreground border-t pt-2 mt-2">
-              Total: {contracts.length} Verträge
-            </div>
-          </CardContent>
-        </Card>
+      <div className="space-y-6">
+        <div className="flex gap-2">
+          <Button
+            variant={activeView === 'contracts' ? 'default' : 'outline'}
+            onClick={() => setActiveView('contracts')}
+          >
+            Verträge - Status
+          </Button>
+          <Button
+            variant={activeView === 'tasks' ? 'default' : 'outline'}
+            onClick={() => setActiveView('tasks')}
+          >
+            Kommende Aufgaben
+          </Button>
+          <Button
+            variant={activeView === 'birthdays' ? 'default' : 'outline'}
+            onClick={() => setActiveView('birthdays')}
+          >
+            🎂 Geburtstage
+          </Button>
+        </div>
 
-        <Card onClick={() => navigate('/aufgaben')} className="cursor-pointer hover:shadow-lg transition-shadow">
-          <CardHeader className="flex justify-between items-center">
-            <CardTitle>Kommende Aufgaben</CardTitle>
-            <Button size="sm" onClick={(e) => { e.stopPropagation(); handleNewTask() }}>+ Neue Aufgabe</Button>
-          </CardHeader>
-          <CardContent>
-            {pendingTasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Keine ausstehenden Aufgaben</p>
-            ) : (
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {pendingTasks.map(t => (
-                  <button
-                    key={t.id}
-                    onClick={(e) => { e.stopPropagation(); handleTaskClick(t) }}
-                    className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded transition-colors text-left"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{t.title}</p>
-                      {t.due_date && <p className="text-xs text-muted-foreground">Fällig: {formatDate(t.due_date)}</p>}
-                    </div>
-                  </button>
-                ))}
+        {activeView === 'contracts' && (
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/vertraege')}>
+            <CardHeader>
+              <CardTitle>Verträge - Status</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between p-2 bg-green-50 rounded">
+                <span className="text-sm font-medium">Aktive Verträge</span>
+                <span className="text-lg font-bold text-green-600">{activeContracts.length}</span>
               </div>
-            )}
-          </CardContent>
-        </Card>
+              <div className="flex justify-between p-2 bg-red-50 rounded">
+                <span className="text-sm font-medium">Inaktive Verträge</span>
+                <span className="text-lg font-bold text-red-600">{inactiveContracts.length}</span>
+              </div>
+              <div className="text-sm text-muted-foreground border-t pt-2 mt-2">
+                Total: {contracts.length} Verträge
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/kunden')}>
-          <CardHeader>
-            <CardTitle>🎂 Kommende Geburtstage</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {upcomingBirthdays.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Keine Geburtstage in den nächsten 30 Tagen</p>
-            ) : (
-              <div className="space-y-3">
-                {upcomingBirthdays.map(b => (
-                  <div key={b.customer.id} className="flex items-center justify-between p-2 bg-pink-50 rounded">
-                    <div>
-                      <p className="text-sm font-medium">{b.customer.first_name} {b.customer.last_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {b.daysUntil === 0 ? 'Heute' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`}
-                      </p>
+        {activeView === 'tasks' && (
+          <Card onClick={() => navigate('/aufgaben')} className="cursor-pointer hover:shadow-lg transition-shadow">
+            <CardHeader className="flex justify-between items-center">
+              <CardTitle>Kommende Aufgaben</CardTitle>
+              <Button size="sm" onClick={(e) => { e.stopPropagation(); handleNewTask() }}>+ Neue Aufgabe</Button>
+            </CardHeader>
+            <CardContent>
+              {pendingTasks.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Keine ausstehenden Aufgaben</p>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {pendingTasks.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={(e) => { e.stopPropagation(); handleTaskClick(t) }}
+                      className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded transition-colors text-left"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{t.title}</p>
+                        {t.due_date && <p className="text-xs text-muted-foreground">Fällig: {formatDate(t.due_date)}</p>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {activeView === 'birthdays' && (
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/kunden')}>
+            <CardHeader>
+              <CardTitle>🎂 Kommende Geburtstage</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {upcomingBirthdays.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Keine Geburtstage in den nächsten 30 Tagen</p>
+              ) : (
+                <div className="space-y-3">
+                  {upcomingBirthdays.map(b => (
+                    <div key={b.customer.id} className="flex items-center justify-between p-2 bg-pink-50 rounded">
+                      <div>
+                        <p className="text-sm font-medium">{b.customer.first_name} {b.customer.last_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {b.daysUntil === 0 ? 'Heute' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`}
+                        </p>
+                      </div>
+                      <span className="text-lg">🎉</span>
                     </div>
-                    <span className="text-lg">🎉</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/kunden')}>
           <CardHeader>
