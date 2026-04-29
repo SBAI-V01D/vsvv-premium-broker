@@ -10,6 +10,14 @@ export default function Documents() {
     queryFn: () => base44.entities.Document.list('-created_date'),
   })
 
+  const categoryLabels = {
+    contract: 'Verträge',
+    application: 'Anträge',
+    identification: 'Ausweise',
+    correspondence: 'Korrespondenz',
+    other: 'Sonstiges',
+  }
+
   const byCategory = {
     contract: documents.filter(d => d.category === 'contract'),
     application: documents.filter(d => d.category === 'application'),
@@ -33,7 +41,7 @@ export default function Documents() {
                 <FileText className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground capitalize">{cat}</p>
+                <p className="text-xs text-muted-foreground">{categoryLabels[cat]}</p>
                 <p className="font-bold text-lg">{docs.length}</p>
               </div>
             </CardContent>
@@ -59,7 +67,7 @@ export default function Documents() {
                       <p className="text-xs text-muted-foreground">{d.customer_name}</p>
                     </div>
                   </div>
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded capitalize">{d.category}</span>
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">{categoryLabels[d.category] || d.category}</span>
                 </div>
               ))}
             </div>

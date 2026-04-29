@@ -99,15 +99,15 @@ export default function CustomerDetail() {
         </Card>
       </div>
 
-      <Tabs defaultValue="contracts">
+      <Tabs defaultValue="vertraege">
         <TabsList className="mb-4">
-          <TabsTrigger value="contracts">Verträge ({contracts.length})</TabsTrigger>
-          <TabsTrigger value="applications">Anträge ({applications.length})</TabsTrigger>
-          <TabsTrigger value="family">Familie ({familyMembers.length - 1})</TabsTrigger>
-          <TabsTrigger value="messages">Kommunikation ({messages.length})</TabsTrigger>
+          <TabsTrigger value="vertraege">Verträge ({contracts.length})</TabsTrigger>
+          <TabsTrigger value="antraege">Anträge ({applications.length})</TabsTrigger>
+          <TabsTrigger value="familie">Familie ({familyMembers.length - 1})</TabsTrigger>
+          <TabsTrigger value="kommunikation">Kommunikation ({messages.length})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="contracts">
+        <TabsContent value="vertraege">
           {contracts.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-center text-muted-foreground">
@@ -136,7 +136,7 @@ export default function CustomerDetail() {
           )}
         </TabsContent>
 
-        <TabsContent value="applications">
+        <TabsContent value="antraege">
           {applications.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-center text-muted-foreground">
@@ -165,7 +165,7 @@ export default function CustomerDetail() {
           )}
         </TabsContent>
 
-        <TabsContent value="family">
+        <TabsContent value="familie">
           {familyMembers.length <= 1 ? (
             <Card>
               <CardContent className="p-6 text-center text-muted-foreground">
@@ -194,7 +194,7 @@ export default function CustomerDetail() {
           )}
         </TabsContent>
 
-        <TabsContent value="messages">
+        <TabsContent value="kommunikation">
           {messages.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-center text-muted-foreground">
