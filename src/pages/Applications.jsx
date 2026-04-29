@@ -25,6 +25,7 @@ export default function Applications() {
   const [filterBroker, setFilterBroker] = useState('all')
   const [statusChanging, setStatusChanging] = useState(null)
   const [expandedDocs, setExpandedDocs] = useState(null)
+  const [showAuswertung, setShowAuswertung] = useState(false)
 
   const queryClient = useQueryClient()
 
@@ -275,14 +276,12 @@ export default function Applications() {
         </Card>
       </div>
 
-      {/* Kundentyp-Filter + Sparten-Auswertung */}
-      <SparteFilterButtons
-        applications={applications}
-        activeKundentyp={filterKundentyp}
-        onSelectKundentyp={setFilterKundentyp}
-        filterSparte={filterSparte}
-        onSelectSparte={setFilterSparte}
-      />
+      {/* Auswertungs-Button */}
+      <div className="mb-6">
+        <Button variant="outline" onClick={() => setShowAuswertung(true)}>
+          📊 Auswertung nach Sparte
+        </Button>
+      </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
@@ -538,6 +537,22 @@ export default function Applications() {
       />
 
 
+
+      {/* Auswertungs-Dialog */}
+      <Dialog open={showAuswertung} onOpenChange={setShowAuswertung}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Auswertung nach Sparte & Kundentyp</DialogTitle>
+          </DialogHeader>
+          <SparteFilterButtons
+            applications={applications}
+            activeKundentyp={filterKundentyp}
+            onSelectKundentyp={setFilterKundentyp}
+            filterSparte={filterSparte}
+            onSelectSparte={setFilterSparte}
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
