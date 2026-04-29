@@ -1,6 +1,6 @@
 import React from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Users, FileText, CheckCircle2, ClipboardList, FileCheck, Mail, Send, LogOut, Settings2 } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, CheckCircle2, ClipboardList, FileCheck, Mail, Send, LogOut, Settings2, Wallet } from 'lucide-react'
 import { base44 } from '@/api/base44Client'
 import { Button } from '@/components/ui/button'
 
@@ -13,6 +13,7 @@ export default function AppLayout() {
     { path: '/vertraege', label: 'Verträge', icon: FileText },
     { path: '/antraege', label: 'Anträge', icon: CheckCircle2 },
     { path: '/aufgaben', label: 'Aufgaben', icon: ClipboardList },
+    { path: '/provisionen-courtagen', label: 'Provisionen & Courtagen', icon: Wallet },
     { path: '/dokumente', label: 'Dokumente', icon: FileCheck },
     { path: '/email-templates', label: 'E-Mail Vorlagen', icon: Mail },
     { path: '/email-kampagnen', label: 'Kampagnen', icon: Send },
