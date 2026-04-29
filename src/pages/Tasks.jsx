@@ -60,7 +60,7 @@ export default function Tasks() {
 
   const handleTaskClick = (task) => {
     setSelectedTask(task)
-    setFormData({ status: task.status, notes: task.notes || '', file: null })
+    setFormData({ status: task.status, notes: task.notes || '', file: null, due_date: task.due_date || '' })
   }
 
   const handleSave = () => {
@@ -184,13 +184,13 @@ export default function Tasks() {
               </div>
 
               <div>
-                <Label>Fälligkeitsdatum</Label>
-                <Input
-                  type="date"
-                  value={formData.due_date || selectedTask?.due_date || ''}
-                  onChange={(e) => setFormData(p => ({ ...p, due_date: e.target.value }))}
-                  className="mt-1"
-                />
+               <Label>Fälligkeitsdatum</Label>
+               <Input
+                 type="date"
+                 value={formData.due_date || ''}
+                 onChange={(e) => setFormData(p => ({ ...p, due_date: e.target.value }))}
+                 className="mt-1"
+               />
               </div>
 
               <div>
