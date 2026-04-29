@@ -322,6 +322,9 @@ export default function Applications() {
                       {app.assigned_broker && (
                         <p className="text-xs text-muted-foreground truncate mt-0.5">{getBrokerName(app.assigned_broker)}</p>
                       )}
+                      {app.notes && (
+                        <p className="text-xs text-muted-foreground line-clamp-2 italic mt-1">{app.notes}</p>
+                      )}
                     </div>
 
                     {/* Sparte / Versicherer / Produkt */}
@@ -431,9 +434,14 @@ export default function Applications() {
                         <StatusBadge statusDef={getStatusDef(app)} label={getStatusLabel(app)} />
                       </button>
                       {app.sparte_data?.health_declaration && (
-                        <p className={`text-xs font-medium mt-1 ${app.sparte_data.health_declaration === 'Ja' ? 'text-orange-600' : 'text-green-600'}`}>
-                          GD: {app.sparte_data.health_declaration === 'Ja' ? 'erforderlich' : 'nicht erforderlich'}
-                        </p>
+                        <div className="mt-1">
+                          <p className={`text-xs font-medium ${app.sparte_data.health_declaration === 'Ja' ? 'text-orange-600' : 'text-green-600'}`}>
+                            GD: {app.sparte_data.health_declaration === 'Ja' ? 'erforderlich' : 'nicht erforderlich'}
+                          </p>
+                          {app.notes && (
+                            <p className="text-xs text-muted-foreground line-clamp-2 italic mt-0.5">{app.notes}</p>
+                          )}
+                        </div>
                       )}
                     </div>
 
