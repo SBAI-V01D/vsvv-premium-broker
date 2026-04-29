@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Search, MoreHorizontal, Edit, Trash2, FileText, TrendingUp, Clock, CheckCircle, Calendar, Building2, Tag, BarChart2, X } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, Edit, Trash2, FileText, TrendingUp, Clock, CheckCircle, Calendar, Building2, Tag } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,11 +20,12 @@ export default function Applications() {
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
   const [filterSparte, setFilterSparte] = useState('all')
+  const [filterKundentyp, setFilterKundentyp] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterBroker, setFilterBroker] = useState('all')
   const [statusChanging, setStatusChanging] = useState(null)
   const [expandedDocs, setExpandedDocs] = useState(null)
-  const [showStats, setShowStats] = useState(false)
+
   const queryClient = useQueryClient()
 
   const { data: statusDefs = [] } = useQuery({
@@ -84,13 +85,20 @@ export default function Applications() {
 
 
   // Filtering
+  const PRIVAT_VALUES = ['kvg','vvg_zusatz','kvg_vvg_kombi','leben_3a','leben_3b','unfall_privat','haftpflicht_privat','hausrat','gebaude_privat','motorfahrzeug','rechtsschutz_privat','reise','cyber_privat']
+  const FIRMA_VALUES = ['bvg','uvg','ktg','inventar','gebaude_firma','technisch','transport','betriebshaftpflicht','berufshaftpflicht','do','rechtsschutz_firma','cyber_firma','kredit','flotte','keyman','gruppen_leben']
+
   const filtered = applications.filter(a => {
     const searchStr = `${a.customer_name} ${a.insurer} ${a.product} ${getSparteLabel(a.sparte || a.insurance_type)}`.toLowerCase()
     const matchSearch = !search.trim() || searchStr.includes(search.toLowerCase())
     const matchSparte = filterSparte === 'all' || a.sparte === filterSparte || a.insurance_type === filterSparte
     const matchStatus = filterStatus === 'all' || (a.custom_status || a.status) === filterStatus
     const matchBroker = filterBroker === 'all' || a.assigned_broker === filterBroker
-    return matchSearch && matchSparte && matchStatus && matchBroker
+    const sparteKey = a.sparte || a.insurance_type
+    const matchKundentyp = filterKundentyp === 'all'
+      || (filterKundentyp === 'privat' && PRIVAT_VALUES.includes(sparteKey))
+      || (filterKundentyp === 'firma' && FIRMA_VALUES.includes(sparteKey))
+    return matchSearch && matchSparte && matchStatus && matchBroker && matchKundentyp
   })
 
   const handleSave = (data) => {
@@ -168,9 +176,6 @@ export default function Applications() {
           <p className="text-muted-foreground mt-1">{activeApps.length} aktive Anträge</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowStats(true)}>
-            <BarChart2 className="w-4 h-4 mr-2" /> Auswertung
-          </Button>
           <Button onClick={() => { setEditing(null); setShowForm(true) }}>
             <Plus className="w-4 h-4 mr-2" /> Neuer Antrag
           </Button>
@@ -233,11 +238,11 @@ export default function Applications() {
         </Card>
       </div>
 
-      {/* Sparten Filter Buttons */}
+      {/* Kundentyp-Filter + Sparten-Auswertung */}
       <SparteFilterButtons
         applications={applications}
-        activeSparte={filterSparte}
-        onSelect={setFilterSparte}
+        activeKundentyp={filterKundentyp}
+        onSelectKundentyp={setFilterKundentyp}
       />
 
       {/* Filters */}
@@ -427,42 +432,7 @@ export default function Applications() {
         title="Antragsstatus ändern"
       />
 
-      {/* Auswertungs-Dialog */}
-      <Dialog open={showStats} onOpenChange={setShowStats}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Auswertung: Anträge nach Sparte</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2 mt-2 max-h-[60vh] overflow-y-auto">
-            {(() => {
-              const counts = {}
-              applications.forEach(a => {
-                const label = getSparteLabel(a.sparte || a.insurance_type) || 'Unbekannt'
-                counts[label] = (counts[label] || 0) + 1
-              })
-              const sorted = Object.entries(counts).sort((x, y) => y[1] - x[1])
-              const total = applications.length
-              return sorted.map(([label, count]) => (
-                <div key={label} className="flex items-center gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="font-medium truncate">{label}</span>
-                      <span className="text-muted-foreground ml-2 flex-shrink-0">{count} ({Math.round(count / total * 100)}%)</span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-primary rounded-full" style={{ width: `${(count / total) * 100}%` }} />
-                    </div>
-                  </div>
-                </div>
-              ))
-            })()}
-            <div className="pt-3 border-t border-border flex justify-between text-sm font-semibold">
-              <span>Total</span>
-              <span>{applications.length} Anträge</span>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+
 
       {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
