@@ -13,7 +13,7 @@ import { Upload, FileText, ExternalLink } from 'lucide-react'
 export default function Tasks() {
   const queryClient = useQueryClient()
   const [selectedTask, setSelectedTask] = useState(null)
-  const [formData, setFormData] = useState({ status: '', notes: '', file: null })
+  const [formData, setFormData] = useState({ status: '', notes: '', file: null, due_date: '', completion_date: '' })
   const [uploading, setUploading] = useState(false)
 
   const { data: tasks = [] } = useQuery({
@@ -67,7 +67,7 @@ export default function Tasks() {
 
   const handleTaskClick = (task) => {
     setSelectedTask(task)
-    setFormData({ status: task.status, notes: task.notes || '', file: null, due_date: task.due_date || '' })
+    setFormData({ status: task.status, notes: task.notes || '', file: null, due_date: task.due_date || '', completion_date: task.completion_date || '' })
   }
 
   const handleSave = () => {
@@ -196,6 +196,16 @@ export default function Tasks() {
                  type="date"
                  value={formData.due_date || ''}
                  onChange={(e) => setFormData(p => ({ ...p, due_date: e.target.value }))}
+                 className="mt-1"
+               />
+              </div>
+
+              <div>
+               <Label>Erledigungsdatum</Label>
+               <Input
+                 type="date"
+                 value={formData.completion_date || ''}
+                 onChange={(e) => setFormData(p => ({ ...p, completion_date: e.target.value }))}
                  className="mt-1"
                />
               </div>

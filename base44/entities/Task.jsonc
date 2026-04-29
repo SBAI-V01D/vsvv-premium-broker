@@ -52,6 +52,11 @@
       "format": "date",
       "description": "F\u00e4lligkeitsdatum"
     },
+    "completion_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Erledigungsdatum"
+    },
     "task_type": {
       "type": "string",
       "enum": [

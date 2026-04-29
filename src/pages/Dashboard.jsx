@@ -58,7 +58,7 @@ export default function Dashboard() {
 
   const handleTaskClick = (task) => {
     setSelectedTask(task)
-    setFormData({ status: task.status, notes: task.notes || '', due_date: task.due_date || '' })
+    setFormData({ status: task.status, notes: task.notes || '', due_date: task.due_date || '', completion_date: task.completion_date || '' })
   }
 
   const handleSave = () => {
@@ -66,6 +66,7 @@ export default function Dashboard() {
       status: formData.status || selectedTask.status,
       notes: formData.notes || selectedTask.notes,
       due_date: formData.due_date || selectedTask.due_date,
+      completion_date: formData.completion_date || selectedTask.completion_date,
     })
   }
 
@@ -176,6 +177,16 @@ export default function Dashboard() {
                   type="date"
                   value={formData.due_date || ''}
                   onChange={(e) => setFormData(p => ({ ...p, due_date: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label>Erledigungsdatum</Label>
+                <Input
+                  type="date"
+                  value={formData.completion_date || ''}
+                  onChange={(e) => setFormData(p => ({ ...p, completion_date: e.target.value }))}
                   className="mt-1"
                 />
               </div>
