@@ -291,7 +291,7 @@ export default function Applications() {
           <div className="hidden md:grid grid-cols-[2fr_2fr_1.5fr_1fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             <div>Kunde / Berater</div>
             <div>Sparte / Versicherer</div>
-            <div>Details</div>
+            <div>Produkt / Tarif</div>
             <div>Vertragsbeginn</div>
             <div>Jahresprämie</div>
             <div>Status</div>
@@ -311,14 +311,14 @@ export default function Applications() {
                     <div className="min-w-0">
                       <div className="flex items-baseline gap-1.5 flex-wrap">
                         <p className="font-semibold text-sm truncate">{app.customer_name || '–'}</p>
-                        {(() => {
-                          const cust = getCustomer(app.customer_id)
-                          const ahv = cust?.ahv_number || app.sparte_data?.ahv_number
-                          return ahv ? (
-                            <span className="text-xs font-mono text-muted-foreground">{ahv}</span>
-                          ) : null
-                        })()}
                       </div>
+                      {(() => {
+                        const cust = getCustomer(app.customer_id)
+                        const ahv = cust?.ahv_number || app.sparte_data?.ahv_number
+                        return ahv ? (
+                          <p className="text-xs font-mono text-muted-foreground mt-0.5">{ahv}</p>
+                        ) : null
+                      })()}
                       {app.assigned_broker && (
                         <p className="text-xs text-muted-foreground truncate mt-0.5">{getBrokerName(app.assigned_broker)}</p>
                       )}

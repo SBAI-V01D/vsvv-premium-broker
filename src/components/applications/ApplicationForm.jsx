@@ -28,28 +28,39 @@ export default function ApplicationForm({ application, customers = [], onSave, o
     queryFn: () => base44.entities.Broker.filter({ is_active: true }),
   })
 
-  const [form, setForm] = useState(application || {
-    customer_id: '',
-    insurance_type: 'other',
-    sparte: '',
-    product: '',
-    insurer: '',
-    status: 'draft',
-    kundentyp: 'privat',
-    estimated_premium_monthly: '',
-    estimated_premium_yearly: '',
-    requested_start_date: '',
-    policy_number: '',
-    contract_start_date: '',
-    contract_end_date: '',
-    commission_estimate: '',
-    assigned_broker: '',
-    notes: '',
-    sparte_data: {},
+  const [form, setForm] = useState(() => {
+    if (application) {
+      return {
+        ...application,
+        sparte: application.sparte || application.insurance_type || '',
+        sparte_data: application.sparte_data || {},
+        kundentyp: application.kundentyp || 'privat',
+      }
+    }
+    return {
+      customer_id: '',
+      insurance_type: '',
+      sparte: '',
+      product: '',
+      insurer: '',
+      status: 'draft',
+      kundentyp: 'privat',
+      estimated_premium_monthly: '',
+      estimated_premium_yearly: '',
+      requested_start_date: '',
+      policy_number: '',
+      contract_start_date: '',
+      contract_end_date: '',
+      commission_estimate: '',
+      assigned_broker: '',
+      notes: '',
+      sparte_data: {},
+    }
   })
 
   const selectedCustomer = customers.find(c => c.id === form.customer_id)
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
+  const setSparte = (v) => setForm(prev => ({ ...prev, sparte: v, insurance_type: v, sparte_data: {} }))
   const setSparteData = (k, v) => setForm(prev => ({ ...prev, sparte_data: { ...prev.sparte_data, [k]: v } }))
 
   const primaryCustomers = customers.filter(c => !c.is_family_member)
@@ -58,21 +69,30 @@ export default function ApplicationForm({ application, customers = [], onSave, o
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    const sparteKey = form.sparte || ''
     onSave({
-      ...form,
-      sparte: form.sparte,
-      insurance_type: form.sparte || form.insurance_type,
-      customer_name: selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : '',
-      primary_customer_id: selectedCustomer?.is_family_member ? selectedCustomer.primary_customer_id : selectedCustomer?.id,
+      customer_id: form.customer_id,
+      customer_name: selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : form.customer_name,
+      primary_customer_id: selectedCustomer?.is_family_member ? selectedCustomer.primary_customer_id : (selectedCustomer?.id || form.primary_customer_id),
       is_family_member: selectedCustomer?.is_family_member || false,
+      kundentyp: form.kundentyp || 'privat',
+      sparte: sparteKey,
+      insurance_type: sparteKey,
+      sparte_data: form.sparte_data || {},
+      product: form.product || '',
+      insurer: form.insurer || '',
+      status: form.status || 'draft',
+      custom_status: form.custom_status,
+      linked_contract_id: form.linked_contract_id,
       estimated_premium_monthly: form.estimated_premium_monthly ? Number(form.estimated_premium_monthly) : undefined,
       estimated_premium_yearly: form.estimated_premium_yearly ? Number(form.estimated_premium_yearly) : undefined,
       commission_estimate: form.commission_estimate ? Number(form.commission_estimate) : undefined,
-      notes: form.notes,
-      product: form.product,
-      policy_number: form.policy_number,
-      contract_start_date: form.contract_start_date,
-      contract_end_date: form.contract_end_date,
+      requested_start_date: form.requested_start_date || '',
+      policy_number: form.policy_number || '',
+      contract_start_date: form.contract_start_date || '',
+      contract_end_date: form.contract_end_date || '',
+      assigned_broker: form.assigned_broker || '',
+      notes: form.notes || '',
     })
   }
 
@@ -126,7 +146,7 @@ export default function ApplicationForm({ application, customers = [], onSave, o
       {/* Sparte */}
       <div>
         <Label>Versicherungssparte *</Label>
-        <Select value={form.sparte} onValueChange={v => set('sparte', v)}>
+        <Select value={form.sparte} onValueChange={setSparte}>
           <SelectTrigger className="mt-1"><SelectValue placeholder="Sparte wählen" /></SelectTrigger>
           <SelectContent>
             {Object.entries(grouped).map(([group, items]) => (

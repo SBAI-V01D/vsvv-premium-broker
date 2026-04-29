@@ -19,21 +19,31 @@
       "default": false,
       "description": "Antrag geh\u00f6rt zu Familienmitglied"
     },
-    "insurance_type": {
+    "kundentyp": {
       "type": "string",
       "enum": [
-        "life",
-        "health",
-        "property",
-        "liability",
-        "motor",
-        "other"
+        "privat",
+        "firma"
       ],
-      "description": "Versicherungsart"
+      "default": "privat",
+      "description": "Kundentyp (privat/firma)"
+    },
+    "sparte": {
+      "type": "string",
+      "description": "Versicherungssparte (Schl\u00fcssel aus insuranceSparten)"
+    },
+    "sparte_data": {
+      "type": "object",
+      "description": "Spartenspezifische Daten (Franchise, Modell, AHV, etc.)",
+      "additionalProperties": true
+    },
+    "insurance_type": {
+      "type": "string",
+      "description": "Versicherungsart (Legacy oder Sparte-Schl\u00fcssel)"
     },
     "product": {
       "type": "string",
-      "description": "Produkt/Sparte"
+      "description": "Produkt/Tarif"
     },
     "insurer": {
       "type": "string",
@@ -101,7 +111,6 @@
   },
   "required": [
     "customer_id",
-    "insurance_type",
     "insurer"
   ]
 }

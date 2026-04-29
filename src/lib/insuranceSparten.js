@@ -2,8 +2,8 @@
 
 export const SPARTEN_PRIVAT = [
   { value: 'kvg', label: 'Krankenversicherung KVG (Grundversicherung)', group: 'Privat' },
-  { value: 'vvg_zusatz', label: 'Zusatzversicherung VVG', group: 'Privat' },
-  { value: 'kvg_vvg_kombi', label: 'Grund- und Zusatzversicherung (Kombi)', group: 'Privat' },
+  { value: 'vvg_zusatz', label: 'Krankenversicherung VVG (Zusatzversicherung)', group: 'Privat' },
+  { value: 'kvg_vvg_kombi', label: 'Krankenversicherung KVG und VVG', group: 'Privat' },
   { value: 'leben_3a', label: 'Lebensversicherung Säule 3a', group: 'Privat' },
   { value: 'leben_3b', label: 'Lebensversicherung Säule 3b', group: 'Privat' },
   { value: 'unfall_privat', label: 'Unfallversicherung', group: 'Privat' },
