@@ -50,21 +50,29 @@ export default function Customers() {
 
   const primaryCustomers = customers.filter(c => !c.is_family_member)
 
-  // Search also checks family members and bubbles up matched primary customers
-  const familyMatchIds = search.trim()
-    ? new Set(
-        searchCustomers(customers.filter(c => c.is_family_member), search)
-          .map(m => m.primary_customer_id)
-      )
-    : new Set()
+  // IDs of family members that directly match the search
+  const matchedFamilyMembers = search.trim()
+    ? searchCustomers(customers.filter(c => c.is_family_member), search)
+    : []
+  const familyMatchParentIds = new Set(matchedFamilyMembers.map(m => m.primary_customer_id))
 
-  const matchedPrimary = searchCustomers(primaryCustomers, search)
-  const filteredIds = new Set(matchedPrimary.map(c => c.id))
-  familyMatchIds.forEach(id => filteredIds.add(id))
+  // Primary customers that directly match
+  const matchedPrimary = search.trim() ? searchCustomers(primaryCustomers, search) : primaryCustomers
+  const matchedPrimaryIds = new Set(matchedPrimary.map(c => c.id))
 
+  // All IDs to show (direct + via family)
+  const filteredIds = new Set([...matchedPrimaryIds, ...familyMatchParentIds])
+
+  // Sort: direct primary matches first, then family-only matches
   const filtered = search.trim()
-    ? primaryCustomers.filter(c => filteredIds.has(c.id))
+    ? [
+        ...matchedPrimary.filter(c => filteredIds.has(c.id)),
+        ...primaryCustomers.filter(c => familyMatchParentIds.has(c.id) && !matchedPrimaryIds.has(c.id)),
+      ]
     : primaryCustomers
+
+  // When searching, auto-expand families that have a matched member
+  const autoExpanded = search.trim() ? familyMatchParentIds : new Set()
 
   const getFamilyMembers = (primaryId) => customers.filter(c => c.primary_customer_id === primaryId)
 
@@ -118,7 +126,7 @@ export default function Customers() {
             ) : (
               filtered.map(customer => {
                 const familyMembers = getFamilyMembers(customer.id)
-                const isExpanded = expandedFamily === customer.id
+                const isExpanded = expandedFamily === customer.id || autoExpanded.has(customer.id)
 
                 return (
                   <div key={customer.id}>
