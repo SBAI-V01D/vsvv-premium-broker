@@ -43,6 +43,22 @@ export default function Dashboard() {
   const inProgressTasks = tasks.filter(t => t.status === 'in_progress')
   const pendingTasks = [...openTasks, ...inProgressTasks]
 
+  // Geburtstage berechnen
+  const today = new Date()
+  const upcomingBirthdays = customers
+    .filter(c => c.birthdate)
+    .map(c => {
+      const birthDate = new Date(c.birthdate)
+      const thisYear = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate())
+      const nextYear = new Date(today.getFullYear() + 1, birthDate.getMonth(), birthDate.getDate())
+      const nextBirthday = thisYear >= today ? thisYear : nextYear
+      const daysUntil = Math.floor((nextBirthday - today) / (1000 * 60 * 60 * 24))
+      return { customer: c, daysUntil, date: nextBirthday }
+    })
+    .filter(b => b.daysUntil <= 30)
+    .sort((a, b) => a.daysUntil - b.daysUntil)
+    .slice(0, 5)
+
   const updateMutation = useMutation({
     mutationFn: async (data) => {
       const updateData = {
@@ -188,10 +204,10 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card onClick={() => navigate('/aufgaben')} className="cursor-pointer hover:shadow-lg transition-shadow">
           <CardHeader className="flex justify-between items-center">
             <CardTitle>Ausstehende Aufgaben</CardTitle>
-            <Button size="sm" onClick={handleNewTask}>+ Neue Aufgabe</Button>
+            <Button size="sm" onClick={(e) => { e.stopPropagation(); handleNewTask() }}>+ Neue Aufgabe</Button>
           </CardHeader>
           <CardContent>
             {pendingTasks.length === 0 ? (
@@ -201,7 +217,7 @@ export default function Dashboard() {
                 {pendingTasks.map(t => (
                   <button
                     key={t.id}
-                    onClick={() => handleTaskClick(t)}
+                    onClick={(e) => { e.stopPropagation(); handleTaskClick(t) }}
                     className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded transition-colors text-left"
                   >
                     <div className="flex-1 min-w-0">
@@ -209,6 +225,31 @@ export default function Dashboard() {
                       {t.due_date && <p className="text-xs text-muted-foreground">Fällig: {formatDate(t.due_date)}</p>}
                     </div>
                   </button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/kunden')}>
+          <CardHeader>
+            <CardTitle>🎂 Kommende Geburtstage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {upcomingBirthdays.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Keine Geburtstage in den nächsten 30 Tagen</p>
+            ) : (
+              <div className="space-y-3">
+                {upcomingBirthdays.map(b => (
+                  <div key={b.customer.id} className="flex items-center justify-between p-2 bg-pink-50 rounded">
+                    <div>
+                      <p className="text-sm font-medium">{b.customer.first_name} {b.customer.last_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {b.daysUntil === 0 ? 'Heute' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`}
+                      </p>
+                    </div>
+                    <span className="text-lg">🎉</span>
+                  </div>
                 ))}
               </div>
             )}
