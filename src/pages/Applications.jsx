@@ -322,9 +322,6 @@ export default function Applications() {
                       {app.assigned_broker && (
                         <p className="text-xs text-muted-foreground truncate mt-0.5">{getBrokerName(app.assigned_broker)}</p>
                       )}
-                      {app.notes && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 italic mt-1">{app.notes}</p>
-                      )}
                     </div>
 
                     {/* Sparte / Versicherer / Produkt */}
@@ -439,7 +436,7 @@ export default function Applications() {
                             GD: {app.sparte_data.health_declaration === 'Ja' ? 'erforderlich' : 'nicht erforderlich'}
                           </p>
                           {app.notes && (
-                            <p className="text-xs text-muted-foreground line-clamp-2 italic mt-0.5">{app.notes}</p>
+                            <p className="text-xs text-red-600 line-clamp-2 mt-0.5">{app.notes}</p>
                           )}
                         </div>
                       )}
