@@ -10,14 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Users, FileText, ClipboardList, CheckCircle2, Download, TrendingUp } from 'lucide-react'
+import { Users, FileText, ClipboardList, CheckCircle2, Download, Wallet } from 'lucide-react'
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const [selectedTask, setSelectedTask] = useState(null)
   const [formData, setFormData] = useState({ status: '', notes: '', due_date: '' })
   const [exportFilter, setExportFilter] = useState('all')
-  const [filterBroker, setFilterBroker] = useState('all')
   const queryClient = useQueryClient()
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
@@ -45,14 +44,6 @@ export default function Dashboard() {
   const openTasks = tasks.filter(t => t.status === 'open')
   const inProgressTasks = tasks.filter(t => t.status === 'in_progress')
   const pendingTasks = [...openTasks, ...inProgressTasks]
-
-  // Provision-Auswertung
-  const uniqueBrokers = [...new Set(applications.map(a => a.assigned_broker).filter(Boolean))]
-  const filteredApplications = filterBroker === 'all' 
-    ? applications 
-    : applications.filter(a => a.assigned_broker === filterBroker)
-  const totalCommission = filteredApplications.reduce((sum, a) => sum + (a.commission_estimate || 0), 0)
-  const avgCommission = filteredApplications.length > 0 ? (totalCommission / filteredApplications.length).toFixed(2) : 0
 
   // Geburtstage berechnen
   const today = new Date()
@@ -270,6 +261,7 @@ export default function Dashboard() {
     { label: 'Aktive Verträge', value: activeContracts.length, icon: FileText, color: 'bg-green-50 text-green-600', path: '/vertraege' },
     { label: 'Offene Anträge', value: openApplications.length, icon: ClipboardList, color: 'bg-amber-50 text-amber-600', path: '/antraege' },
     { label: 'Ausstehende Aufgaben', value: pendingTasks.length, icon: CheckCircle2, color: 'bg-purple-50 text-purple-600', path: '/aufgaben' },
+    { label: 'Provisionen', value: '–', icon: Wallet, color: 'bg-emerald-50 text-emerald-600', path: '/provisionen' },
   ]
 
   return (
@@ -411,55 +403,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Provision-Auswertung */}
-      <div className="mt-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">Provision-Auswertung</h2>
-          {uniqueBrokers.length > 0 && (
-            <Select value={filterBroker} onValueChange={setFilterBroker}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Nach Berater filtern" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Berater</SelectItem>
-                {uniqueBrokers.map(broker => (
-                  <SelectItem key={broker} value={broker}>{broker}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Gesamte erwartete Provision</p>
-                  <p className="text-3xl font-bold">CHF {totalCommission.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-cyan-50 flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-cyan-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Durchschnittliche Provision pro Antrag</p>
-                  <p className="text-3xl font-bold">CHF {avgCommission.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
 
       <Dialog open={!!selectedTask} onOpenChange={(open) => { if (!open) setSelectedTask(null) }}>
         <DialogContent className="max-w-md">
