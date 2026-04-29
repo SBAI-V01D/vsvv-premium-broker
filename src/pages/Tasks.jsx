@@ -52,6 +52,7 @@ export default function Tasks() {
   })
 
   const isOverdue = (dueDate) => new Date(dueDate) < new Date()
+  const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('de-CH')
 
   const openTasks = tasks.filter(t => t.status === 'open')
   const inProgressTasks = tasks.filter(t => t.status === 'in_progress')
@@ -99,7 +100,7 @@ export default function Tasks() {
                   <p className="text-sm font-medium">{t.title}</p>
                   {t.due_date && (
                     <p className={`text-xs mt-1 ${isOverdue(t.due_date) ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
-                      Fällig: {t.due_date}
+                      Fällig: {formatDate(t.due_date)}
                     </p>
                   )}
                 </button>
@@ -129,7 +130,7 @@ export default function Tasks() {
                   <p className="text-sm font-medium">{t.title}</p>
                   {t.due_date && (
                     <p className={`text-xs mt-1 ${isOverdue(t.due_date) ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
-                      Fällig: {t.due_date}
+                      Fällig: {formatDate(t.due_date)}
                     </p>
                   )}
                 </button>
@@ -220,7 +221,7 @@ export default function Tasks() {
               </div>
 
               {selectedTask.due_date && (
-                <p className="text-xs text-muted-foreground">Fällig: {selectedTask.due_date}</p>
+                <p className="text-xs text-muted-foreground">Fällig: {formatDate(selectedTask.due_date)}</p>
               )}
             </div>
           )}
