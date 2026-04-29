@@ -150,11 +150,11 @@ export default function Tasks() {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Erledigt ({completedTasks.length})</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-2 max-h-96 overflow-y-auto">
             {completedTasks.length === 0 ? (
               <p className="text-sm text-muted-foreground">Keine erledigten Aufgaben</p>
             ) : (
-              completedTasks.slice(0, 5).map(t => (
+              completedTasks.map(t => (
                 <button
                   key={t.id}
                   onClick={() => handleTaskClick(t)}
