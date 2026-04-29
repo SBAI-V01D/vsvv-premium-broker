@@ -82,7 +82,9 @@ export default function Applications() {
       note,
       metadata: JSON.stringify(metadata),
     })
-    await base44.entities.Application.update(app.id, { custom_status: status })
+    const updateData = { custom_status: status }
+    if (app.insurer) updateData.insurer = app.insurer
+    await base44.entities.Application.update(app.id, updateData)
     queryClient.invalidateQueries({ queryKey: ['applications'] })
     setStatusChanging(null)
   }
