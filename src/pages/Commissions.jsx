@@ -11,11 +11,10 @@ import { jsPDF } from 'jspdf'
 export default function Commissions() {
   const [search, setSearch] = useState('')
   const [filterBroker, setFilterBroker] = useState('all')
-  const [filterStatus, setFilterStatus] = useState('all')
 
-  const { data: commissions = [] } = useQuery({
-    queryKey: ['commissions'],
-    queryFn: () => base44.entities.Commission.list('-date'),
+  const { data: contracts = [] } = useQuery({
+    queryKey: ['contracts'],
+    queryFn: () => base44.entities.Contract.list(),
   })
 
   const { data: brokers = [] } = useQuery({
@@ -23,38 +22,44 @@ export default function Commissions() {
     queryFn: () => base44.entities.Broker.filter({ is_active: true }),
   })
 
-  const uniqueBrokers = [...new Set(commissions.map(c => c.broker_email).filter(Boolean))]
+  // Filter Verträge mit Provisionen
+  const contractsWithCommission = contracts.filter(c => c.commission_amount || (c.commission_rate && c.premium_yearly))
+  
+  const uniqueBrokers = [...new Set(contractsWithCommission.map(c => c.assigned_broker).filter(Boolean))]
   
   // Filterung
-  const filtered = commissions.filter(c => {
-    const searchStr = `${c.customer_name} ${c.provider} ${c.insurance_type}`.toLowerCase()
+  const filtered = contractsWithCommission.filter(c => {
+    const searchStr = `${c.customer_name} ${c.insurer} ${c.insurance_type}`.toLowerCase()
     const matchSearch = !search.trim() || searchStr.includes(search.toLowerCase())
-    const matchBroker = filterBroker === 'all' || c.broker_email === filterBroker
-    const matchStatus = filterStatus === 'all' || c.status === filterStatus
-    return matchSearch && matchBroker && matchStatus
+    const matchBroker = filterBroker === 'all' || c.assigned_broker === filterBroker
+    return matchSearch && matchBroker
   })
 
   // Auswertung nach Gesellschaft und Berater
   const providerSummary = {}
-  commissions.forEach(c => {
-    if (!providerSummary[c.provider]) {
-      providerSummary[c.provider] = {}
+  contractsWithCommission.forEach(c => {
+    if (!providerSummary[c.insurer]) {
+      providerSummary[c.insurer] = {}
     }
-    if (!providerSummary[c.provider][c.broker_email]) {
-      providerSummary[c.provider][c.broker_email] = {
-        broker_name: c.broker_name,
+    if (!providerSummary[c.insurer][c.assigned_broker]) {
+      providerSummary[c.insurer][c.assigned_broker] = {
+        broker_name: c.assigned_broker,
         gross_amount: 0,
         deductions: 0,
         net_amount: 0,
         count: 0,
       }
     }
-    const gross = c.amount || 0
+    
+    // Berechne Provisionsbrutto
+    const gross = c.commission_amount || (c.commission_rate && c.premium_yearly ? (c.premium_yearly * c.commission_rate / 100) : 0)
     const deduction = gross * 0.1
-    providerSummary[c.provider][c.broker_email].gross_amount += gross
-    providerSummary[c.provider][c.broker_email].deductions += deduction
-    providerSummary[c.provider][c.broker_email].net_amount += (gross - deduction)
-    providerSummary[c.provider][c.broker_email].count += 1
+    const net = gross - deduction
+    
+    providerSummary[c.insurer][c.assigned_broker].gross_amount += gross
+    providerSummary[c.insurer][c.assigned_broker].deductions += deduction
+    providerSummary[c.insurer][c.assigned_broker].net_amount += net
+    providerSummary[c.insurer][c.assigned_broker].count += 1
   })
 
   const formatDate = (dateStr) => {
@@ -228,17 +233,6 @@ export default function Commissions() {
               </SelectContent>
             </Select>
           )}
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-44">
-              <SelectValue placeholder="Alle Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alle Status</SelectItem>
-              <SelectItem value="offen">Offen</SelectItem>
-              <SelectItem value="bezahlt">Bezahlt</SelectItem>
-              <SelectItem value="storniert">Storniert</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         <Card>
@@ -247,12 +241,12 @@ export default function Commissions() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/40">
-                    <th className="text-left py-3 px-4 font-semibold">Datum</th>
+                    <th className="text-left py-3 px-4 font-semibold">Vertragsbeginn</th>
                     <th className="text-left py-3 px-4 font-semibold">Kunde</th>
                     <th className="text-left py-3 px-4 font-semibold">Gesellschaft</th>
                     <th className="text-left py-3 px-4 font-semibold">Versicherungsart</th>
                     <th className="text-left py-3 px-4 font-semibold">Berater</th>
-                    <th className="text-right py-3 px-4 font-semibold">Betrag</th>
+                    <th className="text-right py-3 px-4 font-semibold">Provisionsbrutto</th>
                     <th className="text-center py-3 px-4 font-semibold">Status</th>
                   </tr>
                 </thead>
@@ -260,29 +254,33 @@ export default function Commissions() {
                   {filtered.length === 0 ? (
                     <tr>
                       <td colSpan="7" className="text-center py-8 text-muted-foreground">
-                        Keine Provisionen gefunden
+                        Keine Verträge mit Provisionen gefunden
                       </td>
                     </tr>
                   ) : (
-                    filtered.map(c => (
-                      <tr key={c.id} className="border-b hover:bg-muted/30">
-                        <td className="py-3 px-4">{formatDate(c.date)}</td>
-                        <td className="py-3 px-4">{c.customer_name}</td>
-                        <td className="py-3 px-4">{c.provider}</td>
-                        <td className="py-3 px-4">{c.insurance_type}</td>
-                        <td className="py-3 px-4">{c.broker_name}</td>
-                        <td className="text-right py-3 px-4 font-semibold">CHF {c.amount?.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td className="text-center py-3 px-4">
-                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                            c.status === 'bezahlt' ? 'bg-green-100 text-green-700' :
-                            c.status === 'offen' ? 'bg-amber-100 text-amber-700' :
-                            'bg-red-100 text-red-700'
-                          }`}>
-                            {c.status === 'bezahlt' ? 'Bezahlt' : c.status === 'offen' ? 'Offen' : 'Storniert'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
+                    filtered.map(c => {
+                      const gross = c.commission_amount || (c.commission_rate && c.premium_yearly ? (c.premium_yearly * c.commission_rate / 100) : 0)
+                      const deduction = gross * 0.1
+                      const net = gross - deduction
+                      return (
+                        <tr key={c.id} className="border-b hover:bg-muted/30">
+                          <td className="py-3 px-4">{formatDate(c.start_date)}</td>
+                          <td className="py-3 px-4">{c.customer_name}</td>
+                          <td className="py-3 px-4">{c.insurer}</td>
+                          <td className="py-3 px-4">{c.insurance_type}</td>
+                          <td className="py-3 px-4">{c.assigned_broker || '–'}</td>
+                          <td className="text-right py-3 px-4 font-semibold">CHF {gross.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                          <td className="text-center py-3 px-4">
+                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                              c.status === 'active' ? 'bg-green-100 text-green-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {c.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })
                   )}
                 </tbody>
               </table>
