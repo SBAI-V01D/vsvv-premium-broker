@@ -1,0 +1,117 @@
+{
+  "name": "CommissionEntry",
+  "type": "object",
+  "properties": {
+    "settlement_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Abrechnungsdatum"
+    },
+    "insurer": {
+      "type": "string",
+      "description": "Versicherungsgesellschaft"
+    },
+    "broker_email": {
+      "type": "string",
+      "description": "Berater (E-Mail)"
+    },
+    "broker_name": {
+      "type": "string",
+      "description": "Berater (Name)"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Kunde-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Kunde / Versicherungsnehmer"
+    },
+    "sparte": {
+      "type": "string",
+      "description": "Versicherungssparte"
+    },
+    "product": {
+      "type": "string",
+      "description": "Produkt / Police"
+    },
+    "policy_number": {
+      "type": "string",
+      "description": "Policennummer"
+    },
+    "gross_commission": {
+      "type": "number",
+      "description": "Brutto-Provision Gesellschaft (CHF)"
+    },
+    "company_share_percent": {
+      "type": "number",
+      "default": 40,
+      "description": "Anteil Gesellschaft (%)"
+    },
+    "company_share_amount": {
+      "type": "number",
+      "description": "Anteil Gesellschaft (CHF) - auto-calculated"
+    },
+    "broker_share_percent": {
+      "type": "number",
+      "description": "Anteil Berater (%) - from rates or override"
+    },
+    "broker_share_amount": {
+      "type": "number",
+      "description": "Anteil Berater (CHF) - auto-calculated"
+    },
+    "storno_percent": {
+      "type": "number",
+      "default": 10,
+      "description": "Storno-Abzug (%)"
+    },
+    "storno_amount": {
+      "type": "number",
+      "description": "Storno-Abzug (CHF) - auto-calculated"
+    },
+    "net_payout": {
+      "type": "number",
+      "description": "Netto-Auszahlung Berater (CHF) - auto-calculated"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "erwartet",
+        "abgerechnet",
+        "teilweise_abgerechnet",
+        "storniert"
+      ],
+      "default": "erwartet",
+      "description": "Status"
+    },
+    "linked_contract_id": {
+      "type": "string",
+      "description": "Verkn. Vertrags-ID"
+    },
+    "linked_application_id": {
+      "type": "string",
+      "description": "Verkn. Antrags-ID"
+    },
+    "document_url": {
+      "type": "string",
+      "description": "Abrechnungsbeleg (PDF)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notizen"
+    },
+    "vat_applicable": {
+      "type": "boolean",
+      "default": false,
+      "description": "MwSt. relevant"
+    }
+  },
+  "required": [
+    "settlement_date",
+    "insurer",
+    "broker_email",
+    "customer_name",
+    "sparte",
+    "gross_commission"
+  ]
+}

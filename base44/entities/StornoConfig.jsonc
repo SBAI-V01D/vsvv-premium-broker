@@ -1,0 +1,25 @@
+{
+  "name": "StornoConfig",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Konfigurationsname"
+    },
+    "global_storno_percent": {
+      "type": "number",
+      "default": 10,
+      "description": "Globaler Storno-Prozentsatz (%)",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "is_current": {
+      "type": "boolean",
+      "default": true,
+      "description": "Aktuell aktiv"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

@@ -2,32 +2,21 @@
   "name": "CommissionRate",
   "type": "object",
   "properties": {
-    "provider": {
+    "broker_email": {
       "type": "string",
-      "description": "Versicherungsgesellschaft"
+      "description": "Berater (E-Mail)"
     },
-    "insurance_type": {
+    "broker_name": {
       "type": "string",
-      "enum": [
-        "KVG",
-        "VVG",
-        "Leben",
-        "Haftpflicht",
-        "Hausrat",
-        "Rechtsschutz",
-        "Motorfahrzeug",
-        "Geb\u00e4ude",
-        "Unfall",
-        "Krankentaggeld",
-        "BVG",
-        "S\u00e4ule 3a",
-        "Sonstige"
-      ],
-      "description": "Versicherungsart"
+      "description": "Berater (Name)"
     },
-    "commission_percentage": {
+    "sparte": {
+      "type": "string",
+      "description": "Versicherungssparte"
+    },
+    "rate_percent": {
       "type": "number",
-      "description": "Provisionssatz (%)",
+      "description": "Provisionssatz Berater (%)",
       "minimum": 0,
       "maximum": 100
     },
@@ -35,15 +24,11 @@
       "type": "boolean",
       "default": true,
       "description": "Aktiv"
-    },
-    "notes": {
-      "type": "string",
-      "description": "Bemerkungen"
     }
   },
   "required": [
-    "provider",
-    "insurance_type",
-    "commission_percentage"
+    "broker_email",
+    "sparte",
+    "rate_percent"
   ]
 }
