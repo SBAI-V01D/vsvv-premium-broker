@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import ContractForm from '../components/contracts/ContractForm'
+import { STATUS_LABELS, INSURANCE_TYPE_LABELS, label } from '@/lib/labels'
 
 export default function Contracts() {
   const [showForm, setShowForm] = useState(false)
@@ -114,7 +115,7 @@ export default function Contracts() {
                     <TableCell className="font-medium">
                       CHF {contract.premium_yearly?.toLocaleString('de-CH', { minimumFractionDigits: 0 }) || '–'}
                     </TableCell>
-                    <TableCell className="text-sm capitalize">{contract.status}</TableCell>
+                    <TableCell className="text-sm">{label(STATUS_LABELS, contract.status)}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

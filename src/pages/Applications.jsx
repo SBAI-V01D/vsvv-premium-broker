@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import ApplicationForm from '../components/applications/ApplicationForm'
+import { STATUS_LABELS, INSURANCE_TYPE_LABELS, label } from '@/lib/labels'
 
 export default function Applications() {
   const [showForm, setShowForm] = useState(false)
@@ -110,11 +111,11 @@ export default function Applications() {
                   <TableRow key={app.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">{app.customer_name}</TableCell>
                     <TableCell className="hidden md:table-cell text-sm">{app.insurer}</TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm capitalize">{app.insurance_type}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-sm">{label(INSURANCE_TYPE_LABELS, app.insurance_type)}</TableCell>
                     <TableCell className="font-medium">
                       CHF {app.estimated_premium_yearly?.toLocaleString('de-CH', { minimumFractionDigits: 0 }) || '–'}
                     </TableCell>
-                    <TableCell className="text-sm capitalize">{app.status}</TableCell>
+                    <TableCell className="text-sm">{label(STATUS_LABELS, app.status)}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

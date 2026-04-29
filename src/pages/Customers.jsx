@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import CustomerForm from '../components/customers/CustomerForm'
+import { STATUS_LABELS, FAMILY_ROLE_LABELS, label } from '@/lib/labels'
 
 export default function Customers() {
   const [showForm, setShowForm] = useState(false)
@@ -159,7 +160,7 @@ export default function Customers() {
                             <div key={member.id} className="p-4 pl-12 border-b border-border last:border-0 flex items-center justify-between gap-4 hover:bg-slate-100">
                               <Link to={`/kunden/${member.id}`} className="flex-1 min-w-0 hover:text-primary">
                                 <p className="font-medium text-sm">{member.first_name} {member.last_name}</p>
-                                <p className="text-xs text-muted-foreground">{member.family_role}</p>
+                                <p className="text-xs text-muted-foreground">{label(FAMILY_ROLE_LABELS, member.family_role)}</p>
                               </Link>
 
                               <div className="hidden md:flex text-sm text-muted-foreground flex-shrink-0">

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import CustomerForm from '../components/customers/CustomerForm'
+import { STATUS_LABELS, INSURANCE_TYPE_LABELS, FAMILY_ROLE_LABELS, label } from '@/lib/labels'
 
 export default function CustomerDetail() {
   const { id } = useParams()
@@ -94,7 +95,7 @@ export default function CustomerDetail() {
           <CardContent className="p-4 space-y-2">
             {customer.birthdate && <div className="text-sm"><span className="text-muted-foreground">Geburtsdatum:</span> {customer.birthdate}</div>}
             {customer.profession && <div className="text-sm"><span className="text-muted-foreground">Beruf:</span> {customer.profession}</div>}
-            <div className="text-sm capitalize"><span className="text-muted-foreground">Status:</span> {customer.status}</div>
+            <div className="text-sm"><span className="text-muted-foreground">Status:</span> {label(STATUS_LABELS, customer.status)}</div>
           </CardContent>
         </Card>
       </div>
@@ -126,7 +127,7 @@ export default function CustomerDetail() {
                       </div>
                       <div className="text-right">
                         <p className="font-bold">CHF {c.premium_yearly?.toLocaleString('de-CH', { minimumFractionDigits: 0 }) || '–'}/J.</p>
-                        <p className="text-sm text-muted-foreground capitalize">{c.status}</p>
+                        <p className="text-sm text-muted-foreground">{label(STATUS_LABELS, c.status)}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -155,7 +156,7 @@ export default function CustomerDetail() {
                       </div>
                       <div className="text-right">
                         <p className="font-bold">CHF {a.estimated_premium_yearly?.toLocaleString('de-CH', { minimumFractionDigits: 0 }) || '–'}/J.</p>
-                        <p className="text-sm text-muted-foreground capitalize">{a.status}</p>
+                        <p className="text-sm text-muted-foreground">{label(STATUS_LABELS, a.status)}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -180,7 +181,7 @@ export default function CustomerDetail() {
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <p className="font-medium">{member.first_name} {member.last_name}</p>
-                        <p className="text-sm text-muted-foreground mt-1">{member.email} • {member.family_role}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{member.email} • {label(FAMILY_ROLE_LABELS, member.family_role)}</p>
                         <p className="text-xs text-muted-foreground mt-2">{member.city}, {member.canton}</p>
                       </div>
                       <a href={`/kunden/${member.id}`} className="text-primary hover:underline text-sm font-medium">
