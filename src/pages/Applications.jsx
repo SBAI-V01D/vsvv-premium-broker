@@ -431,14 +431,9 @@ export default function Applications() {
                         <StatusBadge statusDef={getStatusDef(app)} label={getStatusLabel(app)} />
                       </button>
                       {app.sparte_data?.health_declaration && (
-                        <div className="mt-1">
-                          <p className={`text-xs font-medium ${app.sparte_data.health_declaration === 'Ja' ? 'text-orange-600' : 'text-green-600'}`}>
-                            GD: {app.sparte_data.health_declaration === 'Ja' ? 'erforderlich' : 'nicht erforderlich'}
-                          </p>
-                          {app.sparte_data.health_declaration === 'Ja' && (
-                            <p className="text-xs text-orange-600 font-medium">Vorgeburtliche Anmeldung</p>
-                          )}
-                        </div>
+                        <p className={`text-xs font-medium mt-1 ${app.sparte_data.health_declaration === 'Ja' ? 'text-orange-600' : 'text-green-600'}`}>
+                          GD: {app.sparte_data.health_declaration === 'Ja' ? 'erforderlich' : 'nicht erforderlich'}
+                        </p>
                       )}
                     </div>
 
