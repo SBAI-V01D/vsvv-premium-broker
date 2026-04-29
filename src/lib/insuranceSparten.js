@@ -1,8 +1,9 @@
 // Vollständige Schweizer Versicherungssparten
 
 export const SPARTEN_PRIVAT = [
-  { value: 'kvg', label: 'Krankenversicherung KVG', group: 'Privat' },
+  { value: 'kvg', label: 'Krankenversicherung KVG (Grundversicherung)', group: 'Privat' },
   { value: 'vvg_zusatz', label: 'Zusatzversicherung VVG', group: 'Privat' },
+  { value: 'kvg_vvg_kombi', label: 'Grund- und Zusatzversicherung (Kombi)', group: 'Privat' },
   { value: 'leben_3a', label: 'Lebensversicherung Säule 3a', group: 'Privat' },
   { value: 'leben_3b', label: 'Lebensversicherung Säule 3b', group: 'Privat' },
   { value: 'unfall_privat', label: 'Unfallversicherung', group: 'Privat' },
@@ -125,5 +126,16 @@ export const SPARTE_FIELDS = {
     { key: 'sum_insured', label: 'Deckungssumme (CHF)', type: 'number' },
   ],
 }
+
+// Kombi KVG+VVG uses combined fields
+SPARTE_FIELDS['kvg_vvg_kombi'] = [
+  { key: 'ahv_number', label: 'AHV-Nummer', type: 'text', placeholder: '756.1234.5678.90' },
+  { key: 'birth_date', label: 'Geburtsdatum', type: 'date' },
+  { key: 'franchise', label: 'Franchise KVG (CHF)', type: 'select', options: ['300','500','1000','1500','2000','2500'] },
+  { key: 'model', label: 'Kassenmodell', type: 'select', options: ['Standardmodell','HMO','Hausarztmodell','Telemed','Flexmed'] },
+  { key: 'current_insurer', label: 'Aktuelle Krankenkasse', type: 'text' },
+  { key: 'zusatz_type', label: 'Zusatzversicherungstyp', type: 'select', options: ['Spital allgemein','Spital halbprivat','Spital privat','Ambulant','Dental','Alternativ'] },
+  { key: 'health_declaration', label: 'Gesundheitserklärung nötig', type: 'select', options: ['Ja','Nein'] },
+]
 
 export const getFieldsForSparte = (sparte) => SPARTE_FIELDS[sparte] || []

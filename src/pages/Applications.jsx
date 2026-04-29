@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Filter, ChevronDown, ChevronUp, FileText, TrendingUp, Clock, CheckCircle } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, Edit, Trash2, ChevronDown, ChevronUp, FileText, TrendingUp, Clock, CheckCircle, Calendar, Building2, Tag } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -251,77 +251,109 @@ export default function Applications() {
       </div>
 
       {/* List */}
-      <div className="space-y-3">
-        {filtered.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              Keine Anträge gefunden
-            </CardContent>
-          </Card>
-        ) : (
-          filtered.map(app => {
-            const docsOpen = expandedDocs === app.id
-            return (
-              <Card key={app.id} className="overflow-hidden">
-                <CardContent className="p-0">
+      <Card>
+        <CardContent className="p-0">
+          {/* Table Header */}
+          <div className="hidden md:grid grid-cols-[2fr_2fr_1.5fr_1fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            <div>Kunde</div>
+            <div>Sparte / Versicherer</div>
+            <div>Produkt / Police</div>
+            <div>Startdatum</div>
+            <div>Jahresprämie</div>
+            <div>Status</div>
+            <div className="w-20"></div>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="py-12 text-center text-muted-foreground">Keine Anträge gefunden</div>
+          ) : (
+            filtered.map((app, idx) => {
+              const docsOpen = expandedDocs === app.id
+              return (
+                <div key={app.id} className={idx > 0 ? 'border-t border-border' : ''}>
                   {/* Main row */}
-                  <div className="p-4 flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="font-semibold">{app.customer_name}</p>
-                            {app.assigned_broker && (
-                              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                                {app.assigned_broker}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <span className="text-sm text-muted-foreground">
-                              {getSparteLabel(app.sparte || app.insurance_type)}
-                            </span>
-                            {app.insurer && (
-                              <>
-                                <span className="text-muted-foreground">·</span>
-                                <span className="text-sm text-muted-foreground">{app.insurer}</span>
-                              </>
-                            )}
-                            {app.estimated_premium_yearly && (
-                              <>
-                                <span className="text-muted-foreground">·</span>
-                                <span className="text-sm font-medium">
-                                  CHF {app.estimated_premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}/J.
-                                </span>
-                              </>
-                            )}
-                          </div>
-                          {app.notes && (
-                            <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{app.notes}</p>
-                          )}
-                        </div>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors">
+                    {/* Kunde */}
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm truncate">{app.customer_name || '–'}</p>
+                      {app.assigned_broker && (
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">{app.assigned_broker}</p>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Sparte / Versicherer */}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <Tag className="w-3 h-3 text-primary flex-shrink-0" />
+                        <p className="text-sm font-medium truncate">{getSparteLabel(app.sparte || app.insurance_type)}</p>
+                      </div>
+                      {app.insurer && (
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <Building2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                          <p className="text-xs text-muted-foreground truncate">{app.insurer}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Produkt / Police */}
+                    <div className="min-w-0">
+                      {app.product && <p className="text-sm truncate">{app.product}</p>}
+                      {app.policy_number && (
+                        <p className="text-xs text-muted-foreground mt-0.5">Police: {app.policy_number}</p>
+                      )}
+                      {!app.product && !app.policy_number && <span className="text-sm text-muted-foreground">–</span>}
+                    </div>
+
+                    {/* Startdatum */}
+                    <div>
+                      {(app.contract_start_date || app.requested_start_date) ? (
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-sm">
+                            {new Date(app.contract_start_date || app.requested_start_date).toLocaleDateString('de-CH')}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">–</span>
+                      )}
+                    </div>
+
+                    {/* Jahresprämie */}
+                    <div>
+                      {app.estimated_premium_yearly ? (
+                        <p className="text-sm font-semibold text-foreground">
+                          CHF {app.estimated_premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}
+                        </p>
+                      ) : app.estimated_premium_monthly ? (
+                        <p className="text-sm font-medium text-foreground">
+                          CHF {app.estimated_premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}/M.
+                        </p>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">–</span>
+                      )}
+                    </div>
+
+                    {/* Status */}
+                    <div>
                       <button onClick={() => setStatusChanging(app)} className="hover:opacity-80 transition-opacity">
                         <StatusBadge statusDef={getStatusDef(app)} label={getStatusLabel(app)} />
                       </button>
+                    </div>
 
-                      {/* Docs toggle */}
+                    {/* Actions */}
+                    <div className="flex items-center gap-1">
                       <Button
                         variant="ghost"
-                        size="sm"
-                        className="gap-1 text-muted-foreground"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground"
                         onClick={() => setExpandedDocs(docsOpen ? null : app.id)}
+                        title="Dokumente"
                       >
                         <FileText className="w-4 h-4" />
-                        {docsOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                       </Button>
-
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button variant="ghost" size="icon" className="h-7 w-7">
                             <MoreHorizontal className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -341,18 +373,25 @@ export default function Applications() {
                     </div>
                   </div>
 
+                  {/* Notizen (wenn vorhanden) */}
+                  {app.notes && (
+                    <div className="px-4 pb-2 -mt-1">
+                      <p className="text-xs text-muted-foreground line-clamp-1 italic">{app.notes}</p>
+                    </div>
+                  )}
+
                   {/* Documents panel */}
                   {docsOpen && (
                     <div className="px-4 pb-4 border-t border-border bg-muted/20">
                       <ApplicationDocumentsPanel application={app} />
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            )
-          })
-        )}
-      </div>
+                </div>
+              )
+            })
+          )}
+        </CardContent>
+      </Card>
 
       {/* Status Dialog */}
       <StatusChangeDialog
