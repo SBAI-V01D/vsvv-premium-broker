@@ -26,6 +26,7 @@ export default function Tasks() {
       const updateData = {
         status: data.status || selectedTask.status,
         notes: data.notes || selectedTask.notes,
+        due_date: data.due_date || selectedTask.due_date,
       }
       
       if (data.file) {
@@ -39,6 +40,14 @@ export default function Tasks() {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       setSelectedTask(null)
       setFormData({ status: '', notes: '', file: null })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Task.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      setSelectedTask(null)
     },
   })
 
@@ -56,6 +65,10 @@ export default function Tasks() {
   const handleSave = () => {
     updateMutation.mutate(formData)
   }
+
+  const openTasksCount = openTasks.length
+  const inProgressTasksCount = inProgressTasks.length
+  const completedTasksCount = completedTasks.length
 
   return (
     <div>
@@ -170,6 +183,16 @@ export default function Tasks() {
               </div>
 
               <div>
+                <Label>Fälligkeitsdatum</Label>
+                <Input
+                  type="date"
+                  value={formData.due_date || selectedTask?.due_date || ''}
+                  onChange={(e) => setFormData(p => ({ ...p, due_date: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
                 <Label>Notizen</Label>
                 <Textarea
                   value={formData.notes}
@@ -201,11 +224,24 @@ export default function Tasks() {
               )}
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedTask(null)}>Schliessen</Button>
-            <Button onClick={handleSave} disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? 'Speichern...' : 'Speichern'}
+          <DialogFooter className="flex justify-between">
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (confirm('Aufgabe wirklich löschen?')) {
+                  deleteMutation.mutate(selectedTask.id)
+                }
+              }}
+              disabled={deleteMutation.isPending}
+            >
+              Löschen
             </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setSelectedTask(null)}>Schliessen</Button>
+              <Button onClick={handleSave} disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? 'Speichern...' : 'Speichern'}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
