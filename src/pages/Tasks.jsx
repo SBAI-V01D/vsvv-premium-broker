@@ -52,14 +52,9 @@ export default function Tasks() {
   })
 
   const isOverdue = (dueDate) => new Date(dueDate) < new Date()
-  const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('de-CH')
-  const toISODate = (dateStr) => {
-    if (!dateStr) return ''
-    if (dateStr.includes('-')) return dateStr // Already ISO format
-    // Convert from de-CH format (dd.mm.yyyy) to ISO (yyyy-mm-dd)
-    const parts = dateStr.split('.')
-    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`
-    return dateStr
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '–'
+    return new Date(dateStr + 'T00:00:00Z').toLocaleDateString('de-CH')
   }
 
   const openTasks = tasks.filter(t => t.status === 'open')
@@ -195,7 +190,7 @@ export default function Tasks() {
                <Label>Fälligkeitsdatum</Label>
                <Input
                  type="date"
-                 value={toISODate(formData.due_date)}
+                 value={formData.due_date || ''}
                  onChange={(e) => setFormData(p => ({ ...p, due_date: e.target.value }))}
                  className="mt-1"
                />
