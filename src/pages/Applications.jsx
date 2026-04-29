@@ -338,10 +338,10 @@ export default function Applications() {
                       )}
                     </div>
 
-                    {/* Versicherungssparte / Spartendetails */}
+                    {/* Details */}
                     <div className="min-w-0">
-                      {/* KVG/VVG: Kassenmodell + Franchise */}
-                      {['kvg','vvg_zusatz','kvg_vvg_kombi'].includes(app.sparte || app.insurance_type) ? (
+                      {/* KVG/VVG: Kassenmodell + Franchise + GD */}
+                      {['kvg','kvg_vvg_kombi'].includes(app.sparte || app.insurance_type) && (
                         <>
                           {app.sparte_data?.model && (
                             <p className="text-sm truncate">{app.sparte_data.model}</p>
@@ -360,11 +360,29 @@ export default function Applications() {
                               GD: {app.sparte_data.health_declaration}
                             </p>
                           )}
-                          {!app.sparte_data?.model && !app.sparte_data?.franchise && !app.sparte_data?.zusatz_type && (
-                            <span className="text-sm text-muted-foreground">–</span>
+                          {!app.sparte_data?.model && !app.sparte_data?.franchise && (
+                            <span className="text-xs text-muted-foreground">–</span>
                           )}
                         </>
-                      ) : (
+                      )}
+                      {/* VVG Zusatz */}
+                      {(app.sparte || app.insurance_type) === 'vvg_zusatz' && (
+                        <>
+                          {app.sparte_data?.zusatz_type && (
+                            <p className="text-sm truncate">{app.sparte_data.zusatz_type}</p>
+                          )}
+                          {app.sparte_data?.health_declaration && (
+                            <p className={`text-xs mt-0.5 font-medium ${app.sparte_data.health_declaration === 'Ja' ? 'text-orange-600' : 'text-green-600'}`}>
+                              GD: {app.sparte_data.health_declaration}
+                            </p>
+                          )}
+                          {!app.sparte_data?.zusatz_type && (
+                            <span className="text-xs text-muted-foreground">–</span>
+                          )}
+                        </>
+                      )}
+                      {/* Alle anderen Sparten */}
+                      {!['kvg','kvg_vvg_kombi','vvg_zusatz'].includes(app.sparte || app.insurance_type) && (
                         <>
                           {app.product && <p className="text-sm truncate">{app.product}</p>}
                           {app.policy_number && (
