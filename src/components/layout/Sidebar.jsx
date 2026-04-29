@@ -14,6 +14,7 @@ const navItems = [
   { label: 'Anträge', icon: FileText, path: '/antraege' },
   { label: 'Aufgaben', icon: CheckSquare, path: '/aufgaben' },
   { label: 'Provisionen & Courtagen', icon: Wallet, path: '/provisionen-courtagen' },
+  { label: 'Dokumente', icon: FileText, path: '/dokumente' },
   { label: 'Nachrichten', icon: MessageSquare, path: '/nachrichten' },
   { label: 'Schadensmeldungen', icon: AlertCircle, path: '/schaden' },
   { label: 'Benachrichtigungen', icon: Bell, path: '/benachrichtigungen' },
