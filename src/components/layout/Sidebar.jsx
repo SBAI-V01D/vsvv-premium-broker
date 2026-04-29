@@ -13,7 +13,6 @@ const navItems = [
   { label: 'Verträge', icon: FileText, path: '/vertraege' },
   { label: 'Anträge', icon: FileText, path: '/antraege' },
   { label: 'Aufgaben', icon: CheckSquare, path: '/aufgaben' },
-  { label: 'Provisionen & Courtagen', icon: Wallet, path: '/provisionen-courtagen' },
   { label: 'Nachrichten', icon: MessageSquare, path: '/nachrichten' },
   { label: 'Schadensmeldungen', icon: AlertCircle, path: '/schaden' },
   { label: 'Benachrichtigungen', icon: Bell, path: '/benachrichtigungen' },
