@@ -36,7 +36,9 @@ export default function Dashboard() {
 
   const activeContracts = contracts.filter(c => c.status === 'active')
   const openApplications = applications.filter(a => a.status !== 'approved' && a.status !== 'rejected')
-  const openTasks = tasks.filter(t => t.status !== 'completed')
+  const openTasks = tasks.filter(t => t.status === 'open')
+  const inProgressTasks = tasks.filter(t => t.status === 'in_progress')
+  const pendingTasks = [...openTasks, ...inProgressTasks]
 
   const updateMutation = useMutation({
     mutationFn: async (data) => {
@@ -115,7 +117,7 @@ export default function Dashboard() {
     { label: 'Kunden', value: customers.length, icon: Users, color: 'bg-blue-50 text-blue-600' },
     { label: 'Aktive Verträge', value: activeContracts.length, icon: FileText, color: 'bg-green-50 text-green-600' },
     { label: 'Offene Anträge', value: openApplications.length, icon: ClipboardList, color: 'bg-amber-50 text-amber-600' },
-    { label: 'Offene Aufgaben', value: openTasks.length, icon: CheckCircle2, color: 'bg-purple-50 text-purple-600' },
+    { label: 'Ausstehende Aufgaben', value: pendingTasks.length, icon: CheckCircle2, color: 'bg-purple-50 text-purple-600' },
   ]
 
   return (
@@ -170,11 +172,11 @@ export default function Dashboard() {
             <Button size="sm" onClick={handleNewTask}>+ Neue Aufgabe</Button>
           </CardHeader>
           <CardContent>
-            {openTasks.length === 0 ? (
+            {pendingTasks.length === 0 ? (
               <p className="text-sm text-muted-foreground">Keine ausstehenden Aufgaben</p>
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {openTasks.map(t => (
+                {pendingTasks.map(t => (
                   <button
                     key={t.id}
                     onClick={() => handleTaskClick(t)}
