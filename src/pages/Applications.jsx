@@ -48,6 +48,8 @@ export default function Applications() {
     queryFn: () => base44.entities.Broker.filter({ is_active: true }),
   })
 
+  const getCustomer = (customerId) => customers.find(c => c.id === customerId)
+
   const getBrokerName = (brokerValue) => {
     if (!brokerValue) return null
     const found = brokers.find(b => b.name === brokerValue || b.email === brokerValue)
@@ -95,9 +97,10 @@ export default function Applications() {
     const matchStatus = filterStatus === 'all' || (a.custom_status || a.status) === filterStatus
     const matchBroker = filterBroker === 'all' || a.assigned_broker === filterBroker
     const sparteKey = a.sparte || a.insurance_type
+    const kundentyp = a.kundentyp || (PRIVAT_VALUES.includes(sparteKey) ? 'privat' : FIRMA_VALUES.includes(sparteKey) ? 'firma' : null)
     const matchKundentyp = filterKundentyp === 'all'
-      || (filterKundentyp === 'privat' && PRIVAT_VALUES.includes(sparteKey))
-      || (filterKundentyp === 'firma' && FIRMA_VALUES.includes(sparteKey))
+      || (filterKundentyp === 'privat' && (kundentyp === 'privat' || PRIVAT_VALUES.includes(sparteKey)))
+      || (filterKundentyp === 'firma' && (kundentyp === 'firma' || FIRMA_VALUES.includes(sparteKey)))
     return matchSearch && matchSparte && matchStatus && matchBroker && matchKundentyp
   })
 
@@ -288,7 +291,7 @@ export default function Applications() {
           <div className="hidden md:grid grid-cols-[2fr_2fr_1.5fr_1fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             <div>Kunde / Berater</div>
             <div>Sparte / Versicherer</div>
-            <div>Versicherungssparte</div>
+            <div>Details</div>
             <div>Vertragsbeginn</div>
             <div>Jahresprämie</div>
             <div>Status</div>
@@ -306,10 +309,16 @@ export default function Applications() {
                   <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors">
                     {/* Kunde */}
                     <div className="min-w-0">
-                      <p className="font-semibold text-sm truncate">{app.customer_name || '–'}</p>
-                      {app.sparte_data?.ahv_number && (
-                        <p className="text-xs font-mono text-muted-foreground truncate mt-0.5">{app.sparte_data.ahv_number}</p>
-                      )}
+                      <div className="flex items-baseline gap-1.5 flex-wrap">
+                        <p className="font-semibold text-sm truncate">{app.customer_name || '–'}</p>
+                        {(() => {
+                          const cust = getCustomer(app.customer_id)
+                          const ahv = cust?.ahv_number || app.sparte_data?.ahv_number
+                          return ahv ? (
+                            <span className="text-xs font-mono text-muted-foreground">{ahv}</span>
+                          ) : null
+                        })()}
+                      </div>
                       {app.assigned_broker && (
                         <p className="text-xs text-muted-foreground truncate mt-0.5">{getBrokerName(app.assigned_broker)}</p>
                       )}
@@ -346,7 +355,12 @@ export default function Applications() {
                           {app.sparte_data?.zusatz_type && (
                             <p className="text-xs text-muted-foreground mt-0.5">{app.sparte_data.zusatz_type}</p>
                           )}
-                          {!app.sparte_data?.model && !app.sparte_data?.franchise && (
+                          {app.sparte_data?.health_declaration && (
+                            <p className={`text-xs mt-0.5 font-medium ${app.sparte_data.health_declaration === 'Ja' ? 'text-orange-600' : 'text-green-600'}`}>
+                              GD: {app.sparte_data.health_declaration}
+                            </p>
+                          )}
+                          {!app.sparte_data?.model && !app.sparte_data?.franchise && !app.sparte_data?.zusatz_type && (
                             <span className="text-sm text-muted-foreground">–</span>
                           )}
                         </>
@@ -395,11 +409,6 @@ export default function Applications() {
                       <button onClick={() => setStatusChanging(app)} className="hover:opacity-80 transition-opacity">
                         <StatusBadge statusDef={getStatusDef(app)} label={getStatusLabel(app)} />
                       </button>
-                      {app.sparte_data?.health_declaration && (
-                        <p className={`text-xs mt-1 font-medium ${app.sparte_data.health_declaration === 'Ja' ? 'text-orange-600' : 'text-green-600'}`}>
-                          GD: {app.sparte_data.health_declaration}
-                        </p>
-                      )}
                     </div>
 
                     {/* Actions */}
