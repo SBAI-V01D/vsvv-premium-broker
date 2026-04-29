@@ -340,14 +340,20 @@ export default function Applications() {
 
                     {/* Produkt / Tarif */}
                     <div className="min-w-0">
-                      {/* KVG/VVG: Nur Franchise + Altersgruppe */}
+                      {/* KVG/VVG: Franchise + Altersgruppe + Modell + Zusatz */}
                       {['kvg','kvg_vvg_kombi'].includes(app.sparte || app.insurance_type) && (
                         <>
                           {app.sparte_data?.franchise ? (
                             <>
                               <p className="text-sm font-medium">CHF {app.sparte_data.franchise}</p>
                               {app.sparte_data?.age_group && (
-                                <p className="text-xs text-muted-foreground mt-0.5">{app.sparte_data.age_group}</p>
+                                <p className="text-xs text-muted-foreground">{app.sparte_data.age_group}</p>
+                              )}
+                              {app.sparte_data?.model && (
+                                <p className="text-xs text-muted-foreground">{app.sparte_data.model}</p>
+                              )}
+                              {app.sparte_data?.zusatz_type && (
+                                <p className="text-xs text-muted-foreground">{app.sparte_data.zusatz_type}</p>
                               )}
                             </>
                           ) : (
@@ -414,7 +420,7 @@ export default function Applications() {
                       </button>
                       {app.sparte_data?.health_declaration && (
                         <p className={`text-xs font-medium mt-1 ${app.sparte_data.health_declaration === 'Ja' ? 'text-orange-600' : 'text-green-600'}`}>
-                          GD: {app.sparte_data.health_declaration}
+                          GD: {app.sparte_data.health_declaration === 'Ja' ? 'erforderlich' : 'nicht erforderlich'}
                         </p>
                       )}
                     </div>
