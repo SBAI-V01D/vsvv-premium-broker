@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Users, FileText, ClipboardList, CheckCircle2, Download, Wallet } from 'lucide-react'
+import { Users, FileText, ClipboardList, CheckCircle2, Download } from 'lucide-react'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -261,7 +261,6 @@ export default function Dashboard() {
     { label: 'Aktive Verträge', value: activeContracts.length, icon: FileText, color: 'bg-green-50 text-green-600', path: '/vertraege' },
     { label: 'Offene Anträge', value: openApplications.length, icon: ClipboardList, color: 'bg-amber-50 text-amber-600', path: '/antraege' },
     { label: 'Ausstehende Aufgaben', value: pendingTasks.length, icon: CheckCircle2, color: 'bg-purple-50 text-purple-600', path: '/aufgaben' },
-    { label: 'Provisionen', value: '–', icon: Wallet, color: 'bg-emerald-50 text-emerald-600', path: '/provisionen' },
   ]
 
   return (
