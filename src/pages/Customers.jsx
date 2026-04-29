@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import CustomerForm from '../components/customers/CustomerForm'
 import { STATUS_LABELS, FAMILY_ROLE_LABELS, label } from '@/lib/labels'
+import { searchCustomers } from '@/lib/customerSearch'
 
 export default function Customers() {
   const [showForm, setShowForm] = useState(false)
@@ -47,12 +48,23 @@ export default function Customers() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['customers'] }),
   })
 
-  // Filtere nur Hauptkunden
   const primaryCustomers = customers.filter(c => !c.is_family_member)
-  
-  const filtered = primaryCustomers.filter(c =>
-    `${c.first_name} ${c.last_name} ${c.email}`.toLowerCase().includes(search.toLowerCase())
-  )
+
+  // Search also checks family members and bubbles up matched primary customers
+  const familyMatchIds = search.trim()
+    ? new Set(
+        searchCustomers(customers.filter(c => c.is_family_member), search)
+          .map(m => m.primary_customer_id)
+      )
+    : new Set()
+
+  const matchedPrimary = searchCustomers(primaryCustomers, search)
+  const filteredIds = new Set(matchedPrimary.map(c => c.id))
+  familyMatchIds.forEach(id => filteredIds.add(id))
+
+  const filtered = search.trim()
+    ? primaryCustomers.filter(c => filteredIds.has(c.id))
+    : primaryCustomers
 
   const getFamilyMembers = (primaryId) => customers.filter(c => c.primary_customer_id === primaryId)
 
@@ -80,11 +92,19 @@ export default function Customers() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Kunden suchen..."
+            placeholder="Name, E-Mail, Stadt, Beruf... (Fuzzy-Suche)"
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9"
           />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+            >
+              ✕
+            </button>
+          )}
         </div>
       </div>
 
