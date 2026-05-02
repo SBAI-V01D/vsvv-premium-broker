@@ -57,7 +57,7 @@ export default function CustomerDetail() {
   const customerIds = familyMembers.map(m => m.id)
   const relatedContracts = contracts.filter(c => customerIds.includes(c.customer_id))
   const relatedApplications = applications.filter(a => customerIds.includes(a.customer_id))
-  const relatedMessages = allCustomers.filter(c => customerIds.includes(c.id)).flatMap(c => c.messages || [])
+  const relatedMessages = (Array.isArray(allCustomers) ? allCustomers : []).filter(c => customerIds.includes(c.id)).flatMap(c => c.messages || [])
   const relatedDocuments = allDocuments.filter(d => customerIds.includes(d.customer_id))
 
   const updateMutation = useMutation({
