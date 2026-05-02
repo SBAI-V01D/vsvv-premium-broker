@@ -85,7 +85,6 @@
     }
   },
   "required": [
-    "customer_id",
     "name",
     "file_url"
   ]
