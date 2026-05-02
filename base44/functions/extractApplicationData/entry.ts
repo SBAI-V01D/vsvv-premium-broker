@@ -21,6 +21,7 @@ function calcAgeGroup(birthdate) {
 /**
  * Step 2: KVG product name list – used for KVG/VVG classification.
  * Grundversicherung = KVG, everything else = VVG
+ * Also detect insurance type (health vs. property/liability)
  */
 const KVG_NAMES = [
   'benefitplus', 'benefit plus', 'grundversicherung', 'casamed', 'mybenefits',
@@ -28,7 +29,21 @@ const KVG_NAMES = [
   'mycare', 'premed', 'sanitas basic', 'basic', 'standard',
 ];
 
-function normalizeProduktTyp(p) {
+// Property/Liability insurance types (not health insurance)
+const NON_HEALTH_KEYWORDS = [
+  'hausrat', 'household', 'property', 'haftpflicht', 'liability', 'gebäude', 'building',
+  'motorfahrzeug', 'auto', 'kfz', 'rechtsschutz', 'legal protection', 'unfall', 'accident'
+];
+
+function isHealthInsurance(productNames = []) {
+  const combined = productNames.join(' ').toLowerCase();
+  // If any health-specific keyword is present, it's health insurance
+  // If no keywords but has non-health keywords → not health insurance
+  const hasNonHealthKeyword = NON_HEALTH_KEYWORDS.some(k => combined.includes(k));
+  return !hasNonHealthKeyword;
+}
+
+function normalizeProduktTyp(p, isHealth = true) {
   const nameLower = (p.name || '').toLowerCase();
   const typLower = (p.typ || '').toLowerCase();
 
@@ -38,9 +53,9 @@ function normalizeProduktTyp(p) {
   const typ = isKVG ? 'KVG' : 'VVG';
   const result = { name: p.name || '', typ };
 
-  // Zusatzversicherungstyp: only for VVG products
-  if (typ === 'VVG') {
-    result.zusatz_typ = deriveZusatzTyp(p.name || '');
+  // Zusatzversicherungstyp: only for VVG products AND health insurance
+  if (typ === 'VVG' && isHealth) {
+    result.zusatz_typ = deriveZusatzTyp(p.name || '', true);
   }
 
   return result;
@@ -48,17 +63,25 @@ function normalizeProduktTyp(p) {
 
 /**
  * Step 3: Zusatzversicherungstyp – maps to exact form values:
+ * Only for health insurance (KVG/VVG):
  * 'Spital allgemein' | 'Spital halbprivat' | 'Spital privat' | 'Ambulant' | 'Dental' | 'Alternativ'
+ * 
+ * For property/liability insurance (Sach/Haft): returns null
  */
-function deriveZusatzTyp(name) {
+function deriveZusatzTyp(name, isHealthInsurance = true) {
   const n = name.toLowerCase();
 
-  // Spital – check most specific first
-  if (n.includes('privat') || n.includes('halbprivat') && n.includes('privat')) return 'Spital privat';
+  // Non-health insurance (property, liability, household) – no Spital/Ambulant/Dental/Alternativ types
+  if (!isHealthInsurance) {
+    return null;
+  }
+
+  // Spital – check most specific first (only for health insurance)
+  if (n.includes('privat') && n.includes('spital')) return 'Spital privat';
   if (n.includes('halbprivat') || n.includes('semi-privat') || n.includes('semiprivat')) return 'Spital halbprivat';
   if (n.includes('hospital') || n.includes('spital') || n.includes('stationär') || n.includes('allgemein')) return 'Spital allgemein';
 
-  // Ambulant / Dental / Alternativ
+  // Ambulant / Dental / Alternativ (health insurance only)
   if (n.includes('denta') || n.includes('dental') || n.includes('zahn')) return 'Dental';
   if (n.includes('alternativ') || n.includes('komplementär') || n.includes('natur')) return 'Alternativ';
   if (n.includes('top') || n.includes('sana') || n.includes('ambulant') || n.includes('vision') || n.includes('optic')) return 'Ambulant';
@@ -86,7 +109,8 @@ function deriveMainZusatzType(normalizedProdukte) {
  */
 function normalizeProdukte(produkte) {
   if (!Array.isArray(produkte)) return [];
-  return produkte.map(normalizeProduktTyp);
+  const isHealth = isHealthInsurance(produkte.map(p => p.name || ''));
+  return produkte.map(p => normalizeProduktTyp(p, isHealth));
 }
 
 /**
@@ -134,6 +158,7 @@ function normalizeData(raw) {
   const productType = deriveProductType(produkte);
   const kassenmodell = normalizeKassenmodell(raw?.versicherung?.kassenmodell);
   const zusatzType = deriveMainZusatzType(produkte);
+  const isHealth = isHealthInsurance((raw?.versicherung?.produkte || []).map(p => p.name || ''));
 
   // Prämien: monthly extracted, yearly = monthly × 12
   const premiumMonthly = raw?.versicherung?.praemie_monat ?? null;
@@ -142,13 +167,20 @@ function normalizeData(raw) {
   // Age group: ALWAYS calculated from birthdate, mapped to exact form values
   const ageGroup = calcAgeGroup(raw?.person?.geburtsdatum);
 
-  // Gesundheitsdeklaration
-  const gesundheitsdeklaration = raw?.versicherung?.gesundheitsdeklaration ?? false;
+  // Gesundheitsdeklaration: ONLY for health insurance
+  const gesundheitsdeklaration = isHealth ? (raw?.versicherung?.gesundheitsdeklaration ?? false) : false;
 
-  // Sparte mapping
-  const sparte = productType === 'VVG' ? 'vvg_zusatz'
-               : productType === 'KVG + VVG' ? 'kvg_vvg_kombi'
-               : 'kvg';
+  // Sparte mapping: 
+  // - Health insurance: sparte based on KVG/VVG split
+  // - Property/Liability: sparte = 'vvg_zusatz' (generic non-health)
+  let sparte;
+  if (!isHealth) {
+    sparte = 'vvg_zusatz'; // Property/Liability/etc.
+  } else {
+    sparte = productType === 'VVG' ? 'vvg_zusatz'
+           : productType === 'KVG + VVG' ? 'kvg_vvg_kombi'
+           : 'kvg';
+  }
 
   // Product label (all product names joined)
   const productLabel = buildProductLabel(produkte);
