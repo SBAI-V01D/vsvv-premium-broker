@@ -12,9 +12,21 @@ const COLOR_STYLES = {
   teal:   'bg-teal-50 text-teal-700 border-teal-200',
 }
 
+const LEGACY_LABELS = {
+  submitted: 'Eingereicht',
+  draft: 'Entwurf',
+  under_review: 'In Prüfung',
+  approved: 'Genehmigt',
+  rejected: 'Abgelehnt',
+  active: 'Aktiv',
+  cancelled: 'Gekündigt',
+  paused: 'Pausiert',
+  expired: 'Abgelaufen',
+}
+
 export default function StatusBadge({ statusDef, label: fallbackLabel }) {
   const colorClass = COLOR_STYLES[statusDef?.color] || COLOR_STYLES.gray
-  const displayLabel = statusDef?.label || fallbackLabel || '–'
+  const displayLabel = statusDef?.label || LEGACY_LABELS[fallbackLabel] || fallbackLabel || '–'
 
   return (
     <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border', colorClass)}>
