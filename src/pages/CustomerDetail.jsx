@@ -23,15 +23,13 @@ export default function CustomerDetail() {
   })
 
   const { data: contracts = [] } = useQuery({
-    queryKey: ['contracts', id],
-    queryFn: () => base44.entities.Contract.filter({ customer_id: id }),
-    enabled: !!id,
+    queryKey: ['contracts'],
+    queryFn: () => base44.entities.Contract.list(null, 1000),
   })
 
   const { data: applications = [] } = useQuery({
-    queryKey: ['applications', id],
-    queryFn: () => base44.entities.Application.filter({ customer_id: id }),
-    enabled: !!id,
+    queryKey: ['applications'],
+    queryFn: () => base44.entities.Application.list(null, 1000),
   })
 
   const { data: messages = [] } = useQuery({
@@ -45,9 +43,20 @@ export default function CustomerDetail() {
     queryFn: () => base44.entities.Customer.list(),
   })
 
+  const { data: allDocuments = [] } = useQuery({
+    queryKey: ['documents'],
+    queryFn: () => base44.entities.Document.list(null, 1000),
+  })
+
   const familyMembers = allCustomers.filter(c => 
-    c.primary_customer_id === id || (c.is_family_member === false && c.id === id)
+    c.primary_customer_id === id || c.id === id
   )
+
+  const customerIds = familyMembers.map(m => m.id)
+  const relatedContracts = contracts.filter(c => customerIds.includes(c.customer_id))
+  const relatedApplications = applications.filter(a => customerIds.includes(a.customer_id))
+  const relatedMessages = allCustomers.filter(c => customerIds.includes(c.id)).flatMap(c => c.messages || [])
+  const relatedDocuments = allDocuments.filter(d => customerIds.includes(d.customer_id))
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Customer.update(id, data),
@@ -104,19 +113,19 @@ export default function CustomerDetail() {
 
       <Tabs defaultValue="vertraege">
         <TabsList className="mb-4">
-          <TabsTrigger value="vertraege">Verträge ({contracts.length})</TabsTrigger>
-          <TabsTrigger value="antraege">Anträge ({applications.length})</TabsTrigger>
-          <TabsTrigger value="familie">Familie ({familyMembers.length - 1})</TabsTrigger>
-          <TabsTrigger value="dokumente">Dokumente</TabsTrigger>
-          <TabsTrigger value="kommunikation">Kommunikation ({messages.length})</TabsTrigger>
+          <TabsTrigger value="vertraege">Verträge ({relatedContracts.length})</TabsTrigger>
+          <TabsTrigger value="antraege">Anträge ({relatedApplications.length})</TabsTrigger>
+          <TabsTrigger value="familie">Familie ({familyMembers.length > 1 ? familyMembers.length - 1 : 0})</TabsTrigger>
+          <TabsTrigger value="dokumente">Dokumente ({relatedDocuments.length})</TabsTrigger>
+          <TabsTrigger value="kommunikation">Kommunikation</TabsTrigger>
         </TabsList>
 
         <TabsContent value="vertraege">
-          {contracts.length === 0 ? (
+          {relatedContracts.length === 0 ? (
             <Card><CardContent className="p-6 text-center text-muted-foreground">Keine Verträge vorhanden</CardContent></Card>
           ) : (
             <div className="space-y-3">
-              {contracts.map(c => {
+              {relatedContracts.map(c => {
                 const premiumMonthly = c.premium_monthly
                 const premiumYearly = c.premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12) : null)
                 return (
@@ -162,12 +171,12 @@ export default function CustomerDetail() {
           )}
         </TabsContent>
 
-        <TabsContent value="antraege">
-          {applications.length === 0 ? (
+        <TabsContent value="anträge">
+          {relatedApplications.length === 0 ? (
             <Card><CardContent className="p-6 text-center text-muted-foreground">Keine Anträge vorhanden</CardContent></Card>
           ) : (
             <div className="space-y-3">
-              {applications.map(a => {
+              {relatedApplications.map(a => {
                 const premiumMonthly = a.estimated_premium_monthly
                 const premiumYearly = a.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12) : null)
                 const ageGroup = a.sparte_data?.age_group
@@ -272,7 +281,7 @@ export default function CustomerDetail() {
           <DocumentsTab
             customerId={id}
             customerName={`${customer.first_name} ${customer.last_name}`}
-            contracts={contracts}
+            contracts={relatedContracts}
           />
         </TabsContent>
 
