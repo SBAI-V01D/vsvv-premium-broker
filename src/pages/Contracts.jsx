@@ -1,16 +1,15 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Search, MoreHorizontal, Edit, Trash2 } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, Edit, Trash2, FileText, Calendar, Building2, Tag, Download } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import ContractForm from '../components/contracts/ContractForm'
 import ContractDocumentsPanel from '../components/contracts/ContractDocumentsPanel'
-import { INSURANCE_TYPE_LABELS, label } from '@/lib/labels'
+import { getSparteLabel } from '@/lib/insuranceSparten'
 import StatusBadge from '@/components/status/StatusBadge'
 import StatusChangeDialog from '@/components/status/StatusChangeDialog'
 
@@ -19,6 +18,7 @@ export default function Contracts() {
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
   const [statusChanging, setStatusChanging] = useState(null)
+  const [expandedDocs, setExpandedDocs] = useState(null)
   const queryClient = useQueryClient()
 
   const { data: statusDefs = [] } = useQuery({
@@ -34,6 +34,11 @@ export default function Contracts() {
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
     queryFn: () => base44.entities.Customer.list(),
+  })
+
+  const { data: documents = [] } = useQuery({
+    queryKey: ['documents'],
+    queryFn: () => base44.entities.Document.list(null, 1000),
   })
 
   const createMutation = useMutation({
@@ -62,6 +67,9 @@ export default function Contracts() {
   const filtered = contracts.filter(c =>
     `${c.customer_name} ${c.insurer} ${c.policy_number}`.toLowerCase().includes(search.toLowerCase())
   )
+
+  const getCustomer = (id) => customers.find(c => c.id === id)
+  const getContractDocuments = (contractId) => documents.filter(d => d.linked_contract_id === contractId)
 
   const handleSave = (data) => {
     if (editing) {
@@ -93,11 +101,16 @@ export default function Contracts() {
     return statusDefs.find(s => s.key === key)
   }
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '–'
+    return new Date(dateStr).toLocaleDateString('de-CH')
+  }
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Verträge</h1>
+          <h1 className="text-3xl font-bold">Verträge ({filtered.length})</h1>
           <p className="text-muted-foreground mt-1">{contracts.length} Verträge insgesamt</p>
         </div>
         <Button onClick={() => { setEditing(null); setShowForm(true); }}>
@@ -105,11 +118,11 @@ export default function Contracts() {
         </Button>
       </div>
 
-      <div className="mb-6">
-        <div className="relative">
+      <div className="flex flex-wrap gap-3 mb-6">
+        <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Verträge suchen..."
+            placeholder="Suche (Kunde, Versicherer, Police...)"
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9"
@@ -119,81 +132,137 @@ export default function Contracts() {
 
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Kunde</TableHead>
-                <TableHead className="hidden md:table-cell">Versicherer</TableHead>
-                <TableHead className="hidden lg:table-cell">Policen-Nr</TableHead>
-                <TableHead className="hidden lg:table-cell">Beginn</TableHead>
-                <TableHead className="hidden lg:table-cell">Ende</TableHead>
-                <TableHead>Prämie/J.</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-10"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    Keine Verträge gefunden
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map(contract => (
-                  <TableRow key={contract.id} className="hover:bg-muted/50 align-top">
-                    <TableCell className="font-medium">
-                      <div>{contract.customer_name}</div>
-                      <ContractDocumentsPanel contract={contract} />
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">{contract.insurer}</TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm">{contract.policy_number || '–'}</TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm">
-                      {contract.start_date ? new Date(contract.start_date).toLocaleDateString('de-CH') : '–'}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm">
-                      {contract.end_date ? new Date(contract.end_date).toLocaleDateString('de-CH') : '–'}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      CHF {contract.premium_yearly?.toLocaleString('de-CH', { minimumFractionDigits: 0 }) || '–'}
-                    </TableCell>
-                    <TableCell>
-                      <button onClick={() => setStatusChanging(contract)} className="hover:opacity-80 transition-opacity">
+          <div className="hidden md:grid grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            <div>Kunde</div>
+            <div>Versicherer / Sparte</div>
+            <div>Produkt / Policen-Nr</div>
+            <div>Vertragsdaten</div>
+            <div>Jahresprämie</div>
+            <div>Status</div>
+            <div className="w-20"></div>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="py-12 text-center text-muted-foreground">Keine Verträge gefunden</div>
+          ) : (
+            filtered.map((contract, idx) => {
+              const docsOpen = expandedDocs === contract.id
+              const contractDocs = getContractDocuments(contract.id)
+              const customer = getCustomer(contract.customer_id)
+              return (
+                <div key={contract.id} className={idx > 0 ? 'border-t border-border' : ''}>
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors">
+                    {/* Kunde */}
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm truncate">{contract.customer_name || '–'}</p>
+                      {customer?.ahv_number && (
+                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{customer.ahv_number}</p>
+                      )}
+                    </div>
+
+                    {/* Versicherer / Sparte */}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <Building2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                        <p className="text-sm font-medium truncate">{contract.insurer}</p>
+                      </div>
+                      {contract.product && (
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">{contract.product}</p>
+                      )}
+                    </div>
+
+                    {/* Produkt / Policen-Nr */}
+                    <div className="min-w-0">
+                      {contract.policy_number && (
+                        <p className="text-sm font-medium">Police: {contract.policy_number}</p>
+                      )}
+                      {!contract.policy_number && <span className="text-sm text-muted-foreground">–</span>}
+                    </div>
+
+                    {/* Vertragsdaten */}
+                    <div>
+                      {contract.start_date && (
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Calendar className="w-3 h-3 text-green-600 flex-shrink-0" />
+                          <span className="text-sm text-green-600 font-medium">{formatDate(contract.start_date)}</span>
+                        </div>
+                      )}
+                      {contract.end_date && (
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3 h-3 text-green-600 flex-shrink-0" />
+                          <span className="text-sm text-green-600 font-medium">{formatDate(contract.end_date)}</span>
+                        </div>
+                      )}
+                      {!contract.start_date && !contract.end_date && (
+                        <span className="text-sm text-muted-foreground">–</span>
+                      )}
+                    </div>
+
+                    {/* Jahresprämie */}
+                    <div>
+                      {contract.premium_yearly ? (
+                        <p className="text-sm font-semibold text-foreground">
+                          CHF {contract.premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/J.
+                        </p>
+                      ) : null}
+                      {contract.premium_monthly ? (
+                        <p className="text-sm text-muted-foreground">
+                          CHF {contract.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/M.
+                        </p>
+                      ) : null}
+                      {!contract.premium_yearly && !contract.premium_monthly && (
+                        <span className="text-sm text-muted-foreground">–</span>
+                      )}
+                    </div>
+
+                    {/* Status */}
+                    <div>
+                      <button onClick={() => setStatusChanging(contract)} className="hover:opacity-80 transition-opacity mb-1">
                         <StatusBadge statusDef={getStatusDef(contract)} label={getStatusDef(contract)?.label || contract.status} />
                       </button>
-                    </TableCell>
-                    <TableCell>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground"
+                        onClick={() => setExpandedDocs(docsOpen ? null : contract.id)}
+                        title="Dokumente"
+                      >
+                        <FileText className="w-4 h-4" />
+                      </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button variant="ghost" size="icon" className="h-7 w-7">
                             <MoreHorizontal className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setStatusChanging(contract)}>
-                            Status ändern
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => { setEditing(contract); setShowForm(true); }}>
+                          <DropdownMenuItem onClick={() => setStatusChanging(contract)}>Status ändern</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { setEditing(contract); setShowForm(true) }}>
                             <Edit className="w-4 h-4 mr-2" /> Bearbeiten
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
-                            onClick={() => {
-                              if (confirm('Vertrag wirklich löschen?')) {
-                                deleteMutation.mutate(contract.id)
-                              }
-                            }}
+                            onClick={() => { if (confirm('Vertrag wirklich löschen?')) deleteMutation.mutate(contract.id) }}
                           >
                             <Trash2 className="w-4 h-4 mr-2" /> Löschen
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                    </div>
+                  </div>
+
+                  {/* Documents panel */}
+                  <div className={`px-4 pb-4 border-t border-border bg-muted/20 ${docsOpen ? '' : 'hidden'}`}>
+                    <ContractDocumentsPanel contract={contract} />
+                  </div>
+                </div>
+              )
+            })
+          )}
         </CardContent>
       </Card>
 
