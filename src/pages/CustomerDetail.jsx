@@ -150,7 +150,7 @@ export default function CustomerDetail() {
                       <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors">
                         {/* Kunde */}
                         <div className="min-w-0">
-                          <p className="font-semibold text-xs truncate">{relatedCustomer?.first_name} {relatedCustomer?.last_name}</p>
+                          <p className="font-semibold text-xs truncate">{relatedCustomer ? `${relatedCustomer.first_name} ${relatedCustomer.last_name}` : c.customer_name}</p>
                           {relatedCustomer?.ahv_number && (
                             <p className="text-xs font-mono text-muted-foreground mt-0.5">{relatedCustomer.ahv_number}</p>
                           )}
