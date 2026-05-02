@@ -4,7 +4,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 /**
  * Step 1: Altersgruppe – ALWAYS calculated from birthdate, never from form text.
- * ≤18 → Kind | 19–25 → Jugendlich | ≥26 → Erwachsen
+ * Maps to exact form values used in ApplicationForm.
  */
 function calcAgeGroup(birthdate) {
   if (!birthdate) return null;
@@ -13,31 +13,32 @@ function calcAgeGroup(birthdate) {
   const today = new Date();
   const age = today.getFullYear() - birth.getFullYear() -
     (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate()) ? 1 : 0);
-  if (age <= 18) return 'Kind';
-  if (age <= 25) return 'Jugendlich';
-  return 'Erwachsen';
+  if (age <= 18) return 'Kind (0–18 Jahre)';
+  if (age <= 25) return 'Jugendliche (19–25 Jahre)';
+  return 'Erwachsene (ab 26 Jahre)';
 }
 
 /**
- * Step 2: Normalize individual product.
- * - Grundversicherung names → typ = "KVG"
- * - Zusatz names → typ = "VVG"
- * Also derives zusatz_type for VVG products.
+ * Step 2: KVG product name list – used for KVG/VVG classification.
+ * Grundversicherung = KVG, everything else = VVG
  */
-const KVG_NAMES = ['benefitplus', 'benefit plus', 'grundversicherung', 'casamed', 'mybenefits', 'callmed', 'telbasic'];
+const KVG_NAMES = [
+  'benefitplus', 'benefit plus', 'grundversicherung', 'casamed', 'mybenefits',
+  'callmed', 'telbasic', 'compacamed', 'compact', 'classic', 'medbase', 'flexicare',
+  'mycare', 'premed', 'sanitas basic', 'basic', 'standard',
+];
 
 function normalizeProduktTyp(p) {
   const nameLower = (p.name || '').toLowerCase();
   const typLower = (p.typ || '').toLowerCase();
 
-  // Explicit KVG indicators
   const isKVG = typLower === 'grundversicherung' || typLower === 'kvg' ||
     KVG_NAMES.some(k => nameLower.includes(k));
 
   const typ = isKVG ? 'KVG' : 'VVG';
   const result = { name: p.name || '', typ };
 
-  // Zusatzversicherungstyp mapping (only for VVG)
+  // Zusatzversicherungstyp: only for VVG products
   if (typ === 'VVG') {
     result.zusatz_typ = deriveZusatzTyp(p.name || '');
   }
@@ -46,20 +47,42 @@ function normalizeProduktTyp(p) {
 }
 
 /**
- * Step 3: Zusatzversicherungstyp mapping
- * TOP, SANA → ambulant | HOSPITAL → stationär | PREVEA → Risiko
+ * Step 3: Zusatzversicherungstyp – maps to exact form values:
+ * 'Spital allgemein' | 'Spital halbprivat' | 'Spital privat' | 'Ambulant' | 'Dental' | 'Alternativ'
  */
 function deriveZusatzTyp(name) {
   const n = name.toLowerCase();
-  if (n.includes('hospital')) return 'stationär';
-  if (n.includes('prevea') || n.includes('risikovers')) return 'Risiko';
-  if (n.includes('top') || n.includes('sana') || n.includes('ambulant') ||
-      n.includes('denta') || n.includes('vision') || n.includes('optic')) return 'ambulant';
+
+  // Spital – check most specific first
+  if (n.includes('privat') || n.includes('halbprivat') && n.includes('privat')) return 'Spital privat';
+  if (n.includes('halbprivat') || n.includes('semi-privat') || n.includes('semiprivat')) return 'Spital halbprivat';
+  if (n.includes('hospital') || n.includes('spital') || n.includes('stationär') || n.includes('allgemein')) return 'Spital allgemein';
+
+  // Ambulant / Dental / Alternativ
+  if (n.includes('denta') || n.includes('dental') || n.includes('zahn')) return 'Dental';
+  if (n.includes('alternativ') || n.includes('komplementär') || n.includes('natur')) return 'Alternativ';
+  if (n.includes('top') || n.includes('sana') || n.includes('ambulant') || n.includes('vision') || n.includes('optic')) return 'Ambulant';
+
   return null;
 }
 
 /**
- * Step 4: Normalize products array – unified KVG/VVG structure.
+ * Step 4: Derive the dominant Zusatzversicherungstyp from all VVG products.
+ * Priority: Spital privat > halbprivat > allgemein > Ambulant > Dental > Alternativ
+ */
+function deriveMainZusatzType(normalizedProdukte) {
+  const vvgProducts = normalizedProdukte.filter(p => p.typ === 'VVG' && p.zusatz_typ);
+  if (vvgProducts.length === 0) return null;
+
+  const priority = ['Spital privat', 'Spital halbprivat', 'Spital allgemein', 'Ambulant', 'Dental', 'Alternativ'];
+  for (const prio of priority) {
+    if (vvgProducts.some(p => p.zusatz_typ === prio)) return prio;
+  }
+  return vvgProducts[0].zusatz_typ;
+}
+
+/**
+ * Step 5: Normalize products array.
  */
 function normalizeProdukte(produkte) {
   if (!Array.isArray(produkte)) return [];
@@ -67,8 +90,7 @@ function normalizeProdukte(produkte) {
 }
 
 /**
- * Step 5: Derive product type from normalized products.
- * KVG && VVG → "KVG + VVG" | KVG only → "KVG" | VVG only → "VVG"
+ * Step 6: Derive product type from normalized products.
  */
 function deriveProductType(normalizedProdukte) {
   if (!normalizedProdukte || normalizedProdukte.length === 0) return null;
@@ -81,43 +103,55 @@ function deriveProductType(normalizedProdukte) {
 }
 
 /**
- * Step 6: Kassenmodell normalization.
+ * Step 7: Kassenmodell normalization – maps to form values.
  */
 function normalizeKassenmodell(raw) {
   if (!raw) return null;
   const r = raw.toLowerCase();
-  if (r.includes('hausarzt') || r.includes('arzt')) return 'Hausarztmodell';
+  if (r.includes('hausarzt') || r.includes('gp')) return 'Hausarztmodell';
   if (r.includes('hmo')) return 'HMO';
-  if (r.includes('telmed')) return 'Telmed';
-  if (r.includes('flexmed')) return 'Flexmed';
-  if (r.includes('standard') || r === '') return 'Standard';
+  if (r.includes('telmed') || r.includes('telemed')) return 'Telmed';
+  if (r.includes('flexmed') || r.includes('flex')) return 'Flexmed';
+  if (r.includes('standard') || r === '') return 'Standardmodell';
   if (raw.trim()) return raw.trim();
-  return 'Standard';
+  return 'Standardmodell';
 }
 
 /**
- * Step 7: MAIN normalizeData function.
- * Takes raw LLM output and returns fully normalized data identical to manual entry.
+ * Step 8: Build a product label string for the "product" field in the form.
+ * e.g. "BeneFit PLUS, TOP, HOSPITAL ECO"
+ */
+function buildProductLabel(normalizedProdukte) {
+  if (!normalizedProdukte || normalizedProdukte.length === 0) return null;
+  return normalizedProdukte.map(p => p.name).filter(Boolean).join(', ');
+}
+
+/**
+ * Step 9: MAIN normalizeData function.
  */
 function normalizeData(raw) {
   const produkte = normalizeProdukte(raw?.versicherung?.produkte);
   const productType = deriveProductType(produkte);
   const kassenmodell = normalizeKassenmodell(raw?.versicherung?.kassenmodell);
+  const zusatzType = deriveMainZusatzType(produkte);
 
-  // Prämien: extract monthly, always compute yearly = monthly × 12
+  // Prämien: monthly extracted, yearly = monthly × 12
   const premiumMonthly = raw?.versicherung?.praemie_monat ?? null;
   const premiumYearly = premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null;
 
-  // Age group: ALWAYS calculated from birthdate, never from document text
+  // Age group: ALWAYS calculated from birthdate, mapped to exact form values
   const ageGroup = calcAgeGroup(raw?.person?.geburtsdatum);
 
   // Gesundheitsdeklaration
   const gesundheitsdeklaration = raw?.versicherung?.gesundheitsdeklaration ?? false;
 
-  // Sparte mapping (identical to manual entry)
+  // Sparte mapping
   const sparte = productType === 'VVG' ? 'vvg_zusatz'
                : productType === 'KVG + VVG' ? 'kvg_vvg_kombi'
                : 'kvg';
+
+  // Product label (all product names joined)
+  const productLabel = buildProductLabel(produkte);
 
   return {
     // Person
@@ -132,17 +166,20 @@ function normalizeData(raw) {
     zip_code:   raw?.adresse?.plz ?? null,
     city:       raw?.adresse?.ort ?? null,
     // Insurance
-    insurer:    raw?.versicherung?.gesellschaft ?? null,
+    insurer:             raw?.versicherung?.gesellschaft ?? null,
     contract_start_date: raw?.versicherung?.beginn ?? null,
+    contract_end_date:   raw?.versicherung?.ende ?? null,
     zahlungsintervall:   raw?.versicherung?.zahlungsintervall ?? null,
     franchise:           raw?.versicherung?.franchise ?? null,
     // Normalized / derived
     produkte,
-    product_type:     productType,
+    product_type:           productType,
+    product_label:          productLabel,
     kassenmodell,
-    premium_monthly:  premiumMonthly,
-    premium_yearly:   premiumYearly,
-    age_group:        ageGroup,
+    zusatz_type:            zusatzType,
+    premium_monthly:        premiumMonthly,
+    premium_yearly:         premiumYearly,
+    age_group:              ageGroup,
     gesundheitsdeklaration,
     sparte,
   };
@@ -153,14 +190,14 @@ function normalizeData(raw) {
  */
 function validateNormalized(n) {
   const missing = [];
-  if (!n.first_name)        missing.push('Vorname');
-  if (!n.last_name)         missing.push('Nachname');
-  if (!n.birthdate)         missing.push('Geburtsdatum');
+  if (!n.first_name)          missing.push('Vorname');
+  if (!n.last_name)           missing.push('Nachname');
+  if (!n.birthdate)           missing.push('Geburtsdatum');
   if (!n.contract_start_date) missing.push('Vertragsbeginn');
-  if (!n.insurer)           missing.push('Versicherungsgesellschaft');
-  if (!n.product_type)      missing.push('KVG/VVG');
-  if (!n.age_group)         missing.push('Altersgruppe');
-  if (!n.premium_monthly)   missing.push('Monatsprämie');
+  if (!n.insurer)             missing.push('Versicherungsgesellschaft');
+  if (!n.product_type)        missing.push('KVG/VVG');
+  if (!n.age_group)           missing.push('Altersgruppe');
+  if (!n.premium_monthly)     missing.push('Monatsprämie');
   if (n.produkte.length === 0) missing.push('Produkte');
   return missing;
 }
@@ -199,16 +236,29 @@ Dateiname: "${file_name || ''}"
 
 PRODUKTE (KRITISCH – EXAKT SO EXTRAHIEREN):
 - produkte: ARRAY mit {typ, name}
-- typ: "Grundversicherung" für KVG | "Zusatz" für alle Zusatzprodukte
+- typ: "Grundversicherung" für KVG-Grundversicherung | "Zusatz" für ALLE Zusatzversicherungen (VVG)
+- Grundversicherung = KVG (obligatorisch, z.B. BeneFit PLUS, CasaMed, myBenefits, CompaCaMed, Standard)
+- Zusatzversicherung = VVG (freiwillig, z.B. HOSPITAL, TOP, SANA, Dental, Denta, PREVEA, Ambulant)
 - Beispiele:
     [{typ:"Grundversicherung", name:"BeneFit PLUS"}, {typ:"Zusatz", name:"TOP"}, {typ:"Zusatz", name:"HOSPITAL ECO"}]
 - Wenn keine Produkte erkennbar: []
 
+SPITAL/ZUSATZ-TYPEN erkennen:
+- "Spital privat" / "privat" → Spitalversicherung privat
+- "Spital halbprivat" / "halbprivat" → Spitalversicherung halbprivat
+- "Spital allgemein" / "Hospital" / "allgemein" → Spitalversicherung allgemein
+- "Ambulant" / "TOP" / "SANA" → ambulante Zusatzversicherung
+- "Denta" / "Dental" / "Zahn" → Zahnversicherung
+
 VERSICHERUNGS-FELDER:
+- gesellschaft: Name der Versicherungsgesellschaft
+- beginn: Vertragsbeginn (YYYY-MM-DD)
+- ende: Vertragsende / Ablaufdatum falls angegeben (YYYY-MM-DD), sonst null
+- praemie_monat: Monatsprämie als Zahl (z.B. 142.05), null wenn nicht vorhanden
 - franchise: nur Zahl als String, z.B. "300", "2500" oder null
-- kassenmodell: Standard / Hausarzt / HMO / Telemed / Flexmed oder null
+- kassenmodell: Standard / Standardmodell / Hausarzt / HMO / Telemed / Flexmed oder null
 - zahlungsintervall: "monatlich" / "vierteljährlich" / "halbjährlich" / "jährlich" oder null
-- gesundheitsdeklaration: true wenn "Gesundheitsdeklaration erforderlich" oder "Gesundheitsfragen" steht, sonst false
+- gesundheitsdeklaration: true wenn "Gesundheitsdeklaration erforderlich", "Gesundheitsfragen", "ärztliche Untersuchung" oder ähnliches steht, sonst false
 
 Extrahiere in EXAKT dieser Struktur:`,
       file_urls: [file_url],
@@ -247,6 +297,7 @@ Extrahiere in EXAKT dieser Struktur:`,
             properties: {
               gesellschaft:           { type: ['string','null'] },
               beginn:                 { type: ['string','null'] },
+              ende:                   { type: ['string','null'] },
               praemie_monat:          { type: ['number','null'] },
               franchise:              { type: ['string','null'] },
               kassenmodell:           { type: ['string','null'] },
@@ -264,7 +315,7 @@ Extrahiere in EXAKT dieser Struktur:`,
                 }
               }
             },
-            required: ['gesellschaft','beginn','praemie_monat','franchise','kassenmodell','zahlungsintervall','gesundheitsdeklaration','produkte']
+            required: ['gesellschaft','beginn','ende','praemie_monat','franchise','kassenmodell','zahlungsintervall','gesundheitsdeklaration','produkte']
           },
           meta: {
             type: 'object',
@@ -280,7 +331,7 @@ Extrahiere in EXAKT dieser Struktur:`,
       model: 'gemini_3_flash'
     });
 
-    // STEP 2: normalizeData – Single Source of Truth, identical to manual entry
+    // STEP 2: normalizeData – Single Source of Truth
     const normalized = normalizeData(raw);
     const missingFields = validateNormalized(normalized);
     const confidence = raw?.meta?.confidence ?? 0;
@@ -292,16 +343,16 @@ Extrahiere in EXAKT dieser Struktur:`,
     console.log(`[normalizeData] productType=${normalized.product_type} sparte=${normalized.sparte} ageGroup=${normalized.age_group}`);
     console.log(`[normalizeData] premiumMonthly=${normalized.premium_monthly} premiumYearly=${normalized.premium_yearly}`);
     console.log(`[normalizeData] kassenmodell=${normalized.kassenmodell} gd=${normalized.gesundheitsdeklaration}`);
+    console.log(`[normalizeData] zusatz_type=${normalized.zusatz_type} productLabel=${normalized.product_label}`);
+    console.log(`[normalizeData] contract_end_date=${normalized.contract_end_date}`);
     console.log(`[normalizeData] produkte=${JSON.stringify(normalized.produkte)}`);
     if (missingFields.length > 0) console.warn(`[normalizeData] MISSING: ${missingFields.join(', ')}`);
 
     return Response.json({
       success: true,
-      // Raw LLM output (for debug panel)
       structured: raw,
-      // Normalized flat fields (used by doSave in DocumentReviewPanel)
       normalized,
-      // Convenience top-level aliases (backwards compat with DocumentReviewPanel)
+      // Convenience aliases
       age_group:               normalized.age_group,
       product_type:            normalized.product_type,
       kassenmodell_normalized: normalized.kassenmodell,

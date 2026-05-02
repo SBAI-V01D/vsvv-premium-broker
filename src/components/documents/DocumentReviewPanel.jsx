@@ -192,9 +192,12 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       city:                      normalized.city,
       insurer:                   normalized.insurer,
       contract_start_date:       normalized.contract_start_date,
+      contract_end_date:         normalized.contract_end_date,
       estimated_premium_monthly: normalized.premium_monthly,
       franchise:                 normalized.franchise,
       kassenmodell:              normalized.kassenmodell,
+      zusatz_type:               normalized.zusatz_type,
+      product_label:             normalized.product_label,
     }
     setForm(flat)
     originalRef.current = { ...flat }
@@ -346,7 +349,10 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
           product_type:        productType || undefined,
           zahlungsintervall:   zahlungsintervall || undefined,
           health_declaration:  gesundheitsdeklaration ? 'Ja' : 'Nein',
+          zusatz_type:         f.zusatz_type || norm.zusatz_type || undefined,
         },
+        product:               f.product_label || norm.product_label || undefined,
+        contract_end_date:     f.contract_end_date || undefined,
         status: 'submitted',
         custom_status: isIncomplete ? 'unvollstaendig' : (matchMode === 'auto_low' ? 'pruefung_erforderlich' : 'eingereicht'),
         notes: appNotes,
@@ -545,8 +551,11 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                   <ReviewField label="Vertragsbeginn"     value={form.contract_start_date}   onChange={v => setField('contract_start_date', v)}   confidence={fc('Vertragsbeginn', form.contract_start_date)} required />
                   <ReviewField label="Monatsprämie (CHF)" value={String(form.estimated_premium_monthly ?? '')} onChange={v => setField('estimated_premium_monthly', v)} confidence={fc('Monatsprämie', form.estimated_premium_monthly)} required />
                   <ReviewField label="Jahresprämie (CHF)" value={premiumYearly ? premiumYearly.toLocaleString('de-CH', { minimumFractionDigits: 2 }) : ''} confidence={premiumYearly ? 'high' : 'missing'} readOnly />
+                  <ReviewField label="Vertragsende"       value={form.contract_end_date}     onChange={v => setField('contract_end_date', v)}     confidence={form.contract_end_date ? 'high' : 'missing'} />
                   <ReviewField label="Franchise"          value={form.franchise}             onChange={v => setField('franchise', v)}             confidence={form.franchise ? 'high' : 'missing'} />
                   <ReviewField label="Kassenmodell"       value={form.kassenmodell}          onChange={v => setField('kassenmodell', v)}          confidence={form.kassenmodell ? (confidence >= 85 ? 'high' : 'low') : 'missing'} />
+                  <ReviewField label="Zusatzversicherungstyp" value={form.zusatz_type}       onChange={v => setField('zusatz_type', v)}           confidence={form.zusatz_type ? 'high' : 'missing'} />
+                  <ReviewField label="Produkt / Tarif"    value={form.product_label}         onChange={v => setField('product_label', v)}         confidence={form.product_label ? 'high' : 'missing'} />
                   {/* Computed / read-only fields */}
                   {ageGroup && <ReviewField label="Altersgruppe (berechnet)" value={ageGroup} confidence="high" readOnly />}
                   {productType && <ReviewField label="KVG / VVG (abgeleitet)" value={productType} confidence="high" readOnly />}
@@ -554,7 +563,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                   <ReviewField
                     label="Gesundheitserklärung nötig"
                     value={gesundheitsdeklaration ? 'Ja' : 'Nein'}
-                    confidence={gesundheitsdeklaration ? 'high' : 'high'}
+                    confidence="high"
                     readOnly
                   />
                 </div>
