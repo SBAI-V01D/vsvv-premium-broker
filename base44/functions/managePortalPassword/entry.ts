@@ -19,11 +19,15 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req)
     const user = await base44.auth.me()
 
-    if (!user?.role || user.role !== 'admin') {
-      return Response.json({ error: 'Admin access required' }, { status: 403 })
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Only admin can manage passwords for other users
     const { action, customer_id, password } = await req.json()
+    if (user.role !== 'admin' && user.email !== customer_id) {
+      return Response.json({ error: 'Access denied' }, { status: 403 })
+    }
 
     if (action === 'set_password') {
       if (!customer_id || !password) {
