@@ -264,9 +264,9 @@ export default function CustomerDetail() {
                   <Card key={a.id}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">{relatedCustomer?.first_name} {relatedCustomer?.last_name}</p>
+                      <div className="flex-1 min-w-0">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">{relatedCustomer?.first_name && relatedCustomer?.last_name ? `${relatedCustomer.first_name} ${relatedCustomer.last_name}` : a.customer_name}</p>
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-semibold text-sm">{a.insurer || '–'}</p>
                               <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
