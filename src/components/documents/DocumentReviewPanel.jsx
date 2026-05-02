@@ -115,7 +115,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const INITIAL_STEPS = [
     { id: 'extract', label: 'Schritt 1: Datenextraktion (OCR + KI)', status: 'pending' },
     { id: 'match',   label: 'Schritt 2: Kunden-Matching',             status: 'pending' },
-    { id: 'review',  label: 'Schritt 3: Formular-Abgleich & Bestätigung', status: 'pending' },
+    { id: 'review',  label: 'Schritt 3: Automatische Bestätigung',        status: 'pending' },
     { id: 'create',  label: 'Schritt 4: Antrag erstellen',            status: 'pending' },
     { id: 'link',    label: 'Schritt 5: Dokument verknüpfen',         status: 'pending' },
   ]
@@ -144,6 +144,8 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
 
   // Phase: 'extracting' | 'review' | 'saving' | 'done'
   const [phase, setPhase] = useState('extracting')
+  // Whether auto-save was triggered and user aborted to manual review
+  const [manualOverride, setManualOverride] = useState(false)
 
   const { data: customers = [], isSuccess: customersLoaded } = useQuery({
     queryKey: ['customers-all'],
@@ -199,9 +201,10 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       zusatz_type:               normalized.zusatz_type,
       product_label:             normalized.product_label,
     }
+    const produkte_local = normalized.produkte || []
     setForm(flat)
     originalRef.current = { ...flat }
-    setProdukte(normalized.produkte || [])
+    setProdukte(produkte_local)
     setStep('extract', 'ok', `Konfidenz: ${data.confidence}% · Status: ${data.status}`)
 
     // STEP 2: Match
@@ -223,82 +226,74 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       setStep('match', 'ok', `${customers.length} geprüft · kein Match → neuer Kunde`)
     }
 
-    // STEP 3: Wait for user review
-    setStep('review', 'waiting', 'Bitte Felder prüfen und bestätigen')
-    setPhase('review')
-    setProcessing(false)
+    // STEP 3: Auto-confirm if high confidence + no missing fields + safe match
+    const canAutoConfirm = data.confidence >= 85
+      && (data.missing_fields?.length ?? 0) === 0
+      && (topScore >= 80 || topScore === 0) // safe: auto match or new customer
+
+    if (canAutoConfirm) {
+      setStep('review', 'ok', `Automatisch bestätigt (Konfidenz ${data.confidence}%)`)
+      setPhase('saving')
+      setProcessing(false)
+      setTimeout(() => doSaveWithData(normalized, flat, produkte_local, topScore >= 80 ? 'auto' : 'new_auto'), 0)
+    } else {
+      const reason = data.confidence < 85 ? `Konfidenz ${data.confidence}% < 85%`
+        : (data.missing_fields?.length ?? 0) > 0 ? `${data.missing_fields.length} Felder fehlen`
+        : `Unsicherer Match (${topScore}%)`
+      setStep('review', 'waiting', `Manuelle Prüfung: ${reason}`)
+      setPhase('review')
+      setProcessing(false)
+    }
   }
 
-  // ── STEP 3 → confirm: record corrections, then save ──────────────────────────
-  const handleConfirm = async () => {
-    if (!form) return
-
-    // Record any field corrections for learning
-    const orig = originalRef.current || {}
-    const fieldsToLearn = ['kassenmodell', 'insurer', 'franchise']
-    fieldsToLearn.forEach(field => {
-      if (orig[field] !== form[field]) {
-        recordCorrection(field, orig[field], form[field])
-      }
-    })
-
-    setStep('review', 'ok', 'Daten bestätigt')
-    setPhase('saving')
-    await doSave()
-  }
-
-  // ── STEP 4+5: Save ────────────────────────────────────────────────────────────
-  const doSave = async () => {
+  // ── Auto-save helper (called with fully resolved data, no state deps) ─────────
+  const doSaveWithData = async (normalized, flat, produkteData, resolvedMatchMode) => {
     setSaving(true)
     setStep('create', 'running')
 
-    const norm = extraction?.normalized || {}
-    const f = form
-
-    const computedAgeGroup    = norm.age_group
-    const premiumMonthly      = norm.premium_monthly ?? (f.estimated_premium_monthly ? Number(f.estimated_premium_monthly) : null)
-    const premiumYearly       = norm.premium_yearly ?? (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null)
-    const productType         = norm.product_type
-    const kassenmodell        = f.kassenmodell || norm.kassenmodell
-    const gesundheitsdeklaration = norm.gesundheitsdeklaration ?? false
-    const zahlungsintervall   = norm.zahlungsintervall || null
-    const sparteFromNorm      = norm.sparte || null
+    const computedAgeGroup    = normalized.age_group
+    const premiumMonthly      = normalized.premium_monthly ?? (flat.estimated_premium_monthly ? Number(flat.estimated_premium_monthly) : null)
+    const premiumYearly       = normalized.premium_yearly ?? (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null)
+    const productType         = normalized.product_type
+    const kassenmodell        = flat.kassenmodell || normalized.kassenmodell
+    const gesundheitsdeklaration = normalized.gesundheitsdeklaration ?? false
+    const zahlungsintervall   = normalized.zahlungsintervall || null
+    const sparteFromNorm      = normalized.sparte || null
     const sparte              = sparteFromNorm || (
       productType === 'VVG' ? 'vvg_zusatz' :
       productType === 'KVG + VVG' ? 'kvg_vvg_kombi' : 'kvg'
     )
 
+    // Customer matching (re-use already matched state)
     const activeCustomer = overrideCustomer || matchedCustomer
     let cid = activeCustomer?.id || null
     let resolvedCustomer = activeCustomer
 
-    // Create or update customer
     if (!cid) {
       const newC = await base44.entities.Customer.create({
-        first_name: f.first_name || 'Unbekannt',
-        last_name:  f.last_name  || 'Unbekannt',
-        birthdate:  f.birthdate  || undefined,
-        street:     f.street     || undefined,
-        zip_code:   f.zip_code   || undefined,
-        city:       f.city       || undefined,
-        phone:      f.phone      || undefined,
-        email:      f.email      || undefined,
+        first_name: flat.first_name || 'Unbekannt',
+        last_name:  flat.last_name  || 'Unbekannt',
+        birthdate:  flat.birthdate  || undefined,
+        street:     flat.street     || undefined,
+        zip_code:   flat.zip_code   || undefined,
+        city:       flat.city       || undefined,
+        phone:      flat.phone      || undefined,
+        email:      flat.email      || undefined,
         status: 'active',
         notes: computedAgeGroup ? `Kategorie: ${computedAgeGroup}` : undefined,
       })
       cid = newC.id
       resolvedCustomer = newC
-      setStep('review', 'ok', `Neuer Kunde erstellt: ${newC.first_name} ${newC.last_name}`)
     } else {
       const existing = resolvedCustomer || customers.find(c => c.id === cid)
       if (existing) {
         const patch = {}
-        if (!existing.birthdate && f.birthdate) patch.birthdate = f.birthdate
-        if (!existing.street   && f.street)     patch.street   = f.street
-        if (!existing.zip_code && f.zip_code)   patch.zip_code = f.zip_code
-        if (!existing.city     && f.city)       patch.city     = f.city
-        if (!existing.phone    && f.phone)      patch.phone    = f.phone
-        if (!existing.email    && f.email)      patch.email    = f.email
+        if (!existing.birthdate && flat.birthdate) patch.birthdate = flat.birthdate
+        if (!existing.street   && flat.street)     patch.street   = flat.street
+        if (!existing.zip_code && flat.zip_code)   patch.zip_code = flat.zip_code
+        if (!existing.city     && flat.city)       patch.city     = flat.city
+        if (!existing.phone    && flat.phone)      patch.phone    = flat.phone
+        if (!existing.email    && flat.email)      patch.email    = flat.email
         if (computedAgeGroup) {
           patch.notes = existing.notes
             ? (existing.notes.includes('Kategorie:') ? existing.notes.replace(/Kategorie:\s*\S+/, `Kategorie: ${computedAgeGroup}`) : `${existing.notes}\nKategorie: ${computedAgeGroup}`)
@@ -314,46 +309,35 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     const customer = resolvedCustomer || customers.find(c => c.id === cid)
     const customerName = customer
       ? `${customer.first_name} ${customer.last_name}`
-      : `${f.first_name || ''} ${f.last_name || ''}`.trim()
+      : `${flat.first_name || ''} ${flat.last_name || ''}`.trim()
 
-    const missingRequired = !f.first_name || !f.last_name || !f.birthdate || !f.contract_start_date
-    const validationMissing = []
-    if (!productType) validationMissing.push('KVG/VVG')
-    if (!computedAgeGroup) validationMissing.push('Altersgruppe')
-    if (!premiumMonthly) validationMissing.push('Monatsprämie')
-    if (produkte.length === 0) validationMissing.push('Produkte')
-    const isIncomplete = missingRequired || validationMissing.length > 0
-
-    const appNotes = [
-      `Automatisch aus Dokument extrahiert: ${document.name}`,
-      isIncomplete ? `⚠ Unvollständig: ${validationMissing.join(', ')}` : null,
-    ].filter(Boolean).join('\n')
+    const appNotes = `Automatisch aus Dokument extrahiert: ${document.name}`
 
     let newApp
     try {
       newApp = await base44.entities.Application.create({
         customer_id: cid,
         customer_name: customerName,
-        insurer: f.insurer || 'Andere',
+        insurer: flat.insurer || 'Andere',
         sparte,
         insurance_type: sparte,
-        product: f.product_label || norm.product_label || productType || undefined,
-        contract_start_date: f.contract_start_date || undefined,
-        contract_end_date:   f.contract_end_date || undefined,
+        product: flat.product_label || normalized.product_label || productType || undefined,
+        contract_start_date: flat.contract_start_date || undefined,
+        contract_end_date:   flat.contract_end_date || undefined,
         estimated_premium_monthly: premiumMonthly || undefined,
         estimated_premium_yearly: premiumYearly || undefined,
         sparte_data: {
-          franchise:          f.franchise || undefined,
+          franchise:          flat.franchise || undefined,
           model:              kassenmodell || undefined,
           age_group:          computedAgeGroup || undefined,
-          produkte:           norm.produkte?.length > 0 ? norm.produkte : produkte.length > 0 ? produkte : undefined,
+          produkte:           produkteData.length > 0 ? produkteData : undefined,
           product_type:       productType || undefined,
           zahlungsintervall:  zahlungsintervall || undefined,
           health_declaration: gesundheitsdeklaration ? 'Ja' : 'Nein',
-          zusatz_type:        f.zusatz_type || norm.zusatz_type || undefined,
+          zusatz_type:        flat.zusatz_type || normalized.zusatz_type || undefined,
         },
         status: 'submitted',
-        custom_status: isIncomplete ? 'unvollstaendig' : (matchMode === 'auto_low' ? 'pruefung_erforderlich' : 'eingereicht'),
+        custom_status: resolvedMatchMode === 'auto_low' ? 'pruefung_erforderlich' : 'eingereicht',
         notes: appNotes,
       })
     } catch (err) {
@@ -365,8 +349,6 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     }
 
     setStep('create', 'ok', `Antrag-ID: ${newApp.id}`)
-
-    // Link document
     setStep('link', 'running')
     try {
       await base44.entities.Document.update(document.id, {
@@ -389,6 +371,25 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     setPhase('done')
     onSaved?.()
     setTimeout(() => onClose(), 1500)
+  }
+
+  // ── STEP 3 → manual confirm ──────────────────────────────────────────────────
+  const handleConfirm = async () => {
+    if (!form) return
+
+    // Record any field corrections for learning
+    const orig = originalRef.current || {}
+    const fieldsToLearn = ['kassenmodell', 'insurer', 'franchise']
+    fieldsToLearn.forEach(field => {
+      if (orig[field] !== form[field]) {
+        recordCorrection(field, orig[field], form[field])
+      }
+    })
+
+    setStep('review', 'ok', 'Manuell bestätigt')
+    setPhase('saving')
+    const norm = extraction?.normalized || {}
+    await doSaveWithData(norm, form, produkte, matchMode)
   }
 
   const setField = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
