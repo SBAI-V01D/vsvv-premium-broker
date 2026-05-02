@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { DialogFooter } from '@/components/ui/dialog'
+import { usePostalCodeLookup } from '@/hooks/usePostalCodeLookup'
+import PostalCodeInput from '@/components/common/PostalCodeInput'
 
 const CANTONS = ["AG","AI","AR","BE","BL","BS","FR","GE","GL","GR","JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG","TI","UR","VD","VS","ZG","ZH"]
 const FAMILY_ROLES = {
@@ -80,7 +82,19 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
     notes: '',
   })
 
+  const [autoFilled, setAutoFilled] = useState(false)
+  const { plzError, plzSuggestions, handlePostalCodeChange, selectSuggestion } = usePostalCodeLookup()
+
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
+
+  const handlePlzChange = (plz) => {
+    set('zip_code', plz)
+    handlePostalCodeChange(plz, ({ city, canton, autoFilled: auto }) => {
+      if (city) set('city', city)
+      if (canton) set('canton', canton)
+      setAutoFilled(auto || false)
+    })
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -166,32 +180,32 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <div className="col-span-2">
+      <div className="grid grid-cols-1 gap-3 mb-3">
+        <div>
           <Label>Straße</Label>
           <Input value={form.street} onChange={e => set('street', e.target.value)} className="mt-1" />
         </div>
-        <div>
-          <Label>PLZ</Label>
-          <Input value={form.zip_code} onChange={e => set('zip_code', e.target.value)} className="mt-1" />
-        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label>Stadt</Label>
-          <Input value={form.city} onChange={e => set('city', e.target.value)} className="mt-1" />
-        </div>
-        <div>
-          <Label>Kanton</Label>
-          <Select value={form.canton} onValueChange={v => set('canton', v)}>
-            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {CANTONS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      <PostalCodeInput
+        plz={form.zip_code}
+        city={form.city}
+        canton={form.canton}
+        cantons={CANTONS}
+        plzError={plzError}
+        plzSuggestions={plzSuggestions}
+        autoFilled={autoFilled}
+        onPlzChange={handlePlzChange}
+        onCityChange={(city) => { set('city', city); setAutoFilled(false) }}
+        onCantonChange={(canton) => set('canton', canton)}
+        onSelectSuggestion={(suggestion) => {
+          selectSuggestion(suggestion, ({ city, canton, autoFilled: auto }) => {
+            set('city', city)
+            set('canton', canton)
+            setAutoFilled(auto)
+          })
+        }}
+      />
 
       <div className="grid grid-cols-2 gap-3">
         <div>
