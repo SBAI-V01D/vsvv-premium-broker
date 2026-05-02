@@ -64,6 +64,7 @@ export const SPARTE_FIELDS = {
     { key: 'franchise', label: 'Franchise (CHF)', type: 'franchise' },
     { key: 'model', label: 'Kassenmodell', type: 'select', options: ['Standardmodell','HMO','Hausarztmodell','Telemed','Flexmed'] },
     { key: 'current_insurer', label: 'Aktuelle Krankenkasse', type: 'text' },
+    { key: 'health_declaration', label: 'Gesundheitserklärung nötig', type: 'select', options: ['Ja','Nein'] },
   ],
   vvg_zusatz: [
     { key: 'ahv_number', label: 'AHV-Nummer', type: 'text' },
