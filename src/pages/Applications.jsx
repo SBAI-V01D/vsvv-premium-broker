@@ -75,7 +75,7 @@ export default function Applications() {
   // KPIs
   const STORNIERT_ABGELEHNT = ['abgelehnt', 'rejected', 'storniert', 'cancelled']
   const ACCEPTED_KEYS = ['angenommen', 'policiert', 'approved']
-  const OPEN_KEYS = ['neu', 'draft', 'submitted', 'in_bearbeitung', 'under_review', 'eingereicht', 'in_pruefung', 'rueckfrage', 'risikopruefung', 'vorbehalt']
+  const OPEN_KEYS = ['neu', 'draft', 'submitted', 'in_bearbeitung', 'under_review', 'eingereicht', 'in_pruefung', 'rueckfrage', 'vorbehalt']
   const getStatus = (a) => a.custom_status || a.status
 
   const activeApps = applications.filter(a => !STORNIERT_ABGELEHNT.includes(getStatus(a)))
@@ -120,7 +120,7 @@ export default function Applications() {
   const handleStatusChange = async ({ status, statusDef, note, metadata }) => {
     const app = statusChanging
     const prevStatus = app.custom_status || app.status
-    const ACCEPTED_STATUSES = ['angenommen', 'policiert', 'approved', 'angenommen_vorbehalt', 'bewilligung_erteilt']
+    const ACCEPTED_STATUSES = ['angenommen', 'policiert', 'approved']
 
     await base44.entities.StatusHistory.create({
       entity_type: 'application',
