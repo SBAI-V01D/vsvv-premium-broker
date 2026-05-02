@@ -4,8 +4,9 @@ import { base44 } from '@/api/base44Client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AlertTriangle, CheckCircle2, Loader2, UserPlus, FileCheck, X, ChevronRight, Zap, Bug, Package } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Loader2, UserPlus, FileCheck, X, ChevronRight, Zap, Bug, Package, Users } from 'lucide-react'
 import { ALL_SPARTEN } from '@/lib/insuranceSparten'
+import { matchCustomers } from '@/lib/customerMatcher'
 
 // ─── Simple editable field ────────────────────────────────────────────────────
 function Field({ label, value, onChange, warn }) {
@@ -88,6 +89,9 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [autoSaved, setAutoSaved] = useState(false)
   const [matchCustomer, setMatchCustomer] = useState(null)
+  const [matchScore, setMatchScore] = useState(0)
+  const [matchCandidates, setMatchCandidates] = useState([])   // [{customer, score}]
+  const [matchMode, setMatchMode] = useState('pending')        // 'pending'|'auto'|'candidates'|'none'|'confirmed'|'new'
   const [createNew, setCreateNew] = useState(false)
   const [showDebug, setShowDebug] = useState(false)
 
@@ -153,24 +157,24 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     setForm(flat)
     setProdukte(data.structured?.versicherung?.produkte || [])
 
-    // Auto-match customer by extracted name
-    const fn = flat.first_name
-    const ln = flat.last_name
-    if (fn && ln && !matchCustomer) {
-      const found = customers.find(c =>
-        c.first_name?.toLowerCase() === fn.toLowerCase() &&
-        c.last_name?.toLowerCase() === ln.toLowerCase()
-      )
-      if (found) setMatchCustomer(found)
+    // Run multi-stage scoring match
+    const { autoMatch, candidates, topScore } = matchCustomers(flat, customers)
+    setMatchCandidates(candidates)
+    setMatchScore(topScore)
+
+    if (autoMatch) {
+      setMatchCustomer(autoMatch)
+      setMatchMode('auto')
+    } else if (candidates.length > 0 && topScore >= 70) {
+      setMatchMode('candidates')
+    } else {
+      setMatchMode('none')
     }
 
-    // Auto-save if confidence ≥ 85 and customer already linked via document
-    if (data.auto_save && document.customer_id) {
-      const cust = customers.find(c => c.id === document.customer_id)
-      if (cust) {
-        await doSave(flat, data.structured?.versicherung?.produkte || [], data.age_group, cust.id, cust)
-        setAutoSaved(true)
-      }
+    // Auto-save if confidence ≥ 85 and auto-matched customer
+    if (data.auto_save && autoMatch) {
+      await doSave(flat, data.structured?.versicherung?.produkte || [], data.age_group, autoMatch.id, autoMatch)
+      setAutoSaved(true)
     }
   }
 
@@ -253,6 +257,17 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
 
   const handleManualSave = () =>
     doSave(form, produkte, extraction?.age_group, matchCustomer?.id, matchCustomer)
+
+  const handleConfirmCandidate = (cust) => {
+    setMatchCustomer(cust)
+    setMatchMode('confirmed')
+  }
+
+  const handleChangeCustomer = () => {
+    setMatchCustomer(null)
+    setCreateNew(false)
+    setMatchMode('candidates')
+  }
 
   const setField = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
 
@@ -411,37 +426,105 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
 
               {/* Customer assignment */}
               <div className="mx-3 mt-3 p-3 border rounded-lg bg-card">
-                <p className="text-xs font-semibold mb-2">Kundenzuordnung</p>
-                {matchCustomer ? (
-                  <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg">
-                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                    <div className="flex-1 text-xs">
-                      <p className="font-medium text-green-800">{matchCustomer.first_name} {matchCustomer.last_name}</p>
-                      <button className="text-green-600 underline mt-0.5"
-                        onClick={() => { setMatchCustomer(null); setCreateNew(false) }}>Ändern</button>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> Kundenzuordnung</p>
+                  {matchScore > 0 && (
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${matchScore >= 90 ? 'bg-green-100 text-green-700' : matchScore >= 70 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                      Score {matchScore}/100
+                    </span>
+                  )}
+                </div>
+
+                {/* AUTO match (score ≥ 90) – confirmed or pending */}
+                {(matchMode === 'auto' || matchMode === 'confirmed') && matchCustomer && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      <div className="flex-1 text-xs">
+                        <p className="font-medium text-green-800">
+                          {matchMode === 'auto' ? 'Automatisch erkannt: ' : 'Ausgewählt: '}
+                          {matchCustomer.first_name} {matchCustomer.last_name}
+                        </p>
+                        {matchCustomer.birthdate && <p className="text-green-600">Geb.: {matchCustomer.birthdate}</p>}
+                        {matchCustomer.email && <p className="text-green-600">{matchCustomer.email}</p>}
+                      </div>
+                      <button className="text-xs text-muted-foreground underline flex-shrink-0" onClick={handleChangeCustomer}>Ändern</button>
                     </div>
                   </div>
-                ) : createNew ? (
+                )}
+
+                {/* CANDIDATES (score 70–89) – show top 3 */}
+                {matchMode === 'candidates' && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-amber-700 flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" /> Mögliche Übereinstimmungen – bitte bestätigen:
+                    </p>
+                    {matchCandidates.map(({ customer: c, score }) => (
+                      <div key={c.id} className="flex items-center gap-2 p-2 border rounded-lg hover:bg-muted/40 cursor-pointer" onClick={() => handleConfirmCandidate(c)}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${score >= 90 ? 'bg-green-100 text-green-700' : score >= 70 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                          {score}
+                        </div>
+                        <div className="flex-1 text-xs min-w-0">
+                          <p className="font-medium truncate">{c.first_name} {c.last_name}</p>
+                          <p className="text-muted-foreground truncate">{c.birthdate || ''} {c.zip_code ? `· PLZ ${c.zip_code}` : ''}</p>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                      </div>
+                    ))}
+                    <div className="border-t pt-2 flex items-center justify-between">
+                      <button className="text-xs text-primary underline" onClick={() => setMatchMode('manual')}>Andere Kunden durchsuchen</button>
+                      <button className="text-xs text-muted-foreground underline" onClick={() => { setCreateNew(true); setMatchMode('new') }}>Neuen Kunden erstellen</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* NO match (score < 70) */}
+                {matchMode === 'none' && !createNew && (
+                  <div className="space-y-2">
+                    <div className="p-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
+                      <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                      Kein passender Kunde gefunden (Score &lt; 70)
+                    </div>
+                    <div className="flex gap-2">
+                      <button className="text-xs text-primary underline" onClick={() => setMatchMode('manual')}>Manuell zuordnen</button>
+                      <span className="text-muted-foreground text-xs">·</span>
+                      <button className="text-xs text-primary underline flex items-center gap-1" onClick={() => { setCreateNew(true); setMatchMode('new') }}>
+                        <UserPlus className="w-3 h-3" /> Neuen Kunden anlegen
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* NEW customer */}
+                {matchMode === 'new' && createNew && (
                   <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
                     <UserPlus className="w-4 h-4 text-blue-600 flex-shrink-0" />
                     <div className="flex-1 text-xs">
-                      <p className="font-medium text-blue-800">Neuer Kunde wird erstellt</p>
-                      <button className="text-blue-600 underline" onClick={() => setCreateNew(false)}>Abbrechen</button>
+                      <p className="font-medium text-blue-800">Neuer Kunde wird aus Formulardaten erstellt</p>
+                      <p className="text-blue-600">{form.first_name} {form.last_name}</p>
                     </div>
+                    <button className="text-xs text-muted-foreground underline" onClick={() => { setCreateNew(false); setMatchMode('none') }}>Abbrechen</button>
                   </div>
-                ) : (
+                )}
+
+                {/* MANUAL search */}
+                {matchMode === 'manual' && (
                   <div className="space-y-2">
-                    <Select onValueChange={v => setMatchCustomer(customers.find(c => c.id === v))}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Bestehendem Kunden zuordnen..." /></SelectTrigger>
+                    <Select onValueChange={v => { handleConfirmCandidate(customers.find(c => c.id === v)) }}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Kunden suchen..." /></SelectTrigger>
                       <SelectContent>
                         {customers.filter(c => !c.is_family_member).map(c => (
-                          <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
+                          <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}{c.birthdate ? ` (${c.birthdate.slice(0,4)})` : ''}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <button className="text-xs text-primary underline flex items-center gap-1" onClick={() => setCreateNew(true)}>
-                      <UserPlus className="w-3 h-3" /> Neuen Kunden anlegen
-                    </button>
+                    <div className="flex gap-2">
+                      <button className="text-xs text-muted-foreground underline" onClick={() => setMatchMode(matchCandidates.length ? 'candidates' : 'none')}>Zurück</button>
+                      <span className="text-muted-foreground text-xs">·</span>
+                      <button className="text-xs text-primary underline flex items-center gap-1" onClick={() => { setCreateNew(true); setMatchMode('new') }}>
+                        <UserPlus className="w-3 h-3" /> Neuen Kunden anlegen
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -452,15 +535,15 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                   <Button
                     className="w-full gap-2"
                     onClick={handleManualSave}
-                    disabled={saving || (!matchCustomer && !createNew)}
+                    disabled={saving || (!matchCustomer && matchMode !== 'new')}
                   >
                     {saving
                       ? <><Loader2 className="w-4 h-4 animate-spin" /> Speichern...</>
                       : <><ChevronRight className="w-4 h-4" /> Antrag erstellen & Dokument verknüpfen</>
                     }
                   </Button>
-                  {!matchCustomer && !createNew && (
-                    <p className="text-xs text-muted-foreground text-center mt-1">Bitte Kunden auswählen oder neu anlegen</p>
+                  {!matchCustomer && matchMode !== 'new' && (
+                    <p className="text-xs text-muted-foreground text-center mt-1">Bitte Kunden zuordnen oder neu anlegen</p>
                   )}
                 </div>
               )}
