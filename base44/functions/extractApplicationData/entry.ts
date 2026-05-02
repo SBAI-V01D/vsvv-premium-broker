@@ -29,6 +29,13 @@ const KVG_NAMES = [
   'mycare', 'premed', 'sanitas basic', 'basic', 'standard',
 ];
 
+// Health insurance keywords
+const HEALTH_KEYWORDS = [
+  'kvg', 'krankenversicherung', 'grundversicherung', 'zusatzversicherung',
+  'spital', 'ambulant', 'denta', 'zahn', 'dental', 'hmo', 'telmed',
+  'hausarzt', 'medizin', 'arzt', 'ärztlich'
+];
+
 // Property/Liability insurance types (not health insurance)
 const NON_HEALTH_KEYWORDS = [
   'hausrat', 'household', 'property', 'haftpflicht', 'liability', 'gebäude', 'building',
@@ -37,10 +44,14 @@ const NON_HEALTH_KEYWORDS = [
 
 function isHealthInsurance(productNames = []) {
   const combined = productNames.join(' ').toLowerCase();
-  // If any health-specific keyword is present, it's health insurance
-  // If no keywords but has non-health keywords → not health insurance
+  // If has non-health keywords → definitely not health insurance
   const hasNonHealthKeyword = NON_HEALTH_KEYWORDS.some(k => combined.includes(k));
-  return !hasNonHealthKeyword;
+  if (hasNonHealthKeyword) return false;
+  // If has explicit health keywords → health insurance
+  const hasHealthKeyword = HEALTH_KEYWORDS.some(k => combined.includes(k));
+  if (hasHealthKeyword) return true;
+  // Default: assume health (but this should rarely happen with proper product names)
+  return true;
 }
 
 function normalizeProduktTyp(p, isHealth = true) {
@@ -177,8 +188,21 @@ function normalizeData(raw) {
   let sparteDetectionMethod = null;
   
   if (!isHealth) {
-    sparte = 'vvg_zusatz'; // Property/Liability/etc.
-    sparteDetectionMethod = 'non_health_keywords';
+    // Detect specific property/liability type from product names
+    const productCombined = productNames.join(' ').toLowerCase();
+    if (productCombined.includes('hausrat') || productCombined.includes('household')) {
+      sparte = 'hausrat';
+      sparteDetectionMethod = 'hausrat_keyword';
+    } else if (productCombined.includes('motorfahrzeug') || productCombined.includes('auto') || productCombined.includes('kfz')) {
+      sparte = 'motorfahrzeug';
+      sparteDetectionMethod = 'motorfahrzeug_keyword';
+    } else if (productCombined.includes('haftpflicht') || productCombined.includes('liability')) {
+      sparte = 'haftpflicht';
+      sparteDetectionMethod = 'haftpflicht_keyword';
+    } else {
+      sparte = 'vvg_zusatz'; // Generic property/liability fallback
+      sparteDetectionMethod = 'non_health_fallback';
+    }
   } else if (productType) {
     sparte = productType === 'VVG' ? 'vvg_zusatz'
            : productType === 'KVG + VVG' ? 'kvg_vvg_kombi'
