@@ -37,7 +37,7 @@ const grouped = ALL_SPARTEN.reduce((acc, s) => {
   return acc
 }, {})
 
-export default function ApplicationForm({ application, customers = [], onSave, onCancel, saving }) {
+export default function ApplicationForm({ application, customers = [], onSave, onCancel, saving, classificationDebug }) {
   const { data: brokers = [] } = useQuery({
     queryKey: ['brokers'],
     queryFn: () => base44.entities.Broker.filter({ is_active: true }),
@@ -81,6 +81,9 @@ export default function ApplicationForm({ application, customers = [], onSave, o
       sparte_data: {},
     }
   })
+
+  // Sparte ist gesperrt wenn sie bereits klassifiziert wurde
+  const isSparteLockedByClassification = application?.sparte && classificationDebug
 
   const selectedCustomer = customers.find(c => c.id === form.customer_id)
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
@@ -183,22 +186,43 @@ export default function ApplicationForm({ application, customers = [], onSave, o
         </div>
       )}
 
-      {/* Sparte */}
+      {/* Klassifizierungs-Info anzeigen */}
+      {classificationDebug && (
+        <div className={`p-4 rounded-lg border ${application?.sparte ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+          <p className={`text-sm font-medium ${application?.sparte ? 'text-green-700' : 'text-amber-700'}`}>
+            ✓ {classificationDebug.debug}
+          </p>
+          {classificationDebug.matchedKeywords?.length > 0 && (
+            <p className={`text-xs mt-2 ${application?.sparte ? 'text-green-600' : 'text-amber-600'}`}>
+              Erkannte Keywords: {classificationDebug.matchedKeywords.join(', ')}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Sparte – GESPERRT wenn klassifiziert */}
       <div>
         <Label>Versicherungssparte *</Label>
-        <Select value={form.sparte} onValueChange={setSparte}>
-          <SelectTrigger className="mt-1"><SelectValue placeholder="Sparte wählen" /></SelectTrigger>
-          <SelectContent>
-            {Object.entries(grouped).map(([group, items]) => (
-              <div key={group}>
-                <div className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-muted/50 sticky top-0">{group}</div>
-                {items.map(s => (
-                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                ))}
-              </div>
-            ))}
-          </SelectContent>
-        </Select>
+        {isSparteLockedByClassification ? (
+          <div className="mt-1 px-4 py-2 rounded-md bg-muted/40 border border-border flex items-center justify-between">
+            <span className="font-medium text-sm">{getSparteLabel(form.sparte)}</span>
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">🔒 Automatisch erkannt</span>
+          </div>
+        ) : (
+          <Select value={form.sparte} onValueChange={setSparte}>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Sparte wählen" /></SelectTrigger>
+            <SelectContent>
+              {Object.entries(grouped).map(([group, items]) => (
+                <div key={group}>
+                  <div className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-muted/50 sticky top-0">{group}</div>
+                  {items.map(s => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
+                </div>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Versicherer */}

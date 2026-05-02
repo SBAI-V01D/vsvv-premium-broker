@@ -69,10 +69,11 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
           uploaded_by: 'broker',
         })
 
-        // Store inferred sparte in document metadata for later use
+        // Store classification metadata in document notes for debug & traceability
         if (classification.data?.sparte) {
+          const debugInfo = `[KLASSIFIZIERUNG] Sparte: ${classification.data.sparte} | Regel: ${classification.data.rule} | Keywords: ${(classification.data.matchedKeywords || []).join(', ')}`
           await base44.entities.Document.update(doc.id, {
-            notes: (form.notes ? form.notes + ' | ' : '') + `[SPARTE: ${classification.data.sparte}]`
+            notes: (form.notes ? form.notes + ' | ' : '') + debugInfo
           })
         }
       } catch (error) {
