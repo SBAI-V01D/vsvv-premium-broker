@@ -269,40 +269,25 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     let cid = activeCustomer?.id || null
     let resolvedCustomer = activeCustomer
 
-    if (!cid) {
-      const newC = await base44.entities.Customer.create({
+    // Use sync function for automatic customer creation/update with duplicate check
+    if (!cid || manualOverride) {
+      const syncResult = await base44.functions.invoke('syncCustomerFromApplication', {
         first_name: flat.first_name || 'Unbekannt',
-        last_name:  flat.last_name  || 'Unbekannt',
-        birthdate:  flat.birthdate  || undefined,
-        street:     flat.street     || undefined,
-        zip_code:   flat.zip_code   || undefined,
-        city:       flat.city       || undefined,
-        phone:      flat.phone      || undefined,
-        email:      flat.email      || undefined,
-        status: 'active',
-        notes: computedAgeGroup ? `Kategorie: ${computedAgeGroup}` : undefined,
+        last_name: flat.last_name || 'Unbekannt',
+        email: flat.email || undefined,
+        phone: flat.phone || undefined,
+        mobile: flat.mobile || undefined,
+        street: flat.street || undefined,
+        zip_code: flat.zip_code || undefined,
+        city: flat.city || undefined,
+        canton: flat.canton || undefined,
+        birthdate: flat.birthdate || undefined,
+        nationality: flat.nationality || 'CH',
       })
-      cid = newC.id
-      resolvedCustomer = newC
-    } else {
-      const existing = resolvedCustomer || customers.find(c => c.id === cid)
-      if (existing) {
-        const patch = {}
-        if (!existing.birthdate && flat.birthdate) patch.birthdate = flat.birthdate
-        if (!existing.street   && flat.street)     patch.street   = flat.street
-        if (!existing.zip_code && flat.zip_code)   patch.zip_code = flat.zip_code
-        if (!existing.city     && flat.city)       patch.city     = flat.city
-        if (!existing.phone    && flat.phone)      patch.phone    = flat.phone
-        if (!existing.email    && flat.email)      patch.email    = flat.email
-        if (computedAgeGroup) {
-          patch.notes = existing.notes
-            ? (existing.notes.includes('Kategorie:') ? existing.notes.replace(/Kategorie:\s*\S+/, `Kategorie: ${computedAgeGroup}`) : `${existing.notes}\nKategorie: ${computedAgeGroup}`)
-            : `Kategorie: ${computedAgeGroup}`
-        }
-        if (Object.keys(patch).length > 0) {
-          await base44.entities.Customer.update(cid, patch)
-          queryClient.invalidateQueries({ queryKey: ['customers'] })
-        }
+
+      if (syncResult.data?.customer_id) {
+        cid = syncResult.data.customer_id
+        resolvedCustomer = customers.find(c => c.id === cid)
       }
     }
 
