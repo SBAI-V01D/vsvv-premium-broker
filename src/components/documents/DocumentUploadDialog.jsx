@@ -49,12 +49,12 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
         // Extract text from document (using backend function)
         const extracted = await base44.functions.invoke('extractApplicationData', { 
           file_url,
-          fileName: form.name
+          file_name: form.name
         })
 
         // Classify sparte from extracted data
         const classification = await base44.functions.invoke('classifySparteFromDocument', {
-          extractedText: extracted.data?.text || ''
+          extractedText: extracted.data?.structured?.versicherung?.sparte || ''
         })
 
         // Save document with classification metadata
