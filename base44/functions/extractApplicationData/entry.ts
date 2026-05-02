@@ -178,10 +178,6 @@ function normalizeData(raw) {
   // Age group: ALWAYS calculated from birthdate, mapped to exact form values
   const ageGroup = calcAgeGroup(raw?.person?.geburtsdatum);
 
-  // Gesundheitsdeklaration: ONLY for Krankenversicherung (KVG/VVG)
-  const isKvgLike = sparte === 'kvg' || sparte === 'kvg_vvg_kombi' || sparte === 'vvg_zusatz';
-  const gesundheitsdeklaration = isKvgLike && isHealth ? (raw?.versicherung?.gesundheitsdeklaration ?? false) : false;
-
   // Sparte mapping: 
   // PRIORITY 1: Use sparte extracted directly from PDF label
   let sparte = null;
@@ -233,6 +229,11 @@ function normalizeData(raw) {
       sparteDetectionMethod = productType ? 'product_type_derived' : null;
     }
   }
+
+  // Gesundheitsdeklaration: ONLY for Krankenversicherung (KVG/VVG)
+  // Sparte ist jetzt gesetzt, daher ist diese Abfrage sicher
+  const isKvgLike = sparte && (sparte === 'kvg' || sparte === 'kvg_vvg_kombi' || sparte === 'vvg_zusatz');
+  const gesundheitsdeklaration = isKvgLike && isHealth ? (raw?.versicherung?.gesundheitsdeklaration ?? false) : false;
 
   // Product label (all product names joined)
   const productLabel = buildProductLabel(produkte);
