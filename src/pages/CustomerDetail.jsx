@@ -49,12 +49,14 @@ export default function CustomerDetail() {
     queryFn: () => base44.entities.Document.list(null, 1000),
   })
 
+  // If customer is a family member, show primary customer's ID too
   const primaryCustomerId = customer?.primary_customer_id || customer?.id
   const familyMembers = (Array.isArray(allCustomers) ? allCustomers : []).filter(c => 
     c.primary_customer_id === primaryCustomerId || c.id === primaryCustomerId
   )
 
-  const customerIds = familyMembers.map(m => m.id)
+  // Include both the customer and primary customer ID (important if viewing a family member)
+  const customerIds = [customer?.id, primaryCustomerId].filter(Boolean).concat(familyMembers.map(m => m.id))
   const relatedContracts = contracts.filter(c => customerIds.includes(c.customer_id))
   const relatedApplications = applications.filter(a => customerIds.includes(a.customer_id))
   const relatedMessages = (Array.isArray(allCustomers) ? allCustomers : []).filter(c => customerIds.includes(c.id)).flatMap(c => c.messages || [])
