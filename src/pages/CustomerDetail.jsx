@@ -50,7 +50,7 @@ export default function CustomerDetail() {
   })
 
   const primaryCustomerId = customer?.primary_customer_id || customer?.id
-  const familyMembers = allCustomers.filter(c => 
+  const familyMembers = (Array.isArray(allCustomers) ? allCustomers : []).filter(c => 
     c.primary_customer_id === primaryCustomerId || c.id === primaryCustomerId
   )
 
