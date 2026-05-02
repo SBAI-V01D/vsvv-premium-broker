@@ -30,7 +30,6 @@ export default function ContractDocumentsPanel({ contract }) {
   const { data: documents = [] } = useQuery({
     queryKey: ['documents', 'contract', contract.id],
     queryFn: () => base44.entities.Document.filter({ linked_contract_id: contract.id }, '-created_date'),
-    enabled: open,
   })
 
   const deleteMutation = useMutation({
@@ -69,53 +68,48 @@ export default function ContractDocumentsPanel({ contract }) {
   }
 
   return (
-    <div className="border-t border-border mt-3 pt-3">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground w-full"
-      >
-        {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        <FileText className="w-4 h-4" />
-        Dokumente {documents.length > 0 && <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">{documents.length}</span>}
-      </button>
+    <div className="mt-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+          <FileText className="w-4 h-4" />
+          Dokumente ({documents.length})
+        </h4>
+        <Button size="sm" variant="outline" onClick={() => setShowUpload(true)}>
+          <Upload className="w-3.5 h-3.5 mr-1" /> Hochladen
+        </Button>
+      </div>
 
-      {open && (
-        <div className="mt-3 space-y-2">
-          <div className="flex justify-end">
-            <Button size="sm" variant="outline" onClick={() => setShowUpload(true)}>
-              <Upload className="w-3.5 h-3.5 mr-1" /> Hochladen
-            </Button>
-          </div>
-
-          {documents.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-3">Keine Dokumente</p>
-          ) : (
-            documents.map(doc => {
-              const cat = CATEGORIES.find(c => c.value === doc.category)
-              return (
-                <div key={doc.id} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-muted/40 text-sm">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <FileText className="w-4 h-4 text-primary flex-shrink-0" />
-                    <span className="truncate font-medium">{doc.name}</span>
+      {documents.length === 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-3">Keine Dokumente hochgeladen</p>
+      ) : (
+        <div className="space-y-2">
+          {documents.map(doc => {
+            const cat = CATEGORIES.find(c => c.value === doc.category)
+            return (
+              <div key={doc.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-muted/40 text-sm">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="w-4 h-4 text-primary flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{doc.name}</p>
                     {cat && (
-                      <span className={`text-xs border px-1.5 py-0.5 rounded-full flex-shrink-0 ${cat.color}`}>{cat.label}</span>
+                      <span className={`text-xs border px-1.5 py-0.5 rounded-full inline-block mt-1 ${cat.color}`}>{cat.label}</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </Button>
-                    </a>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
-                      onClick={() => deleteMutation.mutate(doc.id)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
                 </div>
-              )
-            })
-          )}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </Button>
+                  </a>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"
+                    onClick={() => deleteMutation.mutate(doc.id)}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
