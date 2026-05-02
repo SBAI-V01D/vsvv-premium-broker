@@ -167,9 +167,9 @@ export default function Contracts() {
                         <Building2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                         <p className="text-sm font-medium truncate">{contract.insurer}</p>
                       </div>
-                      {contract.sparte && (
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">{getSparteLabel(contract.sparte)}</p>
-                      )}
+                      {contract.sparte || contract.insurance_type ? (
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">{getSparteLabel(contract.sparte || contract.insurance_type)}</p>
+                      ) : null}
                       {contract.sparte_data?.franchise && (
                         <p className="text-xs text-muted-foreground mt-0.5">Franchise: CHF {contract.sparte_data.franchise}</p>
                       )}
@@ -189,7 +189,7 @@ export default function Contracts() {
                     {/* Produkt / Tarif */}
                     <div className="min-w-0">
                       {contract.product && (
-                        <p className="text-sm font-medium truncate">{contract.product}</p>
+                        <p className="text-sm font-medium">{contract.product}</p>
                       )}
                       {!contract.product && <span className="text-sm text-muted-foreground">–</span>}
                     </div>
