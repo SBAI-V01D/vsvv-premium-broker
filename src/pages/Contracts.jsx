@@ -132,10 +132,11 @@ export default function Contracts() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="hidden md:grid grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="hidden md:grid grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             <div>Kunde</div>
             <div>Versicherer / Sparte</div>
-            <div>Produkt / Policen-Nr</div>
+            <div>Policen-Nr</div>
+            <div>Produkt / Tarif</div>
             <div>Vertragsdaten</div>
             <div>Jahresprämie</div>
             <div>Status</div>
@@ -151,7 +152,7 @@ export default function Contracts() {
               const customer = getCustomer(contract.customer_id)
               return (
                 <div key={contract.id} className={idx > 0 ? 'border-t border-border' : ''}>
-                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors">
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors">
                     {/* Kunde */}
                     <div className="min-w-0">
                       <p className="font-semibold text-sm truncate">{contract.customer_name || '–'}</p>
@@ -166,25 +167,31 @@ export default function Contracts() {
                         <Building2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                         <p className="text-sm font-medium truncate">{contract.insurer}</p>
                       </div>
-                      {contract.product && (
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">{contract.product}</p>
+                      {contract.sparte && (
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">{getSparteLabel(contract.sparte)}</p>
+                      )}
+                      {contract.sparte_data?.franchise && (
+                        <p className="text-xs text-muted-foreground mt-0.5">Franchise: CHF {contract.sparte_data.franchise}</p>
+                      )}
+                      {contract.sparte_data?.model && (
+                        <p className="text-xs text-muted-foreground mt-0.5">Modell: {contract.sparte_data.model}</p>
                       )}
                     </div>
 
-                    {/* Sparte / Policen-Nr / Produkt */}
+                    {/* Policen-Nr */}
                     <div className="min-w-0">
-                      {contract.sparte && (
-                        <p className="text-sm font-medium">{getSparteLabel(contract.sparte)}</p>
-                      )}
                       {contract.policy_number && (
-                        <p className="text-xs text-muted-foreground mt-0.5">Police: {contract.policy_number}</p>
+                        <p className="text-sm font-medium">{contract.policy_number}</p>
                       )}
+                      {!contract.policy_number && <span className="text-sm text-muted-foreground">–</span>}
+                    </div>
+
+                    {/* Produkt / Tarif */}
+                    <div className="min-w-0">
                       {contract.product && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{contract.product}</p>
+                        <p className="text-sm font-medium truncate">{contract.product}</p>
                       )}
-                      {!contract.sparte && !contract.policy_number && !contract.product && (
-                        <span className="text-sm text-muted-foreground">–</span>
-                      )}
+                      {!contract.product && <span className="text-sm text-muted-foreground">–</span>}
                     </div>
 
                     {/* Vertragsdaten */}
