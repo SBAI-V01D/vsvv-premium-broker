@@ -551,8 +551,29 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                   {ageGroup && <ReviewField label="Altersgruppe (berechnet)" value={ageGroup} confidence="high" readOnly />}
                   {productType && <ReviewField label="KVG / VVG (abgeleitet)" value={productType} confidence="high" readOnly />}
                   {norm.zahlungsintervall && <ReviewField label="Zahlungsintervall" value={norm.zahlungsintervall} confidence="high" readOnly />}
+                  <ReviewField
+                    label="Gesundheitserklärung nötig"
+                    value={gesundheitsdeklaration ? 'Ja' : 'Nein'}
+                    confidence={gesundheitsdeklaration ? 'high' : 'high'}
+                    readOnly
+                  />
                 </div>
               </div>
+
+              {/* Zusatzversicherungstypen aus Produkten */}
+              {produkte.filter(p => p.zusatz_typ).length > 0 && (
+                <div className="px-3 pt-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Zusatzversicherungstypen</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {produkte.filter(p => p.zusatz_typ).map((p, i) => (
+                      <div key={i} className="p-2.5 rounded-lg border border-green-200 bg-green-50/40">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">{p.name}</p>
+                        <p className="text-sm font-semibold text-green-700">{p.zusatz_typ}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Products */}
               <div className="px-3 pt-3">
