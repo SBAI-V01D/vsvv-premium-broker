@@ -186,12 +186,17 @@ export default function ApplicationForm({ application, customers = [], onSave, o
         </div>
       )}
 
-      {/* Klassifizierungs-Info anzeigen */}
+      {/* Klassifizierungs-Info + Sparten-Locking anzeigen */}
       {classificationDebug && (
         <div className={`p-4 rounded-lg border ${application?.sparte ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
-          <p className={`text-sm font-medium ${application?.sparte ? 'text-green-700' : 'text-amber-700'}`}>
-            ✓ {classificationDebug.debug}
-          </p>
+          <div className="flex items-center gap-2 mb-2">
+            <p className={`text-sm font-medium flex-1 ${application?.sparte ? 'text-green-700' : 'text-amber-700'}`}>
+              ✓ {classificationDebug.debug}
+            </p>
+            {application?.sparte && (
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-semibold">🔒 LOCKED</span>
+            )}
+          </div>
           {classificationDebug.matchedKeywords?.length > 0 && (
             <p className={`text-xs mt-2 ${application?.sparte ? 'text-green-600' : 'text-amber-600'}`}>
               Erkannte Keywords: {classificationDebug.matchedKeywords.join(', ')}

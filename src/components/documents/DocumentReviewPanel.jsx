@@ -133,6 +133,10 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const [produkte, setProdukte] = useState([])
   // Original extracted values for change detection (learning)
   const originalRef = useRef(null)
+  // Sparten-Locking: after classification, lock = true
+  const [sparteLocked, setSparteLocked] = useState(false)
+  const [sparteDetectionMethod, setSparteDetectionMethod] = useState(null)
+  const [sparteOverwriteWarning, setSparteOverwriteWarning] = useState(null)
 
   // Matching
   const [matchedCustomer, setMatchedCustomer] = useState(null)
@@ -183,6 +187,13 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     // Apply learned corrections on top of normalized data
     const normalized = applyLearned(data.normalized || {})
     setExtraction({ ...data, normalized })
+    
+    // SPARTEN-LOCKING: Lock if sparte is set from extraction
+    if (normalized.sparte) {
+      setSparteLocked(true)
+      setSparteDetectionMethod(normalized.sparte_detection_method || 'extraction')
+    }
+    
     const flat = {
       first_name:                normalized.first_name,
       last_name:                 normalized.last_name,
@@ -200,6 +211,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       kassenmodell:              normalized.kassenmodell,
       zusatz_type:               normalized.zusatz_type,
       product_label:             normalized.product_label,
+      sparte:                    normalized.sparte, // May be null if no detection
     }
     const produkte_local = normalized.produkte || []
     setForm(flat)
@@ -255,11 +267,18 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     const kassenmodell        = flat.kassenmodell || normalized.kassenmodell
     const gesundheitsdeklaration = normalized.gesundheitsdeklaration ?? false
     const zahlungsintervall   = normalized.zahlungsintervall || null
+    
+    // SPARTEN-OVERWRITE-SCHUTZ: Keep locked sparte, don't derive new one
     const sparteFromNorm      = normalized.sparte || null
-    const sparte              = sparteFromNorm || (
-      productType === 'VVG' ? 'vvg_zusatz' :
-      productType === 'KVG + VVG' ? 'kvg_vvg_kombi' : 'kvg'
-    )
+    let sparte                = sparteFromNorm
+    
+    // If sparte was locked during extraction, use it – NO FALLBACK to derived
+    // If sparte is NULL, leave NULL (no default like 'kvg')
+    if (!sparte && sparteLocked && sparteDetectionMethod) {
+      // Sparte was locked but somehow became null – this shouldn't happen
+      console.warn('[Overwrite-Schutz] Sparte war locked, ist aber null geworden – BUG!')
+      setSparteOverwriteWarning('Sparte-Locking-Fehler: Ursprüngliche Sparte verloren!')
+    }
 
     // Customer matching (re-use already matched state)
     const activeCustomer = overrideCustomer || matchedCustomer
@@ -472,6 +491,14 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                 <p>{pipelineError}</p>
                 <button onClick={runExtract} className="underline mt-1">Erneut versuchen</button>
               </div>
+            </div>
+          )}
+
+          {/* Overwrite Warning */}
+          {sparteOverwriteWarning && (
+            <div className="mx-3 mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 text-xs text-red-700 flex-shrink-0">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <p className="font-semibold">{sparteOverwriteWarning}</p>
             </div>
           )}
 

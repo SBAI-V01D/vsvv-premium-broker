@@ -171,16 +171,22 @@ function normalizeData(raw) {
   const gesundheitsdeklaration = isHealth ? (raw?.versicherung?.gesundheitsdeklaration ?? false) : false;
 
   // Sparte mapping: 
-  // - Health insurance: sparte based on KVG/VVG split
-  // - Property/Liability: sparte = 'vvg_zusatz' (generic non-health)
-  let sparte;
+  // - Only set if clearly identifiable from products
+  // - NO DEFAULT! If uncertain, leave null for manual review
+  let sparte = null;
+  let sparteDetectionMethod = null;
+  
   if (!isHealth) {
     sparte = 'vvg_zusatz'; // Property/Liability/etc.
-  } else {
+    sparteDetectionMethod = 'non_health_keywords';
+  } else if (productType) {
     sparte = productType === 'VVG' ? 'vvg_zusatz'
            : productType === 'KVG + VVG' ? 'kvg_vvg_kombi'
-           : 'kvg';
+           : productType === 'KVG' ? 'kvg'
+           : null;
+    sparteDetectionMethod = productType ? 'product_type_derived' : null;
   }
+  // If still null (no products detected), leave it null – will be determined by classification
 
   // Product label (all product names joined)
   const productLabel = buildProductLabel(produkte);
@@ -223,7 +229,8 @@ function normalizeData(raw) {
     premium_yearly:         premiumYearly,
     age_group:              ageGroup,
     gesundheitsdeklaration,
-    sparte,
+    sparte,                 // NULL if uncertain (no default)
+    sparte_detection_method: sparteDetectionMethod, // Debug: how was sparte determined
   };
 }
 
