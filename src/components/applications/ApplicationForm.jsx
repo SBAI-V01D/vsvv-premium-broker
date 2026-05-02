@@ -50,6 +50,15 @@ export default function ApplicationForm({ application, customers = [], onSave, o
         sparte: application.sparte || application.insurance_type || '',
         sparte_data: application.sparte_data || {},
         kundentyp: application.kundentyp || 'privat',
+        estimated_premium_monthly: application.estimated_premium_monthly || '',
+        estimated_premium_yearly: application.estimated_premium_yearly || '',
+        requested_start_date: application.requested_start_date || '',
+        policy_number: application.policy_number || '',
+        contract_start_date: application.contract_start_date || '',
+        contract_end_date: application.contract_end_date || '',
+        commission_estimate: application.commission_estimate || '',
+        assigned_broker: application.assigned_broker || '',
+        notes: application.notes || '',
       }
     }
     return {
