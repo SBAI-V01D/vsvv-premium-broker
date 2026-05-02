@@ -480,17 +480,19 @@ export default function Applications() {
                       )}
                     </div>
 
-                    {/* Jahresprämie */}
+                    {/* Prämien */}
                     <div>
                       {app.estimated_premium_yearly ? (
                         <p className="text-sm font-semibold text-foreground">
-                          CHF {app.estimated_premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          CHF {app.estimated_premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/J.
                         </p>
-                      ) : app.estimated_premium_monthly ? (
-                        <p className="text-sm font-medium text-foreground">
+                      ) : null}
+                      {app.estimated_premium_monthly ? (
+                        <p className="text-sm text-muted-foreground">
                           CHF {app.estimated_premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/M.
                         </p>
-                      ) : (
+                      ) : null}
+                      {!app.estimated_premium_yearly && !app.estimated_premium_monthly && (
                         <span className="text-sm text-muted-foreground">–</span>
                       )}
                     </div>
