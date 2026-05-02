@@ -40,7 +40,7 @@ export default function CustomerDetail() {
   })
 
   const { data: allCustomers = [] } = useQuery({
-    queryKey: ['customers'],
+    queryKey: ['customers', id],
     queryFn: () => base44.entities.Customer.list(),
   })
 
