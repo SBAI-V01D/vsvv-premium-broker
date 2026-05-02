@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,17 +8,38 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Upload, FileText, ExternalLink } from 'lucide-react'
+import { Upload, FileText, ExternalLink, AlertCircle } from 'lucide-react'
 
 export default function Tasks() {
   const queryClient = useQueryClient()
   const [selectedTask, setSelectedTask] = useState(null)
-  const [formData, setFormData] = useState({ status: '', notes: '', file: null, due_date: '', completion_date: '' })
+  const [formData, setFormData] = useState({ status: '', notes: '', file: null, due_date: '', completion_date: '', assigned_to: '' })
   const [uploading, setUploading] = useState(false)
+  const [currentUser, setCurrentUser] = useState(null)
 
+  // Fetch current user
+  useEffect(() => {
+    const fetchUser = async () => {
+      const user = await base44.auth.me()
+      setCurrentUser(user)
+    }
+    fetchUser()
+  }, [])
+
+  // Fetch tasks assigned to current user
   const { data: tasks = [] } = useQuery({
-    queryKey: ['tasks'],
-    queryFn: () => base44.entities.Task.list('-due_date'),
+    queryKey: ['tasks', currentUser?.email],
+    queryFn: async () => {
+      if (!currentUser?.email) return []
+      const allTasks = await base44.entities.Task.list('-due_date')
+      return allTasks.filter(t => t.assigned_to === currentUser.email)
+    },
+    enabled: !!currentUser?.email,
+  })
+
+  const { data: brokers = [] } = useQuery({
+    queryKey: ['brokers'],
+    queryFn: () => base44.entities.Broker.filter({ is_active: true }),
   })
 
   const updateMutation = useMutation({
@@ -27,6 +48,7 @@ export default function Tasks() {
         status: data.status || selectedTask.status,
         notes: data.notes || selectedTask.notes,
         due_date: data.due_date || selectedTask.due_date,
+        assigned_to: data.assigned_to || selectedTask.assigned_to,
       }
       
       if (data.file) {
@@ -37,16 +59,16 @@ export default function Tasks() {
       return base44.entities.Task.update(selectedTask.id, updateData)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks', currentUser?.email] })
       setSelectedTask(null)
-      setFormData({ status: '', notes: '', file: null })
+      setFormData({ status: '', notes: '', file: null, due_date: '', completion_date: '', assigned_to: '' })
     },
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Task.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['tasks', currentUser?.email] })
       setSelectedTask(null)
     },
   })
@@ -67,7 +89,7 @@ export default function Tasks() {
 
   const handleTaskClick = (task) => {
     setSelectedTask(task)
-    setFormData({ status: task.status, notes: task.notes || '', file: null, due_date: task.due_date || '', completion_date: task.completion_date || '' })
+    setFormData({ status: task.status, notes: task.notes || '', file: null, due_date: task.due_date || '', completion_date: task.completion_date || '', assigned_to: task.assigned_to || '' })
   }
 
   const handleSave = () => {
@@ -78,11 +100,20 @@ export default function Tasks() {
   const inProgressTasksCount = inProgressTasks.length
   const completedTasksCount = completedTasks.length
 
+  if (!currentUser) {
+    return (
+      <div className="flex items-center justify-center gap-2 p-6 rounded-lg bg-amber-50 border border-amber-200 text-amber-700">
+        <AlertCircle className="w-4 h-4" />
+        <p className="text-sm">Authentifizierung wird überprüft...</p>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Aufgaben</h1>
-        <p className="text-muted-foreground mt-1">{tasks.length} Aufgaben insgesamt</p>
+        <h1 className="text-3xl font-bold">Meine Aufgaben</h1>
+        <p className="text-muted-foreground mt-1">{tasks.length} Aufgaben für Sie</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -208,6 +239,20 @@ export default function Tasks() {
                  onChange={(e) => setFormData(p => ({ ...p, completion_date: e.target.value }))}
                  className="mt-1"
                />
+              </div>
+
+              <div>
+               <Label>Zugewiesen an</Label>
+               <Select value={formData.assigned_to} onValueChange={(v) => setFormData(p => ({ ...p, assigned_to: v }))}>
+                 <SelectTrigger className="mt-1">
+                   <SelectValue />
+                 </SelectTrigger>
+                 <SelectContent>
+                   {brokers.map(b => (
+                     <SelectItem key={b.id} value={b.email || b.name}>{b.name}</SelectItem>
+                   ))}
+                 </SelectContent>
+               </Select>
               </div>
 
               <div>
