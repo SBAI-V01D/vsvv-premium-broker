@@ -13,100 +13,144 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'file_url erforderlich' }, { status: 400 });
     }
 
+    console.log(`[extractApplicationData] START file=${file_name}`);
+
     const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `Du bist ein Experte für Schweizer Versicherungsformulare. Analysiere dieses Dokument (Versicherungsantrag) und extrahiere alle relevanten Daten.
+      prompt: `Du bist ein Experte für Schweizer Versicherungsformulare. Analysiere dieses Dokument und extrahiere alle Daten in exakt der vorgegebenen JSON-Struktur.
 
-Extrahiere folgende Felder mit einem Konfidenzwert (0.0 - 1.0) pro Feld:
+KRITISCHE REGELN:
+- KEIN Feld leer lassen: wenn nicht vorhanden → null
+- Datumsformat: YYYY-MM-DD (z.B. 1985-03-15)
+- Prämie: nur Zahl ohne Währungssymbol (z.B. 142.05)
+- Telefonnummer: internationales Format (z.B. +41791234567)
+- E-Mail: validieren, bei ungültigem Format → null
+- confidence in "meta": Zahl 0-100 (Gesamtkonfidenz der Extraktion)
+- Sprache: Deutsch (CH) oder Französisch
 
-PERSONENDATEN:
-- first_name: Vorname
-- last_name: Nachname
-- birthdate: Geburtsdatum (Format: YYYY-MM-DD)
-- street: Strasse und Hausnummer
-- zip_code: Postleitzahl
-- city: Ort
-- canton: Kanton (2-Buchstaben-Kürzel wie ZH, BE, etc.)
-- phone: Telefonnummer
-- mobile: Mobilnummer
-- email: E-Mail-Adresse
-- ahv_number: AHV-Nummer (Format: 756.xxxx.xxxx.xx)
-- civil_status: Zivilstand (single/married/divorced/widowed)
-- profession: Beruf
+Dateiname: "${file_name || ''}"
 
-VERSICHERUNGSDATEN:
-- insurer: Versicherungsgesellschaft
-- insurance_type: Versicherungsart (KVG/VVG/Leben/Haftpflicht/Motorfahrzeug/Hausrat/BVG/Sonstige)
-- product: Produkt / Tarif
-- policy_number: Policen- oder Vertragsnummer
-- contract_start_date: Vertragsbeginn (YYYY-MM-DD)
-- contract_end_date: Vertragsende (YYYY-MM-DD)
-- estimated_premium_monthly: Monatsprämie in CHF (nur Zahl)
-- estimated_premium_yearly: Jahresprämie in CHF (nur Zahl)
-- payment_interval: Zahlungsintervall (monatlich/vierteljährlich/halbjährlich/jährlich)
-- franchise: Franchise falls KVG (z.B. "300", "500", "1000", "1500", "2000", "2500")
+Extrahiere GENAU folgende Felder:
 
-FIRMENDATEN (falls vorhanden):
-- company_name: Firmenname
-- company_uid: UID-Nummer
-- company_industry: Branche
-- company_contact: Ansprechpartner
+person:
+  vorname: Vorname der versicherten Person
+  nachname: Nachname der versicherten Person
+  geburtsdatum: Geburtsdatum (YYYY-MM-DD)
 
-Für jedes gefundene Feld gib einen Konfidenzwert an (wie sicher du dir bist).
-Wenn ein Feld nicht im Dokument vorhanden ist, setze den Wert auf null und Konfidenz auf 0.
+kontaktperson:
+  name: Name des Kontakts / Ansprechpartners (kann gleich wie person sein)
+  telefon: Telefon- oder Mobilnummer (+41...)
+  email: E-Mail-Adresse
 
-Sprache: Deutsch (CH), eventuell Französisch.
-Dateiname als Kontext: "${file_name || ''}"`,
+adresse:
+  strasse: Strasse und Hausnummer
+  plz: Postleitzahl
+  ort: Ort/Stadt
+
+versicherung:
+  gesellschaft: Name der Versicherungsgesellschaft
+  sparte: Versicherungsart (KVG/VVG/Leben/Haftpflicht/Motorfahrzeug/Hausrat/BVG/Sonstige)
+  beginn: Vertragsbeginn (YYYY-MM-DD)
+  praemie_monat: Monatsprämie als Zahl in CHF
+  zahlungsintervall: monatlich/vierteljährlich/halbjährlich/jährlich
+
+meta:
+  confidence: Gesamtkonfidenz 0-100`,
       file_urls: [file_url],
       response_json_schema: {
         type: 'object',
         properties: {
-          fields: {
+          person: {
             type: 'object',
             properties: {
-              first_name: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              last_name: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              birthdate: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              street: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              zip_code: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              city: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              canton: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              phone: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              mobile: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              email: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              ahv_number: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              civil_status: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              profession: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              insurer: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              insurance_type: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              product: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              policy_number: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              contract_start_date: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              contract_end_date: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              estimated_premium_monthly: { type: 'object', properties: { value: { type: ['number', 'null'] }, confidence: { type: 'number' } } },
-              estimated_premium_yearly: { type: 'object', properties: { value: { type: ['number', 'null'] }, confidence: { type: 'number' } } },
-              payment_interval: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              franchise: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              company_name: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              company_uid: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              company_industry: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-              company_contact: { type: 'object', properties: { value: { type: ['string', 'null'] }, confidence: { type: 'number' } } },
-            }
+              vorname: { type: ['string', 'null'] },
+              nachname: { type: ['string', 'null'] },
+              geburtsdatum: { type: ['string', 'null'] }
+            },
+            required: ['vorname', 'nachname', 'geburtsdatum']
           },
-          overall_confidence: { type: 'number' },
-          extraction_notes: { type: 'string' }
+          kontaktperson: {
+            type: 'object',
+            properties: {
+              name: { type: ['string', 'null'] },
+              telefon: { type: ['string', 'null'] },
+              email: { type: ['string', 'null'] }
+            },
+            required: ['name', 'telefon', 'email']
+          },
+          adresse: {
+            type: 'object',
+            properties: {
+              strasse: { type: ['string', 'null'] },
+              plz: { type: ['string', 'null'] },
+              ort: { type: ['string', 'null'] }
+            },
+            required: ['strasse', 'plz', 'ort']
+          },
+          versicherung: {
+            type: 'object',
+            properties: {
+              gesellschaft: { type: ['string', 'null'] },
+              sparte: { type: ['string', 'null'] },
+              beginn: { type: ['string', 'null'] },
+              praemie_monat: { type: ['number', 'null'] },
+              zahlungsintervall: { type: ['string', 'null'] }
+            },
+            required: ['gesellschaft', 'sparte', 'beginn', 'praemie_monat', 'zahlungsintervall']
+          },
+          meta: {
+            type: 'object',
+            properties: {
+              confidence: { type: 'number' }
+            },
+            required: ['confidence']
+          }
         },
-        required: ['fields', 'overall_confidence']
+        required: ['person', 'kontaktperson', 'adresse', 'versicherung', 'meta']
       },
       model: 'gemini_3_flash'
     });
 
+    const confidence = result?.meta?.confidence ?? 0;
+    const autoSave = confidence >= 85;
+    const requiresReview = confidence < 85;
+
+    console.log(`[extractApplicationData] RESULT confidence=${confidence} autoSave=${autoSave}`);
+    console.log(`[extractApplicationData] EXTRACTED JSON: ${JSON.stringify(result, null, 2)}`);
+
+    // Mapping log
+    console.log(`[extractApplicationData] MAPPING:`);
+    console.log(`  person.vorname → Customer.first_name: ${result?.person?.vorname}`);
+    console.log(`  person.nachname → Customer.last_name: ${result?.person?.nachname}`);
+    console.log(`  person.geburtsdatum → Customer.birthdate: ${result?.person?.geburtsdatum}`);
+    console.log(`  adresse.strasse → Customer.street: ${result?.adresse?.strasse}`);
+    console.log(`  adresse.plz → Customer.zip_code: ${result?.adresse?.plz}`);
+    console.log(`  adresse.ort → Customer.city: ${result?.adresse?.ort}`);
+    console.log(`  kontaktperson.telefon → Customer.phone: ${result?.kontaktperson?.telefon}`);
+    console.log(`  kontaktperson.email → Customer.email: ${result?.kontaktperson?.email}`);
+    console.log(`  versicherung.gesellschaft → Application.insurer: ${result?.versicherung?.gesellschaft}`);
+    console.log(`  versicherung.sparte → Application.sparte: ${result?.versicherung?.sparte}`);
+    console.log(`  versicherung.beginn → Application.contract_start_date: ${result?.versicherung?.beginn}`);
+    console.log(`  versicherung.praemie_monat → Application.estimated_premium_monthly: ${result?.versicherung?.praemie_monat}`);
+
+    // Check for missing critical fields
+    const missingFields = [];
+    if (!result?.person?.vorname) missingFields.push('person.vorname');
+    if (!result?.person?.nachname) missingFields.push('person.nachname');
+    if (!result?.versicherung?.gesellschaft) missingFields.push('versicherung.gesellschaft');
+    if (missingFields.length > 0) {
+      console.warn(`[extractApplicationData] MISSING FIELDS: ${missingFields.join(', ')}`);
+    }
+
     return Response.json({
       success: true,
-      fields: result.fields || {},
-      overall_confidence: result.overall_confidence || 0,
-      extraction_notes: result.extraction_notes || '',
+      structured: result,
+      confidence,
+      auto_save: autoSave,
+      requires_review: requiresReview,
+      missing_fields: missingFields,
     });
   } catch (error) {
+    console.error(`[extractApplicationData] ERROR: ${error.message}`);
     return Response.json({ success: false, error: error.message }, { status: 500 });
   }
 });
