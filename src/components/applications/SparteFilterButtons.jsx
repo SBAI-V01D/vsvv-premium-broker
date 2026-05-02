@@ -139,10 +139,10 @@ export default function SparteFilterButtons({ applications, activeKundentyp, onS
             {sortedSparten.map(([key, count]) => (
               <div key={key} className="flex items-center gap-2 min-w-0">
                 <div className="flex-1 min-w-0">
-                  <div className="flex justify-between text-xs mb-0.5">
-                    <span className="font-medium truncate text-foreground">{getSparteLabel(key)}</span>
-                    <span className="text-muted-foreground ml-2 flex-shrink-0">{count} ({Math.round(count / total * 100)}%)</span>
-                  </div>
+                  <div className="flex justify-between text-sm mb-0.5">
+                     <span className="font-bold truncate text-foreground">{getSparteLabel(key)}</span>
+                     <span className="text-muted-foreground ml-2 flex-shrink-0">{count} ({Math.round(count / total * 100)}%)</span>
+                   </div>
                   <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full bg-primary rounded-full"
