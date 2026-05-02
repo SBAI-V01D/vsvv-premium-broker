@@ -153,6 +153,16 @@ function normalizeData(raw) {
   // Product label (all product names joined)
   const productLabel = buildProductLabel(produkte);
 
+  // contract_end_date: use extracted value, or calculate from start date (31.12 of start year)
+  const contractStartDate = raw?.versicherung?.beginn ?? null;
+  let contractEndDate = raw?.versicherung?.ende ?? null;
+  if (!contractEndDate && contractStartDate) {
+    const startYear = new Date(contractStartDate).getFullYear();
+    if (!isNaN(startYear)) {
+      contractEndDate = `${startYear}-12-31`;
+    }
+  }
+
   return {
     // Person
     first_name: raw?.person?.vorname ?? null,
@@ -167,8 +177,8 @@ function normalizeData(raw) {
     city:       raw?.adresse?.ort ?? null,
     // Insurance
     insurer:             raw?.versicherung?.gesellschaft ?? null,
-    contract_start_date: raw?.versicherung?.beginn ?? null,
-    contract_end_date:   raw?.versicherung?.ende ?? null,
+    contract_start_date: contractStartDate,
+    contract_end_date:   contractEndDate,
     zahlungsintervall:   raw?.versicherung?.zahlungsintervall ?? null,
     franchise:           raw?.versicherung?.franchise ?? null,
     // Normalized / derived
@@ -252,8 +262,8 @@ SPITAL/ZUSATZ-TYPEN erkennen:
 
 VERSICHERUNGS-FELDER:
 - gesellschaft: Name der Versicherungsgesellschaft
-- beginn: Vertragsbeginn (YYYY-MM-DD)
-- ende: Vertragsende / Ablaufdatum falls angegeben (YYYY-MM-DD), sonst null
+- beginn: Vertragsbeginn (YYYY-MM-DD) – Felder: "Versicherungsbeginn", "Beginn", "gültig ab", "Eintritt", "ab"
+- ende: Vertragsablauf / Vertragsende (YYYY-MM-DD) – Felder: "Vertragsende", "Ablauf", "Ablaufdatum", "Ende", "Kündigung zum", "Kündigungstermin", "kündbar auf", "läuft ab am", "Laufzeit bis", "Ablauf der Versicherung", "Ende des Versicherungsjahres" – bei jährlicher Erneuerung: berechne das nächste Ablaufdatum aus dem Beginn (z.B. Beginn 01.01.2025 → Ablauf 31.12.2025) – sonst null
 - praemie_monat: Monatsprämie als Zahl (z.B. 142.05), null wenn nicht vorhanden
 - franchise: nur Zahl als String, z.B. "300", "2500" oder null
 - kassenmodell: Standard / Standardmodell / Hausarzt / HMO / Telemed / Flexmed oder null
