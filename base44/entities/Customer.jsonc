@@ -192,6 +192,25 @@
     "assigned_broker": {
       "type": "string",
       "description": "Zust\u00e4ndiger Broker (E-Mail)"
+    },
+    "portal_access_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Kundenportal aktiviert"
+    },
+    "portal_password_hash": {
+      "type": "string",
+      "description": "Passwort-Hash f\u00fcr Portal (intern)"
+    },
+    "portal_password_must_change": {
+      "type": "boolean",
+      "default": true,
+      "description": "Passwort muss beim ersten Login ge\u00e4ndert werden"
+    },
+    "portal_last_login": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Letzter Login ins Portal"
     }
   },
   "required": [
