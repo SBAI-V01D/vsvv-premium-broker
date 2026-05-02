@@ -11,6 +11,7 @@ import CustomerForm from '../components/customers/CustomerForm'
 import DocumentsTab from '../components/documents/DocumentsTab'
 import { STATUS_LABELS, INSURANCE_TYPE_LABELS, FAMILY_ROLE_LABELS, label } from '@/lib/labels'
 import { getSparteLabel } from '@/lib/insuranceSparten'
+import StatusBadge from '@/components/status/StatusBadge'
 
 export default function CustomerDetail() {
   const { id } = useParams()
@@ -125,55 +126,110 @@ export default function CustomerDetail() {
           {relatedContracts.length === 0 ? (
             <Card><CardContent className="p-6 text-center text-muted-foreground">Keine Verträge vorhanden</CardContent></Card>
           ) : (
-            <div className="space-y-3">
-              {relatedContracts.map(c => {
-                const relatedCustomer = allCustomers.find(x => x.id === c.customer_id)
-                const premiumMonthly = c.premium_monthly
-                const premiumYearly = c.premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12) : null)
-                return (
-                  <Card key={c.id}>
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">{relatedCustomer?.first_name} {relatedCustomer?.last_name}</p>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold text-sm">{c.insurer}</p>
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                                {getSparteLabel(c.sparte || c.insurance_type) || c.insurance_type}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
-                            {c.policy_number && <span>Police: {c.policy_number}</span>}
-                            {c.start_date && <span>ab {new Date(c.start_date).toLocaleDateString('de-CH')}</span>}
-                            {c.end_date && <span>bis {new Date(c.end_date).toLocaleDateString('de-CH')}</span>}
-                          </div>
-                          {c.sparte_data?.franchise && <p className="text-xs text-muted-foreground mt-1">Franchise: CHF {c.sparte_data.franchise}</p>}
-                          {c.sparte_data?.model && <p className="text-xs text-muted-foreground">Modell: {c.sparte_data.model}</p>}
+            <Card>
+              <CardContent className="p-0">
+                <div className="hidden md:grid grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  <div>Kunde</div>
+                  <div>Versicherer / Sparte</div>
+                  <div>Policen-Nr</div>
+                  <div>Produkt / Tarif</div>
+                  <div>Vertragsdaten</div>
+                  <div>Jahresprämie</div>
+                  <div>Status</div>
+                </div>
+                {relatedContracts.map((c, idx) => {
+                  const relatedCustomer = allCustomers.find(x => x.id === c.customer_id)
+                  const formatDate = (dateStr) => {
+                    if (!dateStr) return '–'
+                    return new Date(dateStr).toLocaleDateString('de-CH')
+                  }
+                  return (
+                    <div key={c.id} className={idx > 0 ? 'border-t border-border' : ''}>
+                      <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors">
+                        {/* Kunde */}
+                        <div className="min-w-0">
+                          <p className="font-semibold text-xs truncate">{relatedCustomer?.first_name} {relatedCustomer?.last_name}</p>
+                          {relatedCustomer?.ahv_number && (
+                            <p className="text-xs font-mono text-muted-foreground mt-0.5">{relatedCustomer.ahv_number}</p>
+                          )}
                         </div>
-                        <div className="text-right flex-shrink-0">
+
+                        {/* Versicherer / Sparte */}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-xs font-medium truncate">{c.insurer}</p>
+                          </div>
+                          {c.sparte || c.insurance_type ? (
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">{getSparteLabel(c.sparte || c.insurance_type)}</p>
+                          ) : null}
+                          {c.sparte_data?.franchise && (
+                            <p className="text-xs text-muted-foreground mt-0.5">Franchise: CHF {c.sparte_data.franchise}</p>
+                          )}
+                          {c.sparte_data?.model && (
+                            <p className="text-xs text-muted-foreground mt-0.5">Modell: {c.sparte_data.model}</p>
+                          )}
+                        </div>
+
+                        {/* Policen-Nr */}
+                        <div className="min-w-0">
+                          {c.policy_number && (
+                            <p className="text-xs font-medium">{c.policy_number}</p>
+                          )}
+                          {!c.policy_number && <span className="text-xs text-muted-foreground">–</span>}
+                        </div>
+
+                        {/* Produkt / Tarif */}
+                        <div className="min-w-0">
                           {c.product && (
-                            <p className="text-xs text-muted-foreground mb-2">{c.product}</p>
+                            <p className="text-xs font-medium">{c.product}</p>
                           )}
-                          {premiumMonthly && (
-                            <p className="text-sm text-muted-foreground">CHF {premiumMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/M.</p>
+                          {!c.product && <span className="text-xs text-muted-foreground">–</span>}
+                        </div>
+
+                        {/* Vertragsdaten */}
+                        <div>
+                          {c.start_date && (
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className="text-xs text-green-600 font-medium">{formatDate(c.start_date)}</span>
+                            </div>
                           )}
-                          {premiumYearly && (
-                            <p className="font-bold text-sm">CHF {premiumYearly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}/J.</p>
+                          {c.end_date && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-green-600 font-medium">{formatDate(c.end_date)}</span>
+                            </div>
                           )}
-                          <p className="text-xs mt-1">
-                            <span className={`px-2 py-0.5 rounded-full font-medium ${c.custom_status === 'aktiv' || c.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}>
-                              {c.custom_status || label(STATUS_LABELS, c.status)}
-                            </span>
-                          </p>
+                          {!c.start_date && !c.end_date && (
+                            <span className="text-xs text-muted-foreground">–</span>
+                          )}
+                        </div>
+
+                        {/* Jahresprämie */}
+                        <div>
+                          {c.premium_yearly ? (
+                            <p className="text-xs font-semibold text-foreground">
+                              CHF {c.premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/J.
+                            </p>
+                          ) : null}
+                          {c.premium_monthly ? (
+                            <p className="text-xs text-muted-foreground">
+                              CHF {c.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/M.
+                            </p>
+                          ) : null}
+                          {!c.premium_yearly && !c.premium_monthly && (
+                            <span className="text-xs text-muted-foreground">–</span>
+                          )}
+                        </div>
+
+                        {/* Status */}
+                        <div>
+                          <StatusBadge statusDef={{ label: c.custom_status || label(STATUS_LABELS, c.status) }} label={c.custom_status || label(STATUS_LABELS, c.status)} />
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
+                    </div>
+                  )
+                })}
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
