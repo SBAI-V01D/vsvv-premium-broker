@@ -1,13 +1,13 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AlertTriangle, CheckCircle2, Loader2, UserPlus, FileCheck, X, ChevronRight, Zap, Bug } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Loader2, UserPlus, FileCheck, X, ChevronRight, Zap, Bug, Package } from 'lucide-react'
 import { ALL_SPARTEN } from '@/lib/insuranceSparten'
 
-// ─── Field editor ────────────────────────────────────────────────────────────
+// ─── Simple editable field ────────────────────────────────────────────────────
 function Field({ label, value, onChange, warn }) {
   return (
     <div className={`p-2.5 rounded-lg border ${warn ? 'border-amber-300 bg-amber-50' : value ? 'border-green-200 bg-green-50/40' : 'border-border bg-muted/20'}`}>
@@ -15,12 +15,45 @@ function Field({ label, value, onChange, warn }) {
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         {warn && <AlertTriangle className="w-3 h-3 text-amber-500" />}
       </div>
-      <Input
-        value={value ?? ''}
-        onChange={e => onChange(e.target.value)}
-        className="h-7 text-sm"
-        placeholder="–"
-      />
+      <Input value={value ?? ''} onChange={e => onChange(e.target.value)} className="h-7 text-sm" placeholder="–" />
+    </div>
+  )
+}
+
+// ─── Product list display / edit ──────────────────────────────────────────────
+function ProdukteListe({ produkte, onChange }) {
+  const handleChange = (idx, key, val) => {
+    const updated = produkte.map((p, i) => i === idx ? { ...p, [key]: val } : p)
+    onChange(updated)
+  }
+  const handleAdd = () => onChange([...produkte, { typ: 'Zusatz', name: '' }])
+  const handleRemove = (idx) => onChange(produkte.filter((_, i) => i !== idx))
+
+  return (
+    <div className="space-y-1.5">
+      {produkte.map((p, i) => (
+        <div key={i} className="flex gap-1.5 items-center">
+          <select
+            value={p.typ}
+            onChange={e => handleChange(i, 'typ', e.target.value)}
+            className="h-7 text-xs rounded-md border border-input bg-transparent px-2 w-36 flex-shrink-0"
+          >
+            <option>Grundversicherung</option>
+            <option>Zusatz</option>
+            <option>Sonstige</option>
+          </select>
+          <Input
+            value={p.name}
+            onChange={e => handleChange(i, 'name', e.target.value)}
+            className="h-7 text-xs flex-1"
+            placeholder="Produktname"
+          />
+          <button onClick={() => handleRemove(i)} className="text-muted-foreground hover:text-destructive text-xs px-1">✕</button>
+        </div>
+      ))}
+      <button onClick={handleAdd} className="text-xs text-primary underline flex items-center gap-1 mt-1">
+        + Produkt hinzufügen
+      </button>
     </div>
   )
 }
@@ -28,17 +61,17 @@ function Field({ label, value, onChange, warn }) {
 // ─── Debug panel ─────────────────────────────────────────────────────────────
 function DebugPanel({ raw, mapping, missingFields }) {
   return (
-    <div className="mx-3 my-2 rounded-lg border border-slate-300 bg-slate-900 text-slate-100 text-xs overflow-auto max-h-64">
+    <div className="mx-3 my-2 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-xs overflow-auto max-h-56">
       <div className="px-3 py-1.5 border-b border-slate-700 font-semibold flex items-center gap-2">
         <Bug className="w-3 h-3" /> Debug Output
       </div>
       <div className="p-3 space-y-2">
         {missingFields?.length > 0 && (
-          <div className="text-red-400">⚠ Fehlende Felder: {missingFields.join(', ')}</div>
+          <div className="text-red-400">⚠ Fehlende Pflichtfelder: {missingFields.join(', ')}</div>
         )}
         <div className="text-slate-400 font-semibold">Extrahiertes JSON:</div>
         <pre className="whitespace-pre-wrap text-green-300">{JSON.stringify(raw, null, 2)}</pre>
-        <div className="text-slate-400 font-semibold mt-2">Mapping-Ergebnis:</div>
+        <div className="text-slate-400 font-semibold mt-2">Mapping:</div>
         <pre className="whitespace-pre-wrap text-yellow-300">{JSON.stringify(mapping, null, 2)}</pre>
       </div>
     </div>
@@ -48,8 +81,9 @@ function DebugPanel({ raw, mapping, missingFields }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const queryClient = useQueryClient()
-  const [extraction, setExtraction] = useState(null)    // raw API response
-  const [form, setForm] = useState(null)                // editable flat form state
+  const [extraction, setExtraction] = useState(null)
+  const [form, setForm] = useState(null)
+  const [produkte, setProdukte] = useState([])
   const [extracting, setExtracting] = useState(false)
   const [saving, setSaving] = useState(false)
   const [autoSaved, setAutoSaved] = useState(false)
@@ -62,36 +96,45 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     queryFn: () => base44.entities.Customer.list(),
   })
 
-  // ── Map structured response → flat form fields ───────────────────────────
+  // Pre-set customer from document if already linked
+  React.useEffect(() => {
+    if (document?.customer_id && customers.length > 0) {
+      const found = customers.find(c => c.id === document.customer_id)
+      if (found) setMatchCustomer(found)
+    }
+  }, [document?.customer_id, customers])
+
   const buildForm = (s) => ({
     first_name: s.person?.vorname ?? null,
-    last_name: s.person?.nachname ?? null,
-    birthdate: s.person?.geburtsdatum ?? null,
-    phone: s.kontaktperson?.telefon ?? null,
-    email: s.kontaktperson?.email ?? null,
-    street: s.adresse?.strasse ?? null,
-    zip_code: s.adresse?.plz ?? null,
-    city: s.adresse?.ort ?? null,
-    insurer: s.versicherung?.gesellschaft ?? null,
-    insurance_type: s.versicherung?.sparte ?? null,
+    last_name:  s.person?.nachname ?? null,
+    birthdate:  s.person?.geburtsdatum ?? null,
+    phone:      s.kontaktperson?.telefon ?? null,
+    email:      s.kontaktperson?.email ?? null,
+    street:     s.adresse?.strasse ?? null,
+    zip_code:   s.adresse?.plz ?? null,
+    city:       s.adresse?.ort ?? null,
+    insurer:    s.versicherung?.gesellschaft ?? null,
     contract_start_date: s.versicherung?.beginn ?? null,
     estimated_premium_monthly: s.versicherung?.praemie_monat ?? null,
-    payment_interval: s.versicherung?.zahlungsintervall ?? null,
+    franchise:      s.versicherung?.franchise ?? null,
+    kassenmodell:   s.versicherung?.kassenmodell ?? null,
   })
 
   const buildMapping = (f) => ({
-    'person.vorname → Customer.first_name': f?.first_name,
-    'person.nachname → Customer.last_name': f?.last_name,
-    'person.geburtsdatum → Customer.birthdate': f?.birthdate,
-    'kontaktperson.telefon → Customer.phone': f?.phone,
-    'kontaktperson.email → Customer.email': f?.email,
-    'adresse.strasse → Customer.street': f?.street,
-    'adresse.plz → Customer.zip_code': f?.zip_code,
-    'adresse.ort → Customer.city': f?.city,
-    'versicherung.gesellschaft → Application.insurer': f?.insurer,
-    'versicherung.sparte → Application.sparte': f?.insurance_type,
-    'versicherung.beginn → Application.contract_start_date': f?.contract_start_date,
-    'versicherung.praemie_monat → Application.estimated_premium_monthly': f?.estimated_premium_monthly,
+    'person.vorname → first_name': f?.first_name,
+    'person.nachname → last_name': f?.last_name,
+    'person.geburtsdatum → birthdate': f?.birthdate,
+    'adresse.strasse → street': f?.street,
+    'adresse.plz → zip_code': f?.zip_code,
+    'adresse.ort → city': f?.city,
+    'kontaktperson.telefon → phone': f?.phone,
+    'kontaktperson.email → email': f?.email,
+    'versicherung.gesellschaft → insurer': f?.insurer,
+    'versicherung.beginn → contract_start_date': f?.contract_start_date,
+    'versicherung.franchise → sparte_data.franchise': f?.franchise,
+    'versicherung.kassenmodell → sparte_data.model': f?.kassenmodell,
+    'versicherung.produkte → sparte_data.produkte': produkte,
+    'ageGroup → sparte_data.age_group': extraction?.age_group,
   })
 
   // ── Extraction ────────────────────────────────────────────────────────────
@@ -102,18 +145,18 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       file_name: document.name,
     })
     setExtracting(false)
-
     if (!res.data?.success) return
 
     const data = res.data
-    const flatForm = buildForm(data.structured)
+    const flat = buildForm(data.structured)
     setExtraction(data)
-    setForm(flatForm)
+    setForm(flat)
+    setProdukte(data.structured?.versicherung?.produkte || [])
 
-    // Auto-match customer by name
-    const fn = flatForm.first_name
-    const ln = flatForm.last_name
-    if (fn && ln) {
+    // Auto-match customer by extracted name
+    const fn = flat.first_name
+    const ln = flat.last_name
+    if (fn && ln && !matchCustomer) {
       const found = customers.find(c =>
         c.first_name?.toLowerCase() === fn.toLowerCase() &&
         c.last_name?.toLowerCase() === ln.toLowerCase()
@@ -121,34 +164,31 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       if (found) setMatchCustomer(found)
     }
 
-    // Auto-save if confidence ≥ 85 AND customer match found
-    if (data.auto_save && flatForm.first_name && flatForm.last_name) {
-      const found = customers.find(c =>
-        c.first_name?.toLowerCase() === (fn || '').toLowerCase() &&
-        c.last_name?.toLowerCase() === (ln || '').toLowerCase()
-      )
-      if (found) {
-        await doSave(flatForm, found.id, found)
+    // Auto-save if confidence ≥ 85 and customer already linked via document
+    if (data.auto_save && document.customer_id) {
+      const cust = customers.find(c => c.id === document.customer_id)
+      if (cust) {
+        await doSave(flat, data.structured?.versicherung?.produkte || [], data.age_group, cust.id, cust)
         setAutoSaved(true)
       }
     }
   }
 
-  // ── Save logic ────────────────────────────────────────────────────────────
-  const doSave = async (f, customerId, existingCustomer) => {
+  // ── Save ─────────────────────────────────────────────────────────────────
+  const doSave = async (f, prods, ageGroup, customerId, existingCustomer) => {
     setSaving(true)
     let cid = customerId
 
     if (!cid && createNew) {
       const newC = await base44.entities.Customer.create({
         first_name: f.first_name || '',
-        last_name: f.last_name || '',
-        birthdate: f.birthdate || undefined,
-        street: f.street || undefined,
-        zip_code: f.zip_code || undefined,
-        city: f.city || undefined,
-        phone: f.phone || undefined,
-        email: f.email || undefined,
+        last_name:  f.last_name || '',
+        birthdate:  f.birthdate || undefined,
+        street:     f.street || undefined,
+        zip_code:   f.zip_code || undefined,
+        city:       f.city || undefined,
+        phone:      f.phone || undefined,
+        email:      f.email || undefined,
         status: 'active',
       })
       cid = newC.id
@@ -161,13 +201,22 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       ? `${customer.first_name} ${customer.last_name}`
       : `${f.first_name || ''} ${f.last_name || ''}`.trim()
 
+    // Determine sparte
     const sparteMatch = ALL_SPARTEN.find(s =>
       s.label?.toLowerCase().includes((f.insurance_type || '').toLowerCase()) ||
       s.value?.toLowerCase() === (f.insurance_type || '').toLowerCase()
     )
-    const sparte = sparteMatch?.value || f.insurance_type || ''
+    const sparte = sparteMatch?.value || 'kvg'
 
-    await base44.entities.Application.create({
+    // Validation status
+    const missingRequired = !f.first_name || !f.last_name || !f.birthdate || !f.contract_start_date
+    const appStatus = missingRequired ? 'draft' : 'draft'
+    const appNotes = [
+      `Automatisch aus Dokument extrahiert: ${document.name}`,
+      missingRequired ? '⚠ Unvollständig – Pflichtfelder fehlen' : null,
+    ].filter(Boolean).join('\n')
+
+    const newApp = await base44.entities.Application.create({
       customer_id: cid,
       customer_name: customerName,
       insurer: f.insurer || 'Andere',
@@ -176,15 +225,23 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       contract_start_date: f.contract_start_date || undefined,
       estimated_premium_monthly: f.estimated_premium_monthly ? Number(f.estimated_premium_monthly) : undefined,
       sparte_data: {
-        payment_interval: f.payment_interval || undefined,
+        franchise:    f.franchise || undefined,
+        model:        f.kassenmodell || undefined,
+        age_group:    ageGroup || undefined,
+        produkte:     prods.length > 0 ? prods : undefined,
       },
-      status: 'draft',
-      notes: `Automatisch aus Dokument extrahiert: ${document.name}`,
+      status: appStatus,
+      custom_status: missingRequired ? 'unvollstaendig' : undefined,
+      notes: appNotes,
     })
 
+    // Link document to application and customer
     await base44.entities.Document.update(document.id, {
-      customer_id: cid,
+      customer_id:  cid,
       customer_name: customerName,
+      linked_application_id: newApp.id,
+      doc_type: 'antrag',
+      classification_status: 'klassifiziert',
     })
 
     queryClient.invalidateQueries({ queryKey: ['applications'] })
@@ -194,15 +251,17 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     onClose()
   }
 
-  const handleManualSave = () => doSave(form, matchCustomer?.id, matchCustomer)
+  const handleManualSave = () =>
+    doSave(form, produkte, extraction?.age_group, matchCustomer?.id, matchCustomer)
 
   const setField = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
 
   const confidence = extraction?.confidence ?? 0
-  const requiresReview = extraction?.requires_review ?? false
+  const status = extraction?.status ?? null
   const missingFields = extraction?.missing_fields ?? []
+  const ageGroup = extraction?.age_group
 
-  // ─── Render ─────────────────────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -226,7 +285,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
 
       {/* Split layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left: Document */}
+        {/* Left: Document preview */}
         <div className="w-1/2 border-r flex flex-col bg-muted/20">
           <div className="px-3 py-2 border-b text-xs font-semibold text-muted-foreground bg-muted/40">Originaldokument</div>
           <div className="flex-1 overflow-auto p-2">
@@ -240,18 +299,18 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
 
         {/* Right: Extraction panel */}
         <div className="w-1/2 flex flex-col overflow-hidden">
-          {/* Confidence bar */}
-          <div className="px-3 py-2 border-b bg-muted/40 flex items-center justify-between">
+          {/* Confidence + status bar */}
+          <div className="px-3 py-2 border-b bg-muted/40 flex items-center justify-between gap-2 flex-wrap">
             <span className="text-xs font-semibold text-muted-foreground">Extrahierte Daten</span>
             {extraction && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${confidence >= 85 ? 'bg-green-100 text-green-700' : confidence >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
                   {confidence >= 85 ? <CheckCircle2 className="w-3 h-3 inline mr-1" /> : <AlertTriangle className="w-3 h-3 inline mr-1" />}
-                  Konfidenz {confidence}%
+                  {confidence}%
                 </span>
-                {requiresReview && (
-                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">Prüfung erforderlich</span>
-                )}
+                {status === 'unvollstaendig' && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full border border-red-200">Unvollständig</span>}
+                {status === 'pruefung_erforderlich' && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">Prüfung erforderlich</span>}
+                {ageGroup && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{ageGroup}</span>}
               </div>
             )}
           </div>
@@ -263,7 +322,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                   <Loader2 className="w-10 h-10 animate-spin text-primary" />
                   <div className="text-center">
                     <p className="font-semibold">KI analysiert Dokument...</p>
-                    <p className="text-sm text-muted-foreground mt-1">Strukturierte Datenextraktion läuft</p>
+                    <p className="text-sm text-muted-foreground mt-1">Strukturierte Datenextraktion inkl. Produkte & Franchise</p>
                   </div>
                 </>
               ) : (
@@ -272,9 +331,9 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                     <FileCheck className="w-8 h-8 text-primary" />
                   </div>
                   <div className="text-center">
-                    <p className="font-semibold">Strukturierte Datenextraktion</p>
-                    <p className="text-sm text-muted-foreground mt-1">Alle Felder werden automatisch erkannt und ins Antragssystem übertragen</p>
-                    <p className="text-xs text-muted-foreground mt-1">Ab 85% Konfidenz: automatisches Speichern</p>
+                    <p className="font-semibold">Vollständige Datenextraktion</p>
+                    <p className="text-sm text-muted-foreground mt-1">Person, Adresse, Versicherung, Franchise, Modell & Produkte</p>
+                    <p className="text-xs text-muted-foreground mt-1">≥ 85% Konfidenz → automatisches Speichern</p>
                   </div>
                   <Button onClick={handleExtract} className="gap-2">
                     <Zap className="w-4 h-4" /> Extraktion starten
@@ -284,38 +343,34 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
             </div>
           ) : (
             <div className="flex-1 overflow-auto">
-              {/* Debug panel */}
               {showDebug && (
-                <DebugPanel
-                  raw={extraction.structured}
-                  mapping={buildMapping(form)}
-                  missingFields={missingFields}
-                />
+                <DebugPanel raw={extraction.structured} mapping={buildMapping(form)} missingFields={missingFields} />
               )}
 
-              {/* Auto-saved banner */}
+              {/* Banners */}
               {autoSaved && (
                 <div className="mx-3 mt-3 p-2.5 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-xs text-green-700">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Antrag wurde automatisch gespeichert (Konfidenz ≥ 85%)</span>
+                  <CheckCircle2 className="w-4 h-4" /> Antrag automatisch erstellt & Dokument verknüpft (Konfidenz ≥ 85%)
                 </div>
               )}
-
-              {/* Review warning */}
-              {requiresReview && (
+              {status === 'unvollstaendig' && (
+                <div className="mx-3 mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-xs text-red-700">
+                  <AlertTriangle className="w-4 h-4" /> Pflichtfelder fehlen: {missingFields.join(', ')} – bitte ergänzen.
+                </div>
+              )}
+              {status === 'pruefung_erforderlich' && (
                 <div className="mx-3 mt-3 p-2.5 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2 text-xs text-amber-700">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span>Konfidenz unter 85% – bitte Felder prüfen und manuell speichern.</span>
+                  <AlertTriangle className="w-4 h-4" /> Konfidenz unter 85% – bitte Felder prüfen und manuell speichern.
                 </div>
               )}
 
-              {/* Section: Person */}
+              {/* Person */}
               <div className="px-3 pt-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Personendaten</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <Field label="Vorname" value={form.first_name} onChange={v => setField('first_name', v)} />
-                  <Field label="Nachname" value={form.last_name} onChange={v => setField('last_name', v)} />
-                  <Field label="Geburtsdatum" value={form.birthdate} onChange={v => setField('birthdate', v)} />
+                  <Field label="Vorname *" value={form.first_name} onChange={v => setField('first_name', v)} warn={!form.first_name} />
+                  <Field label="Nachname *" value={form.last_name} onChange={v => setField('last_name', v)} warn={!form.last_name} />
+                  <Field label="Geburtsdatum *" value={form.birthdate} onChange={v => setField('birthdate', v)} warn={!form.birthdate} />
                   <Field label="Telefon" value={form.phone} onChange={v => setField('phone', v)} />
                   <Field label="E-Mail" value={form.email} onChange={v => setField('email', v)} />
                   <Field label="Strasse" value={form.street} onChange={v => setField('street', v)} />
@@ -324,27 +379,46 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                 </div>
               </div>
 
-              {/* Section: Insurance */}
+              {/* Insurance */}
               <div className="px-3 pt-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Versicherung</p>
                 <div className="grid grid-cols-2 gap-2">
                   <Field label="Gesellschaft" value={form.insurer} onChange={v => setField('insurer', v)} warn={!form.insurer} />
-                  <Field label="Sparte" value={form.insurance_type} onChange={v => setField('insurance_type', v)} />
-                  <Field label="Vertragsbeginn" value={form.contract_start_date} onChange={v => setField('contract_start_date', v)} />
+                  <Field label="Vertragsbeginn *" value={form.contract_start_date} onChange={v => setField('contract_start_date', v)} warn={!form.contract_start_date} />
                   <Field label="Monatsprämie (CHF)" value={form.estimated_premium_monthly} onChange={v => setField('estimated_premium_monthly', v)} />
-                  <Field label="Zahlungsintervall" value={form.payment_interval} onChange={v => setField('payment_interval', v)} />
+                  <Field label="Franchise" value={form.franchise} onChange={v => setField('franchise', v)} />
+                  <Field label="Kassenmodell" value={form.kassenmodell} onChange={v => setField('kassenmodell', v)} />
+                  {ageGroup && (
+                    <div className="p-2.5 rounded-lg border border-blue-200 bg-blue-50">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Altersgruppe</p>
+                      <p className="text-sm font-semibold text-blue-700">{ageGroup}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Customer matching */}
+              {/* Products */}
+              <div className="px-3 pt-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Package className="w-3.5 h-3.5 text-muted-foreground" />
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Produkte / Tarife</p>
+                </div>
+                {produkte.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic mb-2">Keine Produkte erkannt</p>
+                ) : null}
+                <ProdukteListe produkte={produkte} onChange={setProdukte} />
+              </div>
+
+              {/* Customer assignment */}
               <div className="mx-3 mt-3 p-3 border rounded-lg bg-card">
                 <p className="text-xs font-semibold mb-2">Kundenzuordnung</p>
                 {matchCustomer ? (
                   <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg">
                     <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
                     <div className="flex-1 text-xs">
-                      <p className="font-medium text-green-800">Kunde gefunden: {matchCustomer.first_name} {matchCustomer.last_name}</p>
-                      <button className="text-green-600 underline mt-0.5" onClick={() => { setMatchCustomer(null); setCreateNew(false) }}>Ändern</button>
+                      <p className="font-medium text-green-800">{matchCustomer.first_name} {matchCustomer.last_name}</p>
+                      <button className="text-green-600 underline mt-0.5"
+                        onClick={() => { setMatchCustomer(null); setCreateNew(false) }}>Ändern</button>
                     </div>
                   </div>
                 ) : createNew ? (
@@ -372,7 +446,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                 )}
               </div>
 
-              {/* Save button (only shown if not auto-saved) */}
+              {/* Save button */}
               {!autoSaved && (
                 <div className="mx-3 my-3">
                   <Button
@@ -382,7 +456,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                   >
                     {saving
                       ? <><Loader2 className="w-4 h-4 animate-spin" /> Speichern...</>
-                      : <><ChevronRight className="w-4 h-4" /> Antrag erstellen & speichern</>
+                      : <><ChevronRight className="w-4 h-4" /> Antrag erstellen & Dokument verknüpfen</>
                     }
                   </Button>
                   {!matchCustomer && !createNew && (
