@@ -1,7 +1,21 @@
 /**
- * Multi-stage customer matching with scoring.
- * Input: extracted form fields + full customers array
- * Output: { autoMatch, candidates, score }
+ * Multi-stage customer matching with scoring (0–100).
+ *
+ * Scoring spec:
+ *   Name (Vorname + Nachname) exact match  → 40 pts  (required base)
+ *   Geburtsdatum exact match               → +20 pts  (total 60)
+ *   PLZ / Adresse match                    → +20 pts  (total 80)
+ *   E-Mail OR Telefon match                → +20 pts  (total 100)
+ *
+ * Thresholds:
+ *   ≥ 90  → auto-assign
+ *   70–89 → show top-3 candidates
+ *   < 70  → no match
+ *
+ * Stage 1 (exact): Name + Birthdate + PLZ        → 80 → candidates
+ * Stage 1 + email/phone                           → 100 → auto
+ * Stage 2 (strong): Name + Birthdate              → 60 → near-match
+ * Stage 3 (fallback): Name + Email or Phone       → 60 → near-match
  */
 
 function normalize(str) {
@@ -10,15 +24,26 @@ function normalize(str) {
 
 function dateEqual(a, b) {
   if (!a || !b) return false
-  return normalize(a).slice(0, 10) === normalize(b).slice(0, 10)
+  // Accept YYYY-MM-DD and DD.MM.YYYY
+  const toISO = (s) => {
+    const d = normalize(s).slice(0, 10)
+    if (/^\d{2}\.\d{2}\.\d{4}$/.test(d)) {
+      const [day, month, year] = d.split('.')
+      return `${year}-${month}-${day}`
+    }
+    return d
+  }
+  return toISO(a) === toISO(b)
 }
 
 function scoreCustomer(c, f) {
-  let score = 0
-
   const nameMatch =
     normalize(c.first_name) === normalize(f.first_name) &&
     normalize(c.last_name) === normalize(f.last_name)
+
+  if (!nameMatch) return 0
+
+  let score = 40 // name baseline
 
   const birthdateMatch = dateEqual(c.birthdate, f.birthdate)
   const plzMatch = f.zip_code && normalize(c.zip_code) === normalize(f.zip_code)
@@ -28,22 +53,18 @@ function scoreCustomer(c, f) {
     normalize(c.mobile) === normalize(f.phone)
   )
 
-  if (!nameMatch) return 0 // name is mandatory base
-
-  score += 40 // name match baseline
   if (birthdateMatch) score += 20
   if (plzMatch) score += 20
-  if (emailMatch) score += 10
-  if (phoneMatch) score += 10
+  if (emailMatch || phoneMatch) score += 20
 
   return score
 }
 
 /**
  * Run matching across all customers.
- * @param {object} form - flat extracted form (first_name, last_name, birthdate, zip_code, email, phone)
- * @param {Array}  customers - full customer list
- * @returns {{ autoMatch: object|null, candidates: Array<{customer, score}>, topScore: number }}
+ * @param {object} form      - flat extracted fields
+ * @param {Array}  customers - full customer list (no pagination)
+ * @returns {{ autoMatch, candidates, topScore }}
  */
 export function matchCustomers(form, customers) {
   if (!form.first_name || !form.last_name) {
