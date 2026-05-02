@@ -189,14 +189,14 @@ function normalizeData(raw) {
   
   if (!isHealth) {
     // Detect specific property/liability type from product names
-    const productCombined = productNames.join(' ').toLowerCase();
-    if (productCombined.includes('hausrat') || productCombined.includes('household')) {
+    const productNamesList = produkte.map(p => p.name).join(' ').toLowerCase();
+    if (productNamesList.includes('hausrat') || productNamesList.includes('household')) {
       sparte = 'hausrat';
       sparteDetectionMethod = 'hausrat_keyword';
-    } else if (productCombined.includes('motorfahrzeug') || productCombined.includes('auto') || productCombined.includes('kfz')) {
+    } else if (productNamesList.includes('motorfahrzeug') || productNamesList.includes('auto') || productNamesList.includes('kfz')) {
       sparte = 'motorfahrzeug';
       sparteDetectionMethod = 'motorfahrzeug_keyword';
-    } else if (productCombined.includes('haftpflicht') || productCombined.includes('liability')) {
+    } else if (productNamesList.includes('haftpflicht') || productNamesList.includes('liability')) {
       sparte = 'haftpflicht';
       sparteDetectionMethod = 'haftpflicht_keyword';
     } else {
