@@ -161,7 +161,6 @@ export default function Documents() {
       {/* Document list */}
       <Card>
         <CardContent className="p-0">
-          {/* Table header */}
           <div className="hidden md:grid grid-cols-[2fr_1.5fr_1fr_1fr_1.2fr_auto] gap-3 px-4 py-2 border-b bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             <div>Dokument</div>
             <div>Kunde</div>
@@ -181,7 +180,6 @@ export default function Documents() {
                 key={doc.id}
                 className={`grid grid-cols-1 md:grid-cols-[2fr_1.5fr_1fr_1fr_1.2fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/20 transition-colors ${idx > 0 ? 'border-t' : ''}`}
               >
-                {/* Name */}
                 <div className="flex items-center gap-3 min-w-0">
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${doc.doc_type === 'antrag' ? 'bg-green-100' : 'bg-slate-100'}`}>
                     {isImage(doc.file_url)
@@ -197,27 +195,14 @@ export default function Documents() {
                   </div>
                 </div>
 
-                {/* Customer */}
-                <div className="text-sm text-muted-foreground truncate">
-                  {doc.customer_name || '–'}
-                </div>
+                <div className="text-sm text-muted-foreground truncate">{doc.customer_name || '–'}</div>
 
-                {/* Type badge */}
-                <div>
-                  <DocumentTypeBadge doc={doc} />
-                </div>
+                <div><DocumentTypeBadge doc={doc} /></div>
 
-                {/* Category */}
-                <div className="text-xs text-muted-foreground capitalize">
-                  {doc.category || '–'}
-                </div>
+                <div className="text-xs text-muted-foreground capitalize">{doc.category || '–'}</div>
 
-                {/* Date */}
-                <div className="text-xs text-muted-foreground">
-                  {formatDate(doc.created_date)}
-                </div>
+                <div className="text-xs text-muted-foreground">{formatDate(doc.created_date)}</div>
 
-                {/* Actions */}
                 <div className="flex items-center gap-1">
                   {doc.doc_type === 'antrag' && (
                     <Button
@@ -277,14 +262,12 @@ export default function Documents() {
         </CardContent>
       </Card>
 
-      {/* Upload dialog */}
       <DocumentUploadDialog
         open={uploadOpen}
         onOpenChange={setUploadOpen}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['documents'] })}
       />
 
-      {/* Review panel (Split-Screen) */}
       <Dialog open={!!reviewDoc} onOpenChange={(open) => { if (!open) setReviewDoc(null) }}>
         <DialogContent className="max-w-7xl w-[95vw] h-[90vh] p-0 overflow-hidden">
           {reviewDoc && (
