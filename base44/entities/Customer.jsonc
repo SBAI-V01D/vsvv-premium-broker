@@ -81,13 +81,24 @@
         "single",
         "married",
         "divorced",
-        "widowed"
+        "widowed",
+        "registered_partnership",
+        "dissolved_partnership"
       ],
       "description": "Zivilstand"
     },
     "profession": {
       "type": "string",
       "description": "Beruf"
+    },
+    "nationality": {
+      "type": "string",
+      "description": "Nationalit\u00e4t (L\u00e4ndercode, z.B. CH, DE, FR, IT)"
+    },
+    "drivers_license_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Datum F\u00fchrerausweis"
     },
     "risk_profile": {
       "type": "string",
@@ -116,6 +127,42 @@
       ],
       "default": "active",
       "description": "Status"
+    },
+    "mandate_status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive",
+        "pending",
+        "terminated"
+      ],
+      "default": "active",
+      "description": "Status Mandat"
+    },
+    "association_membership": {
+      "type": "string",
+      "enum": [
+        "vsvv",
+        "skv",
+        "reka",
+        "vfs",
+        "pro_life",
+        "none"
+      ],
+      "description": "Verbandzugeh\u00f6rigkeit"
+    },
+    "permit_type": {
+      "type": "string",
+      "enum": [
+        "b_permit",
+        "l_permit",
+        "c_permit",
+        "ec_permit",
+        "ci_permit",
+        "g_permit",
+        "none"
+      ],
+      "description": "Bewilligung"
     },
     "is_family_member": {
       "type": "boolean",

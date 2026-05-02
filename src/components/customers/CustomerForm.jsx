@@ -14,6 +14,42 @@ const FAMILY_ROLES = {
   parent: 'Eltern',
   other: 'Sonstiges',
 }
+const MANDATE_STATUSES = {
+  active: 'Aktiv',
+  inactive: 'Inaktiv',
+  pending: 'Ausstehend',
+  terminated: 'Beendet',
+}
+const ASSOCIATIONS = {
+  vsvv: 'VSVV',
+  skv: 'SKV',
+  reka: 'REKA',
+  vfs: 'VFS',
+  pro_life: 'Pro Life',
+  none: 'Keine',
+}
+const CIVIL_STATUSES = {
+  single: 'Ledig',
+  married: 'Verheiratet',
+  divorced: 'Geschieden',
+  widowed: 'Verwitwet',
+  registered_partnership: 'Eingetragene Partnerschaft',
+  dissolved_partnership: 'Aufgelöste Partnerschaft',
+}
+const PERMITS = {
+  b_permit: 'Aufenthaltsbewilligung (Kategorie B)',
+  l_permit: 'Kurzaufenthaltserlaubnis (Kategorie L)',
+  c_permit: 'Niederlassungsbewilligung (Kategorie C)',
+  ec_permit: 'Aufenthaltserlaubnis EU/EFTA',
+  ci_permit: 'Aufenthaltserlaubnis Grenzgänger',
+  g_permit: 'Aufenthaltserlaubnis Besucher',
+  none: 'Keine',
+}
+const COUNTRIES = [
+  'CH', 'DE', 'FR', 'IT', 'AT', 'BE', 'LU', 'NL', 'PL', 'ES', 'PT', 'GR', 'SE', 'NO', 'DK', 'FI',
+  'CZ', 'SK', 'HU', 'RO', 'BG', 'HR', 'SI', 'LT', 'LV', 'EE', 'GB', 'IE', 'US', 'CA', 'AU', 'NZ',
+  'CN', 'IN', 'JP', 'KR', 'SG', 'MY', 'TH', 'VN', 'ID', 'PH', 'BR', 'MX', 'ZA', 'AE', 'TR', 'RU',
+]
 
 export default function CustomerForm({ customer, primaryCustomers = [], onSave, onCancel, saving }) {
   const [form, setForm] = useState(customer || {
@@ -30,9 +66,14 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
     ahv_number: '',
     profession: '',
     civil_status: 'single',
+    nationality: 'CH',
+    drivers_license_date: '',
     risk_profile: 'medium',
     customer_type: 'private',
     status: 'active',
+    mandate_status: 'active',
+    association_membership: 'none',
+    permit_type: 'none',
     is_family_member: false,
     primary_customer_id: '',
     family_role: 'primary',
@@ -165,6 +206,22 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
 
       <div className="grid grid-cols-2 gap-3">
         <div>
+          <Label>Nationalität</Label>
+          <Select value={form.nationality} onValueChange={v => set('nationality', v)}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Führerausweis Datum</Label>
+          <Input type="date" value={form.drivers_license_date} onChange={e => set('drivers_license_date', e.target.value)} className="mt-1" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
           <Label>Beruf</Label>
           <Input value={form.profession} onChange={e => set('profession', e.target.value)} className="mt-1" />
         </div>
@@ -202,6 +259,45 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
               <SelectItem value="active">Aktiv</SelectItem>
               <SelectItem value="inactive">Inaktiv</SelectItem>
               <SelectItem value="prospect">Interessent</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Status Mandat</Label>
+          <Select value={form.mandate_status} onValueChange={v => set('mandate_status', v)}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {Object.entries(MANDATE_STATUSES).map(([key, label]) => (
+                <SelectItem key={key} value={key}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Verbandzugehörigkeit</Label>
+          <Select value={form.association_membership} onValueChange={v => set('association_membership', v)}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {Object.entries(ASSOCIATIONS).map(([key, label]) => (
+                <SelectItem key={key} value={key}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3">
+        <div>
+          <Label>Bewilligung</Label>
+          <Select value={form.permit_type} onValueChange={v => set('permit_type', v)}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {Object.entries(PERMITS).map(([key, label]) => (
+                <SelectItem key={key} value={key}>{label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
