@@ -133,6 +133,9 @@ export default function Applications() {
       metadata: JSON.stringify(metadata),
     })
 
+    // Update status_changed_at
+    const now = new Date().toISOString()
+
     // Auto-create contract if newly accepted and no contract linked yet
     let linkedContractId = app.linked_contract_id
     if (ACCEPTED_STATUSES.includes(status) && !ACCEPTED_STATUSES.includes(prevStatus) && !app.linked_contract_id) {
@@ -200,6 +203,7 @@ export default function Applications() {
       insurance_type: app.insurance_type,
       customer_id: app.customer_id,
       linked_contract_id: linkedContractId,
+      status_changed_at: now,
     })
     queryClient.invalidateQueries({ queryKey: ['applications'] })
     queryClient.invalidateQueries({ queryKey: ['contracts'] })
@@ -497,11 +501,16 @@ export default function Applications() {
                       )}
                     </div>
 
-                    {/* Status */}
+                    {/* Status + Datum */}
                     <div>
                       <button onClick={() => setStatusChanging(app)} className="hover:opacity-80 transition-opacity mb-1">
                         <StatusBadge statusDef={getStatusDef(app)} label={getStatusLabel(app)} />
                       </button>
+                      {app.status_changed_at && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(app.status_changed_at).toLocaleDateString('de-CH')}
+                        </p>
+                      )}
                       {app.sparte_data?.health_declaration && (
                         <div className="mt-1">
                           <p className={`text-xs font-medium ${app.sparte_data.health_declaration === 'Ja' ? 'text-orange-600' : 'text-green-600'}`}>

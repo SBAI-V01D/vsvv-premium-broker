@@ -65,6 +65,11 @@
       "type": "string",
       "description": "Dynamischer Status-Schl\u00fcssel (aus StatusDefinition)"
     },
+    "status_changed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Datum der letzten Status\u00e4nderung"
+    },
     "estimated_premium_monthly": {
       "type": "number",
       "description": "Gesch\u00e4tzte Monatspr\u00e4mie (CHF)"

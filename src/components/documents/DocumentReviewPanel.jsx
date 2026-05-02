@@ -338,6 +338,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
         },
         status: 'submitted',
         custom_status: 'in_pruefung',
+        status_changed_at: new Date().toISOString(),
         notes: appNotes,
       })
     } catch (err) {
