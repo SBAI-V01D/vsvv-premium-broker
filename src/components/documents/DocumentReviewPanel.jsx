@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   AlertTriangle, CheckCircle2, Loader2, UserPlus, X,
-  ChevronRight, Zap, Bug, Package, Users, Search, Circle, Shield
+  Zap, Bug, Package, Circle, Search
 } from 'lucide-react'
 import { ALL_SPARTEN } from '@/lib/insuranceSparten'
 import { matchCustomers } from '@/lib/customerMatcher'
@@ -188,9 +188,9 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const [matchedCustomer, setMatchedCustomer] = useState(null)
   const [matchScore, setMatchScore] = useState(0)
   const [matchCandidates, setMatchCandidates] = useState([])
-  const [matchMode, setMatchMode] = useState('pending') // pending|auto|candidates|none|confirmed|new|manual
-  const [createNew, setCreateNew] = useState(false)
+  const [matchMode, setMatchMode] = useState('pending') // pending|auto|auto_low|new_auto|manual
   const [applicationCreated, setApplicationCreated] = useState(null)
+  const [documentLinked, setDocumentLinked] = useState(null)
 
   const [showDebug, setShowDebug] = useState(false)
 
@@ -264,37 +264,45 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       : `${customers.length} durchsucht · kein Treffer`
     setStep('match', 'ok', matchDetail)
 
-    // STEP 3: Assign
-    if (autoMatch) {
-      setMatchedCustomer(autoMatch)
+    // STEP 3: Assign + auto-continue pipeline
+    const prods = data.structured?.versicherung?.produkte || []
+    const ag = data.age_group
+
+    if (topScore >= 80) {
+      // Score ≥ 80: auto-assign, no UI needed
+      setMatchedCustomer(candidates[0].customer)
       setMatchMode('auto')
-      setStep('assign', 'ok', `Automatisch: ${autoMatch.first_name} ${autoMatch.last_name} (Score ${topScore})`)
-    } else if (candidates.length > 0 && topScore >= 70) {
-      setMatchMode('candidates')
-      setStep('assign', 'pending', 'Manuelle Bestätigung erforderlich')
+      setStep('assign', 'ok', `Automatisch: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (Score ${topScore})`)
+      setProcessing(false)
+      await doSave(flat, prods, ag, candidates[0].customer.id, candidates[0].customer)
+    } else if (topScore >= 60) {
+      // Score 60–79: auto-assign with review flag
+      setMatchedCustomer(candidates[0].customer)
+      setMatchMode('auto_low')
+      setStep('assign', 'ok', `Auto-Zuweisung (Prüfen empfohlen): ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (Score ${topScore})`)
+      setProcessing(false)
+      await doSave(flat, prods, ag, candidates[0].customer.id, candidates[0].customer, true)
     } else {
-      setMatchMode('none')
-      setStep('assign', 'pending', 'Kein Match – neuen Kunden anlegen oder manuell suchen')
-    }
-
-    setProcessing(false)
-
-    // Auto-save only if confidence high enough AND auto-matched
-    if (data.auto_save && autoMatch) {
-      await doSave(flat, data.structured?.versicherung?.produkte || [], data.age_group, autoMatch.id, autoMatch)
+      // Score < 60: auto-create new customer
+      setMatchMode('new_auto')
+      setStep('assign', 'ok', 'Kein Match – neuer Kunde wird automatisch erstellt')
+      setProcessing(false)
+      await doSave(flat, prods, ag, null, null)
     }
   }
 
   // ── Save (Steps 4+5) ───────────────────────────────────────────────────────
-  const doSave = async (f, prods, ageGroup, customerId, existingCustomer) => {
+  const doSave = async (f, prods, ageGroup, customerId, existingCustomer, needsReview = false) => {
     setSaving(true)
     setStep('create', 'running')
     let cid = customerId
+    let resolvedCustomer = existingCustomer
 
-    if (!cid && createNew) {
+    // Auto-create new customer if no match
+    if (!cid) {
       const newC = await base44.entities.Customer.create({
-        first_name: f.first_name || '',
-        last_name:  f.last_name || '',
+        first_name: f.first_name || 'Unbekannt',
+        last_name:  f.last_name || 'Unbekannt',
         birthdate:  f.birthdate || undefined,
         street:     f.street || undefined,
         zip_code:   f.zip_code || undefined,
@@ -304,17 +312,11 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
         status: 'active',
       })
       cid = newC.id
-      setStep('assign', 'ok', `Neuer Kunde erstellt: ${f.first_name} ${f.last_name}`)
+      resolvedCustomer = newC
+      setStep('assign', 'ok', `Neuer Kunde automatisch erstellt: ${newC.first_name} ${newC.last_name}`)
     }
 
-    if (!cid) {
-      setStep('create', 'error', 'Keine Kunden-ID verfügbar')
-      setPipelineError('Bitte Kunden zuordnen oder neu anlegen.')
-      setSaving(false)
-      return
-    }
-
-    const customer = existingCustomer || customers.find(c => c.id === cid)
+    const customer = resolvedCustomer || customers.find(c => c.id === cid)
     const customerName = customer
       ? `${customer.first_name} ${customer.last_name}`
       : `${f.first_name || ''} ${f.last_name || ''}`.trim()
@@ -347,7 +349,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
           produkte:   prods.length > 0 ? prods : undefined,
         },
         status: 'draft',
-        custom_status: missingRequired ? 'unvollstaendig' : undefined,
+        custom_status: needsReview ? 'pruefung_erforderlich' : (missingRequired ? 'unvollstaendig' : undefined),
         notes: appNotes,
       })
     } catch (err) {
@@ -372,10 +374,12 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
         classification_status: 'klassifiziert',
       })
       setStep('link', 'ok', `Dokument → Antrag ${newApp.id}`)
+      setDocumentLinked(true)
     } catch (err) {
       setStep('link', 'error', err.message)
       setPipelineError(`Dokument konnte nicht verknüpft werden: ${err.message}`)
       setSaving(false)
+      setDocumentLinked(false)
       return
     }
 
@@ -384,23 +388,8 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     setSaving(false)
     setPipelineDone(true)
     onSaved?.()
-    onClose()
-  }
-
-  const handleManualSave = () =>
-    doSave(form, produkte, extraction?.age_group, matchedCustomer?.id, matchedCustomer)
-
-  const handleConfirmCandidate = (cust) => {
-    setMatchedCustomer(cust)
-    setMatchMode('confirmed')
-    setStep('assign', 'ok', `Manuell bestätigt: ${cust.first_name} ${cust.last_name}`)
-  }
-
-  const handleChangeCustomer = () => {
-    setMatchedCustomer(null)
-    setCreateNew(false)
-    setMatchMode('candidates')
-    setStep('assign', 'pending', 'Manuell ändern...')
+    // Auto-close after 1.5s so user can see the success state
+    setTimeout(() => onClose(), 1500)
   }
 
   const setField = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
@@ -554,112 +543,60 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                 <ProdukteListe produkte={produkte} onChange={setProdukte} />
               </div>
 
-              {/* Customer assignment – auto-first, fallback only when needed */}
+              {/* Customer assignment status – read-only, no interaction needed */}
+              <div className="mx-3 mt-3 space-y-2">
 
-              {/* AUTO assigned: just a small status line, no action needed */}
-              {(matchMode === 'auto' || matchMode === 'confirmed') && matchedCustomer && (
-                <div className="mx-3 mt-3 flex items-center gap-2 p-2.5 bg-green-50 border border-green-200 rounded-lg">
-                  <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  <div className="flex-1 text-xs">
-                    <p className="font-medium text-green-800">
-                      Kunde erkannt: {matchedCustomer.first_name} {matchedCustomer.last_name}
-                      {matchScore > 0 && <span className="ml-1 text-green-600 font-normal">({matchScore}%)</span>}
-                    </p>
-                    {matchedCustomer.birthdate && <span className="text-green-600">Geb. {matchedCustomer.birthdate}</span>}
-                    {matchedCustomer.email && <span className="text-green-600"> · {matchedCustomer.email}</span>}
-                  </div>
-                  <button className="text-xs text-muted-foreground underline flex-shrink-0" onClick={handleChangeCustomer}>Ändern</button>
-                </div>
-              )}
-
-              {/* FALLBACK: candidates (70–89) – needs confirmation */}
-              {matchMode === 'candidates' && (
-                <div className="mx-3 mt-3 p-3 border border-amber-200 rounded-lg bg-amber-50 space-y-2">
-                  <p className="text-xs font-semibold text-amber-800 flex items-center gap-1">
-                    <AlertTriangle className="w-3.5 h-3.5" /> Kunde nicht eindeutig erkannt – bitte bestätigen:
-                  </p>
-                  {matchCandidates.map(({ customer: c, score }) => (
-                    <div key={c.id} onClick={() => handleConfirmCandidate(c)}
-                      className="flex items-center gap-2 p-2 bg-white border rounded-lg hover:bg-muted/40 cursor-pointer">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${score >= 90 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {score}
-                      </div>
-                      <div className="flex-1 text-xs min-w-0">
-                        <p className="font-medium truncate">{c.first_name} {c.last_name}</p>
-                        <p className="text-muted-foreground truncate">{c.birthdate || ''}{c.zip_code ? ` · PLZ ${c.zip_code}` : ''}</p>
-                      </div>
-                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                {(matchMode === 'auto') && matchedCustomer && (
+                  <div className="flex items-center gap-2 p-2.5 bg-green-50 border border-green-200 rounded-lg">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <div className="flex-1 text-xs">
+                      <p className="font-medium text-green-800">
+                        Kunde automatisch zugeordnet: {matchedCustomer.first_name} {matchedCustomer.last_name}
+                        <span className="ml-1 text-green-600 font-normal">({matchScore}%)</span>
+                      </p>
+                      {matchedCustomer.birthdate && <span className="text-green-600">Geb. {matchedCustomer.birthdate}</span>}
                     </div>
-                  ))}
-                  <div className="border-t pt-2 flex items-center justify-between">
-                    <button className="text-xs text-primary underline" onClick={() => setMatchMode('manual')}>Anderen Kunden suchen</button>
-                    <button className="text-xs text-muted-foreground underline" onClick={() => { setCreateNew(true); setMatchMode('new') }}>Neuen Kunden erstellen</button>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* FALLBACK: no match */}
-              {matchMode === 'none' && (
-                <div className="mx-3 mt-3 p-3 border border-red-200 rounded-lg bg-red-50 space-y-2">
-                  <p className="text-xs font-semibold text-red-700 flex items-center gap-1">
-                    <AlertTriangle className="w-3.5 h-3.5" /> Kunde nicht erkannt
-                  </p>
-                  <div className="flex gap-3">
-                    <button className="text-xs text-primary underline flex items-center gap-1" onClick={() => setMatchMode('manual')}>
-                      <Search className="w-3 h-3" /> Kunden suchen
-                    </button>
-                    <span className="text-muted-foreground text-xs">·</span>
-                    <button className="text-xs text-primary underline flex items-center gap-1" onClick={() => { setCreateNew(true); setMatchMode('new') }}>
-                      <UserPlus className="w-3 h-3" /> Neuen Kunden anlegen
-                    </button>
+                {matchMode === 'auto_low' && matchedCustomer && (
+                  <div className="flex items-center gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                    <div className="flex-1 text-xs">
+                      <p className="font-medium text-amber-800">
+                        Kunde zugeordnet (Prüfung empfohlen): {matchedCustomer.first_name} {matchedCustomer.last_name}
+                        <span className="ml-1 text-amber-600 font-normal">({matchScore}%)</span>
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* FALLBACK: new customer preview */}
-              {matchMode === 'new' && createNew && (
-                <div className="mx-3 mt-3 flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
-                  <UserPlus className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                  <div className="flex-1 text-xs">
-                    <p className="font-medium text-blue-800">Neuer Kunde: {form.first_name} {form.last_name}</p>
-                    <p className="text-blue-600 text-xs">Wird beim Speichern automatisch erstellt</p>
+                {matchMode === 'new_auto' && (
+                  <div className="flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+                    <UserPlus className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    <p className="text-xs font-medium text-blue-800">Kein Match – neuer Kunde wird automatisch erstellt</p>
                   </div>
-                  <button className="text-xs text-muted-foreground underline" onClick={() => { setCreateNew(false); setMatchMode('none') }}>Abbrechen</button>
-                </div>
-              )}
+                )}
 
-              {/* FALLBACK: manual typeahead search */}
-              {matchMode === 'manual' && (
-                <div className="mx-3 mt-3 p-3 border rounded-lg bg-card space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground">Kunden suchen:</p>
-                  <CustomerTypeahead
-                    customers={customers.filter(c => !c.is_family_member)}
-                    onSelect={handleConfirmCandidate}
-                  />
-                  <div className="flex gap-2 pt-1">
-                    <button className="text-xs text-muted-foreground underline" onClick={() => setMatchMode(matchCandidates.length ? 'candidates' : 'none')}>Zurück</button>
-                    <span className="text-muted-foreground text-xs">·</span>
-                    <button className="text-xs text-primary underline flex items-center gap-1" onClick={() => { setCreateNew(true); setMatchMode('new') }}>
-                      <UserPlus className="w-3 h-3" /> Neuen Kunden anlegen
-                    </button>
+                {applicationCreated === true && (
+                  <div className="flex items-center gap-2 p-2.5 bg-green-50 border border-green-200 rounded-lg">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <p className="text-xs font-medium text-green-800">Antrag erstellt</p>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Save button */}
-              <div className="mx-3 my-3">
-                <Button
-                  className="w-full gap-2"
-                  onClick={handleManualSave}
-                  disabled={saving || (!matchedCustomer && matchMode !== 'new')}
-                >
-                  {saving
-                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Verarbeitung läuft...</>
-                    : <><Zap className="w-4 h-4" /> Antrag erstellen & Dokument verknüpfen</>
-                  }
-                </Button>
-                {!matchedCustomer && matchMode !== 'new' && (
-                  <p className="text-xs text-muted-foreground text-center mt-1">Bitte Kunden zuordnen oder neu anlegen</p>
+                {documentLinked === true && (
+                  <div className="flex items-center gap-2 p-2.5 bg-green-50 border border-green-200 rounded-lg">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                    <p className="text-xs font-medium text-green-800">Dokument verknüpft</p>
+                  </div>
+                )}
+
+                {saving && (
+                  <div className="flex items-center gap-2 p-2.5 bg-muted/40 border rounded-lg">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary flex-shrink-0" />
+                    <p className="text-xs text-muted-foreground">Antrag wird erstellt und Dokument verknüpft...</p>
+                  </div>
                 )}
               </div>
 

@@ -8,14 +8,9 @@
  *   E-Mail OR Telefon match                → +20 pts  (total 100)
  *
  * Thresholds:
- *   ≥ 90  → auto-assign
- *   70–89 → show top-3 candidates
- *   < 70  → no match
- *
- * Stage 1 (exact): Name + Birthdate + PLZ        → 80 → candidates
- * Stage 1 + email/phone                           → 100 → auto
- * Stage 2 (strong): Name + Birthdate              → 60 → near-match
- * Stage 3 (fallback): Name + Email or Phone       → 60 → near-match
+ *   ≥ 80  → auto-assign (high confidence)
+ *   60–79 → auto-assign with review flag
+ *   < 60  → no match → auto-create new customer
  */
 
 function normalize(str) {
@@ -80,7 +75,7 @@ export function matchCustomers(form, customers) {
   const topScore = scored[0]?.score ?? 0
 
   return {
-    autoMatch: topScore >= 90 ? scored[0].customer : null,
+    autoMatch: topScore >= 80 ? scored[0].customer : null,
     candidates: scored,
     topScore,
   }
