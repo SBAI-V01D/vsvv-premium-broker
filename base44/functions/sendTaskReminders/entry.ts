@@ -16,14 +16,18 @@ Deno.serve(async (req) => {
       if (!task.assigned_to) continue
 
       try {
+        // assigned_to contains broker email
+        const brokerEmail = task.assigned_to
+        
         await base44.integrations.Core.SendEmail({
-          to: task.assigned_to,
+          to: brokerEmail,
           subject: `Erinnerung: Aufgabe fällig – ${task.title}`,
-          body: `Liebe/r Kolleg/in,\n\nDie folgende Aufgabe ist heute fällig oder überfällig:\n\n${task.title}\n\nPriorität: ${task.priority}\n\nBitte kümmern Sie sich darum.`,
+          body: `Liebe/r Kolleg/in,\n\nDie folgende Aufgabe ist heute fällig oder überfällig:\n\nTitel: ${task.title}\nPriorität: ${task.priority || 'medium'}\n${task.customer_name ? `Kunde: ${task.customer_name}` : ''}\n\nBitte kümmern Sie sich darum.`,
         })
         reminders_sent++
+        console.log(`Reminder sent to ${brokerEmail} for task: ${task.title}`)
       } catch (error) {
-        console.error(`Failed to send reminder to ${task.assigned_to}:`, error.message)
+        console.error(`Failed to send reminder to ${task.assigned_to}: ${error.message}`)
       }
     }
 
