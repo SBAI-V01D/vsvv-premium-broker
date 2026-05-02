@@ -58,13 +58,17 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
         })
 
         // Save document with classification metadata
+        // Normalize confidence to 0-100 scale
+        const rawConfidence = classification.data?.confidence ?? 0
+        const normalizedConfidence = rawConfidence > 1 ? rawConfidence : rawConfidence * 100
+
         const doc = await base44.entities.Document.create({
           name: form.name,
           file_url,
           category: 'application',
           doc_type: 'antrag',
-          classification_status: classification.data?.confidence > 0.5 ? 'klassifiziert' : 'pruefung_erforderlich',
-          classification_confidence: classification.data?.confidence,
+          classification_status: normalizedConfidence >= 80 ? 'klassifiziert' : 'ausstehend',
+          classification_confidence: normalizedConfidence,
           notes: form.notes || undefined,
           uploaded_by: 'broker',
         })

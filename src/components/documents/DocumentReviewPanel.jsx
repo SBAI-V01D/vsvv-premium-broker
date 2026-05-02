@@ -104,7 +104,7 @@ function DebugPanel({ raw, candidates, totalCustomers, missingFields }) {
 function getFieldConfidence(value, fieldKey, missingFields, confidence) {
   if (!value) return 'missing'
   if (missingFields?.includes(fieldKey)) return 'missing'
-  if (confidence < 85) return 'low'
+  if (confidence < 80) return 'low'
   return 'high'
 }
 
@@ -226,10 +226,9 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       setStep('match', 'ok', `${customers.length} geprüft · kein Match → neuer Kunde`)
     }
 
-    // STEP 3: Auto-confirm if high confidence + no missing fields + safe match
-    const canAutoConfirm = data.confidence >= 85
-      && (data.missing_fields?.length ?? 0) === 0
-      && (topScore >= 80 || topScore === 0) // safe: auto match or new customer
+    // STEP 3: Auto-confirm if confidence >= 80 (no manual review blocker)
+    // Confidence values are normalized to 0-100 scale
+    const canAutoConfirm = data.confidence >= 80
 
     if (canAutoConfirm) {
       setStep('review', 'ok', `Automatisch bestätigt (Konfidenz ${data.confidence}%)`)
@@ -237,10 +236,8 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       setProcessing(false)
       setTimeout(() => doSaveWithData(normalized, flat, produkte_local, topScore >= 80 ? 'auto' : 'new_auto'), 0)
     } else {
-      const reason = data.confidence < 85 ? `Konfidenz ${data.confidence}% < 85%`
-        : (data.missing_fields?.length ?? 0) > 0 ? `${data.missing_fields.length} Felder fehlen`
-        : `Unsicherer Match (${topScore}%)`
-      setStep('review', 'waiting', `Manuelle Prüfung: ${reason}`)
+      // For confidence < 80: still proceed to review, but allow auto-save (no blocking)
+      setStep('review', 'ok', `Bereit zur Überprüfung (Konfidenz ${data.confidence}%)`)
       setPhase('review')
       setProcessing(false)
     }
@@ -402,8 +399,9 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
 
   const setField = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
 
-  // Confidence helpers
-  const confidence = extraction?.confidence ?? 0
+  // Confidence helpers (normalize to 0-100 scale if needed)
+  const rawConfidence = extraction?.confidence ?? 0
+  const confidence = rawConfidence > 1 ? rawConfidence : rawConfidence * 100
   const missingFields = extraction?.missing_fields ?? []
 
   const fc = (key, value) => getFieldConfidence(value, key, missingFields, confidence)
@@ -515,9 +513,9 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
 
               {/* Confidence + status badges */}
               <div className="px-3 pt-3 flex items-center gap-2 flex-wrap">
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${confidence >= 85 ? 'bg-green-100 text-green-700' : confidence >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
-                  {confidence >= 85 ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
-                  Konfidenz {confidence}%
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${confidence >= 80 ? 'bg-green-100 text-green-700' : confidence >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                  {confidence >= 80 ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+                  Konfidenz {Math.round(confidence)}%
                 </span>
                 {ageGroup && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{ageGroup}</span>}
                 {productType && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">{productType}</span>}
