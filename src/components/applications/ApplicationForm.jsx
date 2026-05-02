@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { DialogFooter } from '@/components/ui/dialog'
-import { ALL_SPARTEN, SPARTEN_PRIVAT, SPARTEN_FIRMA, getFieldsForSparte, FRANCHISE_OPTIONS } from '@/lib/insuranceSparten'
+import { ALL_SPARTEN, SPARTEN_PRIVAT, SPARTEN_FIRMA, getFieldsForSparte, FRANCHISE_OPTIONS, getSparteLabel } from '@/lib/insuranceSparten'
 
 // Commission estimates by sparte
 const COMMISSION_ESTIMATES = {
@@ -100,6 +100,12 @@ export default function ApplicationForm({ application, customers = [], onSave, o
   const primaryCustomers = customers.filter(c => !c.is_family_member)
   const sparteFields = getFieldsForSparte(form.sparte)
   const franchiseOptions = FRANCHISE_OPTIONS[form.sparte_data?.age_group] || FRANCHISE_OPTIONS.default
+
+  // Determine which field groups to show based on sparte
+  const isHealthInsurance = ['kvg', 'kvg_vvg_kombi', 'vvg_zusatz'].includes(form.sparte)
+  const isHouseholdInsurance = ['hausrat', 'gebaude_privat'].includes(form.sparte)
+  const isMotorVehicle = form.sparte === 'motorfahrzeug'
+  const isLife = form.sparte && form.sparte.startsWith('leben')
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -215,7 +221,13 @@ export default function ApplicationForm({ application, customers = [], onSave, o
       {/* Dynamische Sparten-Felder */}
       {sparteFields.length > 0 && (
         <div className="p-4 bg-muted/30 rounded-lg border border-border space-y-4">
-          <p className="text-sm font-semibold text-foreground">Spartenspezifische Angaben</p>
+          <p className="text-sm font-semibold text-foreground">
+            {isHealthInsurance && '🏥 Krankenversicherung – Spezifische Angaben'}
+            {isHouseholdInsurance && '🏠 Haushaltsversicherung – Spezifische Angaben'}
+            {isMotorVehicle && '🚗 Motorfahrzeug – Spezifische Angaben'}
+            {isLife && '📋 Lebensversicherung – Spezifische Angaben'}
+            {!isHealthInsurance && !isHouseholdInsurance && !isMotorVehicle && !isLife && 'Spartenspezifische Angaben'}
+          </p>
           <div className="grid grid-cols-2 gap-3">
             {sparteFields.map(field => (
               <div key={field.key}>
@@ -252,6 +264,19 @@ export default function ApplicationForm({ application, customers = [], onSave, o
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Info: Was ist versteckt basierend auf Sparte */}
+      {form.sparte && !sparteFields.length && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+          <p className="font-medium">✓ Sparte erkannt: {getSparteLabel(form.sparte)}</p>
+          <p className="text-xs mt-1">
+            {isHealthInsurance && 'Felder für Franchise, Modell und Altersgruppe sind verfügbar.'}
+            {isHouseholdInsurance && 'Keine zusätzlichen Felder erforderlich – Basis-Daten ausreichend.'}
+            {isMotorVehicle && 'Fahrzeug- und Haftpflicht-Daten können hinzugefügt werden.'}
+            {isLife && 'Altersgruppe und Auszahlungsoptionen verfügbar.'}
+          </p>
         </div>
       )}
 

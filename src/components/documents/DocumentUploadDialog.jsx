@@ -43,17 +43,63 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
 
     const { file_url } = await base44.integrations.Core.UploadFile({ file })
 
-    // For Antrag: save as antrag, customer matching happens in DocumentReviewPanel
-    // For Anlage: save directly as anlage
-    await base44.entities.Document.create({
-      name: form.name,
-      file_url,
-      category: uploadMode === 'antrag' ? 'application' : 'other',
-      doc_type: uploadMode,
-      classification_status: uploadMode === 'antrag' ? 'ausstehend' : 'klassifiziert',
-      notes: form.notes || undefined,
-      uploaded_by: 'broker',
-    })
+    // For Antrag: trigger sparte classification and application extraction
+    if (uploadMode === 'antrag') {
+      try {
+        // Extract text from document (using backend function)
+        const extracted = await base44.functions.invoke('extractApplicationData', { 
+          file_url,
+          fileName: form.name
+        })
+
+        // Classify sparte from extracted data
+        const classification = await base44.functions.invoke('classifySparteFromDocument', {
+          extractedText: extracted.data?.text || ''
+        })
+
+        // Save document with classification metadata
+        const doc = await base44.entities.Document.create({
+          name: form.name,
+          file_url,
+          category: 'application',
+          doc_type: 'antrag',
+          classification_status: classification.data?.confidence > 0.5 ? 'klassifiziert' : 'pruefung_erforderlich',
+          classification_confidence: classification.data?.confidence,
+          notes: form.notes || undefined,
+          uploaded_by: 'broker',
+        })
+
+        // Store inferred sparte in document metadata for later use
+        if (classification.data?.sparte) {
+          await base44.entities.Document.update(doc.id, {
+            notes: (form.notes ? form.notes + ' | ' : '') + `[SPARTE: ${classification.data.sparte}]`
+          })
+        }
+      } catch (error) {
+        console.error('Classification error:', error)
+        // Fall back to basic document creation if classification fails
+        await base44.entities.Document.create({
+          name: form.name,
+          file_url,
+          category: 'application',
+          doc_type: 'antrag',
+          classification_status: 'ausstehend',
+          notes: form.notes || undefined,
+          uploaded_by: 'broker',
+        })
+      }
+    } else {
+      // For Anlage: save directly as anlage
+      await base44.entities.Document.create({
+        name: form.name,
+        file_url,
+        category: 'other',
+        doc_type: uploadMode,
+        classification_status: 'klassifiziert',
+        notes: form.notes || undefined,
+        uploaded_by: 'broker',
+      })
+    }
 
     setUploading(false)
     onSuccess()
