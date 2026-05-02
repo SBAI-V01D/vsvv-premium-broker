@@ -38,6 +38,35 @@
       ],
       "description": "Kategorie"
     },
+    "doc_type": {
+      "type": "string",
+      "enum": [
+        "antrag",
+        "anlage",
+        "unbekannt"
+      ],
+      "default": "unbekannt",
+      "description": "Klassifizierungstyp: antrag oder anlage"
+    },
+    "classification_status": {
+      "type": "string",
+      "enum": [
+        "ausstehend",
+        "klassifiziert",
+        "pruefung_erforderlich",
+        "manuell"
+      ],
+      "default": "ausstehend",
+      "description": "Status der Klassifizierung"
+    },
+    "classification_confidence": {
+      "type": "number",
+      "description": "Konfidenz der automatischen Klassifizierung (0-1)"
+    },
+    "classification_reason": {
+      "type": "string",
+      "description": "Begr\u00fcndung der Klassifizierung"
+    },
     "linked_contract_id": {
       "type": "string",
       "description": "Verkn\u00fcpfte Vertrags-ID"
