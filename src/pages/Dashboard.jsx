@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Users, FileText, ClipboardList, CheckCircle2, Download } from 'lucide-react'
+import { Users, FileText, ClipboardList, CheckCircle2, Download, TrendingUp } from 'lucide-react'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -256,6 +256,9 @@ export default function Dashboard() {
     link.click()
   }
 
+  // Calculate total expected commission from applications
+  const totalExpectedCommission = applications.reduce((sum, app) => sum + (app.commission_estimate || 0), 0)
+
   const stats = [
     { label: 'Kunden', value: customers.length, icon: Users, color: 'bg-blue-50 text-blue-600', path: '/kunden' },
     { label: 'Aktive Verträge', value: activeContracts.length, icon: FileText, color: 'bg-green-50 text-green-600', path: '/vertraege' },
@@ -400,7 +403,23 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
-      </div>
+
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/antraege')}>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>Gesamte erwartete Provision</CardTitle>
+              <TrendingUp className="w-5 h-5 text-primary" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="text-4xl font-bold text-primary">CHF {totalExpectedCommission.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <p className="text-sm text-muted-foreground">aus {applications.length} Anträgen</p>
+            <div className="text-xs text-muted-foreground pt-2 border-t">
+              <div>Ø pro Antrag: CHF {(applications.length > 0 ? totalExpectedCommission / applications.length : 0).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            </div>
+          </CardContent>
+        </Card>
+        </div>
 
 
 

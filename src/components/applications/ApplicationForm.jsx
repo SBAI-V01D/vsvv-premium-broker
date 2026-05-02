@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Input } from '@/components/ui/input'
@@ -8,6 +9,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { DialogFooter } from '@/components/ui/dialog'
 import { ALL_SPARTEN, SPARTEN_PRIVAT, SPARTEN_FIRMA, getFieldsForSparte, FRANCHISE_OPTIONS } from '@/lib/insuranceSparten'
+
+// Commission estimates by sparte
+const COMMISSION_ESTIMATES = {
+  'kvg': 500.00,                    // Krankenversicherung
+  'kvg_vvg_kombi': 500.00,          // KVG + VVG
+  'vvg_zusatz': 500.00,             // VVG Zusatz
+  'hausrat': 200.00,                // Haushaltsversicherung
+  'motorfahrzeug': 400.00,          // Motorfahrzeugversicherung
+  'rechtsschutz': 350.00,           // Rechtschutzversicherung
+  'gebaueude': 200.00,              // Gebäude
+  'leben': 300.00,                  // Leben
+  'haftpflicht': 200.00,            // Haftpflicht
+  'unfall': 300.00,                 // Unfall
+  'default': 300.00,                // Standard
+}
 
 const SWISS_INSURERS = [
   'Allianz','Axa','Baloise','CSS','Concordia','Die Mobiliar','Elvia','Generali',
@@ -60,7 +76,17 @@ export default function ApplicationForm({ application, customers = [], onSave, o
 
   const selectedCustomer = customers.find(c => c.id === form.customer_id)
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
-  const setSparte = (v) => setForm(prev => ({ ...prev, sparte: v, insurance_type: v, sparte_data: {} }))
+  const setSparte = (v) => {
+    // Auto-set commission estimate based on sparte
+    const commission = COMMISSION_ESTIMATES[v] || COMMISSION_ESTIMATES.default
+    setForm(prev => ({ 
+      ...prev, 
+      sparte: v, 
+      insurance_type: v, 
+      sparte_data: {},
+      commission_estimate: commission
+    }))
+  }
   const setSparteData = (k, v) => setForm(prev => ({ ...prev, sparte_data: { ...prev.sparte_data, [k]: v } }))
 
   const primaryCustomers = customers.filter(c => !c.is_family_member)
