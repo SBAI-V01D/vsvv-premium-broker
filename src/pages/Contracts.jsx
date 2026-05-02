@@ -171,12 +171,20 @@ export default function Contracts() {
                       )}
                     </div>
 
-                    {/* Produkt / Policen-Nr */}
+                    {/* Sparte / Policen-Nr / Produkt */}
                     <div className="min-w-0">
-                      {contract.policy_number && (
-                        <p className="text-sm font-medium">Police: {contract.policy_number}</p>
+                      {contract.sparte && (
+                        <p className="text-sm font-medium">{getSparteLabel(contract.sparte)}</p>
                       )}
-                      {!contract.policy_number && <span className="text-sm text-muted-foreground">–</span>}
+                      {contract.policy_number && (
+                        <p className="text-xs text-muted-foreground mt-0.5">Police: {contract.policy_number}</p>
+                      )}
+                      {contract.product && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{contract.product}</p>
+                      )}
+                      {!contract.sparte && !contract.policy_number && !contract.product && (
+                        <span className="text-sm text-muted-foreground">–</span>
+                      )}
                     </div>
 
                     {/* Vertragsdaten */}
