@@ -203,21 +203,21 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const setStep = (id, status, detail) =>
     setSteps(prev => prev.map(s => s.id === id ? { ...s, status, detail: detail ?? s.detail } : s))
 
-  const buildForm = (s) => ({
-    first_name: s.person?.vorname ?? null,
-    last_name:  s.person?.nachname ?? null,
-    birthdate:  s.person?.geburtsdatum ?? null,
-    phone:      s.kontaktperson?.telefon ?? null,
-    email:      s.kontaktperson?.email ?? null,
-    street:     s.adresse?.strasse ?? null,
-    zip_code:   s.adresse?.plz ?? null,
-    city:       s.adresse?.ort ?? null,
-    insurer:    s.versicherung?.gesellschaft ?? null,
-    contract_start_date: s.versicherung?.beginn ?? null,
-    estimated_premium_monthly: s.versicherung?.praemie_monat ?? null,
-    franchise:  s.versicherung?.franchise ?? null,
-    kassenmodell: s.versicherung?.kassenmodell ?? null,
-    insurance_type: null, // derived server-side via product_type
+  // Build form from normalized data (Single Source of Truth from backend)
+  const buildForm = (n) => ({
+    first_name:                n.first_name,
+    last_name:                 n.last_name,
+    birthdate:                 n.birthdate,
+    phone:                     n.phone,
+    email:                     n.email,
+    street:                    n.street,
+    zip_code:                  n.zip_code,
+    city:                      n.city,
+    insurer:                   n.insurer,
+    contract_start_date:       n.contract_start_date,
+    estimated_premium_monthly: n.premium_monthly,
+    franchise:                 n.franchise,
+    kassenmodell:              n.kassenmodell,
   })
 
   // ── Auto-start extraction when panel opens and customers are ready ─────────
@@ -248,10 +248,12 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     }
 
     const data = res.data
-    const flat = buildForm(data.structured)
+    // Use normalized data from backend as Single Source of Truth
+    const normalized = data.normalized || {}
+    const flat = buildForm(normalized)
     setExtraction(data)
     setForm(flat)
-    setProdukte(data.structured?.versicherung?.produkte || [])
+    setProdukte(normalized.produkte || data.structured?.versicherung?.produkte || [])
     setStep('extract', 'ok', `Konfidenz: ${data.confidence}% · Status: ${data.status}`)
 
     // STEP 2: Match customers
@@ -299,14 +301,17 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     let cid = customerId
     let resolvedCustomer = existingCustomer
 
-    // Use server-derived values from extraction (already computed in backend)
-    const computedAgeGroup = extraction?.age_group || ageGroup
-    const premiumMonthly = extraction?.premium_monthly ?? (f.estimated_premium_monthly ? Number(f.estimated_premium_monthly) : null)
-    const premiumYearly = extraction?.premium_yearly ?? (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null)
-    const productType = extraction?.product_type
-    const kassenmodell = extraction?.kassenmodell_normalized || f.kassenmodell
-    const gesundheitsdeklaration = extraction?.gesundheitsdeklaration ?? false
-    const zahlungsintervall = extraction?.structured?.versicherung?.zahlungsintervall || null
+    // Use normalized data from backend (Single Source of Truth)
+    const norm = extraction?.normalized || {}
+    const computedAgeGroup = norm.age_group || extraction?.age_group || ageGroup
+    const premiumMonthly = norm.premium_monthly ?? extraction?.premium_monthly ?? (f.estimated_premium_monthly ? Number(f.estimated_premium_monthly) : null)
+    const premiumYearly = norm.premium_yearly ?? extraction?.premium_yearly ?? (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null)
+    const productType = norm.product_type || extraction?.product_type
+    const kassenmodell = norm.kassenmodell || extraction?.kassenmodell_normalized || f.kassenmodell
+    const gesundheitsdeklaration = norm.gesundheitsdeklaration ?? extraction?.gesundheitsdeklaration ?? false
+    const zahlungsintervall = norm.zahlungsintervall || extraction?.structured?.versicherung?.zahlungsintervall || null
+    // Sparte already normalized on backend
+    const sparteFromNorm = norm.sparte || null
 
     // Auto-create new customer if no match
     if (!cid) {
@@ -351,10 +356,11 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       ? `${customer.first_name} ${customer.last_name}`
       : `${f.first_name || ''} ${f.last_name || ''}`.trim()
 
-    // Determine sparte from product type
-    const sparte = productType === 'VVG' ? 'vvg_zusatz'
-                 : productType === 'KVG + VVG' ? 'kvg_vvg_kombi'
-                 : 'kvg'
+    // Sparte: use backend-normalized value (identical logic to manual entry)
+    const sparte = sparteFromNorm || (
+      productType === 'VVG' ? 'vvg_zusatz' :
+      productType === 'KVG + VVG' ? 'kvg_vvg_kombi' : 'kvg'
+    )
 
     // Validation: check critical fields per requirements
     const validationMissing = []
@@ -387,7 +393,8 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
           franchise:              f.franchise || undefined,
           model:                  kassenmodell || undefined,
           age_group:              computedAgeGroup || undefined,
-          produkte:               prods.length > 0 ? prods : undefined,
+          // Use normalized produkte (typ: KVG/VVG + zusatz_typ) from backend
+          produkte:               (norm.produkte?.length > 0 ? norm.produkte : prods.length > 0 ? prods : undefined),
           product_type:           productType || undefined,
           zahlungsintervall:      zahlungsintervall || undefined,
           health_declaration:     gesundheitsdeklaration ? 'Ja' : 'Nein',
