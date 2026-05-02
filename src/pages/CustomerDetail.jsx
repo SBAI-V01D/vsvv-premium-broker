@@ -48,8 +48,9 @@ export default function CustomerDetail() {
     queryFn: () => base44.entities.Document.list(null, 1000),
   })
 
+  const primaryCustomerId = customer?.primary_customer_id || customer?.id
   const familyMembers = allCustomers.filter(c => 
-    c.primary_customer_id === id || c.id === id
+    c.primary_customer_id === primaryCustomerId || c.id === primaryCustomerId
   )
 
   const customerIds = familyMembers.map(m => m.id)
