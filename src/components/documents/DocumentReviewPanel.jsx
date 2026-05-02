@@ -217,6 +217,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     estimated_premium_monthly: s.versicherung?.praemie_monat ?? null,
     franchise:  s.versicherung?.franchise ?? null,
     kassenmodell: s.versicherung?.kassenmodell ?? null,
+    insurance_type: null, // derived server-side via product_type
   })
 
   // ── Auto-start extraction when panel opens and customers are ready ─────────
@@ -291,39 +292,6 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     }
   }
 
-  // ── Helper: calculate age group from birthdate ────────────────────────────
-  const calcAgeGroup = (birthdate) => {
-    if (!birthdate) return null
-    const birth = new Date(birthdate)
-    const today = new Date()
-    const age = today.getFullYear() - birth.getFullYear() -
-      (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate()) ? 1 : 0)
-    if (age <= 18) return 'Kind'
-    if (age <= 25) return 'Jugendlich'
-    return 'Erwachsen'
-  }
-
-  // ── Helper: detect insurance product type (KVG / VVG / KVG+VVG) ──────────
-  const detectProductType = (prods) => {
-    if (!prods || prods.length === 0) return null
-    const hasKVG = prods.some(p => p.typ === 'Grundversicherung')
-    const hasVVG = prods.some(p => p.typ === 'Zusatz')
-    if (hasKVG && hasVVG) return 'KVG + VVG'
-    if (hasKVG) return 'KVG'
-    if (hasVVG) return 'VVG'
-    return null
-  }
-
-  // ── Helper: normalize kassenmodell ───────────────────────────────────────
-  const normalizeKassenmodell = (raw) => {
-    if (!raw) return null
-    const r = raw.toLowerCase()
-    if (r.includes('hausarzt')) return 'Hausarztmodell'
-    if (r.includes('hmo')) return 'HMO'
-    if (r.includes('telmed')) return 'Telmed'
-    return 'Standard'
-  }
-
   // ── Save (Steps 4+5) ───────────────────────────────────────────────────────
   const doSave = async (f, prods, ageGroup, customerId, existingCustomer, needsReview = false) => {
     setSaving(true)
@@ -331,12 +299,14 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     let cid = customerId
     let resolvedCustomer = existingCustomer
 
-    // Compute derived values
-    const computedAgeGroup = ageGroup || calcAgeGroup(f.birthdate)
-    const premiumMonthly = f.estimated_premium_monthly ? Number(f.estimated_premium_monthly) : null
-    const premiumYearly = premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null
-    const productType = detectProductType(prods)
-    const kassenmodell = normalizeKassenmodell(f.kassenmodell)
+    // Use server-derived values from extraction (already computed in backend)
+    const computedAgeGroup = extraction?.age_group || ageGroup
+    const premiumMonthly = extraction?.premium_monthly ?? (f.estimated_premium_monthly ? Number(f.estimated_premium_monthly) : null)
+    const premiumYearly = extraction?.premium_yearly ?? (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null)
+    const productType = extraction?.product_type
+    const kassenmodell = extraction?.kassenmodell_normalized || f.kassenmodell
+    const gesundheitsdeklaration = extraction?.gesundheitsdeklaration ?? false
+    const zahlungsintervall = extraction?.structured?.versicherung?.zahlungsintervall || null
 
     // Auto-create new customer if no match
     if (!cid) {
@@ -381,15 +351,24 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       ? `${customer.first_name} ${customer.last_name}`
       : `${f.first_name || ''} ${f.last_name || ''}`.trim()
 
-    const sparteMatch = ALL_SPARTEN.find(s =>
-      s.label?.toLowerCase().includes((f.insurance_type || '').toLowerCase()) ||
-      s.value?.toLowerCase() === (f.insurance_type || '').toLowerCase()
-    )
-    const sparte = sparteMatch?.value || 'kvg'
+    // Determine sparte from product type
+    const sparte = productType === 'VVG' ? 'vvg_zusatz'
+                 : productType === 'KVG + VVG' ? 'kvg_vvg_kombi'
+                 : 'kvg'
+
+    // Validation: check critical fields per requirements
+    const validationMissing = []
+    if (!productType) validationMissing.push('KVG/VVG')
+    if (!computedAgeGroup) validationMissing.push('Altersgruppe')
+    if (!premiumMonthly) validationMissing.push('Monatsprämie')
+    if (prods.length === 0) validationMissing.push('Produkte')
+
     const missingRequired = !f.first_name || !f.last_name || !f.birthdate || !f.contract_start_date
+    const isIncomplete = missingRequired || validationMissing.length > 0
+
     const appNotes = [
       `Automatisch aus Dokument extrahiert: ${document.name}`,
-      missingRequired ? '⚠ Unvollständig – Pflichtfelder fehlen' : null,
+      isIncomplete ? `⚠ Unvollständig: ${validationMissing.join(', ')}` : null,
     ].filter(Boolean).join('\n')
 
     let newApp
@@ -405,14 +384,16 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
         estimated_premium_monthly: premiumMonthly || undefined,
         estimated_premium_yearly: premiumYearly || undefined,
         sparte_data: {
-          franchise:    f.franchise || undefined,
-          model:        kassenmodell || undefined,
-          age_group:    computedAgeGroup || undefined,
-          produkte:     prods.length > 0 ? prods : undefined,
-          product_type: productType || undefined,
+          franchise:              f.franchise || undefined,
+          model:                  kassenmodell || undefined,
+          age_group:              computedAgeGroup || undefined,
+          produkte:               prods.length > 0 ? prods : undefined,
+          product_type:           productType || undefined,
+          zahlungsintervall:      zahlungsintervall || undefined,
+          health_declaration:     gesundheitsdeklaration ? 'Ja' : 'Nein',
         },
         status: 'submitted',
-        custom_status: needsReview ? 'pruefung_erforderlich' : (missingRequired ? 'unvollstaendig' : 'eingereicht'),
+        custom_status: needsReview ? 'pruefung_erforderlich' : (isIncomplete ? 'unvollstaendig' : 'eingereicht'),
         notes: appNotes,
       })
     } catch (err) {
@@ -556,6 +537,8 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                 {status === 'unvollstaendig' && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full border border-red-200">Unvollständig</span>}
                 {status === 'pruefung_erforderlich' && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200">Prüfung erforderlich</span>}
                 {ageGroup && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{ageGroup}</span>}
+                {extraction?.product_type && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">{extraction.product_type}</span>}
+                {extraction?.gesundheitsdeklaration && <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">GD erforderlich</span>}
               </div>
 
               {/* Warning banners */}
@@ -586,13 +569,29 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                 <div className="grid grid-cols-2 gap-2">
                   <Field label="Gesellschaft"       value={form.insurer}                    onChange={v => setField('insurer', v)}                    warn={!form.insurer} />
                   <Field label="Vertragsbeginn *"   value={form.contract_start_date}        onChange={v => setField('contract_start_date', v)}        warn={!form.contract_start_date} />
-                  <Field label="Monatsprämie (CHF)" value={form.estimated_premium_monthly}  onChange={v => setField('estimated_premium_monthly', v)} />
+                  <Field label="Monatsprämie (CHF)" value={String(extraction?.premium_monthly ?? form.estimated_premium_monthly ?? '')} onChange={v => setField('estimated_premium_monthly', v)} warn={!extraction?.premium_monthly && !form.estimated_premium_monthly} />
+                  <div className="p-2.5 rounded-lg border border-muted bg-muted/20">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Jahresprämie (CHF)</p>
+                    <p className="text-sm font-semibold">{extraction?.premium_yearly ? extraction.premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 2 }) : '–'}</p>
+                  </div>
                   <Field label="Franchise"          value={form.franchise}                  onChange={v => setField('franchise', v)} />
-                  <Field label="Kassenmodell"       value={form.kassenmodell}               onChange={v => setField('kassenmodell', v)} />
+                  <Field label="Kassenmodell"       value={extraction?.kassenmodell_normalized || form.kassenmodell}  onChange={v => setField('kassenmodell', v)} />
+                  {extraction?.structured?.versicherung?.zahlungsintervall && (
+                    <div className="p-2.5 rounded-lg border border-muted bg-muted/20">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Zahlungsintervall</p>
+                      <p className="text-sm font-semibold">{extraction.structured.versicherung.zahlungsintervall}</p>
+                    </div>
+                  )}
                   {ageGroup && (
-                    <div className="p-2.5 rounded-lg border border-blue-200 bg-blue-50">
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Altersgruppe</p>
-                      <p className="text-sm font-semibold text-blue-700">{ageGroup}</p>
+                    <div className={`p-2.5 rounded-lg border ${ageGroup ? 'border-blue-200 bg-blue-50' : 'border-amber-300 bg-amber-50'}`}>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Altersgruppe {!ageGroup && '⚠'}</p>
+                      <p className="text-sm font-semibold text-blue-700">{ageGroup || '–'}</p>
+                    </div>
+                  )}
+                  {extraction?.product_type && (
+                    <div className="p-2.5 rounded-lg border border-green-200 bg-green-50">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Versicherungstyp</p>
+                      <p className="text-sm font-semibold text-green-700">{extraction.product_type}</p>
                     </div>
                   )}
                 </div>
