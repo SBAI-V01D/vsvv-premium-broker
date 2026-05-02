@@ -140,7 +140,7 @@ export default function CustomerDetail() {
                   <div>Status</div>
                 </div>
                 {relatedContracts.map((c, idx) => {
-                  const relatedCustomer = allCustomers.find(x => x.id === c.customer_id)
+                  const relatedCustomer = (Array.isArray(allCustomers) ? allCustomers : []).find(x => x.id === c.customer_id)
                   const formatDate = (dateStr) => {
                     if (!dateStr) return '–'
                     return new Date(dateStr).toLocaleDateString('de-CH')
@@ -241,7 +241,7 @@ export default function CustomerDetail() {
           ) : (
             <div className="space-y-3">
               {relatedApplications.map(a => {
-                const relatedCustomer = allCustomers.find(x => x.id === a.customer_id)
+                const relatedCustomer = (Array.isArray(allCustomers) ? allCustomers : []).find(x => x.id === a.customer_id)
                 const premiumMonthly = a.estimated_premium_monthly
                 const premiumYearly = a.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12) : null)
                 const ageGroup = a.sparte_data?.age_group
