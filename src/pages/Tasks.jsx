@@ -26,15 +26,10 @@ export default function Tasks() {
     fetchUser()
   }, [])
 
-  // Fetch tasks assigned to current user (incl. legacy tasks without assignment)
+  // Fetch all tasks
   const { data: tasks = [] } = useQuery({
-    queryKey: ['tasks', currentUser?.email],
-    queryFn: async () => {
-      if (!currentUser?.email) return []
-      const allTasks = await base44.entities.Task.list('-due_date')
-      return allTasks.filter(t => !t.assigned_to || t.assigned_to === currentUser.email)
-    },
-    enabled: !!currentUser?.email,
+    queryKey: ['tasks'],
+    queryFn: () => base44.entities.Task.list('-due_date'),
   })
 
   const { data: brokers = [] } = useQuery({
