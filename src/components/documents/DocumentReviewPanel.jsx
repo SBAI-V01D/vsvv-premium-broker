@@ -171,14 +171,22 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     setPhase('extracting')
 
     setStep('extract', 'running')
-    const res = await base44.functions.invoke('extractApplicationData', {
-      file_url: document.file_url,
-      file_name: document.name,
-    })
+    let res
+    try {
+      res = await base44.functions.invoke('extractApplicationData', {
+        file_url: document.file_url,
+        file_name: document.name,
+      })
 
-    if (!res.data?.success || !res.data?.structured) {
-      setStep('extract', 'error', 'Extraktion fehlgeschlagen')
-      setPipelineError('Datenextraktion fehlgeschlagen. Bitte erneut versuchen.')
+      if (!res.data?.success || !res.data?.structured) {
+        setStep('extract', 'error', 'Extraktion fehlgeschlagen')
+        setPipelineError('Datenextraktion fehlgeschlagen. Bitte erneut versuchen.')
+        setProcessing(false)
+        return
+      }
+    } catch (err) {
+      setStep('extract', 'error', err.message)
+      setPipelineError(`Datenextraktion-Fehler: ${err.message}`)
       setProcessing(false)
       return
     }
