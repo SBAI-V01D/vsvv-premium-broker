@@ -155,7 +155,7 @@ export default function Contracts() {
                   <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors">
                     {/* Kunde */}
                     <div className="min-w-0">
-                      <p className="font-semibold text-sm truncate">{contract.customer_name || '–'}</p>
+                      <p className="font-semibold text-xs truncate">{contract.customer_name || '–'}</p>
                       {customer?.ahv_number && (
                         <p className="text-xs font-mono text-muted-foreground mt-0.5">{customer.ahv_number}</p>
                       )}
@@ -165,7 +165,7 @@ export default function Contracts() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <Building2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                        <p className="text-sm font-medium truncate">{contract.insurer}</p>
+                        <p className="text-xs font-medium truncate">{contract.insurer}</p>
                       </div>
                       {contract.sparte || contract.insurance_type ? (
                         <p className="text-xs text-muted-foreground truncate mt-0.5">{getSparteLabel(contract.sparte || contract.insurance_type)}</p>
@@ -181,17 +181,17 @@ export default function Contracts() {
                     {/* Policen-Nr */}
                     <div className="min-w-0">
                       {contract.policy_number && (
-                        <p className="text-sm font-medium">{contract.policy_number}</p>
+                        <p className="text-xs font-medium">{contract.policy_number}</p>
                       )}
-                      {!contract.policy_number && <span className="text-sm text-muted-foreground">–</span>}
+                      {!contract.policy_number && <span className="text-xs text-muted-foreground">–</span>}
                     </div>
 
                     {/* Produkt / Tarif */}
                     <div className="min-w-0">
                       {contract.product && (
-                        <p className="text-sm font-medium">{contract.product}</p>
+                        <p className="text-xs font-medium">{contract.product}</p>
                       )}
-                      {!contract.product && <span className="text-sm text-muted-foreground">–</span>}
+                      {!contract.product && <span className="text-xs text-muted-foreground">–</span>}
                     </div>
 
                     {/* Vertragsdaten */}
@@ -199,34 +199,34 @@ export default function Contracts() {
                       {contract.start_date && (
                         <div className="flex items-center gap-1.5 mb-1">
                           <Calendar className="w-3 h-3 text-green-600 flex-shrink-0" />
-                          <span className="text-sm text-green-600 font-medium">{formatDate(contract.start_date)}</span>
+                          <span className="text-xs text-green-600 font-medium">{formatDate(contract.start_date)}</span>
                         </div>
                       )}
                       {contract.end_date && (
                         <div className="flex items-center gap-1.5">
                           <Calendar className="w-3 h-3 text-green-600 flex-shrink-0" />
-                          <span className="text-sm text-green-600 font-medium">{formatDate(contract.end_date)}</span>
+                          <span className="text-xs text-green-600 font-medium">{formatDate(contract.end_date)}</span>
                         </div>
                       )}
                       {!contract.start_date && !contract.end_date && (
-                        <span className="text-sm text-muted-foreground">–</span>
+                        <span className="text-xs text-muted-foreground">–</span>
                       )}
                     </div>
 
                     {/* Jahresprämie */}
                     <div>
                       {contract.premium_yearly ? (
-                        <p className="text-sm font-semibold text-foreground">
+                        <p className="text-xs font-semibold text-foreground">
                           CHF {contract.premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/J.
                         </p>
                       ) : null}
                       {contract.premium_monthly ? (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           CHF {contract.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/M.
                         </p>
                       ) : null}
                       {!contract.premium_yearly && !contract.premium_monthly && (
-                        <span className="text-sm text-muted-foreground">–</span>
+                        <span className="text-xs text-muted-foreground">–</span>
                       )}
                     </div>
 
