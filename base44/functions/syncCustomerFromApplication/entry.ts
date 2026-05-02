@@ -32,9 +32,9 @@ Deno.serve(async (req) => {
     } = payload;
 
     // Validate required fields
-    if (!first_name || !last_name || !email) {
+    if (!first_name || !last_name) {
       return Response.json(
-        { error: 'Missing required fields: first_name, last_name, email' },
+        { error: 'Missing required fields: first_name, last_name' },
         { status: 400 }
       );
     }

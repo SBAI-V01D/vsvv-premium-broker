@@ -270,24 +270,46 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     let resolvedCustomer = activeCustomer
 
     // Use sync function for automatic customer creation/update with duplicate check
-    if (!cid || manualOverride) {
-      const syncResult = await base44.functions.invoke('syncCustomerFromApplication', {
-        first_name: flat.first_name || 'Unbekannt',
-        last_name: flat.last_name || 'Unbekannt',
-        email: flat.email || undefined,
-        phone: flat.phone || undefined,
-        mobile: flat.mobile || undefined,
-        street: flat.street || undefined,
-        zip_code: flat.zip_code || undefined,
-        city: flat.city || undefined,
-        canton: flat.canton || undefined,
-        birthdate: flat.birthdate || undefined,
-        nationality: flat.nationality || 'CH',
-      })
+    if (!cid) {
+      try {
+        const syncResult = await base44.functions.invoke('syncCustomerFromApplication', {
+          first_name: flat.first_name || 'Unbekannt',
+          last_name: flat.last_name || 'Unbekannt',
+          email: flat.email || '',
+          phone: flat.phone || '',
+          mobile: flat.mobile || '',
+          street: flat.street || '',
+          zip_code: flat.zip_code || '',
+          city: flat.city || '',
+          canton: flat.canton || '',
+          birthdate: flat.birthdate || '',
+          ahv_number: flat.ahv_number || '',
+          nationality: flat.nationality || 'CH',
+        })
 
-      if (syncResult.data?.customer_id) {
-        cid = syncResult.data.customer_id
-        resolvedCustomer = customers.find(c => c.id === cid)
+        if (syncResult.data?.customer_id) {
+          cid = syncResult.data.customer_id
+          resolvedCustomer = customers.find(c => c.id === cid)
+          queryClient.invalidateQueries({ queryKey: ['customers'] })
+        }
+      } catch (err) {
+        console.error('Customer sync error:', err)
+        // Fallback: create customer manually if sync fails
+        const newC = await base44.entities.Customer.create({
+          first_name: flat.first_name || 'Unbekannt',
+          last_name: flat.last_name || 'Unbekannt',
+          birthdate: flat.birthdate || undefined,
+          street: flat.street || undefined,
+          zip_code: flat.zip_code || undefined,
+          city: flat.city || undefined,
+          phone: flat.phone || undefined,
+          email: flat.email || undefined,
+          status: 'prospect',
+          customer_type: 'private',
+          is_family_member: false,
+        })
+        cid = newC.id
+        resolvedCustomer = newC
       }
     }
 
