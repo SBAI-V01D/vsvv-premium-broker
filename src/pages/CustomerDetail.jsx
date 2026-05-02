@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import CustomerForm from '../components/customers/CustomerForm'
 import DocumentsTab from '../components/documents/DocumentsTab'
 import { STATUS_LABELS, INSURANCE_TYPE_LABELS, FAMILY_ROLE_LABELS, label } from '@/lib/labels'
+import { getSparteLabel } from '@/lib/insuranceSparten'
 
 export default function CustomerDetail() {
   const { id } = useParams()
@@ -112,58 +113,128 @@ export default function CustomerDetail() {
 
         <TabsContent value="vertraege">
           {contracts.length === 0 ? (
-            <Card>
-              <CardContent className="p-6 text-center text-muted-foreground">
-                Keine Verträge vorhanden
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-6 text-center text-muted-foreground">Keine Verträge vorhanden</CardContent></Card>
           ) : (
             <div className="space-y-3">
-              {contracts.map(c => (
-                <Card key={c.id}>
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">{c.insurance_type} - {c.insurer}</p>
-                        <p className="text-sm text-muted-foreground mt-1">Policen-Nr: {c.policy_number || '–'}</p>
+              {contracts.map(c => {
+                const premiumMonthly = c.premium_monthly
+                const premiumYearly = c.premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12) : null)
+                return (
+                  <Card key={c.id}>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold">{c.insurer}</p>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                              {getSparteLabel(c.insurance_type) || c.insurance_type}
+                            </span>
+                            {c.product && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{c.product}</span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
+                            {c.policy_number && <span>Police: {c.policy_number}</span>}
+                            {c.start_date && <span>ab {new Date(c.start_date).toLocaleDateString('de-CH')}</span>}
+                            {c.end_date && <span>bis {new Date(c.end_date).toLocaleDateString('de-CH')}</span>}
+                          </div>
+                          {c.notes && <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{c.notes}</p>}
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          {premiumMonthly && (
+                            <p className="text-sm text-muted-foreground">CHF {premiumMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/M.</p>
+                          )}
+                          {premiumYearly && (
+                            <p className="font-bold">CHF {premiumYearly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}/J.</p>
+                          )}
+                          <p className="text-xs mt-1">
+                            <span className={`px-2 py-0.5 rounded-full font-medium ${c.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}>
+                              {c.custom_status || label(STATUS_LABELS, c.status)}
+                            </span>
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold">CHF {c.premium_yearly?.toLocaleString('de-CH', { minimumFractionDigits: 0 }) || '–'}/J.</p>
-                        <p className="text-sm text-muted-foreground">{label(STATUS_LABELS, c.status)}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="antraege">
           {applications.length === 0 ? (
-            <Card>
-              <CardContent className="p-6 text-center text-muted-foreground">
-                Keine Anträge vorhanden
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-6 text-center text-muted-foreground">Keine Anträge vorhanden</CardContent></Card>
           ) : (
             <div className="space-y-3">
-              {applications.map(a => (
-                <Card key={a.id}>
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">{a.insurance_type} - {a.insurer}</p>
-                        <p className="text-sm text-muted-foreground mt-1">{a.product || 'Produkt nicht spezifiziert'}</p>
+              {applications.map(a => {
+                const premiumMonthly = a.estimated_premium_monthly
+                const premiumYearly = a.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12) : null)
+                const ageGroup = a.sparte_data?.age_group
+                const franchise = a.sparte_data?.franchise
+                const model = a.sparte_data?.model
+                const produkte = a.sparte_data?.produkte || []
+                const productType = a.product || a.sparte_data?.product_type
+                const statusKey = a.custom_status || a.status
+                const statusColors = {
+                  angenommen: 'bg-green-100 text-green-700',
+                  policiert: 'bg-green-100 text-green-700',
+                  approved: 'bg-green-100 text-green-700',
+                  eingereicht: 'bg-blue-100 text-blue-700',
+                  in_bearbeitung: 'bg-blue-100 text-blue-700',
+                  pruefung_erforderlich: 'bg-amber-100 text-amber-700',
+                  abgelehnt: 'bg-red-100 text-red-700',
+                }
+                return (
+                  <Card key={a.id}>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold">{a.insurer || '–'}</p>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                              {getSparteLabel(a.sparte || a.insurance_type) || a.insurance_type}
+                            </span>
+                            {productType && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">{productType}</span>
+                            )}
+                            {ageGroup && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{ageGroup}</span>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
+                            {franchise && <span>Franchise: CHF {franchise}</span>}
+                            {model && <span>Modell: {model}</span>}
+                            {a.contract_start_date && <span>ab {new Date(a.contract_start_date).toLocaleDateString('de-CH')}</span>}
+                          </div>
+                          {produkte.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {produkte.map((p, i) => (
+                                <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                  {p.name} <span className="opacity-60">({p.typ})</span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          {premiumMonthly && (
+                            <p className="text-sm text-muted-foreground">CHF {premiumMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/M.</p>
+                          )}
+                          {premiumYearly && (
+                            <p className="font-bold">CHF {premiumYearly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}/J.</p>
+                          )}
+                          <p className="text-xs mt-1">
+                            <span className={`px-2 py-0.5 rounded-full font-medium ${statusColors[statusKey] || 'bg-muted text-muted-foreground'}`}>
+                              {statusKey}
+                            </span>
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold">CHF {a.estimated_premium_yearly?.toLocaleString('de-CH', { minimumFractionDigits: 0 }) || '–'}/J.</p>
-                        <p className="text-sm text-muted-foreground">{label(STATUS_LABELS, a.status)}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </TabsContent>

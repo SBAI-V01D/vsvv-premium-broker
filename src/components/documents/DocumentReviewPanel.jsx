@@ -291,12 +291,52 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     }
   }
 
+  // ── Helper: calculate age group from birthdate ────────────────────────────
+  const calcAgeGroup = (birthdate) => {
+    if (!birthdate) return null
+    const birth = new Date(birthdate)
+    const today = new Date()
+    const age = today.getFullYear() - birth.getFullYear() -
+      (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate()) ? 1 : 0)
+    if (age <= 18) return 'Kind'
+    if (age <= 25) return 'Jugendlich'
+    return 'Erwachsen'
+  }
+
+  // ── Helper: detect insurance product type (KVG / VVG / KVG+VVG) ──────────
+  const detectProductType = (prods) => {
+    if (!prods || prods.length === 0) return null
+    const hasKVG = prods.some(p => p.typ === 'Grundversicherung')
+    const hasVVG = prods.some(p => p.typ === 'Zusatz')
+    if (hasKVG && hasVVG) return 'KVG + VVG'
+    if (hasKVG) return 'KVG'
+    if (hasVVG) return 'VVG'
+    return null
+  }
+
+  // ── Helper: normalize kassenmodell ───────────────────────────────────────
+  const normalizeKassenmodell = (raw) => {
+    if (!raw) return null
+    const r = raw.toLowerCase()
+    if (r.includes('hausarzt')) return 'Hausarztmodell'
+    if (r.includes('hmo')) return 'HMO'
+    if (r.includes('telmed')) return 'Telmed'
+    return 'Standard'
+  }
+
   // ── Save (Steps 4+5) ───────────────────────────────────────────────────────
   const doSave = async (f, prods, ageGroup, customerId, existingCustomer, needsReview = false) => {
     setSaving(true)
     setStep('create', 'running')
     let cid = customerId
     let resolvedCustomer = existingCustomer
+
+    // Compute derived values
+    const computedAgeGroup = ageGroup || calcAgeGroup(f.birthdate)
+    const premiumMonthly = f.estimated_premium_monthly ? Number(f.estimated_premium_monthly) : null
+    const premiumYearly = premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null
+    const productType = detectProductType(prods)
+    const kassenmodell = normalizeKassenmodell(f.kassenmodell)
 
     // Auto-create new customer if no match
     if (!cid) {
@@ -310,10 +350,30 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
         phone:      f.phone || undefined,
         email:      f.email || undefined,
         status: 'active',
+        notes: computedAgeGroup ? `Kategorie: ${computedAgeGroup}` : undefined,
       })
       cid = newC.id
       resolvedCustomer = newC
       setStep('assign', 'ok', `Neuer Kunde automatisch erstellt: ${newC.first_name} ${newC.last_name}`)
+    } else {
+      // Sync missing fields back to existing customer profile
+      const existing = resolvedCustomer || customers.find(c => c.id === cid)
+      if (existing) {
+        const patch = {}
+        if (!existing.birthdate && f.birthdate) patch.birthdate = f.birthdate
+        if (!existing.street && f.street) patch.street = f.street
+        if (!existing.zip_code && f.zip_code) patch.zip_code = f.zip_code
+        if (!existing.city && f.city) patch.city = f.city
+        if (!existing.phone && f.phone) patch.phone = f.phone
+        if (!existing.email && f.email) patch.email = f.email
+        if (computedAgeGroup) patch.notes = existing.notes
+          ? (existing.notes.includes('Kategorie:') ? existing.notes.replace(/Kategorie:\s*\S+/, `Kategorie: ${computedAgeGroup}`) : `${existing.notes}\nKategorie: ${computedAgeGroup}`)
+          : `Kategorie: ${computedAgeGroup}`
+        if (Object.keys(patch).length > 0) {
+          await base44.entities.Customer.update(cid, patch)
+          queryClient.invalidateQueries({ queryKey: ['customers'] })
+        }
+      }
     }
 
     const customer = resolvedCustomer || customers.find(c => c.id === cid)
@@ -340,16 +400,19 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
         insurer: f.insurer || 'Andere',
         sparte,
         insurance_type: sparte,
+        product: productType || undefined,
         contract_start_date: f.contract_start_date || undefined,
-        estimated_premium_monthly: f.estimated_premium_monthly ? Number(f.estimated_premium_monthly) : undefined,
+        estimated_premium_monthly: premiumMonthly || undefined,
+        estimated_premium_yearly: premiumYearly || undefined,
         sparte_data: {
-          franchise:  f.franchise || undefined,
-          model:      f.kassenmodell || undefined,
-          age_group:  ageGroup || undefined,
-          produkte:   prods.length > 0 ? prods : undefined,
+          franchise:    f.franchise || undefined,
+          model:        kassenmodell || undefined,
+          age_group:    computedAgeGroup || undefined,
+          produkte:     prods.length > 0 ? prods : undefined,
+          product_type: productType || undefined,
         },
-        status: 'draft',
-        custom_status: needsReview ? 'pruefung_erforderlich' : (missingRequired ? 'unvollstaendig' : undefined),
+        status: 'submitted',
+        custom_status: needsReview ? 'pruefung_erforderlich' : (missingRequired ? 'unvollstaendig' : 'eingereicht'),
         notes: appNotes,
       })
     } catch (err) {
@@ -385,6 +448,8 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
 
     queryClient.invalidateQueries({ queryKey: ['applications'] })
     queryClient.invalidateQueries({ queryKey: ['documents'] })
+    queryClient.invalidateQueries({ queryKey: ['customers'] })
+    queryClient.invalidateQueries({ queryKey: ['customers-all'] })
     setSaving(false)
     setPipelineDone(true)
     onSaved?.()

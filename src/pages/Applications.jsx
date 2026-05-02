@@ -136,6 +136,24 @@ export default function Applications() {
     // Auto-create contract if newly accepted and no contract linked yet
     let linkedContractId = app.linked_contract_id
     if (ACCEPTED_STATUSES.includes(status) && !ACCEPTED_STATUSES.includes(prevStatus) && !app.linked_contract_id) {
+      // Derive yearly premium if missing
+      const premiumMonthly = app.estimated_premium_monthly || null
+      const premiumYearly = app.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null)
+
+      // Build a meaningful product label: use product_type or sparte_data info
+      const productLabel = app.product || app.sparte_data?.product_type || getSparteLabel(app.sparte || app.insurance_type)
+
+      // Kassenmodell normalization
+      const rawModel = app.sparte_data?.model || ''
+      const kassenmodell = (() => {
+        const r = rawModel.toLowerCase()
+        if (r.includes('hausarzt')) return 'Hausarztmodell'
+        if (r.includes('hmo')) return 'HMO'
+        if (r.includes('telmed')) return 'Telmed'
+        if (rawModel) return rawModel
+        return null
+      })()
+
       const newContract = await base44.entities.Contract.create({
         customer_id: app.customer_id,
         customer_name: app.customer_name,
@@ -143,18 +161,37 @@ export default function Applications() {
         is_family_member: app.is_family_member || false,
         insurer: app.insurer,
         insurance_type: app.insurance_type,
-        product: app.product,
+        product: productLabel,
         policy_number: app.policy_number || '',
-        premium_yearly: app.estimated_premium_yearly,
-        premium_monthly: app.estimated_premium_monthly,
+        premium_yearly: premiumYearly,
+        premium_monthly: premiumMonthly,
         start_date: app.contract_start_date || app.requested_start_date || '',
         end_date: app.contract_end_date || '',
         assigned_broker: app.assigned_broker,
         custom_status: 'aktiv',
         status: 'active',
-        notes: `Automatisch erstellt aus Antrag. ${app.notes || ''}`.trim(),
+        notes: [
+          `Automatisch erstellt aus Antrag.`,
+          app.sparte_data?.franchise ? `Franchise: CHF ${app.sparte_data.franchise}` : null,
+          kassenmodell ? `Modell: ${kassenmodell}` : null,
+          app.sparte_data?.age_group ? `Kategorie: ${app.sparte_data.age_group}` : null,
+          app.notes || null,
+        ].filter(Boolean).join(' | '),
       })
       linkedContractId = newContract.id
+
+      // Update customer category if we know the age group
+      if (app.sparte_data?.age_group && app.customer_id) {
+        const cust = customers.find(c => c.id === app.customer_id)
+        if (cust) {
+          const ageNote = `Kategorie: ${app.sparte_data.age_group}`
+          const updatedNote = cust.notes
+            ? (cust.notes.includes('Kategorie:') ? cust.notes.replace(/Kategorie:\s*\S+/, ageNote) : `${cust.notes}\n${ageNote}`)
+            : ageNote
+          await base44.entities.Customer.update(app.customer_id, { notes: updatedNote })
+          queryClient.invalidateQueries({ queryKey: ['customers'] })
+        }
+      }
     }
 
     await base44.entities.Application.update(app.id, {
