@@ -337,7 +337,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
           zusatz_type:        flat.zusatz_type || normalized.zusatz_type || undefined,
         },
         status: 'submitted',
-        custom_status: resolvedMatchMode === 'auto_low' ? 'pruefung_erforderlich' : 'eingereicht',
+        custom_status: 'in_pruefung',
         notes: appNotes,
       })
     } catch (err) {
