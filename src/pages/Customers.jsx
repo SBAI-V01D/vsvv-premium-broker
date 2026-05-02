@@ -116,119 +116,130 @@ export default function Customers() {
         </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="space-y-0">
-            {filtered.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Keine Kunden gefunden
-              </div>
-            ) : (
-              filtered.map(customer => {
-                const familyMembers = getFamilyMembers(customer.id)
-                const isExpanded = expandedFamily === customer.id || autoExpanded.has(customer.id)
+      <div className="space-y-6">
+        {filtered.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center text-muted-foreground">
+              Keine Kunden gefunden
+            </CardContent>
+          </Card>
+        ) : (
+          filtered.map((customer, idx) => {
+            const familyMembers = getFamilyMembers(customer.id)
+            const isExpanded = expandedFamily === customer.id || autoExpanded.has(customer.id)
 
-                return (
-                  <div key={customer.id}>
-                    <div className="border-b border-border last:border-0 hover:bg-muted/50">
-                      <div className="p-4 flex items-center justify-between gap-4">
-                        <div className="flex-1 min-w-0 flex items-center gap-3">
-                          {familyMembers.length > 0 && (
-                            <button
-                              onClick={() => setExpandedFamily(isExpanded ? null : customer.id)}
-                              className="flex-shrink-0 p-1"
-                            >
-                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            </button>
-                          )}
-                          <Link to={`/kunden/${customer.id}`} className="flex-1 min-w-0 hover:text-primary">
-                            <p className="font-medium">{customer.first_name} {customer.last_name}</p>
-                            <p className="text-xs text-muted-foreground">{customer.email}</p>
-                          </Link>
-                        </div>
-
-                        <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground flex-shrink-0">
-                          <span>{customer.city}</span>
-                        </div>
-
-                        {familyMembers.length > 0 && (
-                          <div className="hidden lg:flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded flex-shrink-0">
-                            {familyMembers.length} Familienmitglieder
-                          </div>
-                        )}
-
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
-                              <Edit className="w-4 h-4 mr-2" /> Bearbeiten
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => {
-                                if (confirm('Kunde und alle Familienmitglieder löschen?')) {
-                                  deleteMutation.mutate(customer.id)
-                                }
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" /> Löschen
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-
-                      {/* Family Members */}
-                      {isExpanded && familyMembers.length > 0 && (
-                        <div className="bg-slate-50 border-t border-border">
-                          {familyMembers.map(member => (
-                            <div key={member.id} className="p-4 pl-12 border-b border-border last:border-0 flex items-center justify-between gap-4 hover:bg-slate-100">
-                              <Link to={`/kunden/${member.id}`} className="flex-1 min-w-0 hover:text-primary">
-                                <p className="font-medium text-sm">{member.first_name} {member.last_name}</p>
-                                <p className="text-xs text-muted-foreground">{label(FAMILY_ROLE_LABELS, member.family_role)}</p>
-                              </Link>
-
-                              <div className="hidden md:flex text-sm text-muted-foreground flex-shrink-0">
-                                {member.city}
-                              </div>
-
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                                    <MoreHorizontal className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => { setEditing(member); setShowForm(true); }}>
-                                    <Edit className="w-4 h-4 mr-2" /> Bearbeiten
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    className="text-destructive"
-                                    onClick={() => {
-                                      if (confirm('Familienmitglied löschen?')) {
-                                        deleteMutation.mutate(member.id)
-                                      }
-                                    }}
-                                  >
-                                    <Trash2 className="w-4 h-4 mr-2" /> Löschen
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          ))}
-                        </div>
+            return (
+              <Card key={customer.id} className="overflow-hidden">
+                <CardContent className="p-0">
+                  {/* HAUPTKUNDE */}
+                  <div className="bg-gradient-to-r from-primary/5 to-transparent p-4 flex items-center justify-between gap-4 border-b-2 border-primary/20">
+                    <div className="flex-1 min-w-0 flex items-center gap-3">
+                      {familyMembers.length > 0 && (
+                        <button
+                          onClick={() => setExpandedFamily(isExpanded ? null : customer.id)}
+                          className="flex-shrink-0 p-1 hover:bg-primary/10 rounded transition-colors"
+                        >
+                          {isExpanded ? <ChevronUp className="w-5 h-5 text-primary" /> : <ChevronDown className="w-5 h-5 text-primary" />}
+                        </button>
                       )}
+                      <Link to={`/kunden/${customer.id}`} className="flex-1 min-w-0 hover:text-primary group">
+                        <p className="font-bold text-base group-hover:text-primary">{customer.first_name} {customer.last_name}</p>
+                        <p className="text-xs text-muted-foreground">{customer.email} • {customer.city || '–'}</p>
+                      </Link>
                     </div>
+
+                    <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
+                      {familyMembers.length > 0 && (
+                        <span className="text-xs bg-primary text-primary-foreground px-3 py-1 rounded-full font-medium">
+                          {familyMembers.length} Familienmitglieder
+                        </span>
+                      )}
+                      <span className="text-xs bg-secondary text-secondary-foreground px-3 py-1 rounded-full font-medium">
+                        Hauptkunde
+                      </span>
+                    </div>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
+                          <Edit className="w-4 h-4 mr-2" /> Bearbeiten
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => {
+                            if (confirm('Kunde und alle Familienmitglieder löschen?')) {
+                              deleteMutation.mutate(customer.id)
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" /> Löschen
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                )
-              })
-            )}
-          </div>
-        </CardContent>
-      </Card>
+
+                  {/* FAMILIENMITGLIEDER */}
+                  {isExpanded && familyMembers.length > 0 && (
+                    <div className="bg-slate-50/50">
+                      {familyMembers.map((member, memberIdx) => (
+                        <div
+                          key={member.id}
+                          className={`p-4 pl-14 flex items-center justify-between gap-4 hover:bg-slate-100/80 transition-colors ${
+                            memberIdx < familyMembers.length - 1 ? 'border-b border-border' : ''
+                          }`}
+                        >
+                          <Link to={`/kunden/${member.id}`} className="flex-1 min-w-0 hover:text-primary group">
+                            <p className="font-medium text-sm group-hover:text-primary">{member.first_name} {member.last_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {label(FAMILY_ROLE_LABELS, member.family_role)} • {member.email || '–'}
+                            </p>
+                          </Link>
+
+                          <div className="hidden md:flex text-sm text-muted-foreground flex-shrink-0">
+                            {member.city || '–'}
+                          </div>
+
+                          <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded font-medium flex-shrink-0">
+                            Familienmitglied
+                          </span>
+
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => { setEditing(member); setShowForm(true); }}>
+                                <Edit className="w-4 h-4 mr-2" /> Bearbeiten
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => {
+                                  if (confirm('Familienmitglied löschen?')) {
+                                    deleteMutation.mutate(member.id)
+                                  }
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" /> Löschen
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })
+        )}
+      </div>
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
