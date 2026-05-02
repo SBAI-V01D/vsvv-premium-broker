@@ -178,39 +178,61 @@ function normalizeData(raw) {
   // Age group: ALWAYS calculated from birthdate, mapped to exact form values
   const ageGroup = calcAgeGroup(raw?.person?.geburtsdatum);
 
-  // Gesundheitsdeklaration: ONLY for health insurance
-  const gesundheitsdeklaration = isHealth ? (raw?.versicherung?.gesundheitsdeklaration ?? false) : false;
+  // Gesundheitsdeklaration: ONLY for Krankenversicherung (KVG/VVG)
+  const isKvgLike = sparte === 'kvg' || sparte === 'kvg_vvg_kombi' || sparte === 'vvg_zusatz';
+  const gesundheitsdeklaration = isKvgLike && isHealth ? (raw?.versicherung?.gesundheitsdeklaration ?? false) : false;
 
   // Sparte mapping: 
-  // - Only set if clearly identifiable from products
-  // - NO DEFAULT! If uncertain, leave null for manual review
+  // PRIORITY 1: Use sparte extracted directly from PDF label
   let sparte = null;
   let sparteDetectionMethod = null;
   
-  if (!isHealth) {
-    // Detect specific property/liability type from product names
-    const productNamesList = produkte.map(p => p.name).join(' ').toLowerCase();
-    if (productNamesList.includes('hausrat') || productNamesList.includes('household')) {
+  const sparteFromPdf = raw?.versicherung?.sparte ? raw.versicherung.sparte.toLowerCase() : null;
+  if (sparteFromPdf) {
+    // Map PDF sparte labels to internal keys
+    if (sparteFromPdf.includes('hausrat') || sparteFromPdf.includes('household')) {
       sparte = 'hausrat';
-      sparteDetectionMethod = 'hausrat_keyword';
-    } else if (productNamesList.includes('motorfahrzeug') || productNamesList.includes('auto') || productNamesList.includes('kfz')) {
+      sparteDetectionMethod = 'pdf_label_hausrat';
+    } else if (sparteFromPdf.includes('kranken') || sparteFromPdf.includes('health')) {
+      sparte = 'kvg';
+      sparteDetectionMethod = 'pdf_label_kranken';
+    } else if (sparteFromPdf.includes('motorfahrzeug') || sparteFromPdf.includes('auto') || sparteFromPdf.includes('kfz')) {
       sparte = 'motorfahrzeug';
-      sparteDetectionMethod = 'motorfahrzeug_keyword';
-    } else if (productNamesList.includes('haftpflicht') || productNamesList.includes('liability')) {
+      sparteDetectionMethod = 'pdf_label_motorfahrzeug';
+    } else if (sparteFromPdf.includes('haftpflicht') || sparteFromPdf.includes('liability')) {
       sparte = 'haftpflicht';
-      sparteDetectionMethod = 'haftpflicht_keyword';
-    } else {
-      sparte = 'vvg_zusatz'; // Generic property/liability fallback
-      sparteDetectionMethod = 'non_health_fallback';
+      sparteDetectionMethod = 'pdf_label_haftpflicht';
+    } else if (sparteFromPdf.includes('leben') || sparteFromPdf.includes('life')) {
+      sparte = 'leben_3a';
+      sparteDetectionMethod = 'pdf_label_leben';
     }
-  } else if (productType) {
-    sparte = productType === 'VVG' ? 'vvg_zusatz'
-           : productType === 'KVG + VVG' ? 'kvg_vvg_kombi'
-           : productType === 'KVG' ? 'kvg'
-           : null;
-    sparteDetectionMethod = productType ? 'product_type_derived' : null;
   }
-  // If still null (no products detected), leave it null – will be determined by classification
+  
+  // PRIORITY 2: If no PDF label, derive from products
+  if (!sparte) {
+    if (!isHealth) {
+      const productNamesList = produkte.map(p => p.name).join(' ').toLowerCase();
+      if (productNamesList.includes('hausrat') || productNamesList.includes('household')) {
+        sparte = 'hausrat';
+        sparteDetectionMethod = 'product_name_hausrat';
+      } else if (productNamesList.includes('motorfahrzeug') || productNamesList.includes('auto') || productNamesList.includes('kfz')) {
+        sparte = 'motorfahrzeug';
+        sparteDetectionMethod = 'product_name_motorfahrzeug';
+      } else if (productNamesList.includes('haftpflicht') || productNamesList.includes('liability')) {
+        sparte = 'haftpflicht';
+        sparteDetectionMethod = 'product_name_haftpflicht';
+      } else {
+        sparte = 'vvg_zusatz';
+        sparteDetectionMethod = 'product_non_health_fallback';
+      }
+    } else if (productType) {
+      sparte = productType === 'VVG' ? 'vvg_zusatz'
+             : productType === 'KVG + VVG' ? 'kvg_vvg_kombi'
+             : productType === 'KVG' ? 'kvg'
+             : null;
+      sparteDetectionMethod = productType ? 'product_type_derived' : null;
+    }
+  }
 
   // Product label (all product names joined)
   const productLabel = buildProductLabel(produkte);
@@ -325,6 +347,7 @@ SPITAL/ZUSATZ-TYPEN erkennen:
 
 VERSICHERUNGS-FELDER:
 - gesellschaft: Name der Versicherungsgesellschaft
+- sparte: Versicherungssparte direkt vom Dokument (z.B. "Hausratversicherung", "Krankenversicherung", "Motorfahrzeugversicherung") – dies ist das wichtigste Feld!
 - beginn: Vertragsbeginn (YYYY-MM-DD) – Felder: "Versicherungsbeginn", "Beginn", "gültig ab", "Eintritt", "ab"
 - ende: Vertragsablauf / Vertragsende (YYYY-MM-DD) – Felder: "Vertragsende", "Ablauf", "Ablaufdatum", "Ende", "Kündigung zum", "Kündigungstermin", "kündbar auf", "läuft ab am", "Laufzeit bis", "Ablauf der Versicherung", "Ende des Versicherungsjahres" – bei jährlicher Erneuerung: berechne das nächste Ablaufdatum aus dem Beginn (z.B. Beginn 01.01.2025 → Ablauf 31.12.2025) – sonst null
 - praemie_monat: Monatsprämie als Zahl (z.B. 142.05), null wenn nicht vorhanden
@@ -369,6 +392,7 @@ Extrahiere in EXAKT dieser Struktur:`,
             type: 'object',
             properties: {
               gesellschaft:           { type: ['string','null'] },
+              sparte:                 { type: ['string','null'] },
               beginn:                 { type: ['string','null'] },
               ende:                   { type: ['string','null'] },
               praemie_monat:          { type: ['number','null'] },

@@ -431,6 +431,8 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const productType = norm.product_type
   const gesundheitsdeklaration = norm.gesundheitsdeklaration
   const premiumYearly = norm.premium_yearly
+  // GD nur bei Krankenversicherung anzeigen
+  const isKvgLike = form?.sparte === 'kvg' || form?.sparte === 'kvg_vvg_kombi' || form?.sparte === 'vvg_zusatz'
 
   const isReviewPhase = phase === 'review'
   const isDone = phase === 'done'
@@ -593,12 +595,14 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                   {ageGroup && <ReviewField label="Altersgruppe (berechnet)" value={ageGroup} confidence="high" readOnly />}
                   {productType && <ReviewField label="KVG / VVG (abgeleitet)" value={productType} confidence="high" readOnly />}
                   {norm.zahlungsintervall && <ReviewField label="Zahlungsintervall" value={norm.zahlungsintervall} confidence="high" readOnly />}
-                  <ReviewField
-                    label="Gesundheitserklärung nötig"
-                    value={gesundheitsdeklaration ? 'Ja' : 'Nein'}
-                    confidence="high"
-                    readOnly
-                  />
+                  {isKvgLike && (
+                    <ReviewField
+                      label="Gesundheitserklärung nötig"
+                      value={gesundheitsdeklaration ? 'Ja' : 'Nein'}
+                      confidence="high"
+                      readOnly
+                    />
+                  )}
                 </div>
               </div>
 
