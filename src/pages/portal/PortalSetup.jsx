@@ -25,7 +25,9 @@ export default function PortalSetup() {
     try {
       // Find customer by email
       const customers = await base44.entities.Customer.list(null, 1000)
-      const customer = customers.find(c => c.email === email)
+      console.log(`[Login] Suche nach Email: ${email}, ${customers.length} Kunden gefunden`)
+      const customer = customers.find(c => c.email?.toLowerCase() === email.toLowerCase())
+      console.log(`[Login] Kunde gefunden:`, customer?.id, customer?.email)
 
       if (!customer) {
         setError('E-Mail-Adresse nicht gefunden')
