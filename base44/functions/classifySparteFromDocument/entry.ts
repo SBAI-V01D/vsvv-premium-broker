@@ -6,7 +6,7 @@ const CLASSIFICATION_RULES = [
     priority: 1,
     name: 'REGEL 1 (HAUSHALT)',
     sparte: 'hausrat',
-    keywords: ['haushaltsversicherung', 'hausrat', 'privathaftpflicht'],
+    keywords: ['haushaltsversicherung', 'hausrat', 'privathaftpflicht', 'gebäudeversicherung', 'household'],
     mode: 'any', // Matches if ANY keyword is found
     debug: true,
   },
@@ -14,7 +14,7 @@ const CLASSIFICATION_RULES = [
     priority: 2,
     name: 'REGEL 2 (KRANKENVERSICHERUNG)',
     sparte: 'kvg',
-    keywords: ['franchise', 'grundversicherung', 'kvg', 'zusatzversicherung', 'hmo', 'telmed', 'hausarztmodell'],
+    keywords: ['grundversicherung', 'kvg', 'zusatzversicherung', 'hmo', 'telmed', 'hausarztmodell', 'spital', 'ambulant', 'denta', 'zahn'],
     mode: 'any',
     debug: true,
   },
