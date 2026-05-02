@@ -120,7 +120,7 @@ export default function Applications() {
   const handleStatusChange = async ({ status, statusDef, note, metadata }) => {
     const app = statusChanging
     const prevStatus = app.custom_status || app.status
-    const ACCEPTED_STATUSES = ['angenommen', 'policiert', 'approved']
+    const ACCEPTED_STATUSES = ['angenommen', 'policiert', 'approved', 'angenommen_vorbehalt']
 
     await base44.entities.StatusHistory.create({
       entity_type: 'application',
@@ -346,7 +346,7 @@ export default function Applications() {
           <SelectTrigger className="w-44"><SelectValue placeholder="Alle Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Alle Status</SelectItem>
-            {statusDefs.filter(s => !['bewilligung_erteilt', 'angenommen_vorbehalt', 'risikopruefung'].includes(s.key)).map(s => <SelectItem key={s.id} value={s.key}>{s.label}</SelectItem>)}
+            {statusDefs.filter(s => !['bewilligung_erteilt', 'risikopruefung'].includes(s.key)).map(s => <SelectItem key={s.id} value={s.key}>{s.label}</SelectItem>)}
           </SelectContent>
         </Select>
         {uniqueBrokers.length > 0 && (

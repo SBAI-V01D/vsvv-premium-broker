@@ -13,7 +13,7 @@ const COLOR_DOT = {
 }
 
 export default function StatusSelect({ value, onChange, statusDefinitions = [], placeholder = 'Status wählen' }) {
-  const EXCLUDED_KEYS = ['bewilligung_erteilt', 'angenommen_vorbehalt', 'risikopruefung']
+  const EXCLUDED_KEYS = ['bewilligung_erteilt', 'risikopruefung']
   const active = statusDefinitions.filter(s => s.is_active && !EXCLUDED_KEYS.includes(s.key))
     .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
 
