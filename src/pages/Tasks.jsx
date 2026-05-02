@@ -26,13 +26,13 @@ export default function Tasks() {
     fetchUser()
   }, [])
 
-  // Fetch tasks assigned to current user
+  // Fetch tasks assigned to current user (incl. legacy tasks without assignment)
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks', currentUser?.email],
     queryFn: async () => {
       if (!currentUser?.email) return []
       const allTasks = await base44.entities.Task.list('-due_date')
-      return allTasks.filter(t => t.assigned_to === currentUser.email)
+      return allTasks.filter(t => !t.assigned_to || t.assigned_to === currentUser.email)
     },
     enabled: !!currentUser?.email,
   })
