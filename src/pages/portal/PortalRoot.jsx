@@ -10,8 +10,9 @@ export default function PortalRoot() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const authed = await base44.auth.isAuthenticated()
-      if (!authed) {
+      // Check if customer is logged in via portal
+      const customerId = localStorage.getItem('portal_customer_id')
+      if (!customerId) {
         navigate('/portal/setup')
       } else {
         setIsAuthenticated(true)
