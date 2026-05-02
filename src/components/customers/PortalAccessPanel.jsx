@@ -16,6 +16,7 @@ export default function PortalAccessPanel({ customer, onUpdate }) {
   const [message, setMessage] = useState('')
 
   const handleTogglePortal = async (enabled) => {
+    if (!customer?.id) return
     setPortalEnabled(enabled)
     await base44.entities.Customer.update(customer.id, {
       portal_access_enabled: enabled,
@@ -24,7 +25,7 @@ export default function PortalAccessPanel({ customer, onUpdate }) {
   }
 
   const handleSetPassword = async () => {
-    if (!password.trim()) {
+    if (!customer?.id || !password.trim()) {
       setMessage('Passwort erforderlich')
       return
     }
@@ -46,7 +47,7 @@ export default function PortalAccessPanel({ customer, onUpdate }) {
   }
 
   const handleResetPassword = async () => {
-    if (!password.trim()) {
+    if (!customer?.id || !password.trim()) {
       setMessage('Neues Passwort erforderlich')
       return
     }
