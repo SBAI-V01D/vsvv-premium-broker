@@ -40,14 +40,20 @@ export default function PortalSetup() {
       }
 
       // Verify password
-      const result = await base44.functions.invoke('managePortalPassword', {
-        action: 'verify',
-        customer_id: customer.id,
-        password,
-      })
+      try {
+        const result = await base44.functions.invoke('managePortalPassword', {
+          action: 'verify',
+          customer_id: customer.id,
+          password,
+        })
 
-      if (!result.data?.valid) {
-        setError('Passwort ist falsch')
+        if (!result.data?.valid) {
+          setError('E-Mail oder Passwort ist falsch')
+          setLoading(false)
+          return
+        }
+      } catch (err) {
+        setError('E-Mail oder Passwort ist falsch')
         setLoading(false)
         return
       }
