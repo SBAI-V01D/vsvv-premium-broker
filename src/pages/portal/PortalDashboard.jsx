@@ -165,11 +165,11 @@ export default function PortalDashboard() {
               Ihrem Partner für transparente und strukturierte Versicherungslösungen. Behalten Sie jederzeit den Überblick über Ihre Versicherungen.
             </p>
           </div>
-          <a href="https://wa.me/41787170007?text=Ich%20habe%20Fragen%20zu%20meinen%20Versicherungen%20und%20Finanzen" target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, textDecoration: 'none', display: 'flex', flexDirection: 'column', gap: 4, padding: '12px 16px', borderRadius: 8, border: '2px solid #25D366', background: '#fff', cursor: 'pointer', transition: 'all 0.2s' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#f0fdf4'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 211, 102, 0.2)' }}
+          <a href="https://wa.me/41787170007?text=Ich%20habe%20Fragen%20zu%20meinen%20Versicherungen%20und%20Finanzen" target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, textDecoration: 'none', display: 'flex', flexDirection: 'column', gap: 4, padding: '12px 16px', borderRadius: 8, border: '2px solid #0B1F3A', background: '#fff', cursor: 'pointer', transition: 'all 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#f0f4f9'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(11, 31, 58, 0.15)' }}
             onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.boxShadow = 'none' }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#25D366', fontSize: 13, fontWeight: 600 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#0B1F3A', fontSize: 13, fontWeight: 600 }}>
               💬 Beratung via WhatsApp
             </div>
             <div style={{ color: '#6b7280', fontSize: 12, fontWeight: 500 }}>+41 78 717 00 07</div>
