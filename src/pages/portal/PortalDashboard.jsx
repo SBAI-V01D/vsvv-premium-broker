@@ -92,12 +92,28 @@ export default function PortalDashboard() {
         </p>
       </div>
 
-      {/* Debug: show if no data loaded */}
-      {contracts.length === 0 && documents.length === 0 && (
+      {/* Debug info panel */}
+      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 16px', marginBottom: 20, fontSize: 12, color: '#64748b', display: 'flex', flexWrap: 'wrap', gap: 16 }}>
+        <span>User ID: <strong style={{ color: customer ? '#16a34a' : '#dc2626' }}>{customerId || 'null'}</strong></span>
+        <span>Kunde geladen: <strong style={{ color: customer ? '#16a34a' : '#dc2626' }}>{customer ? 'true' : 'false'}</strong></span>
+        <span>Verträge: <strong>{contracts.length}</strong></span>
+        <span>Dokumente: <strong>{documents.length}</strong></span>
+      </div>
+
+      {/* Error: no customer */}
+      {!customer && !isLoading && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+          <AlertCircle size={16} color="#dc2626" />
+          <p style={{ color: '#991b1b', fontSize: 13, margin: 0 }}>Kundendaten nicht geladen – bitte neu einloggen.</p>
+        </div>
+      )}
+
+      {/* Warning: no CRM data */}
+      {customer && contracts.length === 0 && documents.length === 0 && (
         <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
           <AlertCircle size={16} color="#d97706" />
           <p style={{ color: '#92400e', fontSize: 13, margin: 0 }}>
-            Keine CRM-Daten geladen. Kunden-ID: <strong>{customerId}</strong> — Bitte prüfen Sie die Datenzuordnung im CRM.
+            Keine CRM-Daten gefunden für Kunden-ID: <strong>{customerId}</strong> — Bitte Datenzuordnung im CRM prüfen.
           </p>
         </div>
       )}
