@@ -113,13 +113,13 @@ export default function PortalSetup() {
         }}
       >
         {/* Subtle fade to right panel */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 60%, rgba(15,45,85,0.3) 85%, rgba(10,35,75,0.7) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 50%, rgba(11,30,55,0.4) 80%, rgba(10,35,75,0.7) 100%)' }} />
 
         {/* Logo in the middle */}
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '8%', zIndex: 10 }}>
-          <div style={{ position: 'relative', height: 80, display: 'flex', alignItems: 'center', background: 'rgba(11,28,44,0.15)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', borderRadius: 12, paddingLeft: 16, paddingRight: 16 }}>
-            <img src={LOGO_URL} alt="VSVV" style={{ height: '100%', objectFit: 'contain', opacity: 0.92, mixBlendMode: 'screen', filter: 'blur(0.3px) contrast(0.95) saturate(0.82) brightness(1.02)', transition: 'opacity 0.3s ease' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(255,255,255,0.06) 0%, transparent 50%, rgba(0,0,0,0.08) 100%)', pointerEvents: 'none', borderRadius: 12 }} />
+          <div style={{ position: 'relative', height: 120, display: 'flex', alignItems: 'center', background: 'rgba(16,48,80,0.25)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', borderRadius: 14, paddingLeft: 24, paddingRight: 24 }}>
+            <img src={LOGO_URL} alt="VSVV" style={{ height: '100%', objectFit: 'contain', opacity: 0.95, mixBlendMode: 'screen', filter: 'brightness(1.05) saturate(0.9)', transition: 'opacity 0.3s ease' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)', pointerEvents: 'none', borderRadius: 14 }} />
           </div>
         </div>
       </div>
