@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client'
 import { Eye, EyeOff, Shield, BarChart2, UserCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
-const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/e212dd698_HintergrundbildKundenportal.png'
+const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/469756d65_HintergrundbildKundenportal.png'
 
 export default function PortalSetup() {
   const navigate = useNavigate()
