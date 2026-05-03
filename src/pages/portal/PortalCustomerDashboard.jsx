@@ -154,12 +154,8 @@ export default function PortalCustomerDashboard() {
             paddingBottom: 40,
             borderBottom: '1px solid rgba(255,255,255,0.08)',
           }}>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 32,
-            }}>
-              <div>
+            <div>
+              <div style={{ marginBottom: 24 }}>
                 <p style={{ color: '#7A8A9E', fontSize: 11, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
                   Name
                 </p>
@@ -167,7 +163,7 @@ export default function PortalCustomerDashboard() {
                   {customer.first_name} {customer.last_name}
                 </p>
               </div>
-              <div>
+              <div style={{ marginBottom: 24 }}>
                 <p style={{ color: '#7A8A9E', fontSize: 11, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
                   E-Mail
                 </p>
@@ -176,7 +172,7 @@ export default function PortalCustomerDashboard() {
                 </p>
               </div>
               {customer.street && (
-                <div>
+                <div style={{ marginBottom: 24 }}>
                   <p style={{ color: '#7A8A9E', fontSize: 11, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
                     Adresse
                   </p>
