@@ -536,13 +536,13 @@ export default function PortalDashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40 }}>
                 <div>
                   <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: 0.5 }}>Monatsprämie</p>
-                  <p style={{ fontSize: 42, fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1 }}>
+                  <p style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1 }}>
                     CHF {totalPremiumMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div>
                   <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: 0.5 }}>Jahresprämie</p>
-                  <p style={{ fontSize: 42, fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1 }}>
+                  <p style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1 }}>
                     CHF {totalPremiumYearly.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
                   </p>
                 </div>
