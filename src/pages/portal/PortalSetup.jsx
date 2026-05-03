@@ -114,11 +114,6 @@ export default function PortalSetup() {
       >
         {/* Subtle fade to right panel */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 70%, rgba(10,35,75,0.6) 100%)' }} />
-        
-        {/* Subtile Logo im Hintergrund */}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5 }}>
-          <img src={LOGO_URL} alt="VSVV" style={{ height: '28%', maxWidth: '90%', objectFit: 'contain', opacity: 0.12, filter: 'grayscale(1) brightness(0.4)' }} />
-        </div>
       </div>
 
       {/* RIGHT — Login panel */}
@@ -135,22 +130,27 @@ export default function PortalSetup() {
           flexDirection: 'column',
         }}
       >
+        {/* Logo im rechten Bereich */}
+        <div style={{ position: 'absolute', top: '15%', left: '50%', transform: 'translateX(-50%)', zIndex: 5 }}>
+          <img src={LOGO_URL} alt="VSVV" style={{ height: 90, objectFit: 'contain', opacity: 0.88, filter: 'brightness(0.95)' }} />
+        </div>
+
         {/* Main content */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: '12vh', paddingBottom: '80px' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: '28vh', paddingBottom: '80px' }}>
 
           <div className="content-wrapper" style={{ marginLeft: 60, marginRight: 50, maxWidth: 420 }}>
             {!mustChangePassword ? (
               <>
                 {/* Text block */}
-                <div style={{ marginBottom: 28 }}>
-                  <h1 style={{ color: '#EAF1F7', fontSize: 30, fontWeight: 700, margin: '0 0 10px', lineHeight: 1.25, letterSpacing: '-0.4px' }}>
+                <div style={{ marginBottom: 20 }}>
+                  <h1 style={{ color: '#EAF1F7', fontSize: 28, fontWeight: 700, margin: '0 0 8px', lineHeight: 1.2, letterSpacing: '-0.4px' }}>
                     Willkommen bei VSVV
                   </h1>
-                  <p style={{ color: '#4A8DD4', fontSize: 14, fontWeight: 500, margin: '0 0 12px', lineHeight: 1.5 }}>
-                    Ihr persönliches Kundenportal für strukturierte und transparente Versicherungslösungen.
+                  <p style={{ color: '#4A8DD4', fontSize: 13, fontWeight: 500, margin: '0 0 10px', lineHeight: 1.5 }}>
+                    Ihr Kundenportal für klare und strukturierte Versicherungsübersicht.
                   </p>
-                  <p style={{ color: '#8A9BB0', fontSize: 13.5, lineHeight: 1.68, margin: 0 }}>
-                    Greifen Sie jederzeit sicher auf Ihre Verträge, Dokumente und persönliche Beratung zu – alles zentral an einem Ort.
+                  <p style={{ color: '#8A9BB0', fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                    Zugriff auf Ihre Verträge und Dokumente – sicher und zentral.
                   </p>
                 </div>
 
@@ -159,9 +159,9 @@ export default function PortalSetup() {
                   background: 'rgba(255,255,255,0.06)',
                   border: '1px solid rgba(255,255,255,0.12)',
                   borderRadius: 14,
-                  padding: 28,
-                  marginTop: 28,
-                  marginBottom: 26,
+                  padding: 26,
+                  marginTop: 16,
+                  marginBottom: 20,
                   boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
                 }}>
                   <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
