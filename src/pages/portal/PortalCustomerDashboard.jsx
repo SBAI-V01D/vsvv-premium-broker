@@ -142,179 +142,167 @@ export default function PortalCustomerDashboard() {
 
       {/* MAIN CONTENT */}
       <main style={{
-        maxWidth: 1200,
+        maxWidth: 1100,
         margin: '0 auto',
         padding: '40px 24px',
       }}>
 
-        {/* CONTROL CENTER (PREMIUM) */}
-        <div style={{
-          background: 'transparent',
-          padding: '60px 0',
-          marginBottom: 80,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          gap: 60,
-        }}>
-          {/* Left: Content */}
-          <div style={{ flex: 1 }}>
-            <h1 style={{
-              fontSize: 52,
-              fontWeight: 700,
-              margin: '0 0 8px',
-              color: '#EAF1F7',
-              lineHeight: 1.1,
-              letterSpacing: '-1.5px',
-            }}>
-              Ihre Versicherungsübersicht
-            </h1>
-
-            {/* Metrics */}
+        {/* SEKTION 1: KUNDENDATEN */}
+        {customer && (
+          <section style={{
+            marginBottom: 60,
+            paddingBottom: 40,
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+          }}>
             <div style={{
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
-              gap: 64,
-              marginTop: 48,
-              marginBottom: 48,
+              gap: 32,
             }}>
               <div>
-                <p style={{
-                  color: '#7A8A9E',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  margin: 0,
-                  textTransform: 'uppercase',
-                  letterSpacing: 1,
-                }}>
-                  Aktive Verträge
+                <p style={{ color: '#7A8A9E', fontSize: 11, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                  Name
                 </p>
-                <p style={{
-                  color: '#5B9FE6',
-                  fontSize: 64,
-                  fontWeight: 800,
-                  margin: '16px 0 0',
-                  lineHeight: 1,
-                }}>
-                  {activeContracts}
+                <p style={{ color: '#EAF1F7', fontSize: 16, fontWeight: 500, margin: 0 }}>
+                  {customer.first_name} {customer.last_name}
                 </p>
               </div>
               <div>
-                <p style={{
-                  color: '#7A8A9E',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  margin: 0,
-                  textTransform: 'uppercase',
-                  letterSpacing: 1,
-                }}>
-                  Jahresprämie
+                <p style={{ color: '#7A8A9E', fontSize: 11, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                  E-Mail
                 </p>
-                <p style={{
-                  color: '#4ac66e',
-                  fontSize: 64,
-                  fontWeight: 800,
-                  margin: '16px 0 0',
-                  lineHeight: 1,
-                }}>
-                  CHF {totalPremium.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
+                <p style={{ color: '#EAF1F7', fontSize: 16, fontWeight: 500, margin: 0 }}>
+                  {customer.email}
                 </p>
               </div>
+              {customer.street && (
+                <div>
+                  <p style={{ color: '#7A8A9E', fontSize: 11, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                    Adresse
+                  </p>
+                  <p style={{ color: '#EAF1F7', fontSize: 16, fontWeight: 500, margin: 0 }}>
+                    {customer.street}, {customer.zip_code} {customer.city}
+                  </p>
+                </div>
+              )}
+              {customer.phone && (
+                <div>
+                  <p style={{ color: '#7A8A9E', fontSize: 11, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                    Telefon
+                  </p>
+                  <p style={{ color: '#EAF1F7', fontSize: 16, fontWeight: 500, margin: 0 }}>
+                    {customer.phone}
+                  </p>
+                </div>
+              )}
             </div>
+          </section>
+        )}
 
-            {/* Status */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-            }}>
-              <div style={{
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                background: '#4ac66e',
-                boxShadow: '0 0 6px rgba(74,198,110,0.5)',
-              }} />
+        {/* SEKTION 2: KENNZAHLEN */}
+        <section style={{
+          marginBottom: 60,
+          paddingBottom: 40,
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+        }}>
+          <h2 style={{
+            fontSize: 24,
+            fontWeight: 600,
+            margin: '0 0 40px',
+            color: '#EAF1F7',
+            letterSpacing: '-0.5px',
+          }}>
+            Ihre Versicherungsübersicht
+          </h2>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 1fr',
+            gap: 48,
+          }}>
+            <div>
+              <p style={{
+                color: '#7A8A9E',
+                fontSize: 11,
+                fontWeight: 600,
+                margin: '0 0 12px',
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+              }}>
+                Monatsprämie
+              </p>
+              <p style={{
+                color: '#5B9FE6',
+                fontSize: 48,
+                fontWeight: 800,
+                margin: 0,
+                lineHeight: 1,
+              }}>
+                CHF {(totalPremium / 12).toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </p>
+            </div>
+            <div>
+              <p style={{
+                color: '#7A8A9E',
+                fontSize: 11,
+                fontWeight: 600,
+                margin: '0 0 12px',
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+              }}>
+                Jahresprämie
+              </p>
               <p style={{
                 color: '#4ac66e',
-                fontSize: 13,
-                fontWeight: 600,
+                fontSize: 48,
+                fontWeight: 800,
                 margin: 0,
+                lineHeight: 1,
               }}>
-                Alles optimal aufgestellt
+                CHF {totalPremium.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
+              </p>
+            </div>
+            <div>
+              <p style={{
+                color: '#7A8A9E',
+                fontSize: 11,
+                fontWeight: 600,
+                margin: '0 0 12px',
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+              }}>
+                Aktive Verträge
+              </p>
+              <p style={{
+                color: '#8A9BB0',
+                fontSize: 48,
+                fontWeight: 800,
+                margin: 0,
+                lineHeight: 1,
+              }}>
+                {activeContracts}
               </p>
             </div>
           </div>
 
-          {/* Right: Button */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            paddingTop: 48,
+          <p style={{
+            color: '#5B9FE6',
+            fontSize: 12,
+            fontWeight: 500,
+            margin: '32px 0 0',
+            paddingTop: 24,
+            borderTop: '1px solid rgba(91,163,232,0.15)',
           }}>
-            <button style={{
-              background: 'linear-gradient(135deg, #3A6BA8 0%, #5BA3E8 100%)',
-              border: 'none',
-              borderRadius: 12,
-              padding: '20px 32px',
-              color: '#EAF1F7',
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              transition: 'all 0.2s',
-              boxShadow: '0 4px 16px rgba(91,163,232,0.25)',
-            }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)'
-                e.currentTarget.style.boxShadow = '0 6px 24px rgba(91,163,232,0.35)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(91,163,232,0.25)'
-              }}
-            >
-              Portfolio prüfen lassen
-            </button>
-          </div>
-        </div>
+            Gesamte Versicherungsprämien
+          </p>
+        </section>
 
-        {/* KPI CARDS (SECONDARY) */}
-        <div className="kpi-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 20,
-          marginBottom: 80,
-          opacity: 0.8,
+        {/* SEKTION 3: VERTRÄGE */}
+        <section style={{
+          marginBottom: 60,
+          paddingBottom: 40,
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
         }}>
-          <KPICard
-            icon={() => <FileText size={18} />}
-            title="Aktive Verträge"
-            value={activeContracts}
-            unit=""
-          />
-          <KPICard
-            icon={() => <Calendar size={18} />}
-            title="Offene Anliegen"
-            value={openIssues}
-            unit=""
-          />
-          <KPICard
-            icon={() => <ChevronRight size={18} />}
-            title="Nächste Termine"
-            value={nextTerms}
-            unit=""
-          />
-          <KPICard
-            icon={() => <FileText size={18} />}
-            title="Ihre Dokumente"
-            value={documents.length}
-            unit=""
-          />
-        </div>
-
-        {/* VERTRÄGE (HAUPTBEREICH) */}
-        <section style={{ marginBottom: 80 }}>
           <h2 style={{
             fontSize: 24,
             fontWeight: 600,
@@ -461,71 +449,9 @@ export default function PortalCustomerDashboard() {
           </div>
         </section>
 
-        {/* AKTIONSBEREICH (NEU) */}
-        <section style={{ marginBottom: 60 }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: 24,
-          }}>
-            <button style={{
-              background: 'linear-gradient(135deg, #3A6BA8 0%, #5BA3E8 100%)',
-              border: 'none',
-              borderRadius: 12,
-              padding: '24px 32px',
-              color: '#EAF1F7',
-              fontSize: 15,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 12,
-              transition: 'all 0.2s',
-              boxShadow: '0 4px 16px rgba(91,163,232,0.25)',
-            }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)'
-                e.currentTarget.style.boxShadow = '0 6px 24px rgba(91,163,232,0.35)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)'
-                e.currentTarget.style.boxShadow = '0 4px 16px rgba(91,163,232,0.25)'
-              }}
-            >
-              <Phone size={18} /> Beratung anfragen
-            </button>
 
-            <button style={{
-              background: 'rgba(91,163,232,0.1)',
-              border: '1px solid rgba(91,163,232,0.2)',
-              borderRadius: 12,
-              padding: '24px 32px',
-              color: '#5B9FE6',
-              fontSize: 15,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 12,
-              transition: 'all 0.2s',
-            }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(91,163,232,0.15)'
-                e.currentTarget.style.borderColor = 'rgba(91,163,232,0.3)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(91,163,232,0.1)'
-                e.currentTarget.style.borderColor = 'rgba(91,163,232,0.2)'
-              }}
-            >
-              <Calendar size={18} /> Termin vereinbaren
-            </button>
-          </div>
-        </section>
 
-        {/* DOKUMENTE */}
+        {/* SEKTION 4: DOKUMENTE */}
         <section style={{ marginBottom: 80 }}>
           <h2 style={{
             fontSize: 24,
