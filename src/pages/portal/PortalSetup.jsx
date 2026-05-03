@@ -4,7 +4,7 @@ import { Eye, EyeOff, Shield, BarChart2, UserCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/469756d65_HintergrundbildKundenportal.png'
-const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/0cde67ef2_LogoVSVV2.png'
+const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/003596cab_LogoVSVV2.png'
 
 export default function PortalSetup() {
   const navigate = useNavigate()
@@ -117,7 +117,7 @@ export default function PortalSetup() {
 
         {/* Logo in the middle */}
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '8%', zIndex: 10 }}>
-          <div style={{ position: 'relative', height: 120, display: 'flex', alignItems: 'center', background: 'rgba(16,48,80,0.25)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', borderRadius: 14, paddingLeft: 24, paddingRight: 24 }}>
+          <div style={{ position: 'relative', height: 160, display: 'flex', alignItems: 'center', background: 'rgba(16,48,80,0.25)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', borderRadius: 14, paddingLeft: 28, paddingRight: 28 }}>
             <img src={LOGO_URL} alt="VSVV" style={{ height: '100%', objectFit: 'contain', opacity: 0.95, mixBlendMode: 'screen', filter: 'brightness(1.05) saturate(0.9)', transition: 'opacity 0.3s ease' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)', pointerEvents: 'none', borderRadius: 14 }} />
           </div>
