@@ -1,6 +1,4 @@
-import { createClient } from 'npm:@base44/sdk@0.8.25'
-
-const base44 = createClient({ appId: Deno.env.get('BASE44_APP_ID') })
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25'
 
 async function hashPassword(password) {
   const encoder = new TextEncoder()
@@ -17,6 +15,8 @@ async function verifyPassword(password, hash) {
 
 Deno.serve(async (req) => {
   try {
+    // Always create the client — it works for asServiceRole even without a user token
+    const base44 = createClientFromRequest(req)
     const body = await req.json()
     const { action, customer_id, password, email } = body
 
@@ -24,10 +24,8 @@ Deno.serve(async (req) => {
     const publicActions = ['verify', 'lookup_customer', 'reset_password']
 
     if (!publicActions.includes(action)) {
-      // For admin actions, require a Base44 user token
-      const { createClientFromRequest } = await import('npm:@base44/sdk@0.8.25')
-      const authedClient = createClientFromRequest(req)
-      const user = await authedClient.auth.me()
+      // Admin-only: require authenticated Base44 user
+      const user = await base44.auth.me()
       if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
       if (user.role !== 'admin') return Response.json({ error: 'Access denied' }, { status: 403 })
     }
