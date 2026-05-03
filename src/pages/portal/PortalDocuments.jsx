@@ -3,19 +3,16 @@ import { useQuery } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { FileText, Download, ExternalLink } from 'lucide-react'
+import { FileText, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function PortalDocuments() {
-  const { data: user } = useQuery({
-    queryKey: ['portal-user'],
-    queryFn: () => base44.auth.me(),
-  })
+  const customerId = localStorage.getItem('portal_customer_id')
 
   const { data: documents = [] } = useQuery({
-    queryKey: ['portal-documents', user?.id],
-    queryFn: () => base44.entities.Document.filter({ customer_id: user?.id }),
-    enabled: !!user?.id,
+    queryKey: ['portal-documents', customerId],
+    queryFn: () => base44.entities.Document.filter({ customer_id: customerId }).then(docs => docs.filter(d => d.visible_in_portal !== false)),
+    enabled: !!customerId,
   })
 
   if (documents.length === 0) {

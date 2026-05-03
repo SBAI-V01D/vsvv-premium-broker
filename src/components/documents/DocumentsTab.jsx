@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Upload, FileText, Trash2, ExternalLink, Tag } from 'lucide-react';
+import { Upload, FileText, Trash2, ExternalLink, Tag, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,7 +35,7 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
   const queryClient = useQueryClient();
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [form, setForm] = useState({ name: '', category: 'police', linked_contract_id: '', linked_claim_id: '', notes: '' });
+  const [form, setForm] = useState({ name: '', category: 'police', linked_contract_id: '', linked_claim_id: '', notes: '', visible_in_portal: true });
   const [file, setFile] = useState(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -80,12 +80,13 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
       linked_claim_id: form.linked_claim_id || undefined,
       notes: form.notes || undefined,
       uploaded_by_role: 'broker',
+      visible_in_portal: form.visible_in_portal,
     });
     queryClient.invalidateQueries({ queryKey: ['documents', customerId] });
     setUploading(false);
     setShowUpload(false);
     setFile(null);
-    setForm({ name: '', category: 'police', linked_contract_id: '', linked_claim_id: '', notes: '' });
+    setForm({ name: '', category: 'police', linked_contract_id: '', linked_claim_id: '', notes: '', visible_in_portal: true });
   };
 
   const linkedContractName = (id) => {
@@ -153,8 +154,12 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
                       )}
                     </div>
                     {doc.notes && <p className="text-xs text-muted-foreground mt-1">{doc.notes}</p>}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {doc.uploaded_by_role === 'customer' ? 'Vom Kunden' : 'Vom Broker'} · {doc.created_date ? new Date(doc.created_date).toLocaleDateString('de-CH') : ''}
+                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                      <span>{doc.uploaded_by_role === 'customer' ? 'Vom Kunden' : 'Vom Broker'} · {doc.created_date ? new Date(doc.created_date).toLocaleDateString('de-CH') : ''}</span>
+                      {doc.visible_in_portal === false
+                        ? <span className="flex items-center gap-0.5 text-muted-foreground"><EyeOff className="w-3 h-3" /> nicht im Portal</span>
+                        : <span className="flex items-center gap-0.5 text-primary"><Eye className="w-3 h-3" /> im Portal</span>
+                      }
                     </p>
                   </div>
                 </div>
@@ -223,6 +228,19 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
             <div>
               <Label>Bemerkungen (optional)</Label>
               <Textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="mt-1" />
+            </div>
+            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+              <input
+                type="checkbox"
+                id="visible_in_portal"
+                checked={form.visible_in_portal}
+                onChange={e => setForm(p => ({ ...p, visible_in_portal: e.target.checked }))}
+                className="w-4 h-4 cursor-pointer"
+              />
+              <label htmlFor="visible_in_portal" className="text-sm cursor-pointer flex items-center gap-1.5">
+                {form.visible_in_portal ? <Eye className="w-4 h-4 text-primary" /> : <EyeOff className="w-4 h-4 text-muted-foreground" />}
+                Im Kundenportal sichtbar
+              </label>
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setShowUpload(false)}>Abbrechen</Button>
