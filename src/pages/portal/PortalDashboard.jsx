@@ -543,7 +543,7 @@ export default function PortalDashboard() {
                 <div>
                   <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: 0.5 }}>Jahresprämie</p>
                   <p style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1 }}>
-                    CHF {totalPremiumYearly.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
+                    CHF {totalPremiumYearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
@@ -567,7 +567,7 @@ export default function PortalDashboard() {
                   .map((sparte, idx) => (
                     <div key={sparte.type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingBottom: idx < Math.min(contracts.length, 4) - 1 ? 16 : 0, borderBottom: idx < Math.min(contracts.length, 4) - 1 ? '1px solid #f3f4f6' : 'none' }}>
                       <span style={{ fontSize: 14, fontWeight: 500, color: '#1a1a1a' }}>{sparte.type}</span>
-                      <span style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>CHF {sparte.yearly.toLocaleString('de-CH', { maximumFractionDigits: 0 })}</span>
+                      <span style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>CHF {sparte.yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   ))}
               </div>
