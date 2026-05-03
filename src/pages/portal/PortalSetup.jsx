@@ -138,6 +138,7 @@ export default function PortalSetup() {
         <div style={{
           maxWidth: 360,
           width: '100%',
+          marginRight: 50,
         }}>
 
           {!mustChangePassword ? (
