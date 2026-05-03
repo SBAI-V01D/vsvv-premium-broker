@@ -117,9 +117,9 @@ export default function PortalSetup() {
 
         {/* Logo in the middle */}
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '8%', zIndex: 10 }}>
-          <div style={{ position: 'relative', height: 80, display: 'flex', alignItems: 'center' }}>
-            <img src={LOGO_URL} alt="VSVV" style={{ height: '100%', objectFit: 'contain', opacity: 0.9, mixBlendMode: 'overlay', filter: 'blur(0.4px) contrast(0.92) saturate(0.78) brightness(0.98)', transition: 'opacity 0.3s ease' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(255,255,255,0.08) 0%, transparent 50%, rgba(0,0,0,0.12) 100%)', pointerEvents: 'none', borderRadius: 4 }} />
+          <div style={{ position: 'relative', height: 80, display: 'flex', alignItems: 'center', background: 'rgba(11,28,44,0.15)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', borderRadius: 12, paddingLeft: 16, paddingRight: 16 }}>
+            <img src={LOGO_URL} alt="VSVV" style={{ height: '100%', objectFit: 'contain', opacity: 0.92, mixBlendMode: 'screen', filter: 'blur(0.3px) contrast(0.95) saturate(0.82) brightness(1.02)', transition: 'opacity 0.3s ease' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(255,255,255,0.06) 0%, transparent 50%, rgba(0,0,0,0.08) 100%)', pointerEvents: 'none', borderRadius: 12 }} />
           </div>
         </div>
       </div>
