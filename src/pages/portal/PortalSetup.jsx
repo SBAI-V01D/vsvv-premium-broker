@@ -23,57 +23,48 @@ export default function PortalSetup() {
     setLoading(true)
 
     try {
-      // Find customer by email
-      const customers = await base44.entities.Customer.list(null, 1000)
-      console.log(`[Login] Suche nach Email: ${email}, ${customers.length} Kunden gefunden`)
-      const customer = customers.find(c => c.email?.toLowerCase() === email.toLowerCase())
-      console.log(`[Login] Kunde gefunden:`, customer?.id, customer?.email)
+      // Lookup customer by email via backend (no auth required)
+      const lookupResult = await base44.functions.invoke('managePortalPassword', {
+        action: 'lookup_customer',
+        email,
+      })
 
-      if (!customer) {
+      if (!lookupResult.data?.found) {
         setError('E-Mail-Adresse nicht gefunden')
         setLoading(false)
         return
       }
 
-      if (!customer.portal_access_enabled) {
+      const { customer_id, portal_access_enabled, portal_password_must_change } = lookupResult.data
+
+      if (!portal_access_enabled) {
         setError('Portal-Zugriff ist nicht aktiviert. Kontaktieren Sie Ihren Broker.')
         setLoading(false)
         return
       }
 
       // Verify password
-      try {
-        const result = await base44.functions.invoke('managePortalPassword', {
-          action: 'verify',
-          customer_id: customer.id,
-          password,
-        })
+      const verifyResult = await base44.functions.invoke('managePortalPassword', {
+        action: 'verify',
+        customer_id,
+        password,
+      })
 
-        if (!result.data?.valid) {
-          setError('E-Mail oder Passwort ist falsch')
-          setLoading(false)
-          return
-        }
-      } catch (err) {
+      if (!verifyResult.data?.valid) {
         setError('E-Mail oder Passwort ist falsch')
         setLoading(false)
         return
       }
 
       // Check if password must be changed
-      if (customer.portal_password_must_change) {
+      if (portal_password_must_change) {
         setMustChangePassword(true)
         setLoading(false)
         return
       }
 
-      // Update last login
-      await base44.entities.Customer.update(customer.id, {
-        portal_last_login: new Date().toISOString(),
-      })
-
       // Login successful
-      localStorage.setItem('portal_customer_id', customer.id)
+      localStorage.setItem('portal_customer_id', customer_id)
       localStorage.setItem('portal_email', email)
       navigate('/portal')
     } catch (err) {
@@ -91,28 +82,26 @@ export default function PortalSetup() {
     setLoading(true)
 
     try {
-      const customers = await base44.entities.Customer.list(null, 1000)
-      const customer = customers.find(c => c.email === email)
+      const lookupResult = await base44.functions.invoke('managePortalPassword', {
+        action: 'lookup_customer',
+        email,
+      })
 
-      if (!customer) {
+      if (!lookupResult.data?.found) {
         setError('Kunde nicht gefunden')
         setLoading(false)
         return
       }
 
+      const { customer_id } = lookupResult.data
+
       await base44.functions.invoke('managePortalPassword', {
         action: 'reset_password',
-        customer_id: customer.id,
+        customer_id,
         password: newPassword,
       })
 
-      // Update last login and clear must_change flag
-      await base44.entities.Customer.update(customer.id, {
-        portal_password_must_change: false,
-        portal_last_login: new Date().toISOString(),
-      })
-
-      localStorage.setItem('portal_customer_id', customer.id)
+      localStorage.setItem('portal_customer_id', customer_id)
       localStorage.setItem('portal_email', email)
       navigate('/portal')
     } catch (err) {

@@ -1,6 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25'
 
-// Einfacher Hash mit Deno's SubtleCrypto
 async function hashPassword(password) {
   const encoder = new TextEncoder()
   const data = encoder.encode(password)
@@ -17,33 +16,63 @@ async function verifyPassword(password, hash) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req)
-    const { action, customer_id, password } = await req.json()
+    const body = await req.json()
+    const { action, customer_id, password, email } = body
 
-    // 'verify' is public (used by portal login — no app user auth required)
-    if (action !== 'verify') {
+    // Public actions (no auth required — used by portal login)
+    const publicActions = ['verify', 'lookup_customer']
+
+    if (!publicActions.includes(action)) {
       const user = await base44.auth.me()
       if (!user) {
         return Response.json({ error: 'Unauthorized' }, { status: 401 })
       }
-      // Only admin can set/reset passwords
       if (user.role !== 'admin') {
         return Response.json({ error: 'Access denied' }, { status: 403 })
       }
+    }
+
+    // Lookup customer by email — public, used by portal login before we have customer_id
+    if (action === 'lookup_customer') {
+      if (!email) {
+        return Response.json({ error: 'email erforderlich' }, { status: 400 })
+      }
+      const customers = await base44.asServiceRole.entities.Customer.filter({ email })
+      const customer = customers.find(c => c.email?.toLowerCase() === email.toLowerCase())
+      if (!customer) {
+        return Response.json({ found: false })
+      }
+      return Response.json({
+        found: true,
+        customer_id: customer.id,
+        portal_access_enabled: customer.portal_access_enabled,
+        portal_password_must_change: customer.portal_password_must_change,
+        portal_last_login: customer.portal_last_login,
+      })
+    }
+
+    if (action === 'verify') {
+      if (!customer_id || !password) {
+        return Response.json({ error: 'customer_id und password erforderlich' }, { status: 400 })
+      }
+      const customer = await base44.asServiceRole.entities.Customer.get(customer_id)
+      if (!customer) {
+        return Response.json({ error: 'Kunde nicht gefunden' }, { status: 404 })
+      }
+      const valid = await verifyPassword(password, customer.portal_password_hash)
+      return Response.json({ valid })
     }
 
     if (action === 'set_password') {
       if (!customer_id || !password) {
         return Response.json({ error: 'customer_id und password erforderlich' }, { status: 400 })
       }
-
       const passwordHash = await hashPassword(password)
-      
-      await base44.entities.Customer.update(customer_id, {
+      await base44.asServiceRole.entities.Customer.update(customer_id, {
         portal_password_hash: passwordHash,
         portal_password_must_change: true,
         portal_access_enabled: true,
       })
-
       return Response.json({ success: true, message: 'Passwort gesetzt' })
     }
 
@@ -51,29 +80,12 @@ Deno.serve(async (req) => {
       if (!customer_id || !password) {
         return Response.json({ error: 'customer_id und password erforderlich' }, { status: 400 })
       }
-
       const passwordHash = await hashPassword(password)
-
-      await base44.entities.Customer.update(customer_id, {
+      await base44.asServiceRole.entities.Customer.update(customer_id, {
         portal_password_hash: passwordHash,
         portal_password_must_change: true,
       })
-
       return Response.json({ success: true, message: 'Passwort zurückgesetzt' })
-    }
-
-    if (action === 'verify') {
-      if (!customer_id || !password) {
-        return Response.json({ error: 'customer_id und password erforderlich' }, { status: 400 })
-      }
-
-      const customer = await base44.asServiceRole.entities.Customer.get(customer_id)
-      if (!customer) {
-        return Response.json({ error: 'Kunde nicht gefunden' }, { status: 404 })
-      }
-
-      const valid = await verifyPassword(password, customer.portal_password_hash)
-      return Response.json({ valid })
     }
 
     return Response.json({ error: 'Unbekannte Aktion' }, { status: 400 })
