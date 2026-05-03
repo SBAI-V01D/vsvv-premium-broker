@@ -87,7 +87,7 @@ export default function PortalDashboard() {
       {/* HEADER */}
       <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '16px 0', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <img src={LOGO_URL} alt="VSVV" style={{ height: 40 }} />
+          <img src={LOGO_URL} alt="VSVV" style={{ height: 50 }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             {customer && (
               <div style={{ textAlign: 'right' }}>
@@ -116,69 +116,69 @@ export default function PortalDashboard() {
         </div>
       </header>
 
-      {/* TEST HEADER */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '20px 40px', background: '#fff3cd', borderBottom: '1px solid #ffeaa7' }}>
-        <h2 style={{ margin: 0, color: '#856404', fontSize: 14, fontWeight: 700 }}>TEST VSVV SICHTBAR</h2>
-      </div>
+
 
       {/* MAIN CONTENT */}
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 40px' }}>
         
         {/* 1. BEGRÜSSUNG */}
-        <section style={{ marginBottom: 48 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 700, margin: '0 0 10px', lineHeight: 1.2, color: '#0f172a' }}>
-            Willkommen bei VSVV
-          </h1>
-          <p style={{ fontSize: 14, color: '#4b5563', margin: '0 0 18px', lineHeight: 1.5, maxWidth: 700 }}>
-            Ihrem Partner für transparente und strukturierte Versicherungslösungen. Behalten Sie jederzeit den Überblick über Ihre Versicherungen.
-          </p>
-          <a href="https://wa.me/41787170007" target="_blank" rel="noopener noreferrer">
+        <section style={{ marginBottom: 40, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 40 }}>
+          <div style={{ flex: 1 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 700, margin: '0 0 10px', lineHeight: 1.2, color: '#0f172a' }}>
+              Willkommen bei VSVV
+            </h1>
+            <p style={{ fontSize: 14, color: '#4b5563', margin: 0, lineHeight: 1.5 }}>
+              Ihrem Partner für transparente und strukturierte Versicherungslösungen. Behalten Sie jederzeit den Überblick über Ihre Versicherungen.
+            </p>
+          </div>
+          <a href="https://wa.me/41787170007" target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0 }}>
             <button style={{
               background: '#25D366',
               color: '#fff',
               border: 'none',
               borderRadius: 8,
-              padding: '14px 32px',
+              padding: '12px 28px',
               cursor: 'pointer',
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: 700,
               transition: 'all 0.2s',
-              boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)',
+              boxShadow: '0 2px 8px rgba(37, 211, 102, 0.2)',
+              whiteSpace: 'nowrap',
             }}
-            onMouseEnter={e => { e.target.style.transform = 'translateY(-3px)'; e.target.style.boxShadow = '0 6px 16px rgba(37, 211, 102, 0.35)' }}
-            onMouseLeave={e => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = '0 4px 12px rgba(37, 211, 102, 0.25)' }}
+            onMouseEnter={e => { e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 4px 12px rgba(37, 211, 102, 0.3)' }}
+            onMouseLeave={e => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = '0 2px 8px rgba(37, 211, 102, 0.2)' }}
             >
-              💬 Beratung per WhatsApp
+              💬 Beratung
             </button>
           </a>
         </section>
 
         {/* 2. KUNDENDATEN */}
         {customer && (
-          <section style={{ marginBottom: 80, paddingBottom: 60, borderBottom: '1px solid #e5e7eb' }}>
+          <section style={{ marginBottom: 64, paddingBottom: 48, borderBottom: '1px solid #e5e7eb' }}>
             {!editingCustomer ? (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 40 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ marginBottom: 24 }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 8px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Name</p>
-                    <p style={{ fontSize: 16, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.first_name} {customer.last_name}</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 60 }}>
+                <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px 48px' }}>
+                  <div>
+                    <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Name</p>
+                    <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.first_name} {customer.last_name}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>E-Mail</p>
+                    <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.email}</p>
                   </div>
                   {customer.street && (
-                    <div style={{ marginBottom: 24 }}>
-                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 8px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Adresse</p>
-                      <p style={{ fontSize: 16, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Adresse</p>
+                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>
                         {customer.street}, {customer.zip_code} {customer.city}
                       </p>
                     </div>
                   )}
-                  <div style={{ marginBottom: 24 }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 8px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>E-Mail</p>
-                    <p style={{ fontSize: 16, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.email}</p>
-                  </div>
                   {customer.phone && (
                     <div>
-                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 8px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Telefon</p>
-                      <p style={{ fontSize: 16, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.phone}</p>
+                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Telefon</p>
+                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.phone}</p>
                     </div>
                   )}
                 </div>
@@ -333,36 +333,51 @@ export default function PortalDashboard() {
         )}
 
         {/* 3. VERSICHERUNGSÜBERSICHT */}
-        <section style={{ marginBottom: 70, paddingBottom: 40, borderBottom: '1px solid #e5e7eb' }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 28px', color: '#0f172a' }}>Ihre Versicherungsübersicht</h2>
+        <section style={{ marginBottom: 64, paddingBottom: 40, borderBottom: '1px solid #e5e7eb' }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 24px', color: '#0f172a' }}>Versicherungsübersicht</h2>
           
-          <div style={{ background: '#0f172a', color: '#fff', borderRadius: 10, padding: 32 }}>
-            <div style={{ marginBottom: 40 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, margin: '0 0 10px', color: '#a1aab8', textTransform: 'uppercase', letterSpacing: 0.8 }}>Monatsprämie</p>
-              <p style={{ fontSize: 42, fontWeight: 800, margin: 0, lineHeight: 1 }}>
-                CHF {totalPremiumMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
+          <div style={{ background: '#0f172a', color: '#fff', borderRadius: 10, padding: 28 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 28 }}>
+              <div>
+                <p style={{ fontSize: 10, fontWeight: 700, margin: '0 0 8px', color: '#a1aab8', textTransform: 'uppercase', letterSpacing: 0.8 }}>Total Monatsprämie</p>
+                <p style={{ fontSize: 36, fontWeight: 800, margin: 0, lineHeight: 1 }}>
+                  CHF {totalPremiumMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div>
+                <p style={{ fontSize: 10, fontWeight: 700, margin: '0 0 8px', color: '#a1aab8', textTransform: 'uppercase', letterSpacing: 0.8 }}>Total Jahresprämie</p>
+                <p style={{ fontSize: 36, fontWeight: 800, margin: 0, lineHeight: 1 }}>
+                  CHF {totalPremiumYearly.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
+                </p>
+              </div>
             </div>
 
-            <div style={{ marginBottom: 40 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, margin: '0 0 10px', color: '#a1aab8', textTransform: 'uppercase', letterSpacing: 0.8 }}>Jahresprämie</p>
-              <p style={{ fontSize: 42, fontWeight: 800, margin: 0, lineHeight: 1 }}>
-                CHF {totalPremiumYearly.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
-              </p>
-            </div>
-
-            <div>
-              <p style={{ fontSize: 10, fontWeight: 700, margin: '0 0 10px', color: '#a1aab8', textTransform: 'uppercase', letterSpacing: 0.8 }}>Aktive Verträge</p>
-              <p style={{ fontSize: 42, fontWeight: 800, margin: 0, lineHeight: 1 }}>
-                {activeContracts}
-              </p>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 20 }}>
+              <p style={{ fontSize: 10, fontWeight: 700, margin: '0 0 16px', color: '#a1aab8', textTransform: 'uppercase', letterSpacing: 0.8 }}>Prämien nach Versicherungssparte</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                {contracts.reduce((acc, c) => {
+                  const type = c.insurance_type || 'Sonstige'
+                  const existing = acc.find(x => x.type === type)
+                  if (existing) {
+                    existing.yearly += c.premium_yearly || 0
+                  } else {
+                    acc.push({ type, yearly: c.premium_yearly || 0 })
+                  }
+                  return acc
+                }, []).map(sparte => (
+                  <div key={sparte.type} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                    <span style={{ color: '#d1d5db' }}>{sparte.type}</span>
+                    <span style={{ fontWeight: 600, color: '#fff' }}>CHF {sparte.yearly.toLocaleString('de-CH', { maximumFractionDigits: 0 })}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
         {/* 4. VERTRÄGE */}
-        <section style={{ marginBottom: 70, paddingBottom: 40, borderBottom: '1px solid #e5e7eb' }}>
-          <h2 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 32px', color: '#0f172a' }}>Ihre Verträge</h2>
+        <section style={{ marginBottom: 64, paddingBottom: 40, borderBottom: '1px solid #e5e7eb' }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 24px', color: '#0f172a' }}>Ihre Verträge</h2>
           
           {contracts.length === 0 ? (
             <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 40, textAlign: 'center', color: '#6b7280' }}>
@@ -391,17 +406,28 @@ export default function PortalDashboard() {
                         <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 500, color: '#1a1a1a' }}>{contract.insurance_type || '–'}</td>
                         <td style={{ padding: '14px 20px', fontSize: 13, color: '#4b5563' }}>{contract.insurer || '–'}</td>
                         <td style={{ padding: '14px 20px' }}>
-                          <span style={{
-                            display: 'inline-block',
-                            padding: '4px 10px',
-                            borderRadius: 4,
-                            fontSize: 11,
-                            fontWeight: 600,
-                            background: contract.status === 'active' ? '#dcfce7' : '#f3f4f6',
-                            color: contract.status === 'active' ? '#166534' : '#6b7280',
-                          }}>
-                            {contract.status === 'active' ? 'Aktiv' : contract.status === 'cancelled' ? 'Gekündigt' : contract.status}
-                          </span>
+                          {(() => {
+                            const statusMap = {
+                              'active': { bg: '#dcfce7', color: '#166534', label: 'Aktiv' },
+                              'cancelled': { bg: '#fee2e2', color: '#991b1b', label: 'Gekündigt' },
+                              'pending': { bg: '#fef3c7', color: '#92400e', label: 'Prüfung' },
+                              'review': { bg: '#fef3c7', color: '#92400e', label: 'Prüfung' },
+                            }
+                            const status = statusMap[contract.status] || { bg: '#f3f4f6', color: '#6b7280', label: contract.status }
+                            return (
+                              <span style={{
+                                display: 'inline-block',
+                                padding: '4px 10px',
+                                borderRadius: 4,
+                                fontSize: 11,
+                                fontWeight: 600,
+                                background: status.bg,
+                                color: status.color,
+                              }}>
+                                {status.label}
+                              </span>
+                            )
+                          })()}
                         </td>
                         <td style={{ padding: '14px 20px', textAlign: 'right', fontSize: 13, fontWeight: 500, color: '#1a1a1a' }}>
                           CHF {(contract.premium_monthly || 0).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -423,7 +449,10 @@ export default function PortalDashboard() {
 
         {/* 5. DOKUMENTE */}
         <section style={{ marginBottom: 60 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 24px', color: '#0f172a' }}>Ihre Dokumente</h2>
+          <div style={{ marginBottom: 16 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 4px', color: '#0f172a' }}>Ihre Dokumente</h2>
+            <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>Ihre Dokumente sicher gespeichert</p>
+          </div>
           
           {documents.length === 0 ? (
             <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 40, textAlign: 'center', color: '#6b7280' }}>
@@ -471,7 +500,7 @@ export default function PortalDashboard() {
       </main>
 
       {/* FOOTER */}
-      <footer style={{ padding: '32px', textAlign: 'center', fontSize: 11, color: '#9ca3af', borderTop: '1px solid #e5e7eb', marginTop: 60 }}>
+      <footer style={{ padding: '28px', textAlign: 'center', fontSize: 11, color: '#9ca3af', borderTop: '1px solid #e5e7eb', marginTop: 56 }}>
         © 2025 VSVV – Ihre Versicherungsplattform
       </footer>
 
@@ -480,27 +509,27 @@ export default function PortalDashboard() {
         href="https://wa.me/41787170007"
         target="_blank"
         rel="noopener noreferrer"
-        title="Schnelle Beratung via WhatsApp"
+        title="Beratung via WhatsApp"
         style={{
           position: 'fixed',
-          bottom: 24,
-          right: 24,
+          bottom: 20,
+          right: 20,
           zIndex: 100,
-          width: 44,
-          height: 44,
+          width: 40,
+          height: 40,
           background: '#25D366',
           borderRadius: '50%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 2px 6px rgba(37, 211, 102, 0.18)',
+          boxShadow: '0 1px 4px rgba(37, 211, 102, 0.15)',
           textDecoration: 'none',
           cursor: 'pointer',
           transition: 'all 0.2s',
-          fontSize: 20,
+          fontSize: 18,
         }}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.06)'; e.currentTarget.style.boxShadow = '0 3px 10px rgba(37, 211, 102, 0.25)' }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 2px 6px rgba(37, 211, 102, 0.18)' }}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(37, 211, 102, 0.2)' }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(37, 211, 102, 0.15)' }}
       >
         💬
       </a>
