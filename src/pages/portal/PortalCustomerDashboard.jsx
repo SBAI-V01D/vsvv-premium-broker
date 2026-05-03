@@ -208,88 +208,84 @@ export default function PortalCustomerDashboard() {
           <h2 style={{
             fontSize: 24,
             fontWeight: 600,
-            margin: '0 0 40px',
+            margin: '0 0 48px',
             color: '#EAF1F7',
             letterSpacing: '-0.5px',
           }}>
             Ihre Versicherungsübersicht
           </h2>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr',
-            gap: 48,
-          }}>
-            <div>
-              <p style={{
-                color: '#7A8A9E',
-                fontSize: 11,
-                fontWeight: 600,
-                margin: '0 0 12px',
-                textTransform: 'uppercase',
-                letterSpacing: 1,
-              }}>
-                Monatsprämie
-              </p>
-              <p style={{
-                color: '#5B9FE6',
-                fontSize: 48,
-                fontWeight: 800,
-                margin: 0,
-                lineHeight: 1,
-              }}>
-                CHF {(totalPremium / 12).toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-              </p>
-            </div>
-            <div>
-              <p style={{
-                color: '#7A8A9E',
-                fontSize: 11,
-                fontWeight: 600,
-                margin: '0 0 12px',
-                textTransform: 'uppercase',
-                letterSpacing: 1,
-              }}>
-                Jahresprämie
-              </p>
-              <p style={{
-                color: '#4ac66e',
-                fontSize: 48,
-                fontWeight: 800,
-                margin: 0,
-                lineHeight: 1,
-              }}>
-                CHF {totalPremium.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
-              </p>
-            </div>
-            <div>
-              <p style={{
-                color: '#7A8A9E',
-                fontSize: 11,
-                fontWeight: 600,
-                margin: '0 0 12px',
-                textTransform: 'uppercase',
-                letterSpacing: 1,
-              }}>
-                Aktive Verträge
-              </p>
-              <p style={{
-                color: '#8A9BB0',
-                fontSize: 48,
-                fontWeight: 800,
-                margin: 0,
-                lineHeight: 1,
-              }}>
-                {activeContracts}
-              </p>
-            </div>
+          <div style={{ marginBottom: 48 }}>
+            <p style={{
+              color: '#7A8A9E',
+              fontSize: 11,
+              fontWeight: 600,
+              margin: '0 0 12px',
+              textTransform: 'uppercase',
+              letterSpacing: 1,
+            }}>
+              Monatsprämie
+            </p>
+            <p style={{
+              color: '#5B9FE6',
+              fontSize: 56,
+              fontWeight: 800,
+              margin: 0,
+              lineHeight: 1,
+            }}>
+              CHF {(totalPremium / 12).toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </p>
+          </div>
+
+          <div style={{ marginBottom: 48 }}>
+            <p style={{
+              color: '#7A8A9E',
+              fontSize: 11,
+              fontWeight: 600,
+              margin: '0 0 12px',
+              textTransform: 'uppercase',
+              letterSpacing: 1,
+            }}>
+              Jahresprämie
+            </p>
+            <p style={{
+              color: '#4ac66e',
+              fontSize: 56,
+              fontWeight: 800,
+              margin: 0,
+              lineHeight: 1,
+            }}>
+              CHF {totalPremium.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
+            </p>
+          </div>
+
+          <div style={{ marginBottom: 48 }}>
+            <p style={{
+              color: '#7A8A9E',
+              fontSize: 11,
+              fontWeight: 600,
+              margin: '0 0 12px',
+              textTransform: 'uppercase',
+              letterSpacing: 1,
+            }}>
+              Aktive Verträge
+            </p>
+            <p style={{
+              color: '#8A9BB0',
+              fontSize: 56,
+              fontWeight: 800,
+              margin: 0,
+              lineHeight: 1,
+            }}>
+              {activeContracts}
+            </p>
           </div>
 
           <p style={{
             color: '#5B9FE6',
             fontSize: 12,
             fontWeight: 500,
-            margin: '32px 0 0',
+            margin: 0,
             paddingTop: 24,
             borderTop: '1px solid rgba(91,163,232,0.15)',
           }}>
