@@ -147,146 +147,180 @@ export default function PortalCustomerDashboard() {
         padding: '40px 24px',
       }}>
 
-        {/* HERO SECTION (DOMINANT) */}
+        {/* CONTROL CENTER (PREMIUM) */}
         <div style={{
-          background: 'linear-gradient(135deg, rgba(91,163,232,0.15) 0%, rgba(91,163,232,0.08) 100%)',
-          border: '2px solid rgba(91,163,232,0.2)',
-          borderRadius: 20,
-          padding: '56px 48px',
-          marginBottom: 72,
+          background: 'transparent',
+          padding: '60px 0',
+          marginBottom: 80,
           display: 'flex',
-          flexDirection: 'column',
-          gap: 32,
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: 60,
         }}>
-          {/* Title */}
-          <div>
+          {/* Left: Content */}
+          <div style={{ flex: 1 }}>
             <h1 style={{
-              fontSize: 48,
+              fontSize: 52,
               fontWeight: 700,
-              margin: 0,
+              margin: '0 0 8px',
               color: '#EAF1F7',
               lineHeight: 1.1,
-              letterSpacing: '-1px',
+              letterSpacing: '-1.5px',
             }}>
               Ihre Versicherungsübersicht
             </h1>
-          </div>
 
-          {/* Metrics */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 48,
-          }}>
-            <div>
-              <p style={{
-                color: '#8A9BB0',
-                fontSize: 13,
-                fontWeight: 500,
-                margin: '0 0 12px',
-                textTransform: 'uppercase',
-                letterSpacing: 0.5,
-              }}>
-                Aktive Verträge
-              </p>
-              <p style={{
-                color: '#5B9FE6',
-                fontSize: 56,
-                fontWeight: 800,
-                margin: 0,
-              }}>
-                {activeContracts}
-              </p>
+            {/* Metrics */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 64,
+              marginTop: 48,
+              marginBottom: 48,
+            }}>
+              <div>
+                <p style={{
+                  color: '#7A8A9E',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  margin: 0,
+                  textTransform: 'uppercase',
+                  letterSpacing: 1,
+                }}>
+                  Aktive Verträge
+                </p>
+                <p style={{
+                  color: '#5B9FE6',
+                  fontSize: 64,
+                  fontWeight: 800,
+                  margin: '16px 0 0',
+                  lineHeight: 1,
+                }}>
+                  {activeContracts}
+                </p>
+              </div>
+              <div>
+                <p style={{
+                  color: '#7A8A9E',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  margin: 0,
+                  textTransform: 'uppercase',
+                  letterSpacing: 1,
+                }}>
+                  Jahresprämie
+                </p>
+                <p style={{
+                  color: '#4ac66e',
+                  fontSize: 64,
+                  fontWeight: 800,
+                  margin: '16px 0 0',
+                  lineHeight: 1,
+                }}>
+                  CHF {totalPremium.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
+                </p>
+              </div>
             </div>
-            <div>
-              <p style={{
-                color: '#8A9BB0',
-                fontSize: 13,
-                fontWeight: 5,
-                margin: '0 0 12px',
-                textTransform: 'uppercase',
-                letterSpacing: 0.5,
-              }}>
-                Jahresprämie
-              </p>
+
+            {/* Status */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+            }}>
+              <div style={{
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                background: '#4ac66e',
+                boxShadow: '0 0 6px rgba(74,198,110,0.5)',
+              }} />
               <p style={{
                 color: '#4ac66e',
-                fontSize: 56,
-                fontWeight: 800,
+                fontSize: 13,
+                fontWeight: 600,
                 margin: 0,
               }}>
-                CHF {totalPremium.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
+                Alles optimal aufgestellt
               </p>
             </div>
           </div>
 
-          {/* Status Badge */}
+          {/* Right: Button */}
           <div style={{
             display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            paddingTop: 16,
-            borderTop: '1px solid rgba(91,163,232,0.15)',
+            alignItems: 'flex-start',
+            paddingTop: 48,
           }}>
-            <div style={{
-              width: 12,
-              height: 12,
-              borderRadius: '50%',
-              background: '#4ac66e',
-              boxShadow: '0 0 8px rgba(74,198,110,0.4)',
-            }} />
-            <p style={{
-              color: '#4ac66e',
+            <button style={{
+              background: 'linear-gradient(135deg, #3A6BA8 0%, #5BA3E8 100%)',
+              border: 'none',
+              borderRadius: 12,
+              padding: '20px 32px',
+              color: '#EAF1F7',
               fontSize: 14,
               fontWeight: 600,
-              margin: 0,
-            }}>
-              Alles aktuell – Ihr Portfolio ist in Ordnung
-            </p>
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.2s',
+              boxShadow: '0 4px 16px rgba(91,163,232,0.25)',
+            }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = '0 6px 24px rgba(91,163,232,0.35)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(91,163,232,0.25)'
+              }}
+            >
+              Portfolio prüfen lassen
+            </button>
           </div>
         </div>
 
         {/* KPI CARDS (SECONDARY) */}
         <div className="kpi-grid" style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: 16,
-          marginBottom: 72,
-          opacity: 0.85,
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 20,
+          marginBottom: 80,
+          opacity: 0.8,
         }}>
           <KPICard
-            icon={() => <FileText size={20} />}
+            icon={() => <FileText size={18} />}
             title="Aktive Verträge"
             value={activeContracts}
             unit=""
           />
           <KPICard
-            icon={() => <span style={{ fontSize: 20, fontWeight: 700 }}>CHF</span>}
-            title="Jahresprämie"
-            value={totalPremium.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
-            unit=""
-          />
-          <KPICard
-            icon={() => <Calendar size={20} />}
+            icon={() => <Calendar size={18} />}
             title="Offene Anliegen"
             value={openIssues}
             unit=""
           />
           <KPICard
-            icon={() => <ChevronRight size={20} />}
+            icon={() => <ChevronRight size={18} />}
             title="Nächste Termine"
             value={nextTerms}
+            unit=""
+          />
+          <KPICard
+            icon={() => <FileText size={18} />}
+            title="Ihre Dokumente"
+            value={documents.length}
             unit=""
           />
         </div>
 
         {/* VERTRÄGE (HAUPTBEREICH) */}
-        <section style={{ marginBottom: 60 }}>
+        <section style={{ marginBottom: 80 }}>
           <h2 style={{
-            fontSize: 20,
+            fontSize: 24,
             fontWeight: 600,
-            margin: '0 0 24px',
+            margin: '0 0 32px',
             color: '#EAF1F7',
+            letterSpacing: '-0.5px',
           }}>
             Ihre Verträge
           </h2>
@@ -492,12 +526,13 @@ export default function PortalCustomerDashboard() {
         </section>
 
         {/* DOKUMENTE */}
-        <section style={{ marginBottom: 60 }}>
+        <section style={{ marginBottom: 80 }}>
           <h2 style={{
-            fontSize: 20,
+            fontSize: 24,
             fontWeight: 600,
-            margin: '0 0 24px',
+            margin: '0 0 32px',
             color: '#EAF1F7',
+            letterSpacing: '-0.5px',
           }}>
             Ihre Dokumente
           </h2>
