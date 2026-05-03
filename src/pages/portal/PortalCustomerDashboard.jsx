@@ -142,156 +142,264 @@ export default function PortalCustomerDashboard() {
 
       {/* MAIN CONTENT */}
       <main style={{
-        maxWidth: 1100,
-        margin: '0 auto',
-        padding: '40px 24px',
+        width: '100%',
+        padding: '40px 40px',
       }}>
 
-        {/* SEKTION 1: KUNDENDATEN */}
+        {/* ZEILE 1: BEGRÜSSUNG + CTA */}
+        <section style={{
+          marginBottom: 80,
+          paddingBottom: 40,
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          gap: 40,
+        }}>
+          <div style={{ flex: 1 }}>
+            <h1 style={{
+              fontSize: 32,
+              fontWeight: 700,
+              margin: '0 0 12px',
+              color: '#EAF1F7',
+              lineHeight: 1.2,
+            }}>
+              Willkommen bei VSVV
+            </h1>
+            <p style={{
+              fontSize: 15,
+              color: '#C8D4E3',
+              margin: 0,
+              lineHeight: 1.6,
+              maxWidth: 600,
+            }}>
+              Ihr unabhängiger Partner für strukturierte und transparente Versicherungslösungen. Behalten Sie jederzeit den Überblick über Ihre Versicherungen und Dokumente.
+            </p>
+          </div>
+          <button style={{
+            background: 'linear-gradient(135deg, #3A6BA8 0%, #5BA3E8 100%)',
+            border: 'none',
+            borderRadius: 10,
+            padding: '14px 28px',
+            color: '#EAF1F7',
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+            boxShadow: '0 2px 8px rgba(91,163,232,0.2)',
+            transition: 'all 0.2s',
+          }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-1px)'
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(91,163,232,0.3)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)'
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(91,163,232,0.2)'
+            }}
+          >
+            💬 Beratung per WhatsApp
+          </button>
+        </section>
+
+        {/* ZEILE 2: KUNDENDATEN */}
         {customer && (
           <section style={{
-            marginBottom: 60,
+            marginBottom: 80,
             paddingBottom: 40,
             borderBottom: '1px solid rgba(255,255,255,0.08)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: 40,
           }}>
-            <div>
-              <div style={{ marginBottom: 24 }}>
-                <p style={{ color: '#7A8A9E', fontSize: 11, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ marginBottom: 20 }}>
+                <p style={{ color: '#7A8A9E', fontSize: 11, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
                   Name
                 </p>
-                <p style={{ color: '#EAF1F7', fontSize: 16, fontWeight: 500, margin: 0 }}>
+                <p style={{ color: '#EAF1F7', fontSize: 15, fontWeight: 500, margin: 0 }}>
                   {customer.first_name} {customer.last_name}
                 </p>
               </div>
-              <div style={{ marginBottom: 24 }}>
-                <p style={{ color: '#7A8A9E', fontSize: 11, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+              <div style={{ marginBottom: 20 }}>
+                <p style={{ color: '#7A8A9E', fontSize: 11, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
                   E-Mail
                 </p>
-                <p style={{ color: '#EAF1F7', fontSize: 16, fontWeight: 500, margin: 0 }}>
+                <p style={{ color: '#EAF1F7', fontSize: 15, fontWeight: 500, margin: 0 }}>
                   {customer.email}
                 </p>
               </div>
               {customer.street && (
-                <div style={{ marginBottom: 24 }}>
-                  <p style={{ color: '#7A8A9E', fontSize: 11, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                <div style={{ marginBottom: 20 }}>
+                  <p style={{ color: '#7A8A9E', fontSize: 11, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
                     Adresse
                   </p>
-                  <p style={{ color: '#EAF1F7', fontSize: 16, fontWeight: 500, margin: 0 }}>
+                  <p style={{ color: '#EAF1F7', fontSize: 15, fontWeight: 500, margin: 0 }}>
                     {customer.street}, {customer.zip_code} {customer.city}
                   </p>
                 </div>
               )}
               {customer.phone && (
                 <div>
-                  <p style={{ color: '#7A8A9E', fontSize: 11, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                  <p style={{ color: '#7A8A9E', fontSize: 11, fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
                     Telefon
                   </p>
-                  <p style={{ color: '#EAF1F7', fontSize: 16, fontWeight: 500, margin: 0 }}>
+                  <p style={{ color: '#EAF1F7', fontSize: 15, fontWeight: 500, margin: 0 }}>
                     {customer.phone}
                   </p>
                 </div>
               )}
             </div>
+            <button style={{
+              background: 'rgba(91,163,232,0.1)',
+              border: '1px solid rgba(91,163,232,0.2)',
+              borderRadius: 8,
+              padding: '10px 18px',
+              color: '#5B9FE6',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+              transition: 'all 0.2s',
+            }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(91,163,232,0.15)'
+                e.currentTarget.style.borderColor = 'rgba(91,163,232,0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(91,163,232,0.1)'
+                e.currentTarget.style.borderColor = 'rgba(91,163,232,0.2)'
+              }}
+            >
+              ✎ Daten bearbeiten
+            </button>
           </section>
         )}
 
-        {/* SEKTION 2: KENNZAHLEN */}
+        {/* ZEILE 3: DASHBOARD (KENNZAHLEN) */}
         <section style={{
-          marginBottom: 60,
+          marginBottom: 80,
           paddingBottom: 40,
           borderBottom: '1px solid rgba(255,255,255,0.08)',
         }}>
           <h2 style={{
             fontSize: 24,
             fontWeight: 600,
-            margin: '0 0 48px',
+            margin: '0 0 32px',
             color: '#EAF1F7',
             letterSpacing: '-0.5px',
           }}>
             Ihre Versicherungsübersicht
           </h2>
 
-          <div style={{ marginBottom: 48 }}>
-            <p style={{
-              color: '#7A8A9E',
-              fontSize: 11,
-              fontWeight: 600,
-              margin: '0 0 12px',
-              textTransform: 'uppercase',
-              letterSpacing: 1,
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 24,
+          }}>
+            <div style={{
+              background: 'rgba(91,163,232,0.15)',
+              border: '1px solid rgba(91,163,232,0.3)',
+              borderRadius: 12,
+              padding: 24,
             }}>
-              Monatsprämie
-            </p>
-            <p style={{
-              color: '#5B9FE6',
-              fontSize: 56,
-              fontWeight: 800,
-              margin: 0,
-              lineHeight: 1,
-            }}>
-              CHF {(totalPremium / 12).toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-            </p>
-          </div>
+              <p style={{
+                color: '#8A9BB0',
+                fontSize: 11,
+                fontWeight: 600,
+                margin: 0,
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+                marginBottom: 12,
+              }}>
+                Monatsprämie
+              </p>
+              <p style={{
+                color: '#EAF1F7',
+                fontSize: 40,
+                fontWeight: 800,
+                margin: 0,
+                lineHeight: 1,
+              }}>
+                CHF {(totalPremium / 12).toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </p>
+            </div>
 
-          <div style={{ marginBottom: 48 }}>
-            <p style={{
-              color: '#7A8A9E',
-              fontSize: 11,
-              fontWeight: 600,
-              margin: '0 0 12px',
-              textTransform: 'uppercase',
-              letterSpacing: 1,
+            <div style={{
+              background: 'rgba(74,198,110,0.12)',
+              border: '1px solid rgba(74,198,110,0.25)',
+              borderRadius: 12,
+              padding: 24,
             }}>
-              Jahresprämie
-            </p>
-            <p style={{
-              color: '#4ac66e',
-              fontSize: 56,
-              fontWeight: 800,
-              margin: 0,
-              lineHeight: 1,
-            }}>
-              CHF {totalPremium.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
-            </p>
-          </div>
+              <p style={{
+                color: '#8A9BB0',
+                fontSize: 11,
+                fontWeight: 600,
+                margin: 0,
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+                marginBottom: 12,
+              }}>
+                Jahresprämie
+              </p>
+              <p style={{
+                color: '#EAF1F7',
+                fontSize: 40,
+                fontWeight: 800,
+                margin: 0,
+                lineHeight: 1,
+              }}>
+                CHF {totalPremium.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
+              </p>
+            </div>
 
-          <div style={{ marginBottom: 48 }}>
-            <p style={{
-              color: '#7A8A9E',
-              fontSize: 11,
-              fontWeight: 600,
-              margin: '0 0 12px',
-              textTransform: 'uppercase',
-              letterSpacing: 1,
+            <div style={{
+              background: 'rgba(200,150,100,0.1)',
+              border: '1px solid rgba(200,150,100,0.2)',
+              borderRadius: 12,
+              padding: 24,
             }}>
-              Aktive Verträge
-            </p>
-            <p style={{
-              color: '#8A9BB0',
-              fontSize: 56,
-              fontWeight: 800,
-              margin: 0,
-              lineHeight: 1,
-            }}>
-              {activeContracts}
-            </p>
+              <p style={{
+                color: '#8A9BB0',
+                fontSize: 11,
+                fontWeight: 600,
+                margin: 0,
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+                marginBottom: 12,
+              }}>
+                Aktive Verträge
+              </p>
+              <p style={{
+                color: '#EAF1F7',
+                fontSize: 40,
+                fontWeight: 800,
+                margin: 0,
+                lineHeight: 1,
+              }}>
+                {activeContracts}
+              </p>
+            </div>
           </div>
 
           <p style={{
-            color: '#5B9FE6',
+            color: '#7A8A9E',
             fontSize: 12,
             fontWeight: 500,
-            margin: 0,
-            paddingTop: 24,
-            borderTop: '1px solid rgba(91,163,232,0.15)',
+            margin: '24px 0 0',
+            paddingTop: 20,
+            borderTop: '1px solid rgba(255,255,255,0.06)',
           }}>
             Gesamte Versicherungsprämien
           </p>
         </section>
 
-        {/* SEKTION 3: VERTRÄGE */}
+        {/* ZEILE 4: VERTRÄGE */}
         <section style={{
-          marginBottom: 60,
+          marginBottom: 80,
           paddingBottom: 40,
           borderBottom: '1px solid rgba(255,255,255,0.08)',
         }}>
@@ -443,7 +551,7 @@ export default function PortalCustomerDashboard() {
 
 
 
-        {/* SEKTION 4: DOKUMENTE */}
+        {/* ZEILE 5: DOKUMENTE */}
         <section style={{ marginBottom: 80 }}>
           <h2 style={{
             fontSize: 24,
@@ -524,7 +632,7 @@ export default function PortalCustomerDashboard() {
       {/* FOOTER */}
       <footer style={{
         borderTop: '1px solid rgba(255,255,255,0.06)',
-        padding: '32px 24px',
+        padding: '32px 40px',
         marginTop: 80,
         textAlign: 'center',
         fontSize: 11,
@@ -532,6 +640,42 @@ export default function PortalCustomerDashboard() {
       }}>
         © 2025 VSVV – Ihre Versicherungsplattform
       </footer>
+
+      {/* FLOATING WHATSAPP BUTTON */}
+      <a
+        href="https://wa.me/41787170007"
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Beratung per WhatsApp"
+        style={{
+          position: 'fixed',
+          bottom: 28,
+          right: 28,
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          width: 52,
+          height: 52,
+          background: '#25D366',
+          borderRadius: '50%',
+          boxShadow: '0 4px 16px rgba(37,211,102,0.35)',
+          textDecoration: 'none',
+          transition: 'all 0.2s',
+          cursor: 'pointer',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.08)'
+          e.currentTarget.style.boxShadow = '0 6px 24px rgba(37,211,102,0.45)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)'
+          e.currentTarget.style.boxShadow = '0 4px 16px rgba(37,211,102,0.35)'
+        }}
+      >
+        <span style={{ fontSize: 24, lineHeight: 1 }}>💬</span>
+      </a>
     </div>
   )
 }
