@@ -145,29 +145,7 @@ export default function PortalLayout({ children }) {
         </div>
       </div>
 
-      {/* WhatsApp floating button */}
-      <a
-        href="https://wa.me/41787170007"
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Fragen? Jetzt direkt schreiben"
-        style={{
-          position: 'fixed', bottom: 28, right: 28, zIndex: 100,
-          display: 'flex', alignItems: 'center', gap: 10,
-          background: '#25D366',
-          borderRadius: 50, paddingLeft: 16, paddingRight: 20, height: 52,
-          boxShadow: '0 4px 20px rgba(37,211,102,0.45)',
-          textDecoration: 'none',
-          transition: 'all 0.2s',
-        }}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(37,211,102,0.55)' }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(37,211,102,0.45)' }}
-      >
-        <MessageCircle size={22} color="#fff" fill="#fff" />
-        <span style={{ color: '#fff', fontWeight: 700, fontSize: 13, fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}>
-          Frage stellen
-        </span>
-      </a>
+
     </div>
   )
 }
