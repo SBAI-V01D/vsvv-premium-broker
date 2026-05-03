@@ -119,29 +119,30 @@ export default function PortalDashboard() {
     <div style={{ background: '#F5F7FA', minHeight: '100vh', fontFamily: 'Inter, -apple-system, sans-serif', color: '#1a1a1a' }}>
       
       {/* HEADER */}
-      <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '12px 0', position: 'sticky', top: 0, zIndex: 100 }}>
+      <header style={{ background: '#0B1C2C', borderBottom: '3px solid #0B1C2C', padding: '20px 0', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <img src={LOGO_URL} alt="VSVV" style={{ height: 60 }} />
+          <img src={LOGO_URL} alt="VSVV" style={{ height: 60, filter: 'brightness(1.2)' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             {customer && (
               <div style={{ textAlign: 'right' }}>
-                <p style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>{customer.first_name} {customer.last_name}</p>
+                <p style={{ fontSize: 13, fontWeight: 500, margin: 0, color: '#fff' }}>{customer.first_name} {customer.last_name}</p>
               </div>
             )}
             <button 
               onClick={handleLogout}
               style={{
-                background: '#f3f4f6',
-                border: '1px solid #e5e7eb',
+                background: 'rgba(255,255,255,0.15)',
+                border: '1px solid rgba(255,255,255,0.3)',
                 borderRadius: 6,
                 padding: '8px 14px',
                 cursor: 'pointer',
                 fontSize: 13,
                 fontWeight: 500,
+                color: '#fff',
                 transition: 'all 0.2s',
               }}
-              onMouseEnter={e => { e.target.style.background = '#e5e7eb' }}
-              onMouseLeave={e => { e.target.style.background = '#f3f4f6' }}
+              onMouseEnter={e => { e.target.style.background = 'rgba(255,255,255,0.25)' }}
+              onMouseLeave={e => { e.target.style.background = 'rgba(255,255,255,0.15)' }}
             >
               Abmelden
             </button>
@@ -169,7 +170,10 @@ export default function PortalDashboard() {
             onMouseLeave={e => { e.currentTarget.style.background = '#e0f2f1'; e.currentTarget.style.borderColor = '#b2dfdb' }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-5.031 1.378c-3.55 2.357-5.748 6.08-5.748 9.89 0 3.393 1.39 6.662 3.905 9.176 2.515 2.513 5.786 3.9 9.177 3.9h.008c3.39 0 6.662-1.39 9.176-3.905 2.514-2.515 3.902-5.786 3.902-9.177 0-3.39-1.388-6.662-3.905-9.176C20.66 2.39 17.39 1 14 1h-.004c-3.39 0-6.662 1.39-9.176 3.905"/></svg>
-            Fragen zu Ihrem Versicherungsschutz?
+            <div>
+              <div>Fragen zu Ihrem Versicherungsschutz?</div>
+              <div style={{ fontSize: 12, fontWeight: 400, marginTop: 2 }}>+41 78 717 00 07</div>
+            </div>
           </a>
         </section>
 
@@ -178,20 +182,20 @@ export default function PortalDashboard() {
           <section style={{ marginBottom: 48, paddingBottom: 36, borderBottom: '1px solid #e5e7eb' }}>
             {!editingCustomer ? (
               <>
-                <div style={{ display: 'flex', gap: 48, alignItems: 'flex-start', background: '#0B1C2C', padding: 32, borderRadius: 10, marginBottom: 24 }}>
+                <div style={{ display: 'flex', gap: 48, alignItems: 'flex-start', background: '#fff', padding: 32, borderRadius: 10, marginBottom: 24, border: '3px solid #0B1C2C' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 24, flex: 1 }}>
                     <div>
-                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Name</p>
-                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#fff' }}>{customer.first_name} {customer.last_name}</p>
+                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Name</p>
+                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.first_name} {customer.last_name}</p>
                     </div>
                     <div>
-                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 0.5 }}>E-Mail</p>
-                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#fff' }}>{customer.email}</p>
+                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>E-Mail</p>
+                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.email}</p>
                     </div>
                     {customer.street && (
                       <div>
-                        <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Adresse</p>
-                        <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#fff' }}>
+                        <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Adresse</p>
+                        <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>
                           {customer.street}, {customer.zip_code} {customer.city}
                         </p>
                       </div>
@@ -200,14 +204,14 @@ export default function PortalDashboard() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 24, flex: 1 }}>
                     {customer.phone && (
                       <div>
-                        <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Telefon</p>
-                        <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#fff' }}>{customer.phone}</p>
+                        <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Telefon</p>
+                        <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.phone}</p>
                       </div>
                     )}
                     {customer.mobile && (
                       <div>
-                        <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Mobilnummer</p>
-                        <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#fff' }}>{customer.mobile}</p>
+                        <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Mobilnummer</p>
+                        <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.mobile}</p>
                       </div>
                     )}
                   </div>
@@ -434,7 +438,7 @@ export default function PortalDashboard() {
               Keine Verträge vorhanden
             </div>
           ) : (
-            <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
+            <div style={{ background: '#fff', border: '3px solid #0B1C2C', borderRadius: 8, overflow: 'hidden' }}>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
@@ -501,7 +505,7 @@ export default function PortalDashboard() {
         <section style={{ marginBottom: 48, paddingBottom: 32, borderBottom: '1px solid #e5e7eb' }}>
           <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 24px', color: '#0f172a' }}>Prämienübersicht</h2>
           
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 32, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+          <div style={{ background: '#fff', border: '3px solid #0B1C2C', borderRadius: 10, padding: 32, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             {/* TOTAL SECTION */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #f3f4f6', maxWidth: 380, margin: '0 auto 20px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -550,7 +554,7 @@ export default function PortalDashboard() {
               Keine Dokumente vorhanden
             </div>
           ) : (
-            <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: 24 }}>
+            <div style={{ background: '#fff', border: '3px solid #0B1C2C', borderRadius: 8, padding: 24 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                 {documents.map((doc, idx) => (
                   <div key={doc.id} style={{
