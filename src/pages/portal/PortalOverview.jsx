@@ -116,7 +116,7 @@ export default function PortalOverview() {
                       </div>
                       <div>
                         <p className="text-sm font-medium">{c.insurance_type}</p>
-                        <p className="text-xs text-muted-foreground">{c.provider}</p>
+                        <p className="text-xs text-muted-foreground">{c.insurer || c.provider}</p>
                       </div>
                     </div>
                     <div className="text-right">

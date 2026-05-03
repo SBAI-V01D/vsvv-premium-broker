@@ -96,7 +96,7 @@ export default function PortalMessages() {
     let label = '';
     if (newThreadType === 'contract') {
       const c = contracts.find(c => c.id === newThreadRef);
-      label = c ? `${c.insurance_type} – ${c.provider}` : 'Vertrag';
+      label = c ? `${c.insurance_type} – ${c.insurer || c.provider}` : 'Vertrag';
     } else {
       const i = interactions.find(i => i.id === newThreadRef);
       label = i ? i.subject : 'Anfrage';
@@ -114,7 +114,7 @@ export default function PortalMessages() {
 
   const threads = [
     { id: 'general', type: 'general', label: 'Allgemeiner Chat' },
-    ...contracts.map(c => ({ id: c.id, type: 'contract', label: `${c.insurance_type} – ${c.provider}` })),
+    ...contracts.map(c => ({ id: c.id, type: 'contract', label: `${c.insurance_type} – ${c.insurer || c.provider}` })),
     ...interactions.map(i => ({ id: i.id, type: 'interaction', label: i.subject })),
   ];
 
