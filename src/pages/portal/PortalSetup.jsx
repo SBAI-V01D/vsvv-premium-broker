@@ -4,6 +4,7 @@ import { Eye, EyeOff, Shield, BarChart2, UserCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/469756d65_HintergrundbildKundenportal.png'
+const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/4a532045e_VSVV.png'
 
 export default function PortalSetup() {
   const navigate = useNavigate()
@@ -112,7 +113,12 @@ export default function PortalSetup() {
         }}
       >
         {/* Subtle fade to right panel */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 60%, rgba(11,31,58,0.3) 85%, rgba(11,31,58,0.7) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 60%, rgba(15,45,85,0.3) 85%, rgba(10,35,75,0.7) 100%)' }} />
+
+        {/* Logo in the middle */}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '8%', zIndex: 10 }}>
+          <img src={LOGO_URL} alt="VSVV" style={{ height: 80, objectFit: 'contain', filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.3))' }} />
+        </div>
       </div>
 
       {/* RIGHT — Login panel */}
@@ -121,7 +127,7 @@ export default function PortalSetup() {
         style={{
           flex: '1 1 45%',
           minWidth: 360,
-          background: 'linear-gradient(135deg, rgba(11,31,58,0.95) 0%, rgba(11,31,58,0.99) 100%)',
+          background: 'linear-gradient(135deg, rgba(15,45,85,0.95) 0%, rgba(10,35,75,0.99) 100%)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
           position: 'relative',
