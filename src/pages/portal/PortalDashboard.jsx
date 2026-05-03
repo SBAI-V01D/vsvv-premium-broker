@@ -40,7 +40,7 @@ export default function PortalDashboard() {
     return 'Guten Abend'
   }
 
-  const activeContracts = contracts.filter(c => c.status === 'active')
+  const activeContracts = contracts.filter(c => c.status === 'active' || c.status === 'aktiv')
 
   return (
     <div className="space-y-6">

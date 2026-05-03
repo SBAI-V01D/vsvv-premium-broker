@@ -9,14 +9,18 @@ import { getSparteLabel } from '@/lib/insuranceSparten'
 
 const STATUS_LABELS = {
   active: 'Aktiv',
+  aktiv: 'Aktiv',
   cancelled: 'Gekündigt',
+  gekuendigt: 'Gekündigt',
   paused: 'Pausiert',
   expired: 'Abgelaufen',
 }
 
 const STATUS_COLORS = {
   active: 'bg-green-100 text-green-700',
+  aktiv: 'bg-green-100 text-green-700',
   cancelled: 'bg-red-100 text-red-700',
+  gekuendigt: 'bg-red-100 text-red-700',
   paused: 'bg-yellow-100 text-yellow-700',
   expired: 'bg-gray-100 text-gray-600',
 }
@@ -51,7 +55,7 @@ export default function PortalContracts() {
                 <div className="flex justify-between items-start gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <h3 className="font-bold text-lg">{contract.insurer}</h3>
+                      <h3 className="font-bold text-lg">{contract.insurer || contract.provider}</h3>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[contract.status] || 'bg-muted text-muted-foreground'}`}>
                         {contract.custom_status || STATUS_LABELS[contract.status] || contract.status}
                       </span>

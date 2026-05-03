@@ -42,11 +42,23 @@ Deno.serve(async (req) => {
       if (!customer) {
         return Response.json({ found: false })
       }
+      // Check if password change is required:
+      // 1. Explicit flag set (first login / admin reset)
+      // 2. Last password change was more than 28 days ago
+      const FOUR_WEEKS_MS = 28 * 24 * 60 * 60 * 1000
+      const lastChange = customer.portal_last_password_change
+        ? new Date(customer.portal_last_password_change)
+        : null
+      const passwordExpired = lastChange
+        ? (Date.now() - lastChange.getTime()) > FOUR_WEEKS_MS
+        : false
+      const mustChange = customer.portal_password_must_change || passwordExpired
+
       return Response.json({
         found: true,
         customer_id: customer.id,
         portal_access_enabled: customer.portal_access_enabled,
-        portal_password_must_change: customer.portal_password_must_change,
+        portal_password_must_change: mustChange,
         portal_last_login: customer.portal_last_login,
       })
     }
@@ -83,7 +95,8 @@ Deno.serve(async (req) => {
       const passwordHash = await hashPassword(password)
       await base44.asServiceRole.entities.Customer.update(customer_id, {
         portal_password_hash: passwordHash,
-        portal_password_must_change: true,
+        portal_password_must_change: false,
+        portal_last_password_change: new Date().toISOString(),
       })
       return Response.json({ success: true, message: 'Passwort zurückgesetzt' })
     }
