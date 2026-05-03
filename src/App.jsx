@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
+import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom'
 import PageNotFound from './lib/PageNotFound'
 import { AuthProvider, useAuth } from '@/lib/AuthContext'
 import UserNotRegisteredError from '@/components/UserNotRegisteredError'
@@ -29,8 +29,29 @@ import PortalProfile from './pages/portal/PortalProfile'
 import PortalSetup from './pages/portal/PortalSetup'
 import PortalResetPassword from './pages/portal/PortalResetPassword'
 
+const PortalRoutes = () => (
+  <Routes>
+    <Route path="/portal/setup" element={<PortalSetup />} />
+    <Route path="/portal/reset-password" element={<PortalResetPassword />} />
+    <Route path="/portal" element={<PortalRoot />}>
+      <Route index element={<PortalDashboard />} />
+      <Route path="vertraege" element={<PortalContracts />} />
+      <Route path="antraege" element={<PortalApplications />} />
+      <Route path="dokumente" element={<PortalDocuments />} />
+      <Route path="profil" element={<PortalProfile />} />
+    </Route>
+  </Routes>
+)
+
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth()
+  const location = useLocation()
+
+  // Portal routes are public — skip Base44 auth entirely
+  const isPortalRoute = location.pathname.startsWith('/portal')
+  if (isPortalRoute) {
+    return <PortalRoutes />
+  }
 
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
@@ -67,18 +88,6 @@ const AuthenticatedApp = () => {
         <Route path="/status-verwaltung" element={<StatusVerwaltung />} />
         <Route path="/provisionen-courtagen" element={<CommissionsAndCourtage />} />
       </Route>
-
-      {/* Portal */}
-      <Route path="/portal/setup" element={<PortalSetup />} />
-      <Route path="/portal/reset-password" element={<PortalResetPassword />} />
-      <Route path="/portal" element={<PortalRoot />}>
-        <Route index element={<PortalDashboard />} />
-        <Route path="vertraege" element={<PortalContracts />} />
-        <Route path="antraege" element={<PortalApplications />} />
-        <Route path="dokumente" element={<PortalDocuments />} />
-        <Route path="profil" element={<PortalProfile />} />
-      </Route>
-
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   )
