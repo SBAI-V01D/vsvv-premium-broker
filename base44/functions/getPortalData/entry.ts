@@ -3,13 +3,24 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25'
 Deno.serve(async (req) => {
   try {
     const body = await req.json()
-    const { customer_id } = body
+    const { customer_id, action, update_data } = body
 
     if (!customer_id) {
       return Response.json({ error: 'customer_id erforderlich' }, { status: 400 })
     }
 
     const base44 = createClientFromRequest(req)
+
+    // Update action — only allowed fields from the customer themselves
+    if (action === 'update_customer') {
+      const ALLOWED_FIELDS = ['phone', 'mobile', 'street', 'zip_code', 'city']
+      const safeData = {}
+      for (const key of ALLOWED_FIELDS) {
+        if (update_data && key in update_data) safeData[key] = update_data[key]
+      }
+      await base44.asServiceRole.entities.Customer.update(customer_id, safeData)
+      return Response.json({ success: true })
+    }
 
     // Load all data in parallel using service role (portal has no Base44 auth)
     const [customer, directContracts, primaryContracts, directDocs, primaryDocs, directApps, primaryApps] = await Promise.all([

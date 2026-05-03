@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { usePortalData } from '@/hooks/usePortalData'
 import { base44 } from '@/api/base44Client'
 import { User, Mail, Phone, MapPin, Calendar, Briefcase, Globe, Shield, LogOut, Edit2, Check, X, AlertCircle } from 'lucide-react'
@@ -30,6 +31,7 @@ function InfoRow({ icon: Icon, label, value, accent = ACCENT }) {
 
 export default function PortalProfile() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { customer, customerId, isLoading, error } = usePortalData()
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -60,7 +62,12 @@ export default function PortalProfile() {
     setSaving(true)
     setSaveError('')
     try {
-      await base44.entities.Customer.update(customerId, form)
+      await base44.functions.invoke('getPortalData', {
+        customer_id: customerId,
+        action: 'update_customer',
+        update_data: form,
+      })
+      queryClient.invalidateQueries({ queryKey: ['portal-all-data', customerId] })
       setSaveOk(true)
       setEditing(false)
       setTimeout(() => setSaveOk(false), 3000)
