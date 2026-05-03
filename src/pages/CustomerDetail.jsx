@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import CustomerForm from '../components/customers/CustomerForm'
 import DocumentsTab from '../components/documents/DocumentsTab'
+import EmailLink from '../components/common/EmailLink'
 import { STATUS_LABELS, INSURANCE_TYPE_LABELS, FAMILY_ROLE_LABELS, label } from '@/lib/labels'
 import { getSparteLabel } from '@/lib/insuranceSparten'
 import StatusBadge from '@/components/status/StatusBadge'
@@ -83,7 +84,7 @@ export default function CustomerDetail() {
           </div>
           <div>
             <h1 className="text-3xl font-bold">{customer.first_name} {customer.last_name}</h1>
-            <p className="text-muted-foreground mt-1">{customer.email}</p>
+            <p className="text-muted-foreground mt-1"><EmailLink email={customer.email} /></p>
           </div>
         </div>
         <Button variant="outline" onClick={() => setShowEdit(true)}>
@@ -94,7 +95,7 @@ export default function CustomerDetail() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>
           <CardContent className="p-4 space-y-2">
-            {customer.email && <div className="flex items-center gap-2 text-sm"><Mail className="w-4 h-4 text-muted-foreground" /> {customer.email}</div>}
+            {customer.email && <div className="flex items-center gap-2 text-sm"><Mail className="w-4 h-4 text-muted-foreground" /> <EmailLink email={customer.email} /></div>}
             {customer.phone && <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-muted-foreground" /> {customer.phone}</div>}
             {customer.mobile && <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-muted-foreground" /> {customer.mobile}</div>}
           </CardContent>
@@ -329,7 +330,7 @@ export default function CustomerDetail() {
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <p className="font-medium">{member.first_name} {member.last_name}</p>
-                        <p className="text-sm text-muted-foreground mt-1">{member.email} • {label(FAMILY_ROLE_LABELS, member.family_role)}</p>
+                        <p className="text-sm text-muted-foreground mt-1"><EmailLink email={member.email} /> • {label(FAMILY_ROLE_LABELS, member.family_role)}</p>
                         <p className="text-xs text-muted-foreground mt-2">{member.city}, {member.canton}</p>
                       </div>
                       <a href={`/kunden/${member.id}`} className="text-primary hover:underline text-sm font-medium">

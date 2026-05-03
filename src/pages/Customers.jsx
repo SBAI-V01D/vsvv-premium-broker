@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import CustomerForm from '../components/customers/CustomerForm'
+import EmailLink from '../components/common/EmailLink'
 import { STATUS_LABELS, FAMILY_ROLE_LABELS, label } from '@/lib/labels'
 import { searchCustomers } from '@/lib/customerSearch'
 
@@ -144,7 +145,7 @@ export default function Customers() {
                       )}
                       <Link to={`/kunden/${customer.id}`} className="flex-1 min-w-0 hover:text-primary group">
                         <p className="font-bold text-base group-hover:text-primary">{customer.first_name} {customer.last_name}</p>
-                        <p className="text-xs text-muted-foreground">{customer.email} • {customer.city || '–'}</p>
+                        <p className="text-xs text-muted-foreground"><EmailLink email={customer.email} /> • {customer.city || '–'}</p>
                       </Link>
                     </div>
 
@@ -193,10 +194,10 @@ export default function Customers() {
                             memberIdx < familyMembers.length - 1 ? 'border-b border-border' : ''
                           }`}
                         >
-                          <Link to={`/kunden/${member.id}`} className="flex-1 min-w-0 hover:text-primary group">
+                          <Link to={`/kunden/{member.id}`} className="flex-1 min-w-0 hover:text-primary group">
                             <p className="font-medium text-sm group-hover:text-primary">{member.first_name} {member.last_name}</p>
                             <p className="text-xs text-muted-foreground">
-                              {label(FAMILY_ROLE_LABELS, member.family_role)} • {member.email || '–'}
+                              {label(FAMILY_ROLE_LABELS, member.family_role)} • <EmailLink email={member.email} />
                             </p>
                           </Link>
 
