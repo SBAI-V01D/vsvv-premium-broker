@@ -3,7 +3,7 @@ import { useLocation, Link } from 'react-router-dom'
 import { LayoutDashboard, FileText, FolderOpen, User, LogOut, Menu, X, MessageCircle, ClipboardList } from 'lucide-react'
 import { usePortalCustomer } from '@/hooks/usePortalCustomer'
 
-const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/0cde67ef2_LogoVSVV2.png'
+const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/10f5c3d63_VSVV.png'
 
 const NAV = [
   { path: '/portal', label: 'Dashboard', icon: LayoutDashboard },
@@ -31,7 +31,7 @@ export default function PortalLayout({ children }) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Logo */}
       <div style={{ padding: '28px 24px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-        <img src={LOGO_URL} alt="VSVV" style={{ height: 52, objectFit: 'contain', filter: 'brightness(1.1)' }} />
+        <img src={LOGO_URL} alt="VSVV" style={{ height: 80, objectFit: 'contain', filter: 'brightness(1.1)' }} />
       </div>
 
       {/* Nav */}
@@ -135,7 +135,7 @@ export default function PortalLayout({ children }) {
             <button onClick={() => setMobileOpen(true)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer' }}>
               <Menu size={22} />
             </button>
-            <img src={LOGO_URL} alt="VSVV" style={{ height: 36 }} />
+            <img src={LOGO_URL} alt="VSVV" style={{ height: 48 }} />
             <div style={{ width: 22 }} />
           </div>
 

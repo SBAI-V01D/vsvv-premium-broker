@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client'
 import { usePortalData } from '@/hooks/usePortalData'
 import { usePortalCustomer } from '@/hooks/usePortalCustomer'
 
-const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/0cde67ef2_LogoVSVV2.png'
+const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/10f5c3d63_VSVV.png'
 
 export default function PortalDashboard() {
   const { customer } = usePortalCustomer()
@@ -121,7 +121,7 @@ export default function PortalDashboard() {
       {/* HEADER */}
       <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '14px 0', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <img src={LOGO_URL} alt="VSVV" style={{ height: 40 }} />
+          <img src={LOGO_URL} alt="VSVV" style={{ height: 60 }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             {customer && (
               <div style={{ textAlign: 'right' }}>
