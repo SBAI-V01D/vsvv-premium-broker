@@ -165,15 +165,16 @@ export default function PortalDashboard() {
               Ihrem Partner für transparente und strukturierte Versicherungslösungen. Behalten Sie jederzeit den Überblick über Ihre Versicherungen.
             </p>
           </div>
-          <a href="https://wa.me/41787170007?text=Ich%20habe%20Fragen%20zu%20meinen%20Versicherungen%20und%20Finanzen" target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, textDecoration: 'none', display: 'flex', flexDirection: 'column', gap: 4, padding: '12px 16px', borderRadius: 8, border: '2px solid #0B1F3A', background: '#E8F0F8', cursor: 'pointer', transition: 'all 0.2s' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#D6E8F5'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(11, 31, 58, 0.15)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#E8F0F8'; e.currentTarget.style.boxShadow = 'none' }}
+          <a href="https://wa.me/41787170007?text=Ich%20habe%20Fragen%20zu%20meinen%20Versicherungen%20und%20Finanzen" target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, textDecoration: 'none', display: 'flex', flexDirection: 'column', gap: 4, padding: '12px 16px', borderRadius: 8, border: '2px solid #25D366', background: '#E8F5E9', cursor: 'pointer', transition: 'all 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#C8E6C9'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 211, 102, 0.2)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#E8F5E9'; e.currentTarget.style.boxShadow = 'none' }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#0B1F3A', fontSize: 13, fontWeight: 600 }}>
-              💬 Beratung via WhatsApp
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#25D366', fontSize: 13, fontWeight: 600 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-5.031 1.378c-3.55 2.357-5.748 6.08-5.748 9.89 0 3.393 1.39 6.662 3.905 9.176 2.515 2.513 5.786 3.9 9.177 3.9h.008c3.39 0 6.662-1.39 9.176-3.905 2.514-2.515 3.902-5.786 3.902-9.177 0-3.39-1.388-6.662-3.905-9.176C20.66 2.39 17.39 1 14 1h-.004c-3.39 0-6.662 1.39-9.176 3.905"/></svg>
+              Beratung via WhatsApp
             </div>
-            <div style={{ color: '#6b7280', fontSize: 12, fontWeight: 500 }}>+41 78 717 00 07</div>
-            <div style={{ color: '#9ca3af', fontSize: 11, lineHeight: 1.3 }}>Fragen zu Versicherungen und Finanzen</div>
+            <div style={{ color: '#2E7D32', fontSize: 12, fontWeight: 500 }}>+41 78 717 00 07</div>
+            <div style={{ color: '#558B2F', fontSize: 11, lineHeight: 1.3 }}>Fragen zu Versicherungen und Finanzen</div>
           </a>
         </section>
 
