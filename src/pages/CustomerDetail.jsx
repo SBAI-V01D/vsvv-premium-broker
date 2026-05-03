@@ -19,10 +19,12 @@ export default function CustomerDetail() {
   const [showEdit, setShowEdit] = useState(false)
   const queryClient = useQueryClient()
 
-  const { data: customer } = useQuery({
-    queryKey: ['customers', id],
-    queryFn: () => base44.entities.Customer.list().then(c => c.find(x => x.id === id)),
+  const { data: allCustomers = [] } = useQuery({
+    queryKey: ['customers'],
+    queryFn: () => base44.entities.Customer.list(),
   })
+
+  const customer = allCustomers.find(x => x.id === id)
 
   const { data: contracts = [] } = useQuery({
     queryKey: ['contracts'],
@@ -38,11 +40,6 @@ export default function CustomerDetail() {
     queryKey: ['messages', id],
     queryFn: () => base44.entities.Message.filter({ customer_id: id }),
     enabled: !!id,
-  })
-
-  const { data: allCustomers = [] } = useQuery({
-    queryKey: ['customers', id],
-    queryFn: () => base44.entities.Customer.list(),
   })
 
   const { data: allDocuments = [] } = useQuery({
@@ -66,6 +63,7 @@ export default function CustomerDetail() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Customer.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setShowEdit(false); },
+  
   })
 
   if (!customer) {
