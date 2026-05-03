@@ -332,50 +332,7 @@ export default function PortalDashboard() {
           </section>
         )}
 
-        {/* 3. VERSICHERUNGSÜBERSICHT */}
-        <section style={{ marginBottom: 64, paddingBottom: 40, borderBottom: '1px solid #e5e7eb' }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 24px', color: '#0f172a' }}>Versicherungsübersicht</h2>
-          
-          <div style={{ background: '#0f172a', color: '#fff', borderRadius: 10, padding: 28 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 28 }}>
-              <div>
-                <p style={{ fontSize: 10, fontWeight: 700, margin: '0 0 8px', color: '#a1aab8', textTransform: 'uppercase', letterSpacing: 0.8 }}>Total Monatsprämie</p>
-                <p style={{ fontSize: 36, fontWeight: 800, margin: 0, lineHeight: 1 }}>
-                  CHF {totalPremiumMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-              </div>
-              <div>
-                <p style={{ fontSize: 10, fontWeight: 700, margin: '0 0 8px', color: '#a1aab8', textTransform: 'uppercase', letterSpacing: 0.8 }}>Total Jahresprämie</p>
-                <p style={{ fontSize: 36, fontWeight: 800, margin: 0, lineHeight: 1 }}>
-                  CHF {totalPremiumYearly.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
-                </p>
-              </div>
-            </div>
-
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 20 }}>
-              <p style={{ fontSize: 10, fontWeight: 700, margin: '0 0 16px', color: '#a1aab8', textTransform: 'uppercase', letterSpacing: 0.8 }}>Prämien nach Versicherungssparte</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                {contracts.reduce((acc, c) => {
-                  const type = c.insurance_type || 'Sonstige'
-                  const existing = acc.find(x => x.type === type)
-                  if (existing) {
-                    existing.yearly += c.premium_yearly || 0
-                  } else {
-                    acc.push({ type, yearly: c.premium_yearly || 0 })
-                  }
-                  return acc
-                }, []).map(sparte => (
-                  <div key={sparte.type} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                    <span style={{ color: '#d1d5db' }}>{sparte.type}</span>
-                    <span style={{ fontWeight: 600, color: '#fff' }}>CHF {sparte.yearly.toLocaleString('de-CH', { maximumFractionDigits: 0 })}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 4. VERTRÄGE */}
+        {/* 3. VERTRÄGE */}
         <section style={{ marginBottom: 64, paddingBottom: 40, borderBottom: '1px solid #e5e7eb' }}>
           <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 24px', color: '#0f172a' }}>Ihre Verträge</h2>
           
@@ -445,6 +402,55 @@ export default function PortalDashboard() {
               </div>
             </div>
           )}
+        </section>
+
+        {/* 4. PRÄMIENÜBERSICHT */}
+        <section style={{ marginBottom: 64, paddingBottom: 40, borderBottom: '1px solid #e5e7eb' }}>
+          <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 32px', color: '#0f172a' }}>Prämienübersicht</h2>
+          
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 40 }}>
+            {/* TOTAL SECTION */}
+            <div style={{ marginBottom: 48, paddingBottom: 48, borderBottom: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40 }}>
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: 0.5 }}>Monatsprämie</p>
+                  <p style={{ fontSize: 42, fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1 }}>
+                    CHF {totalPremiumMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: 0.5 }}>Jahresprämie</p>
+                  <p style={{ fontSize: 42, fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1 }}>
+                    CHF {totalPremiumYearly.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* SPARTEN SECTION */}
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', margin: '0 0 28px', textTransform: 'uppercase', letterSpacing: 0.5 }}>Aufteilung nach Sparten</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {contracts.reduce((acc, c) => {
+                  const type = c.insurance_type || 'Sonstige'
+                  const existing = acc.find(x => x.type === type)
+                  if (existing) {
+                    existing.yearly += c.premium_yearly || 0
+                  } else {
+                    acc.push({ type, yearly: c.premium_yearly || 0 })
+                  }
+                  return acc
+                }, [])
+                  .sort((a, b) => b.yearly - a.yearly)
+                  .map((sparte, idx) => (
+                    <div key={sparte.type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingBottom: idx < Math.min(contracts.length, 4) - 1 ? 16 : 0, borderBottom: idx < Math.min(contracts.length, 4) - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                      <span style={{ fontSize: 14, fontWeight: 500, color: '#1a1a1a' }}>{sparte.type}</span>
+                      <span style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>CHF {sparte.yearly.toLocaleString('de-CH', { maximumFractionDigits: 0 })}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* 5. DOKUMENTE */}
