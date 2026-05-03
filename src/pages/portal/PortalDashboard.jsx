@@ -503,7 +503,7 @@ export default function PortalDashboard() {
           
           <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 32, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             {/* TOTAL SECTION */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #f3f4f6' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #f3f4f6', maxWidth: 380, margin: '0 auto 20px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', margin: 0, textTransform: 'uppercase', letterSpacing: 0.5 }}>Monatsprämie</p>
                 <p style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', margin: 0 }}>
