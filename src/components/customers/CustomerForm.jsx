@@ -86,12 +86,18 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
    })
 
    const [autoFilled, setAutoFilled] = useState(false)
+   const [brokerSearch, setBrokerSearch] = useState('')
    const { plzError, plzSuggestions, handlePostalCodeChange, selectSuggestion } = usePostalCodeLookup()
 
    const { data: brokers = [] } = useQuery({
      queryKey: ['brokers'],
      queryFn: () => base44.entities.Broker.list(),
    })
+
+   const filteredBrokers = brokers.filter(b => 
+     b.name.toLowerCase().includes(brokerSearch.toLowerCase()) ||
+     (b.email && b.email.toLowerCase().includes(brokerSearch.toLowerCase()))
+   )
 
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
 
@@ -288,16 +294,27 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
 
       <div>
         <Label>Beratender Broker</Label>
-        <Select value={form.assigned_broker} onValueChange={v => set('assigned_broker', v)}>
-          <SelectTrigger className="mt-1"><SelectValue placeholder="Broker auswählen..." /></SelectTrigger>
-          <SelectContent>
-            {brokers.map(b => (
-              <SelectItem key={b.id} value={b.email}>
-                {b.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="mt-1 space-y-2">
+          <Input 
+            placeholder="Broker durchsuchen..." 
+            value={brokerSearch} 
+            onChange={e => setBrokerSearch(e.target.value)}
+          />
+          <Select value={form.assigned_broker} onValueChange={v => { set('assigned_broker', v); setBrokerSearch('') }}>
+            <SelectTrigger><SelectValue placeholder="Broker auswählen..." /></SelectTrigger>
+            <SelectContent>
+              {filteredBrokers.length === 0 ? (
+                <div className="p-2 text-sm text-muted-foreground">Keine Broker gefunden</div>
+              ) : (
+                filteredBrokers.map(b => (
+                  <SelectItem key={b.id} value={b.email}>
+                    {b.name}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
