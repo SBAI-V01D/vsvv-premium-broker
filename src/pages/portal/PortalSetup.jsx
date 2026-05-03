@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client'
 import { Eye, EyeOff, Lock, CheckCircle, Shield, FileSearch, Award } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
-const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/3704c4574_BildohneLogo.png'
+const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/b432ce618_HintergrundbildKundenportal.png'
 
 const TRUST_ITEMS = [
   { icon: Award, text: 'Unabhängige Beratung ohne Interessenskonflikte' },
