@@ -113,7 +113,7 @@ export default function PortalSetup() {
         }}
       >
         {/* Subtle fade to right panel */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 45%, rgba(11,30,55,0.2) 65%, rgba(11,30,55,0.5) 85%, rgba(10,35,75,0.8) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 0%, transparent 25%, rgba(11,30,55,0.1) 40%, rgba(11,30,55,0.3) 55%, rgba(11,30,55,0.5) 75%, rgba(10,35,75,0.8) 100%)' }} />
 
         {/* Logo in the middle */}
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: '20%', zIndex: 10 }}>
