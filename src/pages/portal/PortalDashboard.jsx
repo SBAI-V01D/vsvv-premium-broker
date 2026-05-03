@@ -505,20 +505,20 @@ export default function PortalDashboard() {
         <section style={{ marginBottom: 48, paddingBottom: 32, borderBottom: '1px solid #e5e7eb' }}>
           <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 24px', color: '#0f172a' }}>Prämienübersicht</h2>
           
-          <div style={{ background: '#fff', border: '3px solid #0B1C2C', borderRadius: 10, padding: 32, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+          <div style={{ background: '#fff', border: '3px solid #0B1C2C', borderRadius: 10, padding: 24 }}>
             {/* TOTAL SECTION */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #f3f4f6', maxWidth: 380, margin: '0 auto 20px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', margin: 0, textTransform: 'uppercase', letterSpacing: 0.5 }}>Monatsprämie</p>
-                <p style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', margin: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 24, paddingBottom: 24, borderBottom: '1px solid #f3f4f6' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 400, color: '#4b5563' }}>Monatsprämie</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>
                   CHF {totalPremiumMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
+                </span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', margin: 0, textTransform: 'uppercase', letterSpacing: 0.5 }}>Jahresprämie</p>
-                <p style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', margin: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 400, color: '#4b5563' }}>Jahresprämie</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>
                   CHF {totalPremiumYearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
+                </span>
               </div>
             </div>
 
