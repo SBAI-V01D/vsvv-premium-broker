@@ -1,7 +1,8 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useOutletContext, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { usePortalCustomer } from '@/hooks/usePortalCustomer';
 import { FileText, AlertCircle, FolderOpen, CheckCircle2, Clock, ChevronRight, Shield } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,18 +12,20 @@ import { de } from 'date-fns/locale';
 import PortalStatusBadge from '../../components/portal/PortalStatusBadge';
 
 export default function PortalOverview() {
-  const { user } = useOutletContext();
+  const { customer: user } = usePortalCustomer();
+
+  const customerId = localStorage.getItem('portal_customer_id');
 
   const { data: contracts = [] } = useQuery({
-    queryKey: ['portal-contracts', user?.email],
-    queryFn: () => base44.entities.Contract.filter({ customer_id: user?.id }),
-    enabled: !!user?.id,
+    queryKey: ['portal-contracts', customerId],
+    queryFn: () => base44.entities.Contract.filter({ customer_id: customerId }),
+    enabled: !!customerId,
   });
 
   const { data: claims = [] } = useQuery({
-    queryKey: ['portal-claims', user?.email],
-    queryFn: () => base44.entities.Claim.filter({ customer_id: user?.id }),
-    enabled: !!user?.id,
+    queryKey: ['portal-claims', customerId],
+    queryFn: () => base44.entities.Claim.filter({ customer_id: customerId }),
+    enabled: !!customerId,
   });
 
   const activeContracts = contracts.filter(c => c.status === 'aktiv');

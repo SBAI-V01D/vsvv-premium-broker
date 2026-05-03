@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useOutletContext } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { usePortalCustomer } from '@/hooks/usePortalCustomer';
 import { MessageSquare, Shield, Inbox, Plus, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,7 +31,7 @@ function ThreadItem({ label, icon: Icon, iconBg, count, active, onClick }) {
 }
 
 export default function PortalMessages() {
-  const { user } = useOutletContext();
+  const { customer: user } = usePortalCustomer();
   const queryClient = useQueryClient();
 
   const [activeThread, setActiveThread] = useState({ id: 'general', type: 'general', label: 'Allgemeiner Chat' });
@@ -40,28 +40,30 @@ export default function PortalMessages() {
   const [newThreadRef, setNewThreadRef] = useState('');
   const [mobileShowChat, setMobileShowChat] = useState(false);
 
+  const customerId = localStorage.getItem('portal_customer_id');
+
   const { data: contracts = [] } = useQuery({
-    queryKey: ['portal-contracts', user?.id],
-    queryFn: () => base44.entities.Contract.filter({ customer_id: user?.id }),
-    enabled: !!user?.id,
+    queryKey: ['portal-contracts', customerId],
+    queryFn: () => base44.entities.Contract.filter({ customer_id: customerId }),
+    enabled: !!customerId,
   });
 
   const { data: interactions = [] } = useQuery({
-    queryKey: ['customer-interactions', user?.id],
-    queryFn: () => base44.entities.Interaction.filter({ customer_id: user?.id, is_customer_request: true }, '-created_date'),
-    enabled: !!user?.id,
+    queryKey: ['customer-interactions', customerId],
+    queryFn: () => base44.entities.Interaction.filter({ customer_id: customerId, is_customer_request: true }, '-created_date'),
+    enabled: !!customerId,
   });
 
   const { data: allMessages = [] } = useQuery({
-    queryKey: ['portal-messages', user?.id],
-    queryFn: () => base44.entities.Message.filter({ customer_id: user?.id }),
-    enabled: !!user?.id,
+    queryKey: ['portal-messages', customerId],
+    queryFn: () => base44.entities.Message.filter({ customer_id: customerId }),
+    enabled: !!customerId,
     refetchInterval: 8000,
   });
 
   const sendMutation = useMutation({
     mutationFn: (data) => base44.entities.Message.create(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['portal-messages', user?.id] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['portal-messages', customerId] }),
   });
 
   const getThreadMessages = (thread) => {
@@ -77,10 +79,10 @@ export default function PortalMessages() {
 
   const handleSend = (content) => {
     sendMutation.mutate({
-      customer_id: user.id,
+      customer_id: customerId,
       content,
-      sender_name: user.full_name || user.email,
-      sender_email: user.email,
+      sender_name: user ? `${user.first_name} ${user.last_name}` : localStorage.getItem('portal_email'),
+      sender_email: user?.email || localStorage.getItem('portal_email'),
       is_from_customer: true,
       read: false,
       reference_id: activeThread.type !== 'general' ? activeThread.id : null,

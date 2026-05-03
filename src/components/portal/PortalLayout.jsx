@@ -15,8 +15,10 @@ export default function PortalLayout({ children }) {
     { path: '/portal/profil', label: 'Profil', icon: User },
   ]
 
-  const handleLogout = async () => {
-    await base44.auth.logout('/portal/setup')
+  const handleLogout = () => {
+    localStorage.removeItem('portal_customer_id')
+    localStorage.removeItem('portal_email')
+    window.location.href = '/portal/setup'
   }
 
   return (
