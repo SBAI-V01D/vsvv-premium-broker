@@ -19,8 +19,8 @@ Deno.serve(async (req) => {
     const body = await req.json()
     const { action, customer_id, password, email } = body
 
-    // Public actions (no auth required — used by portal login)
-    const publicActions = ['verify', 'lookup_customer']
+    // Public actions (no auth required — used by portal login / password change)
+    const publicActions = ['verify', 'lookup_customer', 'reset_password']
 
     if (!publicActions.includes(action)) {
       const user = await base44.auth.me()
