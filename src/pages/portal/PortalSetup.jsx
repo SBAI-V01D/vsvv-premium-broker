@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client'
 import { Eye, EyeOff, Shield, BarChart2, UserCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
-const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/0ce798d8e_HintergrundbildKundenportal.png'
+const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/e212dd698_HintergrundbildKundenportal.png'
 
 export default function PortalSetup() {
   const navigate = useNavigate()
@@ -86,65 +86,76 @@ export default function PortalSetup() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: '60% 40%', fontFamily: 'Inter, Helvetica, sans-serif', position: 'relative' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', fontFamily: 'Inter, Helvetica, sans-serif', position: 'relative', overflow: 'hidden' }}>
       <style>{`
         @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
         input::placeholder { color: rgba(168,179,194,0.4); }
         @media (max-width: 768px) {
-          .grid-layout { grid-template-columns: 1fr !important; }
-          .left-col { display: none !important; }
-          .right-col { width: 100% !important; }
-          .content-wrapper { margin-left: 28px !important; margin-right: 28px !important; margin-top: 40px !important; }
+          .left-section { display: none !important; }
+          .right-section { width: 100% !important; }
+          .content-wrapper { margin-left: 32px !important; margin-right: 32px !important; margin-top: 60px !important; max-width: 100% !important; }
+          .footer-section { padding: 20px 32px !important; }
         }
       `}</style>
 
-      {/* LEFT — Background image */}
+      {/* LEFT — Background image (flexible width) */}
       <div
-        className="left-col"
+        className="left-section"
         style={{
+          flex: '1 1 55%',
+          minWidth: 0,
           backgroundImage: `url(${BG_URL})`,
           backgroundSize: 'cover',
           backgroundPosition: 'left center',
           backgroundRepeat: 'no-repeat',
+          position: 'relative',
         }}
-      />
+      >
+        {/* Subtle fade to right panel */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 60%, rgba(11,31,58,0.3) 85%, rgba(11,31,58,0.7) 100%)' }} />
+      </div>
 
       {/* RIGHT — Login panel */}
       <div
-        className="right-col"
+        className="right-section"
         style={{
-          background: '#0B1F3A',
+          flex: '1 1 45%',
+          minWidth: 360,
+          background: 'linear-gradient(135deg, rgba(11,31,58,0.95) 0%, rgba(11,31,58,0.99) 100%)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
         {/* Main content */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: '10vh' }}>
-          <div className="content-wrapper" style={{ marginLeft: 80, marginRight: 60, maxWidth: 380 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: '12vh', paddingBottom: '80px' }}>
+          <div className="content-wrapper" style={{ marginLeft: 60, marginRight: 50, maxWidth: 420 }}>
             {!mustChangePassword ? (
               <>
                 {/* Text block */}
-                <div style={{ marginBottom: 32 }}>
-                  <h1 style={{ color: '#EAF1F7', fontSize: 28, fontWeight: 600, margin: '0 0 12px', lineHeight: 1.2, letterSpacing: '-0.3px' }}>
+                <div style={{ marginBottom: 28 }}>
+                  <h1 style={{ color: '#EAF1F7', fontSize: 30, fontWeight: 700, margin: '0 0 10px', lineHeight: 1.25, letterSpacing: '-0.4px' }}>
                     Willkommen bei VSVV
                   </h1>
-                  <p style={{ color: '#4A8DD4', fontSize: 13.5, fontWeight: 500, margin: '0 0 12px' }}>
-                    Ihr persönliches Kundenportal für klare und strukturierte Versicherungsübersicht.
+                  <p style={{ color: '#4A8DD4', fontSize: 14, fontWeight: 500, margin: '0 0 12px', lineHeight: 1.5 }}>
+                    Ihr persönliches Kundenportal für strukturierte und transparente Versicherungslösungen.
                   </p>
-                  <p style={{ color: '#8A9BB0', fontSize: 13, lineHeight: 1.6, margin: 0 }}>
-                    Greifen Sie sicher auf Ihre Verträge, Dokumente und persönliche Beratung zu – jederzeit und an einem Ort.
+                  <p style={{ color: '#8A9BB0', fontSize: 13.5, lineHeight: 1.68, margin: 0 }}>
+                    Greifen Sie jederzeit sicher auf Ihre Verträge, Dokumente und persönliche Beratung zu – alles zentral an einem Ort.
                   </p>
                 </div>
 
                 {/* Login box */}
                 <div style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.10)',
-                  borderRadius: 12,
-                  padding: 24,
-                  marginTop: 24,
-                  marginBottom: 24,
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 14,
+                  padding: 28,
+                  marginTop: 28,
+                  marginBottom: 26,
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
                 }}>
                   <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {/* Email */}
@@ -233,15 +244,20 @@ export default function PortalSetup() {
                 </div>
 
                 {/* Trust section */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {[
-                    { icon: Shield, text: 'Unabhängige Beratung' },
-                    { icon: BarChart2, text: 'Volle Transparenz' },
-                    { icon: UserCheck, text: 'Schweizer Datenschutz' },
-                  ].map(({ icon: Icon, text }) => (
-                    <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                      <Icon size={13} color="rgba(74,141,212,0.6)" style={{ flexShrink: 0 }} />
-                      <span style={{ color: '#8A9BB0', fontSize: 12 }}>{text}</span>
+                    { icon: Shield, title: 'Unabhängige Beratung', text: 'Ohne Interessenskonflikte – nur Ihre Ziele zählen' },
+                    { icon: BarChart2, title: 'Volle Transparenz', text: 'Jederzeit vollständiger Überblick über Ihre Policen' },
+                    { icon: UserCheck, title: 'Schweizer Datenschutz', text: 'Ihre Daten sind sicher und vertraulich geschützt' },
+                  ].map(({ icon: Icon, title, text }) => (
+                    <div key={title} style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(74,141,212,0.12)', border: '1px solid rgba(74,141,212,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
+                        <Icon size={14} color="rgba(74,141,212,0.7)" />
+                      </div>
+                      <div>
+                        <p style={{ color: '#C8D4E0', fontSize: 12, fontWeight: 600, margin: '0 0 2px' }}>{title}</p>
+                        <p style={{ color: '#7A8A9E', fontSize: 12, margin: 0, lineHeight: 1.5 }}>{text}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -296,13 +312,13 @@ export default function PortalSetup() {
         </div>
 
         {/* Footer */}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '20px 80px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
+        <div className="footer-section" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '18px 60px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
           <span>© 2025 VSVV – Ihre Versicherungsplattform</span>
-          <div style={{ display: 'flex', gap: 16 }}>
+          <div style={{ display: 'flex', gap: 18 }}>
             {['Impressum', 'Datenschutz', 'AGB'].map((item, i, arr) => (
               <React.Fragment key={item}>
-                <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', padding: 0 }}>{item}</button>
-                {i < arr.length - 1 && <span style={{ color: 'rgba(255,255,255,0.3)' }}>|</span>}
+                <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', padding: 0, transition: 'opacity 0.2s' }} onMouseEnter={e => e.currentTarget.style.opacity = '0.8'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}>{item}</button>
+                {i < arr.length - 1 && <span style={{ color: 'rgba(255,255,255,0.25)' }}>|</span>}
               </React.Fragment>
             ))}
           </div>
