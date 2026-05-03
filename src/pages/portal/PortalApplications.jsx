@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Card, CardContent } from '@/components/ui/card'
 import { format } from 'date-fns'
-import { usePortalCustomer } from '@/hooks/usePortalCustomer'
+import { usePortalCustomer, fetchPortalApplications } from '@/hooks/usePortalCustomer'
 import { getSparteLabel } from '@/lib/insuranceSparten'
 
 const STATUS_COLORS = {
@@ -24,8 +24,9 @@ export default function PortalApplications() {
 
   const { data: applications = [], isLoading: loadingApps } = useQuery({
     queryKey: ['portal-applications', customerId],
-    queryFn: () => base44.entities.Application.filter({ customer_id: customerId }),
+    queryFn: () => fetchPortalApplications(customerId),
     enabled: !!customerId,
+    staleTime: 30_000,
   })
 
   if (isLoading || loadingApps) {

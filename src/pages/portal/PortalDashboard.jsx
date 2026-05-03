@@ -2,7 +2,7 @@ import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { FileText, FolderOpen, TrendingUp, Mail, Phone, MapPin, Calendar, ChevronRight, AlertCircle } from 'lucide-react'
-import { usePortalCustomer, fetchPortalContracts, yearlyPremium } from '@/hooks/usePortalCustomer'
+import { usePortalCustomer, fetchPortalContracts, fetchPortalDocuments, yearlyPremium } from '@/hooks/usePortalCustomer'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { Link } from 'react-router-dom'
@@ -53,8 +53,7 @@ export default function PortalDashboard() {
 
   const { data: documents = [], isLoading: loadingDocs } = useQuery({
     queryKey: ['portal-documents', customerId],
-    queryFn: () => base44.entities.Document.filter({ customer_id: customerId })
-      .then(docs => docs.filter(d => d.visible_in_portal !== false)),
+    queryFn: () => fetchPortalDocuments(customerId),
     enabled: !!customerId,
     staleTime: 30_000,
   })

@@ -8,9 +8,7 @@ export function usePortalCustomer() {
   const customerId = localStorage.getItem('portal_customer_id')
 
   useEffect(() => {
-    if (!customerId) {
-      navigate('/portal/setup')
-    }
+    if (!customerId) navigate('/portal/setup')
   }, [customerId, navigate])
 
   const { data: customer, isLoading } = useQuery({
@@ -23,19 +21,41 @@ export function usePortalCustomer() {
   return { customer, customerId, isLoading }
 }
 
-// Helper: load all contracts for a customer (direct + as primary)
+// Merge two arrays by id, deduplicating
+function mergeById(a, b) {
+  const map = {}
+  ;[...a, ...b].forEach(x => { map[x.id] = x })
+  return Object.values(map)
+}
+
+// Contracts: direct + as primary customer
 export async function fetchPortalContracts(customerId) {
   const [direct, asPrimary] = await Promise.all([
     base44.entities.Contract.filter({ customer_id: customerId }),
     base44.entities.Contract.filter({ primary_customer_id: customerId }),
   ])
-  // Merge, deduplicate by id
-  const map = {}
-  ;[...direct, ...asPrimary].forEach(c => { map[c.id] = c })
-  return Object.values(map)
+  return mergeById(direct, asPrimary)
 }
 
-// Helper: yearly premium with fallback
+// Applications: direct + as primary customer
+export async function fetchPortalApplications(customerId) {
+  const [direct, asPrimary] = await Promise.all([
+    base44.entities.Application.filter({ customer_id: customerId }),
+    base44.entities.Application.filter({ primary_customer_id: customerId }),
+  ])
+  return mergeById(direct, asPrimary)
+}
+
+// Documents: direct + as primary customer, only portal-visible
+export async function fetchPortalDocuments(customerId) {
+  const [direct, asPrimary] = await Promise.all([
+    base44.entities.Document.filter({ customer_id: customerId }),
+    base44.entities.Document.filter({ primary_customer_id: customerId }),
+  ])
+  return mergeById(direct, asPrimary).filter(d => d.visible_in_portal !== false)
+}
+
+// Yearly premium with fallback
 export function yearlyPremium(contract) {
   if (contract.premium_yearly) return contract.premium_yearly
   if (contract.premium_monthly) return contract.premium_monthly * 12

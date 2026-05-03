@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { FolderOpen, Upload, ExternalLink, FileText, Loader2 } from 'lucide-react'
-import { usePortalCustomer, fetchPortalContracts } from '@/hooks/usePortalCustomer'
+import { usePortalCustomer, fetchPortalContracts, fetchPortalDocuments } from '@/hooks/usePortalCustomer'
 
 const NAVY = '#0B1C2C'
 const ACCENT = '#4F7CFF'
@@ -23,17 +23,7 @@ export default function PortalDocuments() {
 
   const { data: documents = [], isLoading: loadingDocs } = useQuery({
     queryKey: ['portal-documents', customerId],
-    queryFn: async () => {
-      // Load docs linked directly or via primary_customer_id (broker-uploaded)
-      const [direct, viaPrimary] = await Promise.all([
-        base44.entities.Document.filter({ customer_id: customerId }),
-        base44.entities.Document.filter({ primary_customer_id: customerId }),
-      ])
-      const map = {}
-      ;[...direct, ...viaPrimary].forEach(d => { map[d.id] = d })
-      // Only show docs not explicitly hidden from portal
-      return Object.values(map).filter(d => d.visible_in_portal !== false)
-    },
+    queryFn: () => fetchPortalDocuments(customerId),
     enabled: !!customerId,
     staleTime: 20_000,
   })
