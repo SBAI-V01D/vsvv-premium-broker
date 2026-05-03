@@ -17,7 +17,27 @@ export function usePortalCustomer() {
     queryKey: ['portal-customer', customerId],
     queryFn: () => base44.entities.Customer.get(customerId),
     enabled: !!customerId,
+    staleTime: 60_000,
   })
 
   return { customer, customerId, isLoading }
+}
+
+// Helper: load all contracts for a customer (direct + as primary)
+export async function fetchPortalContracts(customerId) {
+  const [direct, asPrimary] = await Promise.all([
+    base44.entities.Contract.filter({ customer_id: customerId }),
+    base44.entities.Contract.filter({ primary_customer_id: customerId }),
+  ])
+  // Merge, deduplicate by id
+  const map = {}
+  ;[...direct, ...asPrimary].forEach(c => { map[c.id] = c })
+  return Object.values(map)
+}
+
+// Helper: yearly premium with fallback
+export function yearlyPremium(contract) {
+  if (contract.premium_yearly) return contract.premium_yearly
+  if (contract.premium_monthly) return contract.premium_monthly * 12
+  return 0
 }
