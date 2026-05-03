@@ -538,7 +538,10 @@ export default function PortalDashboard() {
                 .map((sparte) => (
                   <div key={sparte.type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 13, fontWeight: 400, color: '#4b5563' }}>{sparte.type}</span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>CHF {sparte.yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                      <span style={{ fontSize: 12, fontWeight: 400, color: '#9ca3af' }}>CHF {(sparte.yearly / 12).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>CHF {sparte.yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
                   </div>
                 ))}
             </div>
