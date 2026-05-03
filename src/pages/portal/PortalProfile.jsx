@@ -52,6 +52,11 @@ export default function PortalProfile() {
       street: customer.street || '',
       zip_code: customer.zip_code || '',
       city: customer.city || '',
+      birthdate: customer.birthdate || '',
+      civil_status: customer.civil_status || '',
+      nationality: customer.nationality || '',
+      profession: customer.profession || '',
+      ahv_number: customer.ahv_number || '',
     })
     setEditing(true)
     setSaveError('')
@@ -132,12 +137,60 @@ export default function PortalProfile() {
           )}
         </div>
 
-        <InfoRow icon={Mail} label="E-Mail" value={customer.email} />
-        <InfoRow icon={Calendar} label="Geburtsdatum" value={customer.birthdate ? new Date(customer.birthdate).toLocaleDateString('de-CH') : null} />
-        <InfoRow icon={Globe} label="Nationalität" value={customer.nationality} />
-        <InfoRow icon={Shield} label="Zivilstand" value={CIVIL_LABELS[customer.civil_status] || customer.civil_status} />
-        <InfoRow icon={Briefcase} label="Beruf" value={customer.profession} />
-        <InfoRow icon={Shield} label="AHV-Nummer" value={customer.ahv_number} accent="#7c3aed" />
+        {!editing ? (
+          <>
+            <InfoRow icon={Mail} label="E-Mail" value={customer.email} />
+            <InfoRow icon={Calendar} label="Geburtsdatum" value={customer.birthdate ? new Date(customer.birthdate).toLocaleDateString('de-CH') : null} />
+            <InfoRow icon={Globe} label="Nationalität" value={customer.nationality} />
+            <InfoRow icon={Shield} label="Zivilstand" value={CIVIL_LABELS[customer.civil_status] || customer.civil_status} />
+            <InfoRow icon={Briefcase} label="Beruf" value={customer.profession} />
+            <InfoRow icon={Shield} label="AHV-Nummer" value={customer.ahv_number} accent="#7c3aed" />
+          </>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <label style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 5 }}>GEBURTSDATUM</label>
+              <input type="date" style={inputStyle} value={form.birthdate} onChange={e => setForm(f => ({ ...f, birthdate: e.target.value }))} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 5 }}>ZIVILSTAND</label>
+                <select style={inputStyle} value={form.civil_status} onChange={e => setForm(f => ({ ...f, civil_status: e.target.value }))}>
+                  <option value="">–</option>
+                  <option value="single">Ledig</option>
+                  <option value="married">Verheiratet</option>
+                  <option value="divorced">Geschieden</option>
+                  <option value="widowed">Verwitwet</option>
+                  <option value="registered_partnership">Eingetragene Partnerschaft</option>
+                  <option value="dissolved_partnership">Aufgelöste Partnerschaft</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 5 }}>NATIONALITÄT</label>
+                <input style={inputStyle} value={form.nationality} onChange={e => setForm(f => ({ ...f, nationality: e.target.value }))} placeholder="z.B. CH, DE, FR" />
+              </div>
+            </div>
+            <div>
+              <label style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 5 }}>BERUF</label>
+              <input style={inputStyle} value={form.profession} onChange={e => setForm(f => ({ ...f, profession: e.target.value }))} placeholder="Ihre Berufsbezeichnung" />
+            </div>
+            <div>
+              <label style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, display: 'block', marginBottom: 5 }}>AHV-NUMMER</label>
+              <input style={inputStyle} value={form.ahv_number} onChange={e => setForm(f => ({ ...f, ahv_number: e.target.value }))} placeholder="756.1234.5678.90" />
+            </div>
+            {saveError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#dc2626' }}>{saveError}</div>
+            )}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={handleSave} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: 6, background: ACCENT, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontWeight: 600, fontSize: 13, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1 }}>
+                <Check size={13} /> {saving ? 'Speichern…' : 'Speichern'}
+              </button>
+              <button onClick={() => setEditing(false)} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f3f4f6', color: '#6b7280', border: 'none', borderRadius: 8, padding: '9px 18px', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                <X size={13} /> Abbrechen
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Contact / Address — Editable */}

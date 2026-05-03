@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
 
     // Update action — only allowed fields from the customer themselves
     if (action === 'update_customer') {
-      const ALLOWED_FIELDS = ['phone', 'mobile', 'street', 'zip_code', 'city']
+      const ALLOWED_FIELDS = ['phone', 'mobile', 'street', 'zip_code', 'city', 'birthdate', 'civil_status', 'nationality', 'profession', 'ahv_number']
       const safeData = {}
       for (const key of ALLOWED_FIELDS) {
         if (update_data && key in update_data) safeData[key] = update_data[key]
