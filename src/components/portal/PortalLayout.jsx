@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useLocation, Link } from 'react-router-dom'
-import { LayoutDashboard, FileText, FolderOpen, User, LogOut, Menu, X, MessageCircle } from 'lucide-react'
+import { LayoutDashboard, FileText, FolderOpen, User, LogOut, Menu, X, MessageCircle, ClipboardList } from 'lucide-react'
 import { usePortalCustomer } from '@/hooks/usePortalCustomer'
 
 const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/daa966436_VSVV.png'
@@ -8,6 +8,7 @@ const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c9
 const NAV = [
   { path: '/portal', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/portal/vertraege', label: 'Verträge', icon: FileText },
+  { path: '/portal/antraege', label: 'Anträge', icon: ClipboardList },
   { path: '/portal/dokumente', label: 'Dokumente', icon: FolderOpen },
   { path: '/portal/profil', label: 'Mein Profil', icon: User },
 ]
@@ -149,17 +150,20 @@ export default function PortalLayout({ children }) {
         title="Fragen? Jetzt direkt schreiben"
         style={{
           position: 'fixed', bottom: 28, right: 28, zIndex: 100,
-          width: 56, height: 56, borderRadius: '50%',
+          display: 'flex', alignItems: 'center', gap: 10,
           background: '#25D366',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 20px rgba(37,211,102,0.4)',
+          borderRadius: 50, paddingLeft: 16, paddingRight: 20, height: 52,
+          boxShadow: '0 4px 20px rgba(37,211,102,0.45)',
           textDecoration: 'none',
-          transition: 'transform 0.2s',
+          transition: 'all 0.2s',
         }}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)' }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(37,211,102,0.55)' }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(37,211,102,0.45)' }}
       >
-        <MessageCircle size={26} color="#fff" fill="#fff" />
+        <MessageCircle size={22} color="#fff" fill="#fff" />
+        <span style={{ color: '#fff', fontWeight: 700, fontSize: 13, fontFamily: 'Inter, sans-serif', whiteSpace: 'nowrap' }}>
+          Frage stellen
+        </span>
       </a>
     </div>
   )

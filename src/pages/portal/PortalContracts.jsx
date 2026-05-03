@@ -1,8 +1,7 @@
 import React from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { FileText } from 'lucide-react'
+import { FileText, AlertCircle, Shield } from 'lucide-react'
 import { format } from 'date-fns'
-import { usePortalCustomer, fetchPortalContracts, yearlyPremium } from '@/hooks/usePortalCustomer'
+import { usePortalData, yearlyPremium } from '@/hooks/usePortalData'
 
 const NAVY = '#0B1C2C'
 const ACCENT = '#4F7CFF'
@@ -18,6 +17,10 @@ const STATUS_LABELS = {
   paused: 'Pausiert', expired: 'Abgelaufen',
 }
 
+const INSURANCE_TYPE_ICONS = {
+  health: '🏥', life: '❤️', property: '🏠', liability: '🛡️', motor: '🚗', other: '📋',
+}
+
 function Field({ label, value }) {
   if (!value) return null
   return (
@@ -29,18 +32,18 @@ function Field({ label, value }) {
 }
 
 export default function PortalContracts() {
-  const { customerId, isLoading } = usePortalCustomer()
+  const { contracts, isLoading, error } = usePortalData()
 
-  const { data: contracts = [], isLoading: loadingContracts } = useQuery({
-    queryKey: ['portal-contracts', customerId],
-    queryFn: () => fetchPortalContracts(customerId),
-    enabled: !!customerId,
-    staleTime: 30_000,
-  })
-
-  if (isLoading || loadingContracts) {
+  if (isLoading) {
     return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>Laden…</div>
   }
+
+  if (error) return (
+    <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 10, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <AlertCircle size={16} color="#dc2626" />
+      <p style={{ color: '#991b1b', fontSize: 13, margin: 0 }}>Fehler beim Laden: {error.message}</p>
+    </div>
+  )
 
   const totalMonthly = contracts.reduce((s, c) => s + (c.premium_monthly || 0), 0)
   const totalYearly = contracts.reduce((s, c) => s + yearlyPremium(c), 0)
@@ -52,7 +55,6 @@ export default function PortalContracts() {
         <p style={{ color: '#6b7280', fontSize: 14, marginTop: 4 }}>{contracts.length} Vertrag{contracts.length !== 1 ? 'e' : ''} gefunden</p>
       </div>
 
-      {/* Summary bar */}
       {contracts.length > 0 && (
         <div style={{ display: 'flex', gap: 16, marginBottom: 22, flexWrap: 'wrap' }}>
           <div style={{ background: '#fff', borderRadius: 10, padding: '12px 18px', boxShadow: '0 1px 4px rgba(11,28,44,0.07)', borderLeft: `3px solid ${ACCENT}` }}>
@@ -70,6 +72,7 @@ export default function PortalContracts() {
         <div style={{ background: '#fff', borderRadius: 12, padding: 40, textAlign: 'center', boxShadow: '0 1px 6px rgba(11,28,44,0.07)' }}>
           <FileText size={36} color="#d1d5db" style={{ marginBottom: 12 }} />
           <p style={{ color: '#9ca3af', margin: 0 }}>Keine Verträge vorhanden</p>
+          <p style={{ color: '#c4c9d1', fontSize: 12, marginTop: 6 }}>Ihr Broker hat noch keine Verträge für Sie erfasst.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -77,19 +80,21 @@ export default function PortalContracts() {
             const statusColor = STATUS_COLORS[c.status] || '#6b7280'
             const statusLabel = c.custom_status || STATUS_LABELS[c.status] || c.status
             const yearly = yearlyPremium(c)
+            const icon = INSURANCE_TYPE_ICONS[c.insurance_type] || '📋'
             return (
               <div key={c.id} style={{ background: '#fff', borderRadius: 12, padding: '20px 22px', boxShadow: '0 1px 6px rgba(11,28,44,0.07)', borderLeft: `4px solid ${statusColor}` }}>
-                {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 14 }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                      <h3 style={{ color: NAVY, fontWeight: 700, fontSize: 16, margin: 0 }}>{c.insurer || c.provider || '–'}</h3>
+                      <span style={{ fontSize: 20 }}>{icon}</span>
+                      <h3 style={{ color: NAVY, fontWeight: 700, fontSize: 16, margin: 0 }}>{c.insurer || '–'}</h3>
                       <span style={{ background: `${statusColor}18`, color: statusColor, fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20 }}>
                         {statusLabel}
                       </span>
                     </div>
                     <p style={{ color: '#6b7280', fontSize: 13, margin: '4px 0 0' }}>
                       {c.insurance_type}{c.product ? ` · ${c.product}` : ''}
+                      {c.customer_name && c.customer_name !== `${c.first_name} ${c.last_name}` ? ` · ${c.customer_name}` : ''}
                     </p>
                   </div>
 
@@ -108,7 +113,6 @@ export default function PortalContracts() {
                   </div>
                 </div>
 
-                {/* Details grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12, paddingTop: 14, borderTop: '1px solid #f3f4f6' }}>
                   <Field label="Policen-Nr." value={c.policy_number} />
                   <Field label="Vertragsbeginn" value={c.start_date ? format(new Date(c.start_date), 'dd.MM.yyyy') : null} />
@@ -118,6 +122,15 @@ export default function PortalContracts() {
                   {c.sparte_data?.model && <Field label="Modell" value={c.sparte_data.model} />}
                   {c.notes && <div style={{ gridColumn: '1/-1' }}><Field label="Notizen" value={c.notes} /></div>}
                 </div>
+
+                {c.policy_document_url && (
+                  <div style={{ marginTop: 12 }}>
+                    <a href={c.policy_document_url} target="_blank" rel="noopener noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: ACCENT, fontSize: 12, fontWeight: 600, textDecoration: 'none', padding: '6px 12px', background: `${ACCENT}10`, borderRadius: 7, border: `1px solid ${ACCENT}22` }}>
+                      <Shield size={12} /> Police öffnen
+                    </a>
+                  </div>
+                )}
               </div>
             )
           })}

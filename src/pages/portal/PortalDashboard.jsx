@@ -1,8 +1,6 @@
 import React from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { base44 } from '@/api/base44Client'
-import { FileText, FolderOpen, TrendingUp, Mail, Phone, MapPin, Calendar, ChevronRight, AlertCircle } from 'lucide-react'
-import { usePortalCustomer, fetchPortalContracts, fetchPortalDocuments, yearlyPremium } from '@/hooks/usePortalCustomer'
+import { FileText, FolderOpen, TrendingUp, Mail, Phone, MapPin, Calendar, ChevronRight, AlertCircle, ClipboardList } from 'lucide-react'
+import { usePortalData, yearlyPremium } from '@/hooks/usePortalData'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { Link } from 'react-router-dom'
@@ -42,29 +40,21 @@ function KpiCard({ to, icon: Icon, label, value, accent }) {
 }
 
 export default function PortalDashboard() {
-  const { customer, customerId, isLoading } = usePortalCustomer()
+  const { customer, customerId, contracts, documents, applications, isLoading, error } = usePortalData()
 
-  const { data: contracts = [], isLoading: loadingContracts } = useQuery({
-    queryKey: ['portal-contracts', customerId],
-    queryFn: () => fetchPortalContracts(customerId),
-    enabled: !!customerId,
-    staleTime: 30_000,
-  })
-
-  const { data: documents = [], isLoading: loadingDocs } = useQuery({
-    queryKey: ['portal-documents', customerId],
-    queryFn: () => fetchPortalDocuments(customerId),
-    enabled: !!customerId,
-    staleTime: 30_000,
-  })
-
-  const loading = isLoading || loadingContracts || loadingDocs
-
-  if (loading) return (
+  if (isLoading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>
       Daten werden geladen…
     </div>
   )
+
+  if (error) return (
+    <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 10, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <AlertCircle size={16} color="#dc2626" />
+      <p style={{ color: '#991b1b', fontSize: 13, margin: 0 }}>Fehler beim Laden: {error.message}</p>
+    </div>
+  )
+
   if (!customer) return null
 
   const greeting = () => {
@@ -74,7 +64,6 @@ export default function PortalDashboard() {
     return 'Guten Abend'
   }
 
-  const activeContracts = contracts.filter(c => ['active', 'aktiv'].includes(c.status))
   const totalMonthly = contracts.reduce((s, c) => s + (c.premium_monthly || 0), 0)
   const totalYearly = contracts.reduce((s, c) => s + yearlyPremium(c), 0)
 
@@ -91,36 +80,11 @@ export default function PortalDashboard() {
         </p>
       </div>
 
-      {/* Debug info panel */}
-      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 16px', marginBottom: 20, fontSize: 12, color: '#64748b', display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-        <span>User ID: <strong style={{ color: customer ? '#16a34a' : '#dc2626' }}>{customerId || 'null'}</strong></span>
-        <span>Kunde geladen: <strong style={{ color: customer ? '#16a34a' : '#dc2626' }}>{customer ? 'true' : 'false'}</strong></span>
-        <span>Verträge: <strong>{contracts.length}</strong></span>
-        <span>Dokumente: <strong>{documents.length}</strong></span>
-      </div>
-
-      {/* Error: no customer */}
-      {!customer && !isLoading && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-          <AlertCircle size={16} color="#dc2626" />
-          <p style={{ color: '#991b1b', fontSize: 13, margin: 0 }}>Kundendaten nicht geladen – bitte neu einloggen.</p>
-        </div>
-      )}
-
-      {/* Warning: no CRM data */}
-      {customer && contracts.length === 0 && documents.length === 0 && (
-        <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-          <AlertCircle size={16} color="#d97706" />
-          <p style={{ color: '#92400e', fontSize: 13, margin: 0 }}>
-            Keine CRM-Daten gefunden für Kunden-ID: <strong>{customerId}</strong> — Bitte Datenzuordnung im CRM prüfen.
-          </p>
-        </div>
-      )}
-
       {/* KPI row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
         <KpiCard to="/portal/vertraege" icon={FileText} label="Verträge" value={contracts.length} accent={ACCENT} />
-        <KpiCard to="/portal/vertraege" icon={TrendingUp} label="Monatsprämie total" value={totalMonthly > 0 ? `CHF ${totalMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2 })}` : '–'} accent="#16a34a" />
+        <KpiCard to="/portal/antraege" icon={ClipboardList} label="Anträge" value={applications.length} accent="#7c3aed" />
+        <KpiCard to="/portal/vertraege" icon={TrendingUp} label="Monatsprämie" value={totalMonthly > 0 ? `CHF ${totalMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2 })}` : '–'} accent="#16a34a" />
         <KpiCard to="/portal/dokumente" icon={FolderOpen} label="Dokumente" value={documents.length} accent="#d97706" />
       </div>
 
@@ -143,7 +107,7 @@ export default function PortalDashboard() {
                 return (
                   <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#f9fafb', borderRadius: 8 }}>
                     <div>
-                      <p style={{ color: NAVY, fontWeight: 600, fontSize: 13, margin: 0 }}>{c.insurer || c.provider || '–'}</p>
+                      <p style={{ color: NAVY, fontWeight: 600, fontSize: 13, margin: 0 }}>{c.insurer || '–'}</p>
                       <p style={{ color: '#6b7280', fontSize: 12, margin: '2px 0 0' }}>
                         {c.insurance_type}{c.product ? ` · ${c.product}` : ''}
                       </p>
@@ -165,7 +129,7 @@ export default function PortalDashboard() {
           )}
         </div>
 
-        {/* Contact + Yearly */}
+        {/* Contact info + Yearly premium */}
         <div style={{ background: '#fff', borderRadius: 12, padding: 22, boxShadow: '0 1px 6px rgba(11,28,44,0.07)' }}>
           <h2 style={{ color: NAVY, fontSize: 15, fontWeight: 700, margin: '0 0 16px' }}>Meine Kontaktdaten</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>

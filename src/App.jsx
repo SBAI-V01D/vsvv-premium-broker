@@ -21,11 +21,11 @@ import CommissionsAndCourtage from './pages/CommissionsAndCourtage'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
-import PortalDashboard from './pages/portal/PortalDashboard'
-import PortalContracts from './pages/portal/PortalContracts'
-import PortalApplications from './pages/portal/PortalApplications'
-import PortalDocuments from './pages/portal/PortalDocuments'
-import PortalProfile from './pages/portal/PortalProfile'
+import PortalDashboard from './pages/portal/PortalDashboard.jsx'
+import PortalContracts from './pages/portal/PortalContracts.jsx'
+import PortalApplications from './pages/portal/PortalApplications.jsx'
+import PortalDocuments from './pages/portal/PortalDocuments.jsx'
+import PortalProfile from './pages/portal/PortalProfile.jsx'
 import PortalSetup from './pages/portal/PortalSetup'
 import PortalResetPassword from './pages/portal/PortalResetPassword'
 
@@ -39,6 +39,7 @@ const PortalRoutes = () => (
       <Route path="antraege" element={<PortalApplications />} />
       <Route path="dokumente" element={<PortalDocuments />} />
       <Route path="profil" element={<PortalProfile />} />
+      <Route path="dashboard" element={<PortalDashboard />} />
     </Route>
   </Routes>
 )
