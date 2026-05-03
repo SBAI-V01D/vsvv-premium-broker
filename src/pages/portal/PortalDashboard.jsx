@@ -512,7 +512,7 @@ export default function PortalDashboard() {
                           CHF {(contract.premium_monthly || 0).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td style={{ padding: '14px 20px', textAlign: 'right', fontSize: 13, fontWeight: 700, color: '#1a1a1a' }}>
-                          CHF {(contract.premium_yearly || 0).toLocaleString('de-CH', { maximumFractionDigits: 0 })}
+                          CHF {(contract.premium_yearly || 0).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td style={{ padding: '14px 20px', fontSize: 12, color: '#6b7280' }}>
                           {contract.start_date ? formatDate(contract.start_date) : '–'}
