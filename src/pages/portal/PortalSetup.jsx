@@ -4,7 +4,7 @@ import { Eye, EyeOff, Shield, BarChart2, UserCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/469756d65_HintergrundbildKundenportal.png'
-const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/003596cab_LogoVSVV2.png'
+const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/0cde67ef2_LogoVSVV2.png'
 
 export default function PortalSetup() {
   const navigate = useNavigate()
@@ -113,11 +113,11 @@ export default function PortalSetup() {
         }}
       >
         {/* Subtle fade to right panel */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 0%, transparent 25%, rgba(11,30,55,0.1) 40%, rgba(11,30,55,0.3) 55%, rgba(11,30,55,0.5) 75%, rgba(10,35,75,0.8) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 45%, rgba(11,30,55,0.2) 65%, rgba(11,30,55,0.5) 85%, rgba(10,35,75,0.8) 100%)' }} />
 
         {/* Logo in the middle */}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: '20%', zIndex: 10 }}>
-          <div style={{ position: 'relative', height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, rgba(16,48,80,0.15) 0%, rgba(11,30,55,0.2) 100%)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRadius: 16, paddingLeft: 32, paddingRight: 32 }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingRight: '5%', zIndex: 10 }}>
+          <div style={{ position: 'relative', height: 120, display: 'flex', alignItems: 'center', background: 'linear-gradient(135deg, rgba(16,48,80,0.15) 0%, rgba(11,30,55,0.2) 100%)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRadius: 16, paddingLeft: 32, paddingRight: 32 }}>
             <img src={LOGO_URL} alt="VSVV" style={{ height: '100%', objectFit: 'contain', opacity: 0.96, mixBlendMode: 'screen', filter: 'brightness(1.08) saturate(0.85)', transition: 'opacity 0.3s ease' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 50%, rgba(0,0,0,0.06) 100%)', pointerEvents: 'none', borderRadius: 16 }} />
           </div>
