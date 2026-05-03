@@ -78,18 +78,49 @@ export default function CustomerDetail() {
       </Link>
 
       <div className="flex justify-between items-start mb-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-1">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
             {customer.first_name?.[0]}{customer.last_name?.[0]}
           </div>
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-bold">{customer.first_name} {customer.last_name}</h1>
             <p className="text-muted-foreground mt-1"><EmailLink email={customer.email} /></p>
           </div>
         </div>
-        <Button variant="outline" onClick={() => setShowEdit(true)}>
-          <Edit className="w-4 h-4 mr-2" /> Bearbeiten
-        </Button>
+        <div className="flex gap-2 flex-shrink-0">
+          <a
+            href="https://wa.me/41787170007?text=Ich%20habe%20eine%20Frage%20zum%20Kunden%20Profil"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+              padding: '12px 16px',
+              borderRadius: 8,
+              border: '2px solid #25D366',
+              background: '#E8F5E9',
+              cursor: 'pointer',
+              textDecoration: 'none',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = '#C8E6C9'
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 211, 102, 0.2)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = '#E8F5E9'
+              e.currentTarget.style.boxShadow = 'none'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#25D366', fontSize: 12, fontWeight: 600 }}>
+              💬 WhatsApp
+            </div>
+          </a>
+          <Button variant="outline" onClick={() => setShowEdit(true)}>
+            <Edit className="w-4 h-4 mr-2" /> Bearbeiten
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
