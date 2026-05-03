@@ -2,29 +2,30 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
   try {
-    const formData = await req.formData();
-    const file = formData.get('file');
-    const customer_id = formData.get('customer_id');
-    const customer_name = formData.get('customer_name');
-    const category = formData.get('category');
+    const base44 = createClientFromRequest(req);
+    const { file_base64, filename, customer_id, customer_name, category } = await req.json();
 
-    if (!file || !customer_id) {
+    if (!file_base64 || !customer_id) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Use service role client without request-based auth
-    const base44 = createClientFromRequest(req);
-    
+    // Convert base64 to Uint8Array
+    const binaryString = atob(file_base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
     // Upload file
     const { file_url } = await base44.asServiceRole.integrations.Core.UploadFile({ 
-      file 
+      file: bytes
     });
 
     // Create document record
     await base44.asServiceRole.entities.Document.create({
       customer_id,
       customer_name,
-      name: file.name.replace(/\.[^.]+$/, ''),
+      name: filename.replace(/\.[^.]+$/, ''),
       file_url,
       category,
       uploaded_by_role: 'customer',
