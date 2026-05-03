@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client'
 import { Eye, EyeOff, Shield, BarChart2, UserCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
-const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/469756d65_HintergrundbildKundenportal.png'
+const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/b98de11bd_VSVV2.png'
 
 export default function PortalSetup() {
   const navigate = useNavigate()
@@ -64,7 +64,7 @@ export default function PortalSetup() {
     width: '100%',
     height: 44,
     background: 'rgba(255,255,255,0.08)',
-    border: `1px solid ${focused === field ? '#4A8DD4' : 'rgba(255,255,255,0.12)'}`,
+    border: `1px solid ${focused === field ? '#5BA3E8' : 'rgba(255,255,255,0.12)'}`,
     borderRadius: 8,
     padding: '0 14px',
     color: '#EAF1F7',
@@ -73,7 +73,7 @@ export default function PortalSetup() {
     boxSizing: 'border-box',
     fontFamily: 'Inter, Helvetica, sans-serif',
     transition: 'border-color 0.2s, box-shadow 0.2s',
-    boxShadow: focused === field ? '0 0 0 3px rgba(74,141,212,0.12)' : 'none',
+    boxShadow: focused === field ? '0 0 0 3px rgba(91,163,232,0.12)' : 'none',
   })
 
   const labelStyle = {
@@ -86,244 +86,497 @@ export default function PortalSetup() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: 'Inter, Helvetica, sans-serif' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: `url(${BG_URL})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'left center',
+      backgroundRepeat: 'no-repeat',
+      display: 'flex',
+      flexDirection: 'column',
+      fontFamily: 'Inter, Helvetica, sans-serif',
+      position: 'relative',
+    }}>
       <style>{`
         @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
         input::placeholder { color: rgba(168,179,194,0.4); }
         @media (max-width: 768px) {
-          .left-section { display: none !important; }
-          .right-section { width: 100% !important; }
-          .content-wrapper { margin-left: 32px !important; margin-right: 32px !important; margin-top: 60px !important; max-width: 100% !important; }
-          .footer-section { padding: 20px 32px !important; }
+          .content-wrapper { margin-right: 24px !important; margin-left: 24px !important; }
+          .footer-section { padding: 16px 24px !important; }
         }
       `}</style>
 
-      {/* LEFT — Background image (flexible width) */}
-      <div
-        className="left-section"
-        style={{
-          flex: '1 1 55%',
-          minWidth: 0,
-          backgroundImage: `url(${BG_URL})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'left center',
-          backgroundRepeat: 'no-repeat',
-          position: 'relative',
-        }}
-      >
-        {/* Subtle fade to right panel */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 70%, rgba(10,35,75,0.6) 100%)' }} />
-      </div>
+      {/* MAIN CONTENT AREA */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'flex-start',
+        alignItems: 'flex-end',
+        paddingTop: '80px',
+        paddingRight: '9%',
+      }}>
 
-      {/* RIGHT — Login panel */}
-      <div
-        className="right-section"
-        style={{
-          flex: '1 1 45%',
-          minWidth: 360,
-          background: 'linear-gradient(135deg, rgba(15,45,85,0.95) 0%, rgba(10,35,75,0.99) 100%)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        {/* Main content */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: '60px' }}>
+        <div className="content-wrapper" style={{
+          maxWidth: 380,
+          width: '100%',
+        }}>
 
-          <div className="content-wrapper" style={{ marginLeft: 60, marginRight: 50, maxWidth: 420 }}>
-            {!mustChangePassword ? (
-              <>
-                {/* Text block */}
-                <div style={{ marginBottom: 24 }}>
-                  <h1 style={{ color: '#EAF1F7', fontSize: 34, fontWeight: 600, margin: '0 0 12px', lineHeight: 1.2, letterSpacing: '0.5px' }}>
-                    Willkommen bei VSVV
-                  </h1>
-                  <p style={{ color: '#5B9FE6', fontSize: 14, fontWeight: 500, margin: '0 0 8px', lineHeight: 1.6 }}>
-                    Ihr persönliches Kundenportal für strukturierte und transparente Versicherungslösungen.
-                  </p>
-                  <p style={{ color: '#C8D4E3', fontSize: 13.5, lineHeight: 1.75, margin: '0 0 12px' }}>
-                    Greifen Sie jederzeit sicher auf Ihre Verträge, Dokumente und persönliche Beratung zu – alles zentral an einem Ort.
-                  </p>
-                  <p style={{ color: '#7FA8FF', fontSize: 12.5, fontWeight: 500, margin: 0, fontStyle: 'italic', letterSpacing: '0.3px' }}>
-                    Alles an einem Ort. Klar strukturiert. Für Sie optimiert.
-                  </p>
-                </div>
-
-                {/* Login box */}
-                <div style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: 14,
-                  padding: 28,
-                  marginTop: 36,
-                  marginBottom: 26,
-                  boxShadow: '0 6px 24px rgba(0,0,0,0.1)',
+          {!mustChangePassword ? (
+            <>
+              {/* HEADLINE + DESCRIPTION */}
+              <div style={{ marginBottom: 32 }}>
+                <h1 style={{
+                  color: '#EAF1F7',
+                  fontSize: 32,
+                  fontWeight: 600,
+                  margin: '0 0 12px',
+                  lineHeight: 1.2,
+                  letterSpacing: '-0.5px',
                 }}>
-                  <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {/* Email */}
-                    <div>
-                      <label style={labelStyle}>E-Mail-Adresse</label>
-                      <input
-                        type="email" value={email} onChange={e => setEmail(e.target.value)}
-                        required autoFocus placeholder="ihre@email.ch"
-                        style={{ ...inputStyle('email'), background: 'rgba(255,255,255,0.08)' }}
-                        onFocus={() => setFocused('email')}
-                        onBlur={() => setFocused(null)}
-                      />
-                    </div>
+                  Willkommen bei VSVV
+                </h1>
+                <p style={{
+                  color: '#5B9FE6',
+                  fontSize: 13.5,
+                  fontWeight: 500,
+                  margin: '0 0 8px',
+                  lineHeight: 1.6,
+                }}>
+                  Ihr persönliches Kundenportal für strukturierte und transparente Versicherungslösungen.
+                </p>
+                <p style={{
+                  color: '#C8D4E3',
+                  fontSize: 13,
+                  lineHeight: 1.75,
+                  margin: 0,
+                }}>
+                  Greifen Sie jederzeit sicher auf Ihre Verträge, Dokumente und persönliche Beratung zu – alles zentral an einem Ort.
+                </p>
+              </div>
 
-                    {/* Password */}
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <label style={{ ...labelStyle, marginBottom: 0 }}>Passwort</label>
-                        <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5B9FE6', fontSize: 11.5, fontFamily: 'inherit', padding: 0 }}>
-                          Vergessen?
-                        </button>
-                      </div>
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type={showPassword ? 'text' : 'password'} value={password}
-                          onChange={e => setPassword(e.target.value)} required placeholder="••••••••"
-                          style={{ ...inputStyle('password'), background: 'rgba(255,255,255,0.08)', paddingRight: 42 }}
-                          onFocus={() => setFocused('password')}
-                          onBlur={() => setFocused(null)}
-                        />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(168,179,194,0.4)', padding: 0, display: 'flex' }}>
-                          {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                        </button>
-                      </div>
-                    </div>
+              {/* LOGIN BOX */}
+              <div style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 12,
+                padding: 24,
+                marginBottom: 24,
+                boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+              }}>
+                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-                    {/* Remember me */}
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 2 }}>
-                      <div
-                        onClick={() => setRememberMe(!rememberMe)}
+                  {/* EMAIL */}
+                  <div>
+                    <label style={labelStyle}>E-Mail-Adresse</label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      required
+                      autoFocus
+                      placeholder="ihre@email.ch"
+                      style={inputStyle('email')}
+                      onFocus={() => setFocused('email')}
+                      onBlur={() => setFocused(null)}
+                    />
+                  </div>
+
+                  {/* PASSWORD */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <label style={{ ...labelStyle, marginBottom: 0 }}>Passwort</label>
+                      <button
+                        type="button"
                         style={{
-                          width: 16, height: 16, borderRadius: 4, flexShrink: 0,
-                          border: `1.5px solid ${rememberMe ? '#4A8DD4' : 'rgba(255,255,255,0.18)'}`,
-                          background: rememberMe ? 'rgba(74,141,212,0.2)' : 'transparent',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          transition: 'all 0.15s',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#5B9FE6',
+                          fontSize: 11.5,
+                          fontFamily: 'inherit',
+                          padding: 0,
                         }}
                       >
-                        {rememberMe && <div style={{ width: 8, height: 8, borderRadius: 2, background: '#4A8DD4' }} />}
-                      </div>
-                      <span style={{ color: '#8A9BB0', fontSize: 12.5 }}>Angemeldet bleiben</span>
-                    </label>
+                        Vergessen?
+                      </button>
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        required
+                        placeholder="••••••••"
+                        style={{ ...inputStyle('password'), paddingRight: 42 }}
+                        onFocus={() => setFocused('password')}
+                        onBlur={() => setFocused(null)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        style={{
+                          position: 'absolute',
+                          right: 13,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: 'rgba(168,179,194,0.4)',
+                          padding: 0,
+                          display: 'flex',
+                        }}
+                      >
+                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
 
-                    {/* Error */}
-                    {error && (
-                      <div style={{ background: 'rgba(160,130,70,0.1)', border: '1px solid rgba(160,130,70,0.22)', borderRadius: 7, padding: '8px 12px' }}>
-                        <p style={{ color: '#c8a96e', fontSize: 12, margin: 0 }}>{error}</p>
-                      </div>
-                    )}
-
-                    {/* Button */}
-                    <button
-                      type="submit" disabled={loading}
+                  {/* REMEMBER ME */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    cursor: 'pointer',
+                  }}>
+                    <div
+                      onClick={() => setRememberMe(!rememberMe)}
                       style={{
-                        width: '100%', height: 46, borderRadius: 8, border: 'none',
-                        background: loading ? 'rgba(95,157,230,0.3)' : 'linear-gradient(135deg, #3A6BA8 0%, #5BA3E8 100%)',
-                        color: '#EAF1F7', fontWeight: 600, fontSize: 14,
-                        cursor: loading ? 'not-allowed' : 'pointer',
-                        marginTop: 14,
-                        transition: 'transform 0.2s, box-shadow 0.2s, background 0.2s',
-                        boxShadow: loading ? 'none' : '0 4px 18px rgba(75,141,212,0.3)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                        fontFamily: 'Inter, Helvetica, sans-serif',
+                        width: 16,
+                        height: 16,
+                        borderRadius: 4,
+                        flexShrink: 0,
+                        border: `1.5px solid ${rememberMe ? '#5BA3E8' : 'rgba(255,255,255,0.18)'}`,
+                        background: rememberMe ? 'rgba(91,163,232,0.2)' : 'transparent',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.15s',
                       }}
-                      onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.background = 'linear-gradient(135deg, #4575B5 0%, #66AFF0 100%)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(75,141,212,0.4)' } }}
-                      onMouseLeave={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.background = 'linear-gradient(135deg, #3A6BA8 0%, #5BA3E8 100%)'; e.currentTarget.style.boxShadow = '0 4px 18px rgba(75,141,212,0.3)' } }}
                     >
-                      {loading ? (
-                        <>
-                          <div style={{ width: 14, height: 14, border: '2px solid rgba(234,241,247,0.25)', borderTopColor: '#EAF1F7', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-                          Anmelden…
-                        </>
-                      ) : 'Anmelden'}
-                    </button>
-                  </form>
-                </div>
+                      {rememberMe && <div style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 2,
+                        background: '#5BA3E8',
+                      }} />}
+                    </div>
+                    <span style={{ color: '#8A9BB0', fontSize: 12.5 }}>Angemeldet bleiben</span>
+                  </label>
 
-                {/* Trust section */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {[
-                    { icon: Shield, title: 'Unabhängige Beratung', text: 'Ohne Interessenskonflikte – nur Ihre Ziele zählen' },
-                    { icon: BarChart2, title: 'Volle Transparenz', text: 'Jederzeit vollständiger Überblick über Ihre Policen' },
-                    { icon: UserCheck, title: 'Schweizer Datenschutz', text: 'Ihre Daten sind sicher und vertraulich geschützt' },
-                  ].map(({ icon: Icon, title, text }) => (
-                    <div key={title} style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(74,141,212,0.12)', border: '1px solid rgba(74,141,212,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2 }}>
-                        <Icon size={14} color="rgba(74,141,212,0.7)" />
-                      </div>
-                      <div>
-                        <p style={{ color: '#C8D4E0', fontSize: 12, fontWeight: 600, margin: '0 0 2px' }}>{title}</p>
-                        <p style={{ color: '#7A8A9E', fontSize: 12, margin: 0, lineHeight: 1.5 }}>{text}</p>
-                      </div>
+                  {/* ERROR */}
+                  {error && (
+                    <div style={{
+                      background: 'rgba(200,150,100,0.1)',
+                      border: '1px solid rgba(200,150,100,0.22)',
+                      borderRadius: 7,
+                      padding: '8px 12px',
+                    }}>
+                      <p style={{ color: '#c8a96e', fontSize: 12, margin: 0 }}>{error}</p>
                     </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              /* Change password */
-              <>
-                <div style={{ marginBottom: 24 }}>
-                  <h1 style={{ color: '#EAF1F7', fontSize: 24, fontWeight: 600, margin: '0 0 8px' }}>Passwort festlegen</h1>
-                  <p style={{ color: '#8A9BB0', fontSize: 13, margin: 0 }}>Bitte wählen Sie ein persönliches Passwort.</p>
-                </div>
-                <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12, padding: 24, marginBottom: 24 }}>
-                  <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  )}
+
+                  {/* SUBMIT BUTTON */}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    style={{
+                      width: '100%',
+                      height: 46,
+                      borderRadius: 8,
+                      border: 'none',
+                      background: loading
+                        ? 'rgba(91,163,232,0.3)'
+                        : 'linear-gradient(135deg, #3A6BA8 0%, #5BA3E8 100%)',
+                      color: '#EAF1F7',
+                      fontWeight: 600,
+                      fontSize: 14,
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      marginTop: 8,
+                      transition: 'transform 0.2s, box-shadow 0.2s, background 0.2s',
+                      boxShadow: loading ? 'none' : '0 4px 18px rgba(91,163,232,0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      fontFamily: 'Inter, Helvetica, sans-serif',
+                    }}
+                    onMouseEnter={e => {
+                      if (!loading) {
+                        e.currentTarget.style.transform = 'translateY(-2px)'
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #4575B5 0%, #66AFF0 100%)'
+                        e.currentTarget.style.boxShadow = '0 6px 24px rgba(91,163,232,0.4)'
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!loading) {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #3A6BA8 0%, #5BA3E8 100%)'
+                        e.currentTarget.style.boxShadow = '0 4px 18px rgba(91,163,232,0.3)'
+                      }
+                    }}
+                  >
+                    {loading ? (
+                      <>
+                        <div style={{
+                          width: 14,
+                          height: 14,
+                          border: '2px solid rgba(234,241,247,0.25)',
+                          borderTopColor: '#EAF1F7',
+                          borderRadius: '50%',
+                          animation: 'spin 0.7s linear infinite',
+                        }} />
+                        Anmelden…
+                      </>
+                    ) : 'Anmelden'}
+                  </button>
+                </form>
+              </div>
+
+              {/* TRUST SECTION */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {[
+                  { icon: Shield, title: 'Unabhängige Beratung', text: 'Ohne Interessenskonflikte – nur Ihre Ziele zählen' },
+                  { icon: BarChart2, title: 'Volle Transparenz', text: 'Jederzeit vollständiger Überblick über Ihre Policen' },
+                  { icon: UserCheck, title: 'Schweizer Datenschutz', text: 'Ihre Daten sind sicher und vertraulich geschützt' },
+                ].map(({ icon: Icon, title, text }) => (
+                  <div key={title} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      background: 'rgba(91,163,232,0.12)',
+                      border: '1px solid rgba(91,163,232,0.18)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      marginTop: 2,
+                    }}>
+                      <Icon size={14} color="rgba(91,163,232,0.7)" />
+                    </div>
                     <div>
-                      <label style={labelStyle}>Neues Passwort</label>
-                      <div style={{ position: 'relative' }}>
-                        <input type={showNew ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} required autoFocus placeholder="Min. 8 Zeichen" style={{ ...inputStyle('newpw'), paddingRight: 42 }} onFocus={() => setFocused('newpw')} onBlur={() => setFocused(null)} />
-                        <button type="button" onClick={() => setShowNew(!showNew)} style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(168,179,194,0.4)', padding: 0, display: 'flex' }}>
-                          {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
-                        </button>
-                      </div>
+                      <p style={{
+                        color: '#C8D4E0',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        margin: '0 0 2px',
+                      }}>
+                        {title}
+                      </p>
+                      <p style={{
+                        color: '#7A8A9E',
+                        fontSize: 12,
+                        margin: 0,
+                        lineHeight: 1.5,
+                      }}>
+                        {text}
+                      </p>
                     </div>
-                    <div>
-                      <label style={labelStyle}>Passwort bestätigen</label>
-                      <div style={{ position: 'relative' }}>
-                        <input type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required placeholder="Wiederholen" style={{ ...inputStyle('confirmpw'), paddingRight: 42 }} onFocus={() => setFocused('confirmpw')} onBlur={() => setFocused(null)} />
-                        <button type="button" onClick={() => setShowConfirm(!showConfirm)} style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(168,179,194,0.4)', padding: 0, display: 'flex' }}>
-                          {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
-                        </button>
-                      </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            /* CHANGE PASSWORD VIEW */
+            <>
+              <div style={{ marginBottom: 24 }}>
+                <h1 style={{
+                  color: '#EAF1F7',
+                  fontSize: 24,
+                  fontWeight: 600,
+                  margin: '0 0 8px',
+                }}>
+                  Passwort festlegen
+                </h1>
+                <p style={{ color: '#8A9BB0', fontSize: 13, margin: 0 }}>
+                  Bitte wählen Sie ein persönliches Passwort.
+                </p>
+              </div>
+
+              <div style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                borderRadius: 12,
+                padding: 24,
+                marginBottom: 24,
+              }}>
+                <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {/* NEW PASSWORD */}
+                  <div>
+                    <label style={labelStyle}>Neues Passwort</label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type={showNew ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={e => setNewPassword(e.target.value)}
+                        required
+                        autoFocus
+                        placeholder="Min. 8 Zeichen"
+                        style={{ ...inputStyle('newpw'), paddingRight: 42 }}
+                        onFocus={() => setFocused('newpw')}
+                        onBlur={() => setFocused(null)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNew(!showNew)}
+                        style={{
+                          position: 'absolute',
+                          right: 13,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: 'rgba(168,179,194,0.4)',
+                          padding: 0,
+                          display: 'flex',
+                        }}
+                      >
+                        {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
                     </div>
-                    {error && (
-                      <div style={{ background: 'rgba(160,130,70,0.1)', border: '1px solid rgba(160,130,70,0.22)', borderRadius: 7, padding: '8px 12px' }}>
-                        <p style={{ color: '#c8a96e', fontSize: 12, margin: 0 }}>{error}</p>
-                      </div>
-                    )}
-                    <button
-                      type="submit" disabled={loading}
-                      style={{ width: '100%', height: 44, borderRadius: 8, border: 'none', background: loading ? 'rgba(74,141,212,0.3)' : 'linear-gradient(135deg, #2F5D8A 0%, #4A8DD4 100%)', color: '#EAF1F7', fontWeight: 600, fontSize: 14, cursor: loading ? 'not-allowed' : 'pointer', marginTop: 12, transition: 'transform 0.15s, background 0.2s', boxShadow: '0 4px 16px rgba(47,93,138,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'Inter, Helvetica, sans-serif' }}
-                      onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.background = 'linear-gradient(135deg, #366a9e 0%, #5598e8 100%)' } }}
-                      onMouseLeave={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.background = 'linear-gradient(135deg, #2F5D8A 0%, #4A8DD4 100%)' } }}
-                    >
-                      {loading ? (
-                        <><div style={{ width: 14, height: 14, border: '2px solid rgba(234,241,247,0.25)', borderTopColor: '#EAF1F7', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />Wird gespeichert…</>
-                      ) : 'Passwort festlegen'}
-                    </button>
-                  </form>
-                </div>
-              </>
-            )}
-          </div>
+                  </div>
+
+                  {/* CONFIRM PASSWORD */}
+                  <div>
+                    <label style={labelStyle}>Passwort bestätigen</label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type={showConfirm ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                        required
+                        placeholder="Wiederholen"
+                        style={{ ...inputStyle('confirmpw'), paddingRight: 42 }}
+                        onFocus={() => setFocused('confirmpw')}
+                        onBlur={() => setFocused(null)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirm(!showConfirm)}
+                        style={{
+                          position: 'absolute',
+                          right: 13,
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: 'rgba(168,179,194,0.4)',
+                          padding: 0,
+                          display: 'flex',
+                        }}
+                      >
+                        {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ERROR */}
+                  {error && (
+                    <div style={{
+                      background: 'rgba(200,150,100,0.1)',
+                      border: '1px solid rgba(200,150,100,0.22)',
+                      borderRadius: 7,
+                      padding: '8px 12px',
+                    }}>
+                      <p style={{ color: '#c8a96e', fontSize: 12, margin: 0 }}>{error}</p>
+                    </div>
+                  )}
+
+                  {/* SUBMIT */}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    style={{
+                      width: '100%',
+                      height: 44,
+                      borderRadius: 8,
+                      border: 'none',
+                      background: loading
+                        ? 'rgba(91,163,232,0.3)'
+                        : 'linear-gradient(135deg, #2F5D8A 0%, #4A8DD4 100%)',
+                      color: '#EAF1F7',
+                      fontWeight: 600,
+                      fontSize: 14,
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      marginTop: 8,
+                      transition: 'transform 0.15s, background 0.2s',
+                      boxShadow: '0 4px 16px rgba(47,93,138,0.35)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      fontFamily: 'Inter, Helvetica, sans-serif',
+                    }}
+                    onMouseEnter={e => {
+                      if (!loading) {
+                        e.currentTarget.style.transform = 'translateY(-1px)'
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #366a9e 0%, #5598e8 100%)'
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!loading) {
+                        e.currentTarget.style.transform = 'translateY(0)'
+                        e.currentTarget.style.background = 'linear-gradient(135deg, #2F5D8A 0%, #4A8DD4 100%)'
+                      }
+                    }}
+                  >
+                    {loading ? (
+                      <>
+                        <div style={{
+                          width: 14,
+                          height: 14,
+                          border: '2px solid rgba(234,241,247,0.25)',
+                          borderTopColor: '#EAF1F7',
+                          borderRadius: '50%',
+                          animation: 'spin 0.7s linear infinite',
+                        }} />
+                        Wird gespeichert…
+                      </>
+                    ) : 'Passwort festlegen'}
+                  </button>
+                </form>
+              </div>
+            </>
+          )}
         </div>
-
       </div>
 
-      {/* Footer — outside right section, as separate flex item */}
-      <div className="footer-section" style={{ flexShrink: 0, background: 'linear-gradient(135deg, rgba(15,45,85,0.95) 0%, rgba(10,35,75,0.99) 100%)', padding: '18px 60px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10.5, color: 'rgba(255,255,255,0.55)' }}>
+      {/* FOOTER */}
+      <div className="footer-section" style={{
+        flexShrink: 0,
+        background: 'rgba(0,0,0,0.3)',
+        padding: '16px 24px',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        fontSize: 10.5,
+        color: 'rgba(255,255,255,0.55)',
+        marginTop: 'auto',
+      }}>
         <span>© 2025 VSVV – Ihre Versicherungsplattform</span>
         <div style={{ display: 'flex', gap: 18 }}>
-          {['Impressum', 'Datenschutz', 'AGB'].map((item, i, arr) => (
+          {['AGB', 'Impressum', 'Datenschutz'].map((item, i, arr) => (
             <React.Fragment key={item}>
-              <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', padding: 0, transition: 'opacity 0.2s' }} onMouseEnter={e => e.currentTarget.style.opacity = '0.8'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}>{item}</button>
+              <button style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'inherit',
+                fontSize: 'inherit',
+                fontFamily: 'inherit',
+                padding: 0,
+                transition: 'opacity 0.2s',
+              }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              >
+                {item}
+              </button>
               {i < arr.length - 1 && <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>}
             </React.Fragment>
           ))}
