@@ -164,15 +164,12 @@ export default function PortalDashboard() {
               Ihre Versicherungen im Überblick.
             </p>
           </div>
-          <a href="https://wa.me/41787170007?text=Ich%20habe%20Fragen%20zu%20meinen%20Versicherungen%20und%20Finanzen" target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, textDecoration: 'none', display: 'flex', flexDirection: 'column', gap: 2, padding: '10px 14px', borderRadius: 8, border: '2px solid #25D366', background: '#E8F5E9', cursor: 'pointer', transition: 'all 0.2s', fontSize: 12 }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#C8E6C9'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(37, 211, 102, 0.15)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#E8F5E9'; e.currentTarget.style.boxShadow = 'none' }}
+          <a href="https://wa.me/41787170007" target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, color: '#25D366', cursor: 'pointer', transition: 'opacity 0.2s', fontSize: 12, fontWeight: 500 }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '0.8' }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#25D366', fontWeight: 600 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-5.031 1.378c-3.55 2.357-5.748 6.08-5.748 9.89 0 3.393 1.39 6.662 3.905 9.176 2.515 2.513 5.786 3.9 9.177 3.9h.008c3.39 0 6.662-1.39 9.176-3.905 2.514-2.515 3.902-5.786 3.902-9.177 0-3.39-1.388-6.662-3.905-9.176C20.66 2.39 17.39 1 14 1h-.004c-3.39 0-6.662 1.39-9.176 3.905"/></svg>
-              WhatsApp
-            </div>
-            <div style={{ color: '#2E7D32', fontSize: 11, fontWeight: 500 }}>+41 78 717 00 07</div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421-7.403h-.004a9.87 9.87 0 00-5.031 1.378c-3.55 2.357-5.748 6.08-5.748 9.89 0 3.393 1.39 6.662 3.905 9.176 2.515 2.513 5.786 3.9 9.177 3.9h.008c3.39 0 6.662-1.39 9.176-3.905 2.514-2.515 3.902-5.786 3.902-9.177 0-3.39-1.388-6.662-3.905-9.176C20.66 2.39 17.39 1 14 1h-.004c-3.39 0-6.662 1.39-9.176 3.905"/></svg>
+            +41 78 717 00 07
           </a>
         </section>
 
@@ -180,66 +177,40 @@ export default function PortalDashboard() {
         {customer && (
           <section style={{ marginBottom: 48, paddingBottom: 36, borderBottom: '1px solid #e5e7eb' }}>
             {!editingCustomer ? (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 48 }}>
-                <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px 40px' }}>
-                  <div>
-                    <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Name</p>
-                    <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.first_name} {customer.last_name}</p>
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'start' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Name</p>
+                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.first_name} {customer.last_name}</p>
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>E-Mail</p>
+                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.email}</p>
+                    </div>
+                    {customer.street && (
+                      <div>
+                        <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Adresse</p>
+                        <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>
+                          {customer.street}, {customer.zip_code} {customer.city}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>E-Mail</p>
-                    <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.email}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                    {customer.phone && (
+                      <div>
+                        <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Telefon</p>
+                        <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.phone}</p>
+                      </div>
+                    )}
+                    {customer.mobile && (
+                      <div>
+                        <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Mobilnummer</p>
+                        <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.mobile}</p>
+                      </div>
+                    )}
                   </div>
-                  {customer.street && (
-                    <div>
-                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Adresse</p>
-                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>
-                        {customer.street}, {customer.zip_code} {customer.city}
-                      </p>
-                    </div>
-                  )}
-                  {customer.phone && (
-                    <div>
-                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Telefon</p>
-                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.phone}</p>
-                    </div>
-                  )}
-                  {customer.mobile && (
-                    <div>
-                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Mobilnummer</p>
-                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.mobile}</p>
-                    </div>
-                  )}
-                  {customer.canton && (
-                    <div>
-                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Kanton</p>
-                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.canton}</p>
-                    </div>
-                  )}
-                  {customer.birthdate && (
-                    <div>
-                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Geburtsdatum</p>
-                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{new Date(customer.birthdate).toLocaleDateString('de-CH')}</p>
-                    </div>
-                  )}
-                  {customer.profession && (
-                    <div>
-                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Beruf</p>
-                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.profession}</p>
-                    </div>
-                  )}
-                  {customer.nationality && (
-                    <div>
-                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Nationalität</p>
-                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.nationality}</p>
-                    </div>
-                  )}
-                  {customer.ahv_number && (
-                    <div>
-                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>AHV-Nummer</p>
-                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.ahv_number}</p>
-                    </div>
-                  )}
                 </div>
                 <button 
                   onClick={startEditCustomer}
@@ -254,13 +225,14 @@ export default function PortalDashboard() {
                     color: '#1f2937',
                     whiteSpace: 'nowrap',
                     transition: 'all 0.2s',
+                    alignSelf: 'flex-start',
                   }}
                   onMouseEnter={e => { e.target.style.background = '#e5e7eb' }}
                   onMouseLeave={e => { e.target.style.background = '#f3f4f6' }}
                 >
                   ✎ Daten bearbeiten
                 </button>
-              </div>
+              />
             ) : (
               <div>
                 <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: '#0f172a' }}>Daten bearbeiten</h3>
@@ -530,45 +502,40 @@ export default function PortalDashboard() {
           
           <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 32, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             {/* TOTAL SECTION */}
-            <div style={{ marginBottom: 36, paddingBottom: 32, borderBottom: '2px solid #f3f4f6' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48 }}>
-                <div>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: 0.5 }}>Monatsprämie</p>
-                  <p style={{ fontSize: 18, fontWeight: 600, color: '#0f172a', margin: 0, lineHeight: 1 }}>
-                    CHF {totalPremiumMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: 0.5 }}>Jahresprämie</p>
-                  <p style={{ fontSize: 18, fontWeight: 600, color: '#0f172a', margin: 0, lineHeight: 1 }}>
-                    CHF {totalPremiumYearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </p>
-                </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #f3f4f6' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ fontSize: 14, fontWeight: 500, color: '#1a1a1a', margin: 0 }}>Monatsprämie:</p>
+                <p style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', margin: 0 }}>
+                  CHF {totalPremiumMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ fontSize: 14, fontWeight: 500, color: '#1a1a1a', margin: 0 }}>Jahresprämie:</p>
+                <p style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', margin: 0 }}>
+                  CHF {totalPremiumYearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
               </div>
             </div>
 
             {/* SPARTEN SECTION */}
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', margin: '0 0 20px', textTransform: 'uppercase', letterSpacing: 0.5 }}>Aufteilung nach Sparten</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {contracts.reduce((acc, c) => {
-                  const type = c.insurance_type || 'Sonstige'
-                  const existing = acc.find(x => x.type === type)
-                  if (existing) {
-                    existing.yearly += c.premium_yearly || 0
-                  } else {
-                    acc.push({ type, yearly: c.premium_yearly || 0 })
-                  }
-                  return acc
-                }, [])
-                  .sort((a, b) => b.yearly - a.yearly)
-                  .map((sparte, idx) => (
-                    <div key={sparte.type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingBottom: idx < Math.min(contracts.length, 4) - 1 ? 16 : 0, borderBottom: idx < Math.min(contracts.length, 4) - 1 ? '1px solid #f3f4f6' : 'none' }}>
-                      <span style={{ fontSize: 14, fontWeight: 500, color: '#1a1a1a' }}>{sparte.type}</span>
-                      <span style={{ fontSize: 16, fontWeight: 700, color: '#0f172a' }}>CHF {sparte.yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                  ))}
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {contracts.reduce((acc, c) => {
+                const type = c.insurance_type || 'Sonstige'
+                const existing = acc.find(x => x.type === type)
+                if (existing) {
+                  existing.yearly += c.premium_yearly || 0
+                } else {
+                  acc.push({ type, yearly: c.premium_yearly || 0 })
+                }
+                return acc
+              }, [])
+                .sort((a, b) => b.yearly - a.yearly)
+                .map((sparte) => (
+                  <div key={sparte.type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 13, fontWeight: 400, color: '#4b5563' }}>{sparte.type}:</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a' }}>CHF {sparte.yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                ))}
             </div>
           </div>
         </section>
@@ -623,7 +590,7 @@ export default function PortalDashboard() {
       </main>
 
       {/* FOOTER */}
-      <footer style={{ padding: '20px', textAlign: 'center', fontSize: 11, color: '#9ca3af', borderTop: '1px solid #e5e7eb', marginTop: 40 }}>
+      <footer style={{ padding: '16px 40px', textAlign: 'center', fontSize: 11, color: '#9ca3af', borderTop: '1px solid #e5e7eb', marginTop: 32 }}>
         © 2025 VSVV
       </footer>
 
