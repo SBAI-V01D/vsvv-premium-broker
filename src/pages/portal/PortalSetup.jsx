@@ -87,7 +87,7 @@ export default function PortalSetup() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', fontFamily: 'Inter, Helvetica, sans-serif', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', fontFamily: 'Inter, Helvetica, sans-serif' }}>
       <style>{`
         @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
         input::placeholder { color: rgba(168,179,194,0.4); }
@@ -114,11 +114,6 @@ export default function PortalSetup() {
       >
         {/* Subtle fade to right panel */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 70%, rgba(10,35,75,0.6) 100%)' }} />
-        
-        {/* Logo centered in blue area */}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
-          <img src={LOGO_URL} alt="VSVV" style={{ height: 140, objectFit: 'contain', opacity: 0.85 }} />
-        </div>
       </div>
 
       {/* RIGHT — Login panel */}
@@ -130,13 +125,17 @@ export default function PortalSetup() {
           background: 'linear-gradient(135deg, rgba(15,45,85,0.95) 0%, rgba(10,35,75,0.99) 100%)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
-          position: 'relative',
           display: 'flex',
           flexDirection: 'column',
         }}
       >
         {/* Main content */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: '12vh', paddingBottom: '80px' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: 0 }}>
+          {/* Logo */}
+          <div style={{ marginLeft: 40, marginTop: 0, marginBottom: 28 }}>
+            <img src={LOGO_URL} alt="VSVV" style={{ height: 120, objectFit: 'contain', opacity: 0.9, color: '#DCE6F2', filter: 'brightness(1.05)' }} />
+          </div>
+
           <div className="content-wrapper" style={{ marginLeft: 60, marginRight: 50, maxWidth: 420 }}>
             {!mustChangePassword ? (
               <>
@@ -318,7 +317,7 @@ export default function PortalSetup() {
         </div>
 
         {/* Footer */}
-        <div className="footer-section" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '18px 60px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+        <div className="footer-section" style={{ padding: '16px 60px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'rgba(255,255,255,0.6)', flexShrink: 0 }}>
           <span>© 2025 VSVV – Ihre Versicherungsplattform</span>
           <div style={{ display: 'flex', gap: 18 }}>
             {['Impressum', 'Datenschutz', 'AGB'].map((item, i, arr) => (
