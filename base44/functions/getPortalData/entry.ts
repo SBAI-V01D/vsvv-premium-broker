@@ -1,9 +1,8 @@
-import { createClient } from 'npm:@base44/sdk@0.8.25'
-
-const base44 = createClient({ appId: Deno.env.get('BASE44_APP_ID') })
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25'
 
 Deno.serve(async (req) => {
   try {
+    const base44 = createClientFromRequest(req)
     const body = await req.json()
     const { customer_id, action, update_data } = body
 
@@ -37,7 +36,6 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Kunde nicht gefunden' }, { status: 404 })
     }
 
-    // Merge & deduplicate by id
     function mergeById(a, b) {
       const map = {}
       ;[...(a || []), ...(b || [])].forEach(x => { map[x.id] = x })
@@ -48,12 +46,7 @@ Deno.serve(async (req) => {
     const documents = mergeById(directDocs, primaryDocs)
     const applications = mergeById(directApps, primaryApps)
 
-    return Response.json({
-      customer,
-      contracts,
-      documents,
-      applications,
-    })
+    return Response.json({ customer, contracts, documents, applications })
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 })
   }
