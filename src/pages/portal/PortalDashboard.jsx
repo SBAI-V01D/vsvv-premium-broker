@@ -77,29 +77,40 @@ export default function PortalDashboard() {
     setSavingCustomer(true)
     setCustomerError('')
     try {
+      const customerId = localStorage.getItem('portal_customer_id')
+      const dataToSave = {
+        first_name: editForm.first_name,
+        last_name: editForm.last_name,
+        street: editForm.street,
+        zip_code: editForm.zip_code,
+        city: editForm.city,
+        canton: editForm.canton,
+        email: editForm.email,
+        phone: editForm.phone,
+        mobile: editForm.mobile,
+        birthdate: editForm.birthdate,
+        profession: editForm.profession,
+        nationality: editForm.nationality,
+        civil_status: editForm.civil_status,
+        ahv_number: editForm.ahv_number,
+      }
+      
+      // Update in CRM (backend)
       await base44.functions.invoke('updatePortalCustomer', {
-        customer_id: localStorage.getItem('portal_customer_id'),
-        data: {
-          first_name: editForm.first_name,
-          last_name: editForm.last_name,
-          street: editForm.street,
-          zip_code: editForm.zip_code,
-          city: editForm.city,
-          canton: editForm.canton,
-          email: editForm.email,
-          phone: editForm.phone,
-          mobile: editForm.mobile,
-          birthdate: editForm.birthdate,
-          profession: editForm.profession,
-          nationality: editForm.nationality,
-          civil_status: editForm.civil_status,
-          ahv_number: editForm.ahv_number,
-        },
+        customer_id: customerId,
+        data: dataToSave,
       })
+      
+      // Store in localStorage for immediate display
+      const localCustomer = {
+        id: customerId,
+        ...dataToSave,
+      }
+      localStorage.setItem('portal_customer_data', JSON.stringify(localCustomer))
+      
       setCustomerSuccess(true)
       setEditingCustomer(false)
-      // Reload page to reflect changes
-      setTimeout(() => window.location.reload(), 1500)
+      setTimeout(() => setCustomerSuccess(false), 3000)
     } catch (err) {
       setCustomerError('Fehler beim Speichern: ' + err.message)
     }
@@ -549,52 +560,75 @@ export default function PortalDashboard() {
         </section>
 
         {/* 5. DOKUMENTE */}
-        <section style={{ marginBottom: 40 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 20px', color: '#0f172a' }}>Ihre Dokumente</h2>
-          
-          {documents.length === 0 ? (
-            <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 40, textAlign: 'center', color: '#6b7280' }}>
-              Keine Dokumente vorhanden
-            </div>
-          ) : (
-            <div style={{ background: '#fff', border: '3px solid #0B1C2C', borderRadius: 8, padding: 24 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                {documents.map((doc, idx) => (
-                  <div key={doc.id} style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '16px 0',
-                    borderBottom: idx < documents.length - 1 ? '1px solid #f3f4f6' : 'none',
-                  }}>
-                    <div>
-                      <p style={{ fontSize: 14, fontWeight: 500, margin: '0 0 4px', color: '#1a1a1a' }}>{doc.name}</p>
-                      <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>{formatDate(doc.created_date)}</p>
-                    </div>
-                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                      <button style={{
-                        background: '#f3f4f6',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: 6,
-                        padding: '8px 12px',
-                        cursor: 'pointer',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: '#1f2937',
-                        transition: 'all 0.2s',
-                      }}
-                      onMouseEnter={e => { e.target.style.background = '#e5e7eb' }}
-                      onMouseLeave={e => { e.target.style.background = '#f3f4f6' }}
-                      >
-                        📥 Herunterladen
-                      </button>
-                    </a>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
+         <section style={{ marginBottom: 40 }}>
+           <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 20px', color: '#0f172a' }}>Ihre Dokumente</h2>
+
+           {documents.length === 0 ? (
+             <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 40, textAlign: 'center', color: '#6b7280' }}>
+               Keine Dokumente vorhanden
+             </div>
+           ) : (
+             <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+               {[
+                 { title: 'Policen', category: 'contract', color: '#3b82f6' },
+                 { title: 'Kundeninformation und Mandat', category: 'correspondence', color: '#8b5cf6' },
+                 { title: 'Generelle Dokumente', category: 'other', color: '#6b7280' },
+               ].map((section) => {
+                 const sectionDocs = documents.filter(d => {
+                   if (section.category === 'contract') return d.category === 'contract'
+                   if (section.category === 'correspondence') return d.category === 'correspondence'
+                   return !['contract', 'correspondence'].includes(d.category)
+                 })
+
+                 if (sectionDocs.length === 0) return null
+
+                 return (
+                   <div key={section.category}>
+                     <h3 style={{ fontSize: 15, fontWeight: 600, margin: '0 0 12px', color: '#0f172a', borderLeft: `4px solid ${section.color}`, paddingLeft: 12 }}>
+                       {section.title}
+                     </h3>
+                     <div style={{ background: '#fff', border: '3px solid #0B1C2C', borderRadius: 8, padding: 24 }}>
+                       <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                         {sectionDocs.map((doc, idx) => (
+                           <div key={doc.id} style={{
+                             display: 'flex',
+                             justifyContent: 'space-between',
+                             alignItems: 'center',
+                             padding: '16px 0',
+                             borderBottom: idx < sectionDocs.length - 1 ? '1px solid #f3f4f6' : 'none',
+                           }}>
+                             <div>
+                               <p style={{ fontSize: 14, fontWeight: 500, margin: '0 0 4px', color: '#1a1a1a' }}>{doc.name}</p>
+                               <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>{formatDate(doc.created_date)}</p>
+                             </div>
+                             <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                               <button style={{
+                                 background: '#f3f4f6',
+                                 border: '1px solid #e5e7eb',
+                                 borderRadius: 6,
+                                 padding: '8px 12px',
+                                 cursor: 'pointer',
+                                 fontSize: 13,
+                                 fontWeight: 600,
+                                 color: '#1f2937',
+                                 transition: 'all 0.2s',
+                               }}
+                               onMouseEnter={e => { e.target.style.background = '#e5e7eb' }}
+                               onMouseLeave={e => { e.target.style.background = '#f3f4f6' }}
+                               >
+                                 📥 Herunterladen
+                               </button>
+                             </a>
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+                   </div>
+                 )
+               })}
+             </div>
+           )}
+         </section>
       </main>
 
       {/* FOOTER */}
