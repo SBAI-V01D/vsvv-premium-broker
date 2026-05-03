@@ -114,14 +114,6 @@ export default function PortalSetup() {
       >
         {/* Subtle fade to right panel */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 45%, rgba(11,30,55,0.2) 65%, rgba(11,30,55,0.5) 85%, rgba(10,35,75,0.8) 100%)' }} />
-
-        {/* Logo in the middle */}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', paddingRight: '5%', zIndex: 10 }}>
-          <div style={{ position: 'relative', height: 120, display: 'flex', alignItems: 'center', background: 'linear-gradient(135deg, rgba(16,48,80,0.15) 0%, rgba(11,30,55,0.2) 100%)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', borderRadius: 16, paddingLeft: 32, paddingRight: 32 }}>
-            <img src={LOGO_URL} alt="VSVV" style={{ height: '100%', objectFit: 'contain', opacity: 0.96, mixBlendMode: 'screen', filter: 'brightness(1.08) saturate(0.85)', transition: 'opacity 0.3s ease' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 50%, rgba(0,0,0,0.06) 100%)', pointerEvents: 'none', borderRadius: 16 }} />
-          </div>
-        </div>
       </div>
 
       {/* RIGHT — Login panel */}
