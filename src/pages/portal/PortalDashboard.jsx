@@ -19,9 +19,15 @@ export default function PortalDashboard() {
     street: customer?.street || '',
     zip_code: customer?.zip_code || '',
     city: customer?.city || '',
+    canton: customer?.canton || '',
     email: customer?.email || '',
     phone: customer?.phone || '',
     mobile: customer?.mobile || '',
+    birthdate: customer?.birthdate || '',
+    profession: customer?.profession || '',
+    nationality: customer?.nationality || '',
+    civil_status: customer?.civil_status || '',
+    ahv_number: customer?.ahv_number || '',
   })
 
   useEffect(() => {
@@ -32,9 +38,15 @@ export default function PortalDashboard() {
         street: customer.street || '',
         zip_code: customer.zip_code || '',
         city: customer.city || '',
+        canton: customer.canton || '',
         email: customer.email || '',
         phone: customer.phone || '',
         mobile: customer.mobile || '',
+        birthdate: customer.birthdate || '',
+        profession: customer.profession || '',
+        nationality: customer.nationality || '',
+        civil_status: customer.civil_status || '',
+        ahv_number: customer.ahv_number || '',
       })
     }
   }, [customer, editingCustomer])
@@ -73,8 +85,15 @@ export default function PortalDashboard() {
           street: editForm.street,
           zip_code: editForm.zip_code,
           city: editForm.city,
+          canton: editForm.canton,
+          email: editForm.email,
           phone: editForm.phone,
           mobile: editForm.mobile,
+          birthdate: editForm.birthdate,
+          profession: editForm.profession,
+          nationality: editForm.nationality,
+          civil_status: editForm.civil_status,
+          ahv_number: editForm.ahv_number,
         },
       })
       setCustomerSuccess(true)
@@ -146,11 +165,11 @@ export default function PortalDashboard() {
               Ihrem Partner für transparente und strukturierte Versicherungslösungen. Behalten Sie jederzeit den Überblick über Ihre Versicherungen.
             </p>
           </div>
-          <a href="https://wa.me/41787170007" target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, color: '#6b7280', fontSize: 13, fontWeight: 500, transition: 'all 0.2s', padding: '6px 12px', borderRadius: 6, background: 'rgba(91, 163, 232, 0.08)' }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#4A8DD4'; e.currentTarget.style.background = 'rgba(91, 163, 232, 0.14)' }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = 'rgba(91, 163, 232, 0.08)' }}
+          <a href="https://wa.me/41787170007" target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, color: '#5B9FE6', fontSize: 13, fontWeight: 500, transition: 'all 0.2s', padding: '6px 12px', borderRadius: 6 }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#4A8DD4' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#5B9FE6' }}
           >
-            💬 Beratung
+            💬 Beratung via WhatsApp
           </a>
         </section>
 
@@ -180,6 +199,42 @@ export default function PortalDashboard() {
                     <div>
                       <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Telefon</p>
                       <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.phone}</p>
+                    </div>
+                  )}
+                  {customer.mobile && (
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Mobilnummer</p>
+                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.mobile}</p>
+                    </div>
+                  )}
+                  {customer.canton && (
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Kanton</p>
+                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.canton}</p>
+                    </div>
+                  )}
+                  {customer.birthdate && (
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Geburtsdatum</p>
+                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{new Date(customer.birthdate).toLocaleDateString('de-CH')}</p>
+                    </div>
+                  )}
+                  {customer.profession && (
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Beruf</p>
+                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.profession}</p>
+                    </div>
+                  )}
+                  {customer.nationality && (
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Nationalität</p>
+                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.nationality}</p>
+                    </div>
+                  )}
+                  {customer.ahv_number && (
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>AHV-Nummer</p>
+                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.ahv_number}</p>
                     </div>
                   )}
                 </div>
@@ -291,7 +346,68 @@ export default function PortalDashboard() {
                       style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
                     />
                   </div>
-                </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Kanton</label>
+                    <input
+                      type="text"
+                      value={editForm.canton}
+                      onChange={e => setEditForm(f => ({ ...f, canton: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Geburtsdatum</label>
+                    <input
+                      type="date"
+                      value={editForm.birthdate}
+                      onChange={e => setEditForm(f => ({ ...f, birthdate: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Beruf</label>
+                    <input
+                      type="text"
+                      value={editForm.profession}
+                      onChange={e => setEditForm(f => ({ ...f, profession: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Nationalität</label>
+                    <input
+                      type="text"
+                      value={editForm.nationality}
+                      onChange={e => setEditForm(f => ({ ...f, nationality: e.target.value }))}
+                      placeholder="z.B. CH, DE, FR"
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Zivilstand</label>
+                    <select
+                      value={editForm.civil_status}
+                      onChange={e => setEditForm(f => ({ ...f, civil_status: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                    >
+                      <option value="">–</option>
+                      <option value="single">Ledig</option>
+                      <option value="married">Verheiratet</option>
+                      <option value="divorced">Geschieden</option>
+                      <option value="widowed">Verwitwet</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>AHV-Nummer</label>
+                    <input
+                      type="text"
+                      value={editForm.ahv_number}
+                      onChange={e => setEditForm(f => ({ ...f, ahv_number: e.target.value }))}
+                      placeholder="756.1234.5678.90"
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  </div>
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button
                     onClick={saveCustomerData}
