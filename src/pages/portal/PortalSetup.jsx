@@ -136,13 +136,13 @@ export default function PortalSetup() {
         }}
       >
         {/* Main content */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: 0, paddingBottom: '80px' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: '60px' }}>
 
           <div className="content-wrapper" style={{ marginLeft: 60, marginRight: 50, maxWidth: 420 }}>
             {!mustChangePassword ? (
               <>
                 {/* Text block */}
-                <div style={{ marginBottom: 32 }}>
+                <div style={{ marginBottom: 24 }}>
                   <h1 style={{ color: '#EAF1F7', fontSize: 34, fontWeight: 600, margin: '0 0 12px', lineHeight: 1.2, letterSpacing: '0.5px' }}>
                     Willkommen bei VSVV
                   </h1>
