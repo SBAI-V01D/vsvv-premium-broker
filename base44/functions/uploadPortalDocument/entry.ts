@@ -9,26 +9,26 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { customer_id, customer_name, file_base64, filename, category } = await req.json();
+    const formData = await req.formData();
+    const file = formData.get('file');
+    const customer_id = formData.get('customer_id');
+    const customer_name = formData.get('customer_name');
+    const category = formData.get('category');
 
-    // Convert base64 to Blob
-    const binaryString = atob(file_base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+    if (!file) {
+      return Response.json({ error: 'No file provided' }, { status: 400 });
     }
-    const blob = new Blob([bytes], { type: 'application/octet-stream' });
-    
+
     // Upload file
     const { file_url } = await base44.asServiceRole.integrations.Core.UploadFile({ 
-      file: blob 
+      file 
     });
 
     // Create document record
     await base44.asServiceRole.entities.Document.create({
       customer_id,
       customer_name,
-      name: filename.replace(/\.[^.]+$/, ''),
+      name: file.name.replace(/\.[^.]+$/, ''),
       file_url,
       category,
       uploaded_by_role: 'customer',

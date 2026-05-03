@@ -137,33 +137,22 @@ export default function PortalDashboard() {
     setUploadingDoc(true)
     setUploadError('')
     try {
-      // Convert file to base64
-      const reader = new FileReader()
-      reader.onload = async () => {
-        const file_base64 = reader.result.split(',')[1]
-        
-        const response = await base44.functions.invoke('uploadPortalDocument', {
-          customer_id: localStorage.getItem('portal_customer_id'),
-          customer_name: `${customer.first_name} ${customer.last_name}`,
-          file_base64,
-          filename: uploadFile.name,
-          category: uploadCategory,
-        })
-        
-        setUploadFile(null)
-        setUploadCategory('other')
-        setShowUpload(false)
-        setTimeout(() => window.location.reload(), 500)
-      }
-      reader.onerror = () => {
-        setUploadError('Fehler beim Lesen der Datei')
-        setUploadingDoc(false)
-      }
-      reader.readAsDataURL(uploadFile)
+      const formData = new FormData()
+      formData.append('file', uploadFile)
+      formData.append('customer_id', localStorage.getItem('portal_customer_id'))
+      formData.append('customer_name', `${customer.first_name} ${customer.last_name}`)
+      formData.append('category', uploadCategory)
+
+      await base44.functions.invoke('uploadPortalDocument', formData)
+      
+      setUploadFile(null)
+      setUploadCategory('other')
+      setShowUpload(false)
+      setTimeout(() => window.location.reload(), 500)
     } catch (err) {
       setUploadError('Fehler beim Hochladen: ' + err.message)
-      setUploadingDoc(false)
     }
+    setUploadingDoc(false)
   }
 
   return (
