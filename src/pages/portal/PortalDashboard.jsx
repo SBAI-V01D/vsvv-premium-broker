@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { base44 } from '@/api/base44Client'
 import { usePortalData } from '@/hooks/usePortalData'
 import { usePortalCustomer } from '@/hooks/usePortalCustomer'
 
@@ -8,11 +9,67 @@ export default function PortalDashboard() {
   const { customer } = usePortalCustomer()
   const { contracts = [], documents = [] } = usePortalData()
   const [showUpload, setShowUpload] = useState(false)
+  const [editingCustomer, setEditingCustomer] = useState(false)
+  const [savingCustomer, setSavingCustomer] = useState(false)
+  const [customerError, setCustomerError] = useState('')
+  const [customerSuccess, setCustomerSuccess] = useState(false)
+  const [editForm, setEditForm] = useState({
+    first_name: customer?.first_name || '',
+    last_name: customer?.last_name || '',
+    street: customer?.street || '',
+    zip_code: customer?.zip_code || '',
+    city: customer?.city || '',
+    email: customer?.email || '',
+    phone: customer?.phone || '',
+    mobile: customer?.mobile || '',
+  })
 
   const handleLogout = () => {
     localStorage.removeItem('portal_customer_id')
     localStorage.removeItem('portal_email')
     window.location.href = '/portal/setup'
+  }
+
+  const startEditCustomer = () => {
+    setEditForm({
+      first_name: customer?.first_name || '',
+      last_name: customer?.last_name || '',
+      street: customer?.street || '',
+      zip_code: customer?.zip_code || '',
+      city: customer?.city || '',
+      email: customer?.email || '',
+      phone: customer?.phone || '',
+      mobile: customer?.mobile || '',
+    })
+    setEditingCustomer(true)
+    setCustomerError('')
+    setCustomerSuccess(false)
+  }
+
+  const saveCustomerData = async () => {
+    setSavingCustomer(true)
+    setCustomerError('')
+    try {
+      await base44.functions.invoke('updatePortalCustomer', {
+        customer_id: localStorage.getItem('portal_customer_id'),
+        data: {
+          first_name: editForm.first_name,
+          last_name: editForm.last_name,
+          street: editForm.street,
+          zip_code: editForm.zip_code,
+          city: editForm.city,
+          phone: editForm.phone,
+          mobile: editForm.mobile,
+        },
+      })
+      setCustomerSuccess(true)
+      setEditingCustomer(false)
+      // Reload page to reflect changes
+      setTimeout(() => window.location.reload(), 1500)
+    } catch (err) {
+      setCustomerError('Fehler beim Speichern: ' + err.message)
+    }
+    setSavingCustomer(false)
   }
 
   const activeContracts = contracts.filter(c => c.status === 'active').length
@@ -99,49 +156,179 @@ export default function PortalDashboard() {
         {/* 2. KUNDENDATEN */}
         {customer && (
           <section style={{ marginBottom: 80, paddingBottom: 60, borderBottom: '1px solid #e5e7eb' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 40 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ marginBottom: 24 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 8px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Name</p>
-                  <p style={{ fontSize: 16, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.first_name} {customer.last_name}</p>
-                </div>
-                {customer.street && (
+            {!editingCustomer ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 40 }}>
+                <div style={{ flex: 1 }}>
                   <div style={{ marginBottom: 24 }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 8px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Adresse</p>
-                    <p style={{ fontSize: 16, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>
-                      {customer.street}, {customer.zip_code} {customer.city}
-                    </p>
+                    <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 8px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Name</p>
+                    <p style={{ fontSize: 16, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.first_name} {customer.last_name}</p>
                   </div>
-                )}
-                <div style={{ marginBottom: 24 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 8px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>E-Mail</p>
-                  <p style={{ fontSize: 16, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.email}</p>
+                  {customer.street && (
+                    <div style={{ marginBottom: 24 }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 8px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Adresse</p>
+                      <p style={{ fontSize: 16, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>
+                        {customer.street}, {customer.zip_code} {customer.city}
+                      </p>
+                    </div>
+                  )}
+                  <div style={{ marginBottom: 24 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 8px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>E-Mail</p>
+                    <p style={{ fontSize: 16, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.email}</p>
+                  </div>
+                  {customer.phone && (
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 8px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Telefon</p>
+                      <p style={{ fontSize: 16, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.phone}</p>
+                    </div>
+                  )}
                 </div>
-                {customer.phone && (
-                  <div>
-                    <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 8px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Telefon</p>
-                    <p style={{ fontSize: 16, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.phone}</p>
+                <button 
+                  onClick={startEditCustomer}
+                  style={{
+                    background: '#f3f4f6',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 6,
+                    padding: '10px 16px',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: '#1f2937',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={e => { e.target.style.background = '#e5e7eb' }}
+                  onMouseLeave={e => { e.target.style.background = '#f3f4f6' }}
+                >
+                  ✎ Daten bearbeiten
+                </button>
+              </div>
+            ) : (
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: '#0f172a' }}>Daten bearbeiten</h3>
+                {customerSuccess && (
+                  <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 8, padding: '12px 14px', marginBottom: 16, fontSize: 13, color: '#166534', fontWeight: 500 }}>
+                    ✓ Daten erfolgreich gespeichert
                   </div>
                 )}
+                {customerError && (
+                  <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '12px 14px', marginBottom: 16, fontSize: 13, color: '#dc2626' }}>
+                    {customerError}
+                  </div>
+                )}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Vorname</label>
+                    <input
+                      type="text"
+                      value={editForm.first_name}
+                      onChange={e => setEditForm(f => ({ ...f, first_name: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Nachname</label>
+                    <input
+                      type="text"
+                      value={editForm.last_name}
+                      onChange={e => setEditForm(f => ({ ...f, last_name: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Strasse</label>
+                    <input
+                      type="text"
+                      value={editForm.street}
+                      onChange={e => setEditForm(f => ({ ...f, street: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>PLZ</label>
+                      <input
+                        type="text"
+                        value={editForm.zip_code}
+                        onChange={e => setEditForm(f => ({ ...f, zip_code: e.target.value }))}
+                        style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Ort</label>
+                      <input
+                        type="text"
+                        value={editForm.city}
+                        onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))}
+                        style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>E-Mail</label>
+                    <input
+                      type="email"
+                      value={editForm.email}
+                      onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Telefon</label>
+                    <input
+                      type="tel"
+                      value={editForm.phone}
+                      onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Mobilnummer</label>
+                    <input
+                      type="tel"
+                      value={editForm.mobile}
+                      onChange={e => setEditForm(f => ({ ...f, mobile: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button
+                    onClick={saveCustomerData}
+                    disabled={savingCustomer}
+                    style={{
+                      background: '#0f172a',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 6,
+                      padding: '12px 24px',
+                      cursor: savingCustomer ? 'not-allowed' : 'pointer',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      opacity: savingCustomer ? 0.6 : 1,
+                    }}
+                  >
+                    {savingCustomer ? 'Speichert...' : '✓ Speichern'}
+                  </button>
+                  <button
+                    onClick={() => setEditingCustomer(false)}
+                    disabled={savingCustomer}
+                    style={{
+                      background: '#f3f4f6',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: 6,
+                      padding: '12px 24px',
+                      cursor: savingCustomer ? 'not-allowed' : 'pointer',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: '#6b7280',
+                      opacity: savingCustomer ? 0.6 : 1,
+                    }}
+                  >
+                    Abbrechen
+                  </button>
+                </div>
               </div>
-              <button style={{
-                background: '#f3f4f6',
-                border: '1px solid #e5e7eb',
-                borderRadius: 6,
-                padding: '10px 16px',
-                cursor: 'pointer',
-                fontSize: 13,
-                fontWeight: 600,
-                color: '#1f2937',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={e => { e.target.style.background = '#e5e7eb' }}
-              onMouseLeave={e => { e.target.style.background = '#f3f4f6' }}
-              >
-                ✎ Daten bearbeiten
-              </button>
-            </div>
+            )}
           </section>
         )}
 
