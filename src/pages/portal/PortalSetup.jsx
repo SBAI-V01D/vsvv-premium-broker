@@ -116,8 +116,8 @@ export default function PortalSetup() {
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 70%, rgba(10,35,75,0.6) 100%)' }} />
         
         {/* Subtiles Logo im rechten dunklen Bereich */}
-        <div style={{ position: 'absolute', right: 0, top: '35%', width: '45%', height: '30%', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5 }}>
-          <img src={LOGO_URL} alt="VSVV" style={{ height: '100%', maxHeight: 180, objectFit: 'contain', opacity: 0.85, filter: 'brightness(0.7) saturate(0.3)' }} />
+        <div style={{ position: 'absolute', right: '2%', top: '32%', width: '42%', height: '28%', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5 }}>
+          <img src={LOGO_URL} alt="VSVV" style={{ height: '100%', maxHeight: 160, objectFit: 'contain', opacity: 0.82, filter: 'brightness(0.75) saturate(0.25)' }} />
         </div>
       </div>
 
@@ -142,27 +142,30 @@ export default function PortalSetup() {
             {!mustChangePassword ? (
               <>
                 {/* Text block */}
-                <div style={{ marginBottom: 28 }}>
-                  <h1 style={{ color: '#EAF1F7', fontSize: 30, fontWeight: 700, margin: '0 0 10px', lineHeight: 1.25, letterSpacing: '-0.4px' }}>
+                <div style={{ marginBottom: 32 }}>
+                  <h1 style={{ color: '#EAF1F7', fontSize: 34, fontWeight: 600, margin: '0 0 12px', lineHeight: 1.2, letterSpacing: '0.5px' }}>
                     Willkommen bei VSVV
                   </h1>
-                  <p style={{ color: '#4A8DD4', fontSize: 14, fontWeight: 500, margin: '0 0 12px', lineHeight: 1.5 }}>
+                  <p style={{ color: '#5B9FE6', fontSize: 14, fontWeight: 500, margin: '0 0 8px', lineHeight: 1.6 }}>
                     Ihr persönliches Kundenportal für strukturierte und transparente Versicherungslösungen.
                   </p>
-                  <p style={{ color: '#8A9BB0', fontSize: 13.5, lineHeight: 1.68, margin: 0 }}>
+                  <p style={{ color: '#C8D4E3', fontSize: 13.5, lineHeight: 1.75, margin: '0 0 12px' }}>
                     Greifen Sie jederzeit sicher auf Ihre Verträge, Dokumente und persönliche Beratung zu – alles zentral an einem Ort.
+                  </p>
+                  <p style={{ color: '#7FA8FF', fontSize: 12.5, fontWeight: 500, margin: 0, fontStyle: 'italic', letterSpacing: '0.3px' }}>
+                    Alles an einem Ort. Klar strukturiert. Für Sie optimiert.
                   </p>
                 </div>
 
                 {/* Login box */}
                 <div style={{
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: 14,
                   padding: 28,
-                  marginTop: 28,
+                  marginTop: 36,
                   marginBottom: 26,
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                  boxShadow: '0 6px 24px rgba(0,0,0,0.1)',
                 }}>
                   <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {/* Email */}
@@ -171,7 +174,7 @@ export default function PortalSetup() {
                       <input
                         type="email" value={email} onChange={e => setEmail(e.target.value)}
                         required autoFocus placeholder="ihre@email.ch"
-                        style={inputStyle('email')}
+                        style={{ ...inputStyle('email'), background: 'rgba(255,255,255,0.08)' }}
                         onFocus={() => setFocused('email')}
                         onBlur={() => setFocused(null)}
                       />
@@ -181,7 +184,7 @@ export default function PortalSetup() {
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                         <label style={{ ...labelStyle, marginBottom: 0 }}>Passwort</label>
-                        <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4A8DD4', fontSize: 11.5, fontFamily: 'inherit', padding: 0 }}>
+                        <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5B9FE6', fontSize: 11.5, fontFamily: 'inherit', padding: 0 }}>
                           Vergessen?
                         </button>
                       </div>
@@ -189,7 +192,7 @@ export default function PortalSetup() {
                         <input
                           type={showPassword ? 'text' : 'password'} value={password}
                           onChange={e => setPassword(e.target.value)} required placeholder="••••••••"
-                          style={{ ...inputStyle('password'), paddingRight: 42 }}
+                          style={{ ...inputStyle('password'), background: 'rgba(255,255,255,0.08)', paddingRight: 42 }}
                           onFocus={() => setFocused('password')}
                           onBlur={() => setFocused(null)}
                         />
@@ -227,18 +230,18 @@ export default function PortalSetup() {
                     <button
                       type="submit" disabled={loading}
                       style={{
-                        width: '100%', height: 44, borderRadius: 8, border: 'none',
-                        background: loading ? 'rgba(74,141,212,0.3)' : 'linear-gradient(135deg, #2F5D8A 0%, #4A8DD4 100%)',
+                        width: '100%', height: 46, borderRadius: 8, border: 'none',
+                        background: loading ? 'rgba(95,157,230,0.3)' : 'linear-gradient(135deg, #3A6BA8 0%, #5BA3E8 100%)',
                         color: '#EAF1F7', fontWeight: 600, fontSize: 14,
                         cursor: loading ? 'not-allowed' : 'pointer',
-                        marginTop: 12,
-                        transition: 'transform 0.15s, box-shadow 0.15s, background 0.2s',
-                        boxShadow: loading ? 'none' : '0 4px 16px rgba(47,93,138,0.35)',
+                        marginTop: 14,
+                        transition: 'transform 0.2s, box-shadow 0.2s, background 0.2s',
+                        boxShadow: loading ? 'none' : '0 4px 18px rgba(75,141,212,0.3)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                         fontFamily: 'Inter, Helvetica, sans-serif',
                       }}
-                      onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.background = 'linear-gradient(135deg, #366a9e 0%, #5598e8 100%)' } }}
-                      onMouseLeave={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.background = 'linear-gradient(135deg, #2F5D8A 0%, #4A8DD4 100%)' } }}
+                      onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.background = 'linear-gradient(135deg, #4575B5 0%, #66AFF0 100%)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(75,141,212,0.4)' } }}
+                      onMouseLeave={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.background = 'linear-gradient(135deg, #3A6BA8 0%, #5BA3E8 100%)'; e.currentTarget.style.boxShadow = '0 4px 18px rgba(75,141,212,0.3)' } }}
                     >
                       {loading ? (
                         <>
@@ -319,13 +322,13 @@ export default function PortalSetup() {
         </div>
 
         {/* Footer */}
-        <div className="footer-section" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '18px 60px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>
+        <div className="footer-section" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '20px 60px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10.5, color: 'rgba(255,255,255,0.55)' }}>
           <span>© 2025 VSVV – Ihre Versicherungsplattform</span>
           <div style={{ display: 'flex', gap: 18 }}>
             {['Impressum', 'Datenschutz', 'AGB'].map((item, i, arr) => (
               <React.Fragment key={item}>
                 <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', padding: 0, transition: 'opacity 0.2s' }} onMouseEnter={e => e.currentTarget.style.opacity = '0.8'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}>{item}</button>
-                {i < arr.length - 1 && <span style={{ color: 'rgba(255,255,255,0.25)' }}>|</span>}
+                {i < arr.length - 1 && <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>}
               </React.Fragment>
             ))}
           </div>
