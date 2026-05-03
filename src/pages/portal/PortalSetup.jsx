@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { base44 } from '@/api/base44Client'
-import { Eye, EyeOff, ShieldCheck, BarChart2, UserCheck } from 'lucide-react'
+import { Eye, EyeOff, Shield, BarChart2, UserCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/0ce798d8e_HintergrundbildKundenportal.png'
@@ -60,104 +60,80 @@ export default function PortalSetup() {
     setLoading(false)
   }
 
-  const getInputStyle = (field) => ({
+  const inputStyle = (field) => ({
     width: '100%',
     height: 44,
-    background: 'rgba(255,255,255,0.06)',
-    border: `1px solid ${focused === field ? '#3A7BD5' : 'rgba(255,255,255,0.11)'}`,
+    background: 'rgba(255,255,255,0.08)',
+    border: `1px solid ${focused === field ? '#4A8DD4' : 'rgba(255,255,255,0.12)'}`,
     borderRadius: 8,
     padding: '0 14px',
     color: '#EAF1F7',
     fontSize: 14,
     outline: 'none',
     boxSizing: 'border-box',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
     fontFamily: 'Inter, Helvetica, sans-serif',
-    boxShadow: focused === field ? '0 0 0 3px rgba(58,123,213,0.15)' : 'none',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+    boxShadow: focused === field ? '0 0 0 3px rgba(74,141,212,0.12)' : 'none',
   })
 
   const labelStyle = {
-    color: '#C8D4E0',
-    fontSize: 12.5,
+    color: '#B8C5D6',
+    fontSize: 12,
     fontWeight: 500,
     display: 'block',
-    marginBottom: 7,
+    marginBottom: 6,
     fontFamily: 'Inter, Helvetica, sans-serif',
   }
 
-  const trustItems = [
-    { icon: ShieldCheck, title: 'Unabhängige Beratung', sub: 'Ohne Interessenskonflikte – nur Ihre Ziele zählen' },
-    { icon: BarChart2, title: 'Volle Transparenz', sub: 'Jederzeit vollständiger Überblick über Ihre Policen' },
-    { icon: UserCheck, title: 'Schweizer Datenschutz', sub: 'Ihre Daten sind sicher und vertraulich geschützt' },
-  ]
-
   return (
-    <div style={{
-      minHeight: '100vh',
-      position: 'relative',
-      display: 'flex',
-      fontFamily: 'Inter, Helvetica, sans-serif',
-      overflow: 'hidden',
-      animation: 'fadeIn 0.45s ease',
-    }}>
+    <div style={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: '60% 40%', fontFamily: 'Inter, Helvetica, sans-serif', position: 'relative' }}>
       <style>{`
-        @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
         input::placeholder { color: rgba(168,179,194,0.4); }
         @media (max-width: 768px) {
-          .right-overlay { width: 100% !important; padding: 40px 24px 80px !important; }
-          .content-box { margin-right: 0 !important; margin-left: 0 !important; max-width: 100% !important; }
+          .grid-layout { grid-template-columns: 1fr !important; }
+          .left-col { display: none !important; }
+          .right-col { width: 100% !important; }
+          .content-wrapper { margin-left: 28px !important; margin-right: 28px !important; margin-top: 40px !important; }
         }
       `}</style>
 
-      {/* Fullscreen background */}
-      <div style={{
-        position: 'absolute', inset: 0, zIndex: 0,
-        backgroundImage: `url(${BG_URL})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'left center',
-        backgroundRepeat: 'no-repeat',
-      }} />
-
-      {/* Right overlay panel */}
+      {/* LEFT — Background image */}
       <div
-        className="right-overlay"
+        className="left-col"
         style={{
-          position: 'absolute',
-          right: 0, top: 0, bottom: 0,
-          width: '46%',
-          minWidth: 420,
-          background: 'linear-gradient(160deg, rgba(11,31,58,0.88) 0%, rgba(11,31,58,0.97) 100%)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
+          backgroundImage: `url(${BG_URL})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'left center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      />
+
+      {/* RIGHT — Login panel */}
+      <div
+        className="right-col"
+        style={{
+          background: '#0B1F3A',
+          position: 'relative',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
-          zIndex: 1,
-          padding: '0 0 0 0',
         }}
       >
-        {/* Vertical center content */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '60px 0' }}>
-          <div
-            className="content-box"
-            style={{ width: '100%', maxWidth: 340, marginLeft: '10%', marginRight: '12%' }}
-          >
+        {/* Main content */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: '10vh' }}>
+          <div className="content-wrapper" style={{ marginLeft: 80, marginRight: 60, maxWidth: 380 }}>
             {!mustChangePassword ? (
               <>
-                {/* Headline block */}
+                {/* Text block */}
                 <div style={{ marginBottom: 32 }}>
-                  <h1 style={{ color: '#EAF1F7', fontSize: 28, fontWeight: 600, margin: '0 0 14px', lineHeight: 1.25, letterSpacing: '-0.3px' }}>
+                  <h1 style={{ color: '#EAF1F7', fontSize: 28, fontWeight: 600, margin: '0 0 12px', lineHeight: 1.2, letterSpacing: '-0.3px' }}>
                     Willkommen bei VSVV
                   </h1>
-                  <p style={{ color: '#3A7BD5', fontSize: 14, fontWeight: 500, margin: '0 0 14px' }}>
-                    Ihr persönliches Kundenportal für strukturierte, transparente und professionelle Versicherungsbetreuung.
+                  <p style={{ color: '#4A8DD4', fontSize: 13.5, fontWeight: 500, margin: '0 0 12px' }}>
+                    Ihr persönliches Kundenportal für klare und strukturierte Versicherungsübersicht.
                   </p>
-                  <p style={{ color: '#8A9BB0', fontSize: 13, lineHeight: 1.65, margin: '0 0 16px' }}>
-                    Behalten Sie jederzeit den Überblick über Ihre Verträge, Dokumente und Lösungen – zentral, sicher und auf höchstem Beratungsniveau.
-                  </p>
-                  <p style={{ color: '#3A7BD5', fontSize: 12.5, fontWeight: 500, fontStyle: 'italic', margin: 0 }}>
-                    „Alles an einem Ort. Klar strukturiert. Für Sie optimiert."
+                  <p style={{ color: '#8A9BB0', fontSize: 13, lineHeight: 1.6, margin: 0 }}>
+                    Greifen Sie sicher auf Ihre Verträge, Dokumente und persönliche Beratung zu – jederzeit und an einem Ort.
                   </p>
                 </div>
 
@@ -165,20 +141,19 @@ export default function PortalSetup() {
                 <div style={{
                   background: 'rgba(255,255,255,0.05)',
                   border: '1px solid rgba(255,255,255,0.10)',
-                  borderRadius: 14,
-                  padding: '26px 24px',
-                  boxShadow: '0 16px 48px rgba(0,0,0,0.3)',
-                  marginTop: 28,
-                  marginBottom: 28,
+                  borderRadius: 12,
+                  padding: 24,
+                  marginTop: 24,
+                  marginBottom: 24,
                 }}>
-                  <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {/* Email */}
                     <div>
                       <label style={labelStyle}>E-Mail-Adresse</label>
                       <input
                         type="email" value={email} onChange={e => setEmail(e.target.value)}
-                        required autoFocus placeholder="Ihre E-Mail-Adresse"
-                        style={getInputStyle('email')}
+                        required autoFocus placeholder="ihre@email.ch"
+                        style={inputStyle('email')}
                         onFocus={() => setFocused('email')}
                         onBlur={() => setFocused(null)}
                       />
@@ -186,47 +161,47 @@ export default function PortalSetup() {
 
                     {/* Password */}
                     <div>
-                      <label style={labelStyle}>Passwort</label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <label style={{ ...labelStyle, marginBottom: 0 }}>Passwort</label>
+                        <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4A8DD4', fontSize: 11.5, fontFamily: 'inherit', padding: 0 }}>
+                          Vergessen?
+                        </button>
+                      </div>
                       <div style={{ position: 'relative' }}>
                         <input
                           type={showPassword ? 'text' : 'password'} value={password}
-                          onChange={e => setPassword(e.target.value)} required placeholder="Ihr Passwort"
-                          style={{ ...getInputStyle('password'), paddingRight: 44 }}
+                          onChange={e => setPassword(e.target.value)} required placeholder="••••••••"
+                          style={{ ...inputStyle('password'), paddingRight: 42 }}
                           onFocus={() => setFocused('password')}
                           onBlur={() => setFocused(null)}
                         />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(168,179,194,0.45)', padding: 0, display: 'flex' }}>
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(168,179,194,0.4)', padding: 0, display: 'flex' }}>
                           {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                         </button>
                       </div>
                     </div>
 
-                    {/* Remember + forgot */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                        <div
-                          onClick={() => setRememberMe(!rememberMe)}
-                          style={{
-                            width: 16, height: 16, borderRadius: 4, flexShrink: 0,
-                            border: `1.5px solid ${rememberMe ? '#3A7BD5' : 'rgba(255,255,255,0.2)'}`,
-                            background: rememberMe ? 'rgba(58,123,213,0.25)' : 'transparent',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            transition: 'all 0.15s',
-                          }}
-                        >
-                          {rememberMe && <div style={{ width: 8, height: 8, borderRadius: 2, background: '#3A7BD5' }} />}
-                        </div>
-                        <span style={{ color: '#8A9BB0', fontSize: 12.5 }}>Angemeldet bleiben</span>
-                      </label>
-                      <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3A7BD5', fontSize: 12.5, fontFamily: 'inherit', padding: 0, opacity: 0.8 }}>
-                        Passwort vergessen?
-                      </button>
-                    </div>
+                    {/* Remember me */}
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginTop: 2 }}>
+                      <div
+                        onClick={() => setRememberMe(!rememberMe)}
+                        style={{
+                          width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                          border: `1.5px solid ${rememberMe ? '#4A8DD4' : 'rgba(255,255,255,0.18)'}`,
+                          background: rememberMe ? 'rgba(74,141,212,0.2)' : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {rememberMe && <div style={{ width: 8, height: 8, borderRadius: 2, background: '#4A8DD4' }} />}
+                      </div>
+                      <span style={{ color: '#8A9BB0', fontSize: 12.5 }}>Angemeldet bleiben</span>
+                    </label>
 
                     {/* Error */}
                     {error && (
-                      <div style={{ background: 'rgba(160,130,70,0.1)', border: '1px solid rgba(160,130,70,0.22)', borderRadius: 7, padding: '9px 12px' }}>
-                        <p style={{ color: '#c8a96e', fontSize: 12.5, margin: 0 }}>{error}</p>
+                      <div style={{ background: 'rgba(160,130,70,0.1)', border: '1px solid rgba(160,130,70,0.22)', borderRadius: 7, padding: '8px 12px' }}>
+                        <p style={{ color: '#c8a96e', fontSize: 12, margin: 0 }}>{error}</p>
                       </div>
                     )}
 
@@ -234,19 +209,18 @@ export default function PortalSetup() {
                     <button
                       type="submit" disabled={loading}
                       style={{
-                        width: '100%', height: 46, borderRadius: 8, border: 'none',
-                        background: loading ? 'rgba(47,93,138,0.45)' : 'linear-gradient(135deg, #2F5D8A 0%, #3A7BD5 100%)',
-                        color: '#EAF1F7', fontWeight: 600, fontSize: 14.5,
+                        width: '100%', height: 44, borderRadius: 8, border: 'none',
+                        background: loading ? 'rgba(74,141,212,0.3)' : 'linear-gradient(135deg, #2F5D8A 0%, #4A8DD4 100%)',
+                        color: '#EAF1F7', fontWeight: 600, fontSize: 14,
                         cursor: loading ? 'not-allowed' : 'pointer',
+                        marginTop: 12,
                         transition: 'transform 0.15s, box-shadow 0.15s, background 0.2s',
-                        boxShadow: loading ? 'none' : '0 4px 18px rgba(47,93,138,0.4)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
+                        boxShadow: loading ? 'none' : '0 4px 16px rgba(47,93,138,0.35)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                         fontFamily: 'Inter, Helvetica, sans-serif',
-                        marginTop: 4,
-                        letterSpacing: '0.1px',
                       }}
-                      onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.background = 'linear-gradient(135deg, #366a9e 0%, #4589e3 100%)'; e.currentTarget.style.boxShadow = '0 6px 22px rgba(47,93,138,0.5)' } }}
-                      onMouseLeave={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.background = 'linear-gradient(135deg, #2F5D8A 0%, #3A7BD5 100%)'; e.currentTarget.style.boxShadow = '0 4px 18px rgba(47,93,138,0.4)' } }}
+                      onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.background = 'linear-gradient(135deg, #366a9e 0%, #5598e8 100%)' } }}
+                      onMouseLeave={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.background = 'linear-gradient(135deg, #2F5D8A 0%, #4A8DD4 100%)' } }}
                     >
                       {loading ? (
                         <>
@@ -259,16 +233,15 @@ export default function PortalSetup() {
                 </div>
 
                 {/* Trust section */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {trustItems.map(({ icon: Icon, title, sub }) => (
-                    <div key={title} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                      <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(58,123,213,0.1)', border: '1px solid rgba(58,123,213,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Icon size={15} color="#4A8DD4" />
-                      </div>
-                      <div>
-                        <p style={{ color: '#C8D4E0', fontSize: 12.5, fontWeight: 600, margin: '0 0 2px' }}>{title}</p>
-                        <p style={{ color: '#6A7D92', fontSize: 12, margin: 0, lineHeight: 1.5 }}>{sub}</p>
-                      </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {[
+                    { icon: Shield, text: 'Unabhängige Beratung' },
+                    { icon: BarChart2, text: 'Volle Transparenz' },
+                    { icon: UserCheck, text: 'Schweizer Datenschutz' },
+                  ].map(({ icon: Icon, text }) => (
+                    <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                      <Icon size={13} color="rgba(74,141,212,0.6)" style={{ flexShrink: 0 }} />
+                      <span style={{ color: '#8A9BB0', fontSize: 12 }}>{text}</span>
                     </div>
                   ))}
                 </div>
@@ -276,17 +249,17 @@ export default function PortalSetup() {
             ) : (
               /* Change password */
               <>
-                <div style={{ marginBottom: 28 }}>
-                  <h1 style={{ color: '#EAF1F7', fontSize: 24, fontWeight: 600, margin: '0 0 8px', letterSpacing: '-0.2px' }}>Passwort festlegen</h1>
-                  <p style={{ color: '#8A9BB0', fontSize: 13, margin: 0, lineHeight: 1.6 }}>Bitte wählen Sie ein persönliches Passwort für Ihren Zugang.</p>
+                <div style={{ marginBottom: 24 }}>
+                  <h1 style={{ color: '#EAF1F7', fontSize: 24, fontWeight: 600, margin: '0 0 8px' }}>Passwort festlegen</h1>
+                  <p style={{ color: '#8A9BB0', fontSize: 13, margin: 0 }}>Bitte wählen Sie ein persönliches Passwort.</p>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 14, padding: '26px 24px', boxShadow: '0 16px 48px rgba(0,0,0,0.3)' }}>
-                  <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12, padding: 24, marginBottom: 24 }}>
+                  <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <div>
                       <label style={labelStyle}>Neues Passwort</label>
                       <div style={{ position: 'relative' }}>
-                        <input type={showNew ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} required autoFocus placeholder="Min. 8 Zeichen" style={{ ...getInputStyle('newpw'), paddingRight: 44 }} onFocus={() => setFocused('newpw')} onBlur={() => setFocused(null)} />
-                        <button type="button" onClick={() => setShowNew(!showNew)} style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(168,179,194,0.45)', padding: 0, display: 'flex' }}>
+                        <input type={showNew ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} required autoFocus placeholder="Min. 8 Zeichen" style={{ ...inputStyle('newpw'), paddingRight: 42 }} onFocus={() => setFocused('newpw')} onBlur={() => setFocused(null)} />
+                        <button type="button" onClick={() => setShowNew(!showNew)} style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(168,179,194,0.4)', padding: 0, display: 'flex' }}>
                           {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
                         </button>
                       </div>
@@ -294,22 +267,22 @@ export default function PortalSetup() {
                     <div>
                       <label style={labelStyle}>Passwort bestätigen</label>
                       <div style={{ position: 'relative' }}>
-                        <input type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required placeholder="Passwort wiederholen" style={{ ...getInputStyle('confirmpw'), paddingRight: 44 }} onFocus={() => setFocused('confirmpw')} onBlur={() => setFocused(null)} />
-                        <button type="button" onClick={() => setShowConfirm(!showConfirm)} style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(168,179,194,0.45)', padding: 0, display: 'flex' }}>
+                        <input type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required placeholder="Wiederholen" style={{ ...inputStyle('confirmpw'), paddingRight: 42 }} onFocus={() => setFocused('confirmpw')} onBlur={() => setFocused(null)} />
+                        <button type="button" onClick={() => setShowConfirm(!showConfirm)} style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(168,179,194,0.4)', padding: 0, display: 'flex' }}>
                           {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
                         </button>
                       </div>
                     </div>
                     {error && (
-                      <div style={{ background: 'rgba(160,130,70,0.1)', border: '1px solid rgba(160,130,70,0.22)', borderRadius: 7, padding: '9px 12px' }}>
-                        <p style={{ color: '#c8a96e', fontSize: 12.5, margin: 0 }}>{error}</p>
+                      <div style={{ background: 'rgba(160,130,70,0.1)', border: '1px solid rgba(160,130,70,0.22)', borderRadius: 7, padding: '8px 12px' }}>
+                        <p style={{ color: '#c8a96e', fontSize: 12, margin: 0 }}>{error}</p>
                       </div>
                     )}
                     <button
                       type="submit" disabled={loading}
-                      style={{ width: '100%', height: 46, borderRadius: 8, border: 'none', background: loading ? 'rgba(47,93,138,0.45)' : 'linear-gradient(135deg, #2F5D8A 0%, #3A7BD5 100%)', color: '#EAF1F7', fontWeight: 600, fontSize: 14.5, cursor: loading ? 'not-allowed' : 'pointer', transition: 'transform 0.15s, background 0.2s', boxShadow: '0 4px 18px rgba(47,93,138,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, fontFamily: 'Inter, Helvetica, sans-serif' }}
-                      onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.background = 'linear-gradient(135deg, #366a9e 0%, #4589e3 100%)' } }}
-                      onMouseLeave={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.background = 'linear-gradient(135deg, #2F5D8A 0%, #3A7BD5 100%)' } }}
+                      style={{ width: '100%', height: 44, borderRadius: 8, border: 'none', background: loading ? 'rgba(74,141,212,0.3)' : 'linear-gradient(135deg, #2F5D8A 0%, #4A8DD4 100%)', color: '#EAF1F7', fontWeight: 600, fontSize: 14, cursor: loading ? 'not-allowed' : 'pointer', marginTop: 12, transition: 'transform 0.15s, background 0.2s', boxShadow: '0 4px 16px rgba(47,93,138,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'Inter, Helvetica, sans-serif' }}
+                      onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.background = 'linear-gradient(135deg, #366a9e 0%, #5598e8 100%)' } }}
+                      onMouseLeave={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.background = 'linear-gradient(135deg, #2F5D8A 0%, #4A8DD4 100%)' } }}
                     >
                       {loading ? (
                         <><div style={{ width: 14, height: 14, border: '2px solid rgba(234,241,247,0.25)', borderTopColor: '#EAF1F7', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />Wird gespeichert…</>
@@ -323,13 +296,13 @@ export default function PortalSetup() {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '20px 10% 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11.5 }}>© {new Date().getFullYear()} VSVV – Ihre Versicherungsplattform</span>
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '20px 80px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
+          <span>© 2025 VSVV – Ihre Versicherungsplattform</span>
           <div style={{ display: 'flex', gap: 16 }}>
             {['Impressum', 'Datenschutz', 'AGB'].map((item, i, arr) => (
               <React.Fragment key={item}>
-                <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(106,125,146,0.6)', fontSize: 11, fontFamily: 'inherit', padding: 0 }}>{item}</button>
-                {i < arr.length - 1 && <span style={{ color: 'rgba(106,125,146,0.3)', fontSize: 11 }}>|</span>}
+                <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', padding: 0 }}>{item}</button>
+                {i < arr.length - 1 && <span style={{ color: 'rgba(255,255,255,0.3)' }}>|</span>}
               </React.Fragment>
             ))}
           </div>
