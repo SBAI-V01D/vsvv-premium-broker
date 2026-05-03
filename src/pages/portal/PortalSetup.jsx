@@ -86,9 +86,9 @@ export default function PortalSetup() {
   }
 
   const trustItems = [
-    { icon: ShieldCheck, title: 'Höchste Sicherheit', sub: 'Ihre Daten sind bei uns sicher und geschützt.' },
-    { icon: BarChart2, title: 'Transparenz', sub: 'Behalten Sie jederzeit den Überblick.' },
-    { icon: UserCheck, title: 'Persönliche Betreuung', sub: 'Wir sind für Sie da – kompetent und zuverlässig.' },
+    { icon: ShieldCheck, title: 'Unabhängige Beratung', sub: 'Ohne Interessenskonflikte – nur Ihre Ziele zählen' },
+    { icon: BarChart2, title: 'Volle Transparenz', sub: 'Jederzeit vollständiger Überblick über Ihre Policen' },
+    { icon: UserCheck, title: 'Schweizer Datenschutz', sub: 'Ihre Daten sind sicher und vertraulich geschützt' },
   ]
 
   return (
@@ -115,7 +115,7 @@ export default function PortalSetup() {
         position: 'absolute', inset: 0, zIndex: 0,
         backgroundImage: `url(${BG_URL})`,
         backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        backgroundPosition: 'left center',
         backgroundRepeat: 'no-repeat',
       }} />
 
@@ -127,7 +127,7 @@ export default function PortalSetup() {
           right: 0, top: 0, bottom: 0,
           width: '46%',
           minWidth: 420,
-          background: 'linear-gradient(160deg, rgba(11,31,58,0.92) 0%, rgba(11,31,58,0.98) 100%)',
+          background: 'linear-gradient(160deg, rgba(11,31,58,0.88) 0%, rgba(11,31,58,0.97) 100%)',
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
           display: 'flex',
@@ -141,20 +141,23 @@ export default function PortalSetup() {
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '60px 0' }}>
           <div
             className="content-box"
-            style={{ width: '100%', maxWidth: 400, marginLeft: '10%', marginRight: '8%' }}
+            style={{ width: '100%', maxWidth: 340, marginLeft: '10%', marginRight: '12%' }}
           >
             {!mustChangePassword ? (
               <>
                 {/* Headline block */}
                 <div style={{ marginBottom: 32 }}>
-                  <h1 style={{ color: '#EAF1F7', fontSize: 28, fontWeight: 600, margin: '0 0 8px', lineHeight: 1.25, letterSpacing: '-0.3px' }}>
-                    Willkommen im Kundenportal
+                  <h1 style={{ color: '#EAF1F7', fontSize: 28, fontWeight: 600, margin: '0 0 14px', lineHeight: 1.25, letterSpacing: '-0.3px' }}>
+                    Willkommen bei VSVV
                   </h1>
-                  <p style={{ color: '#3A7BD5', fontSize: 14, fontWeight: 500, margin: '0 0 12px' }}>
-                    Ihr zentraler Zugang zu Ihren Finanz- und Versicherungsinformationen
+                  <p style={{ color: '#3A7BD5', fontSize: 14, fontWeight: 500, margin: '0 0 14px' }}>
+                    Ihr persönliches Kundenportal für strukturierte, transparente und professionelle Versicherungsbetreuung.
                   </p>
-                  <p style={{ color: '#8A9BB0', fontSize: 13, lineHeight: 1.65, margin: 0 }}>
-                    Sicherer Zugriff auf Ihre Verträge, Dokumente und persönliche Beratung – jederzeit und überall.
+                  <p style={{ color: '#8A9BB0', fontSize: 13, lineHeight: 1.65, margin: '0 0 16px' }}>
+                    Behalten Sie jederzeit den Überblick über Ihre Verträge, Dokumente und Lösungen – zentral, sicher und auf höchstem Beratungsniveau.
+                  </p>
+                  <p style={{ color: '#3A7BD5', fontSize: 12.5, fontWeight: 500, fontStyle: 'italic', margin: 0 }}>
+                    „Alles an einem Ort. Klar strukturiert. Für Sie optimiert."
                   </p>
                 </div>
 
@@ -165,7 +168,8 @@ export default function PortalSetup() {
                   borderRadius: 14,
                   padding: '26px 24px',
                   boxShadow: '0 16px 48px rgba(0,0,0,0.3)',
-                  marginBottom: 26,
+                  marginTop: 28,
+                  marginBottom: 28,
                 }}>
                   <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {/* Email */}
@@ -319,8 +323,8 @@ export default function PortalSetup() {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '16px 10% 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <span style={{ color: 'rgba(106,125,146,0.6)', fontSize: 11 }}>© {new Date().getFullYear()} – Alle Rechte vorbehalten.</span>
+        <div style={{ padding: '20px 10% 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11.5 }}>© {new Date().getFullYear()} VSVV – Ihre Versicherungsplattform</span>
           <div style={{ display: 'flex', gap: 16 }}>
             {['Impressum', 'Datenschutz', 'AGB'].map((item, i, arr) => (
               <React.Fragment key={item}>
