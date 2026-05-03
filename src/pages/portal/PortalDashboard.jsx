@@ -85,9 +85,9 @@ export default function PortalDashboard() {
     <div style={{ background: '#f8f9fa', minHeight: '100vh', fontFamily: 'Inter, -apple-system, sans-serif', color: '#1a1a1a' }}>
       
       {/* HEADER */}
-      <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '16px 0', position: 'sticky', top: 0, zIndex: 100 }}>
+      <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '14px 0', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <img src={LOGO_URL} alt="VSVV" style={{ height: 50 }} />
+          <img src={LOGO_URL} alt="VSVV" style={{ height: 40 }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             {customer && (
               <div style={{ textAlign: 'right' }}>
@@ -131,25 +131,11 @@ export default function PortalDashboard() {
               Ihrem Partner für transparente und strukturierte Versicherungslösungen. Behalten Sie jederzeit den Überblick über Ihre Versicherungen.
             </p>
           </div>
-          <a href="https://wa.me/41787170007" target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0 }}>
-            <button style={{
-              background: '#25D366',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              padding: '12px 28px',
-              cursor: 'pointer',
-              fontSize: 14,
-              fontWeight: 700,
-              transition: 'all 0.2s',
-              boxShadow: '0 2px 8px rgba(37, 211, 102, 0.2)',
-              whiteSpace: 'nowrap',
-            }}
-            onMouseEnter={e => { e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 4px 12px rgba(37, 211, 102, 0.3)' }}
-            onMouseLeave={e => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = '0 2px 8px rgba(37, 211, 102, 0.2)' }}
-            >
-              💬 Beratung
-            </button>
+          <a href="https://wa.me/41787170007" target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8, color: '#5B9FE6', fontSize: 13, fontWeight: 500, transition: 'color 0.2s', padding: '8px 0' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#4A8DD4' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#5B9FE6' }}
+          >
+            💬 Beratung via WhatsApp
           </a>
         </section>
 
@@ -510,35 +496,7 @@ export default function PortalDashboard() {
         © 2025 VSVV – Ihre Versicherungsplattform
       </footer>
 
-      {/* FLOATING WHATSAPP BUTTON */}
-      <a
-        href="https://wa.me/41787170007"
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Beratung via WhatsApp"
-        style={{
-          position: 'fixed',
-          bottom: 20,
-          right: 20,
-          zIndex: 100,
-          width: 40,
-          height: 40,
-          background: '#25D366',
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 1px 4px rgba(37, 211, 102, 0.15)',
-          textDecoration: 'none',
-          cursor: 'pointer',
-          transition: 'all 0.2s',
-          fontSize: 18,
-        }}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(37, 211, 102, 0.2)' }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(37, 211, 102, 0.15)' }}
-      >
-        💬
-      </a>
+
     </div>
   )
 }
