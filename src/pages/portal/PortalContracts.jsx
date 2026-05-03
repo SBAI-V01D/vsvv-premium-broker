@@ -1,7 +1,9 @@
-import React from 'react'
-import { FileText, AlertCircle, Shield } from 'lucide-react'
+import React, { useState } from 'react'
+import { FileText, AlertCircle, Shield, Upload, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
+import { base44 } from '@/api/base44Client'
 import { usePortalData, yearlyPremium } from '@/hooks/usePortalData'
+import { useQueryClient } from '@tanstack/react-query'
 
 const NAVY = '#0B1C2C'
 const ACCENT = '#4F7CFF'
@@ -32,7 +34,35 @@ function Field({ label, value }) {
 }
 
 export default function PortalContracts() {
-  const { contracts, isLoading, error } = usePortalData()
+  const { customer, contracts, isLoading, error, customerId } = usePortalData()
+  const queryClient = useQueryClient()
+  const [uploading, setUploading] = useState(false)
+  const [uploadSuccess, setUploadSuccess] = useState(false)
+
+  const handleUpload = async (files, contractId) => {
+    if (!files || !files.length || uploading) return
+    setUploading(true)
+    try {
+      for (const file of Array.from(files)) {
+        const { file_url } = await base44.integrations.Core.UploadFile({ file })
+        await base44.entities.Document.create({
+          customer_id: customerId,
+          customer_name: customer ? `${customer.first_name} ${customer.last_name}` : '',
+          name: file.name,
+          file_url,
+          category: 'contract',
+          uploaded_by: localStorage.getItem('portal_email') || '',
+          linked_contract_id: contractId,
+        })
+      }
+      queryClient.invalidateQueries({ queryKey: ['portal-all-data', customerId] })
+      setUploadSuccess(true)
+      setTimeout(() => setUploadSuccess(false), 3000)
+    } catch (err) {
+      console.error('Upload fehler:', err)
+    }
+    setUploading(false)
+  }
 
   if (isLoading) {
     return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>Laden…</div>
@@ -47,6 +77,10 @@ export default function PortalContracts() {
 
   const totalMonthly = contracts.reduce((s, c) => s + (c.premium_monthly || 0), 0)
   const totalYearly = contracts.reduce((s, c) => s + yearlyPremium(c), 0)
+
+  if (uploadSuccess) {
+    setTimeout(() => setUploadSuccess(false), 3000)
+  }
 
   return (
     <div style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -75,7 +109,13 @@ export default function PortalContracts() {
           <p style={{ color: '#c4c9d1', fontSize: 12, marginTop: 6 }}>Ihr Broker hat noch keine Verträge für Sie erfasst.</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <>
+          {uploadSuccess && (
+            <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 9, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#16a34a', fontWeight: 500 }}>
+              ✓ Dokument erfolgreich hochgeladen
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {contracts.map(c => {
             const statusColor = STATUS_COLORS[c.status] || '#6b7280'
             const statusLabel = c.custom_status || STATUS_LABELS[c.status] || c.status
@@ -123,19 +163,27 @@ export default function PortalContracts() {
                   {c.notes && <div style={{ gridColumn: '1/-1' }}><Field label="Notizen" value={c.notes} /></div>}
                 </div>
 
-                {c.policy_document_url && (
-                  <div style={{ marginTop: 12 }}>
+                <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  {c.policy_document_url && (
                     <a href={c.policy_document_url} target="_blank" rel="noopener noreferrer"
                       style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: ACCENT, fontSize: 12, fontWeight: 600, textDecoration: 'none', padding: '6px 12px', background: `${ACCENT}10`, borderRadius: 7, border: `1px solid ${ACCENT}22` }}>
                       <Shield size={12} /> Police öffnen
                     </a>
-                  </div>
-                )}
+                  )}
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#16a34a', fontSize: 12, fontWeight: 600, cursor: uploading ? 'not-allowed' : 'pointer', padding: '6px 12px', background: '#dcfce70d', borderRadius: 7, border: '1px solid #86efac66', opacity: uploading ? 0.6 : 1 }}>
+                    {uploading ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={12} />}
+                    Dokument hochladen
+                    <input type="file" accept=".pdf,.jpg,.jpeg,.png" multiple style={{ display: 'none' }} disabled={uploading} onChange={e => handleUpload(e.target.files, c.id)} />
+                  </label>
+                </div>
               </div>
             )
           })}
-        </div>
+          </div>
+        </>
       )}
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }
