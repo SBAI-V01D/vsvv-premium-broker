@@ -138,7 +138,7 @@ export default function PortalSetup() {
         <div style={{
           maxWidth: 360,
           width: '100%',
-          marginRight: 50,
+          marginRight: 80,
         }}>
 
           {!mustChangePassword ? (
@@ -149,7 +149,7 @@ export default function PortalSetup() {
                   color: '#EAF1F7',
                   fontSize: 28,
                   fontWeight: 600,
-                  margin: '0 0 12px',
+                  margin: '0 0 6px',
                   lineHeight: 1.2,
                   letterSpacing: '-0.5px',
                 }}>
@@ -159,7 +159,7 @@ export default function PortalSetup() {
                   color: '#5B9FE6',
                   fontSize: 13.5,
                   fontWeight: 500,
-                  margin: '0 0 8px',
+                  margin: '0 0 6px',
                   lineHeight: 1.6,
                 }}>
                   Ihr persönliches Kundenportal für strukturierte und transparente Versicherungslösungen.
@@ -176,8 +176,8 @@ export default function PortalSetup() {
 
               {/* LOGIN BOX */}
               <div style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.06)',
                 borderRadius: 12,
                 padding: 18,
                 marginBottom: 20,
