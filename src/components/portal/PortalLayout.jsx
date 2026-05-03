@@ -3,7 +3,7 @@ import { useLocation, Link } from 'react-router-dom'
 import { LayoutDashboard, FileText, FolderOpen, User, LogOut, Menu, X, MessageCircle, ClipboardList } from 'lucide-react'
 import { usePortalCustomer } from '@/hooks/usePortalCustomer'
 
-const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/daa966436_VSVV.png'
+const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/0cde67ef2_LogoVSVV2.png'
 
 const NAV = [
   { path: '/portal', label: 'Dashboard', icon: LayoutDashboard },

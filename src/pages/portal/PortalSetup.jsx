@@ -4,7 +4,7 @@ import { Eye, EyeOff, Shield, BarChart2, UserCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/469756d65_HintergrundbildKundenportal.png'
-const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/80b29f91c_VSVV.png'
+const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/0cde67ef2_LogoVSVV2.png'
 
 export default function PortalSetup() {
   const navigate = useNavigate()
