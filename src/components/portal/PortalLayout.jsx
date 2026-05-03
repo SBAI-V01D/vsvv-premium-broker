@@ -130,10 +130,7 @@ export default function PortalLayout({ children }) {
 
         {/* Main */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto' }}>
-          {/* Topbar mobile */}
-          <div style={{ background: NAVY, padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="md:hidden">
-            <img src={LOGO_URL} alt="VSVV" style={{ height: 48 }} />
-          </div>
+
 
           <main style={{ flex: 1, padding: '28px 24px', maxWidth: 1100, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
             {children}
