@@ -31,30 +31,30 @@ export default function PortalCustomerDashboard() {
 
   const KPICard = ({ icon: Icon, title, value, unit }) => (
     <div style={{
-      background: 'rgba(255,255,255,0.04)',
-      border: '1px solid rgba(255,255,255,0.08)',
-      borderRadius: 12,
-      padding: '24px',
+      background: 'rgba(255,255,255,0.02)',
+      border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: 10,
+      padding: '16px',
       display: 'flex',
       alignItems: 'flex-start',
-      gap: 16,
+      gap: 12,
     }}>
       <div style={{
-        width: 48,
-        height: 48,
-        borderRadius: 10,
-        background: 'rgba(91,163,232,0.12)',
+        width: 40,
+        height: 40,
+        borderRadius: 8,
+        background: 'rgba(91,163,232,0.1)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         flexShrink: 0,
       }}>
-        <Icon size={24} color='rgba(91,163,232,0.8)' />
+        <Icon size={18} color='rgba(91,163,232,0.7)' />
       </div>
       <div>
         <p style={{
           color: '#8A9BB0',
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: 500,
           margin: 0,
           textTransform: 'uppercase',
@@ -64,12 +64,12 @@ export default function PortalCustomerDashboard() {
         </p>
         <p style={{
           color: '#EAF1F7',
-          fontSize: 28,
+          fontSize: 20,
           fontWeight: 700,
-          margin: '6px 0 0',
+          margin: '4px 0 0',
         }}>
           {value}
-          <span style={{ fontSize: 14, fontWeight: 400, marginLeft: 4 }}>
+          <span style={{ fontSize: 12, fontWeight: 400, marginLeft: 4 }}>
             {unit}
           </span>
         </p>
@@ -147,31 +147,101 @@ export default function PortalCustomerDashboard() {
         padding: '40px 24px',
       }}>
 
-        {/* HERO SECTION */}
-        <div style={{ marginBottom: 48 }}>
-          <h1 style={{
-            fontSize: 36,
-            fontWeight: 700,
-            margin: '0 0 8px',
-            color: '#EAF1F7',
+        {/* HERO SECTION (PROMINENT) */}
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(91,163,232,0.1) 0%, rgba(91,163,232,0.05) 100%)',
+          border: '1px solid rgba(91,163,232,0.12)',
+          borderRadius: 16,
+          padding: '48px 40px',
+          marginBottom: 60,
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 40,
+          alignItems: 'center',
+        }}>
+          <div>
+            <h1 style={{
+              fontSize: 40,
+              fontWeight: 700,
+              margin: '0 0 12px',
+              color: '#EAF1F7',
+              lineHeight: 1.2,
+            }}>
+              Ihre Versicherungsübersicht
+            </h1>
+            <p style={{
+              fontSize: 15,
+              color: '#8A9BB0',
+              margin: 0,
+              lineHeight: 1.6,
+            }}>
+              Alle Ihre Verträge zentral und transparent verwaltet
+            </p>
+          </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 24,
           }}>
-            Ihre Versicherungsübersicht
-          </h1>
-          <p style={{
-            fontSize: 15,
-            color: '#8A9BB0',
-            margin: 0,
-          }}>
-            Alle Ihre Verträge zentral und transparent verwaltet
-          </p>
+            <div style={{
+              background: 'rgba(255,255,255,0.03)',
+              borderRadius: 12,
+              padding: 24,
+              textAlign: 'center',
+            }}>
+              <p style={{
+                color: '#8A9BB0',
+                fontSize: 12,
+                fontWeight: 500,
+                margin: 0,
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+              }}>
+                Aktive Verträge
+              </p>
+              <p style={{
+                color: '#5B9FE6',
+                fontSize: 44,
+                fontWeight: 700,
+                margin: '12px 0 0',
+              }}>
+                {activeContracts}
+              </p>
+            </div>
+            <div style={{
+              background: 'rgba(255,255,255,0.03)',
+              borderRadius: 12,
+              padding: 24,
+              textAlign: 'center',
+            }}>
+              <p style={{
+                color: '#8A9BB0',
+                fontSize: 12,
+                fontWeight: 500,
+                margin: 0,
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+              }}>
+                Jahresprämie
+              </p>
+              <p style={{
+                color: '#4ac66e',
+                fontSize: 44,
+                fontWeight: 700,
+                margin: '12px 0 0',
+              }}>
+                CHF {totalPremium.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* KPI CARDS */}
+        {/* KPI CARDS (COMPACT) */}
         <div className="kpi-grid" style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 20,
-          marginBottom: 48,
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 16,
+          marginBottom: 60,
         }}>
           <KPICard
             icon={() => <FileText size={20} />}
@@ -199,12 +269,12 @@ export default function PortalCustomerDashboard() {
           />
         </div>
 
-        {/* VERTRÄGE */}
-        <section style={{ marginBottom: 48 }}>
+        {/* VERTRÄGE (HAUPTBEREICH) */}
+        <section style={{ marginBottom: 60 }}>
           <h2 style={{
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: 600,
-            margin: '0 0 20px',
+            margin: '0 0 24px',
             color: '#EAF1F7',
           }}>
             Ihre Verträge
@@ -346,12 +416,76 @@ export default function PortalCustomerDashboard() {
           </div>
         </section>
 
+        {/* AKTIONSBEREICH (NEU) */}
+        <section style={{ marginBottom: 60 }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: 24,
+          }}>
+            <button style={{
+              background: 'linear-gradient(135deg, #3A6BA8 0%, #5BA3E8 100%)',
+              border: 'none',
+              borderRadius: 12,
+              padding: '24px 32px',
+              color: '#EAF1F7',
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 12,
+              transition: 'all 0.2s',
+              boxShadow: '0 4px 16px rgba(91,163,232,0.25)',
+            }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = '0 6px 24px rgba(91,163,232,0.35)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = '0 4px 16px rgba(91,163,232,0.25)'
+              }}
+            >
+              <Phone size={18} /> Beratung anfragen
+            </button>
+
+            <button style={{
+              background: 'rgba(91,163,232,0.1)',
+              border: '1px solid rgba(91,163,232,0.2)',
+              borderRadius: 12,
+              padding: '24px 32px',
+              color: '#5B9FE6',
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 12,
+              transition: 'all 0.2s',
+            }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(91,163,232,0.15)'
+                e.currentTarget.style.borderColor = 'rgba(91,163,232,0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(91,163,232,0.1)'
+                e.currentTarget.style.borderColor = 'rgba(91,163,232,0.2)'
+              }}
+            >
+              <Calendar size={18} /> Termin vereinbaren
+            </button>
+          </div>
+        </section>
+
         {/* DOKUMENTE */}
-        <section style={{ marginBottom: 48 }}>
+        <section style={{ marginBottom: 60 }}>
           <h2 style={{
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: 600,
-            margin: '0 0 20px',
+            margin: '0 0 24px',
             color: '#EAF1F7',
           }}>
             Ihre Dokumente
@@ -420,137 +554,14 @@ export default function PortalCustomerDashboard() {
           </div>
         </section>
 
-        {/* KONTAKT */}
-        <section>
-          <h2 style={{
-            fontSize: 18,
-            fontWeight: 600,
-            margin: '0 0 20px',
-            color: '#EAF1F7',
-          }}>
-            Benötigen Sie Unterstützung?
-          </h2>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: 20,
-          }}>
-            <div style={{
-              background: 'rgba(91,163,232,0.08)',
-              border: '1px solid rgba(91,163,232,0.15)',
-              borderRadius: 12,
-              padding: 24,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: 16,
-            }}>
-              <div style={{
-                width: 48,
-                height: 48,
-                borderRadius: 10,
-                background: 'rgba(91,163,232,0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <Phone size={24} color='#5B9FE6' />
-              </div>
-              <div>
-                <p style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  margin: '0 0 6px',
-                  color: '#EAF1F7',
-                }}>
-                  Beratung anfragen
-                </p>
-                <p style={{
-                  fontSize: 13,
-                  color: '#8A9BB0',
-                  margin: 0,
-                  lineHeight: 1.5,
-                }}>
-                  Vereinbaren Sie ein Gespräch mit Ihrem persönlichen Berater
-                </p>
-              </div>
-              <button style={{
-                marginTop: 'auto',
-                background: 'linear-gradient(135deg, #3A6BA8 0%, #5BA3E8 100%)',
-                border: 'none',
-                borderRadius: 8,
-                padding: '8px 16px',
-                color: '#EAF1F7',
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}>
-                Jetzt buchen
-              </button>
-            </div>
 
-            <div style={{
-              background: 'rgba(91,163,232,0.08)',
-              border: '1px solid rgba(91,163,232,0.15)',
-              borderRadius: 12,
-              padding: 24,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: 16,
-            }}>
-              <div style={{
-                width: 48,
-                height: 48,
-                borderRadius: 10,
-                background: 'rgba(91,163,232,0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <Calendar size={24} color='#5B9FE6' />
-              </div>
-              <div>
-                <p style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  margin: '0 0 6px',
-                  color: '#EAF1F7',
-                }}>
-                  Termin vereinbaren
-                </p>
-                <p style={{
-                  fontSize: 13,
-                  color: '#8A9BB0',
-                  margin: 0,
-                  lineHeight: 1.5,
-                }}>
-                  Wählen Sie einen passenden Zeitpunkt für Ihr Anliegen
-                </p>
-              </div>
-              <button style={{
-                marginTop: 'auto',
-                background: 'linear-gradient(135deg, #3A6BA8 0%, #5BA3E8 100%)',
-                border: 'none',
-                borderRadius: 8,
-                padding: '8px 16px',
-                color: '#EAF1F7',
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}>
-                Termin buchen
-              </button>
-            </div>
-          </div>
-        </section>
       </main>
 
       {/* FOOTER */}
       <footer style={{
         borderTop: '1px solid rgba(255,255,255,0.06)',
-        padding: '24px',
-        marginTop: 60,
+        padding: '32px 24px',
+        marginTop: 80,
         textAlign: 'center',
         fontSize: 11,
         color: 'rgba(255,255,255,0.5)',
