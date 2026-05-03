@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client'
 import { Eye, EyeOff, Shield, BarChart2, UserCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
-const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/b98de11bd_VSVV2.png'
+const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/cebd2b2f0_VSVV2.png'
 
 export default function PortalSetup() {
   const navigate = useNavigate()
@@ -88,37 +88,55 @@ export default function PortalSetup() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: `url(${BG_URL})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'left center',
-      backgroundRepeat: 'no-repeat',
       display: 'flex',
-      flexDirection: 'column',
       fontFamily: 'Inter, Helvetica, sans-serif',
-      position: 'relative',
     }}>
       <style>{`
         @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
         input::placeholder { color: rgba(168,179,194,0.4); }
-        @media (max-width: 768px) {
-          .content-wrapper { margin-right: 24px !important; margin-left: 24px !important; }
-          .footer-section { padding: 16px 24px !important; }
+        @media (max-width: 1024px) {
+          .image-column { display: none; }
+          .login-column { width: 100%; }
         }
       `}</style>
 
-      {/* MAIN CONTENT AREA */}
-      <div style={{
-        flex: 1,
+      {/* LEFT COLUMN – IMAGE */}
+      <div className="image-column" style={{
+        width: '55%',
+        flexShrink: 0,
+        backgroundColor: '#0B1F3A',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <img
+          src={BG_URL}
+          alt="VSVV Portal"
+          style={{
+            width: '100%',
+            height: '100vh',
+            objectFit: 'cover',
+            display: 'block',
+          }}
+        />
+      </div>
+
+      {/* RIGHT COLUMN – LOGIN */}
+      <div className="login-column" style={{
+        width: '45%',
+        backgroundColor: '#0B1F3A',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'flex-start',
-        alignItems: 'flex-end',
-        paddingTop: '60px',
-        paddingRight: '9%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '40px 24px',
+        boxSizing: 'border-box',
+        position: 'relative',
       }}>
 
-        <div className="content-wrapper" style={{
-          maxWidth: 320,
+        {/* CONTENT CONTAINER */}
+        <div style={{
+          maxWidth: 360,
           width: '100%',
         }}>
 
@@ -128,7 +146,7 @@ export default function PortalSetup() {
               <div style={{ marginBottom: 20 }}>
                 <h1 style={{
                   color: '#EAF1F7',
-                  fontSize: 32,
+                  fontSize: 28,
                   fontWeight: 600,
                   margin: '0 0 12px',
                   lineHeight: 1.2,
@@ -151,7 +169,7 @@ export default function PortalSetup() {
                   lineHeight: 1.75,
                   margin: 0,
                 }}>
-                  Greifen Sie jederzeit sicher auf Ihre Verträge, Dokumente und persönliche Beratung zu – alles zentral an einem Ort.
+                  Greifen Sie jederzeit sicher auf Ihre Verträge und Dokumente zu – zentral und übersichtlich.
                 </p>
               </div>
 
@@ -161,8 +179,7 @@ export default function PortalSetup() {
                 border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: 12,
                 padding: 18,
-                marginBottom: 18,
-                boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+                marginBottom: 20,
               }}>
                 <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
@@ -543,43 +560,44 @@ export default function PortalSetup() {
             </>
           )}
         </div>
-      </div>
 
-      {/* FOOTER */}
-      <div className="footer-section" style={{
-        flexShrink: 0,
-        background: 'rgba(0,0,0,0.3)',
-        padding: '16px 24px',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        fontSize: 10.5,
-        color: 'rgba(255,255,255,0.55)',
-        marginTop: 'auto',
-      }}>
-        <span>© 2025 VSVV – Ihre Versicherungsplattform</span>
-        <div style={{ display: 'flex', gap: 18 }}>
-          {['AGB', 'Impressum', 'Datenschutz'].map((item, i, arr) => (
-            <React.Fragment key={item}>
-              <button style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'inherit',
-                fontSize: 'inherit',
-                fontFamily: 'inherit',
-                padding: 0,
-                transition: 'opacity 0.2s',
-              }}
-                onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-              >
-                {item}
-              </button>
-              {i < arr.length - 1 && <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>}
-            </React.Fragment>
-          ))}
+        {/* FOOTER */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: '16px 24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: 10.5,
+          color: 'rgba(255,255,255,0.55)',
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+        }}>
+          <span>© 2025 VSVV – Ihre Versicherungsplattform</span>
+          <div style={{ display: 'flex', gap: 18 }}>
+            {['AGB', 'Impressum', 'Datenschutz'].map((item, i, arr) => (
+              <React.Fragment key={item}>
+                <button style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'inherit',
+                  fontSize: 'inherit',
+                  fontFamily: 'inherit',
+                  padding: 0,
+                  transition: 'opacity 0.2s',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                >
+                  {item}
+                </button>
+                {i < arr.length - 1 && <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>}
+              </React.Fragment>
+            ))}
+          </div>
         </div>
       </div>
     </div>
