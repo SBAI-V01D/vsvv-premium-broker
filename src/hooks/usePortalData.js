@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 
 export function usePortalData() {
   const customerId = localStorage.getItem('portal_customer_id')
+  const queryClient = useQueryClient()
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['portal-all-data', customerId],
@@ -12,9 +13,13 @@ export function usePortalData() {
       return res.data
     },
     enabled: !!customerId,
-    staleTime: 30_000,
+    staleTime: 0, // Always fresh
     retry: 2,
   })
+
+  const invalidateCache = () => {
+    queryClient.invalidateQueries({ queryKey: ['portal-all-data', customerId] })
+  }
 
   return {
     customer: data?.customer || null,
@@ -25,6 +30,7 @@ export function usePortalData() {
     isLoading,
     error,
     refetch,
+    invalidateCache,
   }
 }
 

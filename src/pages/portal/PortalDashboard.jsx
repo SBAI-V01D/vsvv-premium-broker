@@ -7,7 +7,7 @@ const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c9
 
 export default function PortalDashboard() {
   const { customer } = usePortalCustomer()
-  const { contracts = [], documents = [] } = usePortalData()
+  const { contracts = [], documents = [], invalidateCache } = usePortalData()
   const [showUpload, setShowUpload] = useState(false)
   const [uploadFile, setUploadFile] = useState(null)
   const [uploadCategory, setUploadCategory] = useState('other')
@@ -139,20 +139,28 @@ export default function PortalDashboard() {
     try {
       const reader = new FileReader()
       reader.onload = async () => {
-        const file_base64 = reader.result.split(',')[1]
-        
-        await base44.functions.invoke('uploadPortalDocument', {
-          file_base64,
-          filename: uploadFile.name,
-          customer_id: localStorage.getItem('portal_customer_id'),
-          customer_name: `${customer.first_name} ${customer.last_name}`,
-          category: uploadCategory,
-        })
-        
-        setUploadFile(null)
-        setUploadCategory('other')
-        setShowUpload(false)
-        setTimeout(() => window.location.reload(), 500)
+        try {
+          const file_base64 = reader.result.split(',')[1]
+          
+          await base44.functions.invoke('uploadPortalDocument', {
+            file_base64,
+            filename: uploadFile.name,
+            customer_id: localStorage.getItem('portal_customer_id'),
+            customer_name: `${customer.first_name} ${customer.last_name}`,
+            category: uploadCategory,
+          })
+          
+          setUploadFile(null)
+          setUploadCategory('other')
+          setShowUpload(false)
+          setUploadingDoc(false)
+          
+          // Refresh document list immediately
+          invalidateCache()
+        } catch (err) {
+          setUploadError('Fehler beim Hochladen: ' + err.message)
+          setUploadingDoc(false)
+        }
       }
       reader.onerror = () => {
         setUploadError('Fehler beim Lesen der Datei')

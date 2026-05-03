@@ -9,20 +9,16 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Convert base64 to Uint8Array
-    const binaryString = atob(file_base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
+    // Convert base64 to Buffer for upload
+    const buffer = Buffer.from(file_base64, 'base64');
 
     // Upload file
     const { file_url } = await base44.asServiceRole.integrations.Core.UploadFile({ 
-      file: bytes
+      file: buffer
     });
 
     // Create document record
-    await base44.asServiceRole.entities.Document.create({
+    const doc = await base44.asServiceRole.entities.Document.create({
       customer_id,
       customer_name,
       name: filename.replace(/\.[^.]+$/, ''),
@@ -32,7 +28,11 @@ Deno.serve(async (req) => {
       visible_in_portal: true,
     });
 
-    return Response.json({ success: true, file_url });
+    return Response.json({ 
+      success: true, 
+      file_url,
+      document: doc
+    });
   } catch (error) {
     console.error('Upload error:', error);
     return Response.json({ error: error.message }, { status: 500 });
