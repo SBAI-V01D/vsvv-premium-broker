@@ -1,166 +1,325 @@
-import React from 'react'
-import { FileText, FolderOpen, TrendingUp, Mail, Phone, MapPin, Calendar, ChevronRight, AlertCircle, ClipboardList } from 'lucide-react'
-import { usePortalData, yearlyPremium } from '@/hooks/usePortalData'
-import { format } from 'date-fns'
-import { de } from 'date-fns/locale'
-import { Link } from 'react-router-dom'
+import React, { useState } from 'react'
+import { usePortalData } from '@/hooks/usePortalData'
+import { usePortalCustomer } from '@/hooks/usePortalCustomer'
 
-const NAVY = '#0B1C2C'
-const ACCENT = '#4F7CFF'
-
-const STATUS_COLORS = {
-  active: '#16a34a', aktiv: '#16a34a',
-  cancelled: '#dc2626', gekuendigt: '#dc2626',
-  paused: '#d97706', expired: '#6b7280',
-}
-const STATUS_LABELS = {
-  active: 'Aktiv', aktiv: 'Aktiv',
-  cancelled: 'Gekündigt', gekuendigt: 'Gekündigt',
-  paused: 'Pausiert', expired: 'Abgelaufen',
-}
-
-function KpiCard({ to, icon: Icon, label, value, accent }) {
-  return (
-    <Link to={to} style={{ textDecoration: 'none' }}>
-      <div
-        style={{ background: '#fff', borderRadius: 12, padding: '20px 22px', boxShadow: '0 1px 6px rgba(11,28,44,0.07)', borderLeft: `4px solid ${accent}`, display: 'flex', alignItems: 'center', gap: 16, transition: 'box-shadow 0.15s', cursor: 'pointer' }}
-        onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 16px rgba(11,28,44,0.12)' }}
-        onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 6px rgba(11,28,44,0.07)' }}
-      >
-        <div style={{ width: 44, height: 44, borderRadius: 10, background: `${accent}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <Icon size={20} color={accent} />
-        </div>
-        <div>
-          <p style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>{label}</p>
-          <p style={{ color: NAVY, fontSize: 26, fontWeight: 700, margin: '3px 0 0', lineHeight: 1 }}>{value}</p>
-        </div>
-      </div>
-    </Link>
-  )
-}
+const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/0cde67ef2_LogoVSVV2.png'
 
 export default function PortalDashboard() {
-  const { customer, customerId, contracts, documents, applications, isLoading, error } = usePortalData()
+  const { customer } = usePortalCustomer()
+  const { contracts = [], documents = [] } = usePortalData()
+  const [showUpload, setShowUpload] = useState(false)
 
-  if (isLoading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, color: '#6b7280', fontFamily: 'Inter, sans-serif' }}>
-      Daten werden geladen…
-    </div>
-  )
-
-  if (error) return (
-    <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 10, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
-      <AlertCircle size={16} color="#dc2626" />
-      <p style={{ color: '#991b1b', fontSize: 13, margin: 0 }}>Fehler beim Laden: {error.message}</p>
-    </div>
-  )
-
-  if (!customer) return null
-
-  const greeting = () => {
-    const h = new Date().getHours()
-    if (h < 12) return 'Guten Morgen'
-    if (h < 18) return 'Guten Tag'
-    return 'Guten Abend'
+  const handleLogout = () => {
+    localStorage.removeItem('portal_customer_id')
+    localStorage.removeItem('portal_email')
+    window.location.href = '/portal/setup'
   }
 
-  const totalMonthly = contracts.reduce((s, c) => s + (c.premium_monthly || 0), 0)
-  const totalYearly = contracts.reduce((s, c) => s + yearlyPremium(c), 0)
+  const activeContracts = contracts.filter(c => c.status === 'active').length
+  const totalPremiumMonthly = contracts.reduce((sum, c) => sum + (c.premium_monthly || 0), 0)
+  const totalPremiumYearly = contracts.reduce((sum, c) => sum + (c.premium_yearly || 0), 0)
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '–'
+    return new Date(dateStr).toLocaleDateString('de-CH')
+  }
 
   return (
-    <div style={{ fontFamily: 'Inter, sans-serif' }}>
-
-      {/* Greeting */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ color: NAVY, fontSize: 26, fontWeight: 700, margin: 0 }}>
-          {greeting()}, {customer.first_name} 👋
-        </h1>
-        <p style={{ color: '#6b7280', marginTop: 4, fontSize: 14 }}>
-          Heute ist der {format(new Date(), 'EEEE, d. MMMM yyyy', { locale: de })}
-        </p>
-      </div>
-
-      {/* KPI row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
-        <KpiCard to="/portal/vertraege" icon={FileText} label="Verträge" value={contracts.length} accent={ACCENT} />
-        <KpiCard to="/portal/antraege" icon={ClipboardList} label="Anträge" value={applications.length} accent="#7c3aed" />
-        <KpiCard to="/portal/vertraege" icon={TrendingUp} label="Monatsprämie" value={totalMonthly > 0 ? `CHF ${totalMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2 })}` : '–'} accent="#16a34a" />
-        <KpiCard to="/portal/dokumente" icon={FolderOpen} label="Dokumente" value={documents.length} accent="#d97706" />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} className="dashboard-grid">
-
-        {/* Recent Contracts */}
-        <div style={{ background: '#fff', borderRadius: 12, padding: 22, boxShadow: '0 1px 6px rgba(11,28,44,0.07)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h2 style={{ color: NAVY, fontSize: 15, fontWeight: 700, margin: 0 }}>Meine Verträge</h2>
-            <Link to="/portal/vertraege" style={{ color: ACCENT, fontSize: 12, fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 2 }}>
-              Alle <ChevronRight size={14} />
-            </Link>
-          </div>
-          {contracts.length === 0 ? (
-            <p style={{ color: '#9ca3af', fontSize: 14, textAlign: 'center', padding: '20px 0' }}>Keine Verträge vorhanden</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {contracts.slice(0, 5).map(c => {
-                const statusColor = STATUS_COLORS[c.status] || '#6b7280'
-                return (
-                  <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#f9fafb', borderRadius: 8 }}>
-                    <div>
-                      <p style={{ color: NAVY, fontWeight: 600, fontSize: 13, margin: 0 }}>{c.insurer || '–'}</p>
-                      <p style={{ color: '#6b7280', fontSize: 12, margin: '2px 0 0' }}>
-                        {c.insurance_type}{c.product ? ` · ${c.product}` : ''}
-                      </p>
-                    </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 10 }}>
-                      {c.premium_monthly != null && (
-                        <p style={{ color: NAVY, fontWeight: 600, fontSize: 13, margin: 0 }}>
-                          CHF {c.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2 })}/Mt.
-                        </p>
-                      )}
-                      <span style={{ background: `${statusColor}18`, color: statusColor, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, marginTop: 2, display: 'inline-block' }}>
-                        {c.custom_status || STATUS_LABELS[c.status] || c.status}
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Contact info + Yearly premium */}
-        <div style={{ background: '#fff', borderRadius: 12, padding: 22, boxShadow: '0 1px 6px rgba(11,28,44,0.07)' }}>
-          <h2 style={{ color: NAVY, fontSize: 15, fontWeight: 700, margin: '0 0 16px' }}>Meine Kontaktdaten</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-            {[
-              { icon: Mail, value: customer.email },
-              { icon: Phone, value: customer.phone || customer.mobile },
-              { icon: MapPin, value: customer.street ? `${customer.street}, ${customer.zip_code} ${customer.city}` : null },
-              { icon: Calendar, value: customer.birthdate ? new Date(customer.birthdate).toLocaleDateString('de-CH') : null },
-            ].filter(i => i.value).map(({ icon: Icon, value }, idx) => (
-              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 30, height: 30, borderRadius: 7, background: `${ACCENT}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Icon size={13} color={ACCENT} />
-                </div>
-                <span style={{ color: '#374151', fontSize: 13 }}>{value}</span>
+    <div style={{ background: '#f8f9fa', minHeight: '100vh', fontFamily: 'Inter, -apple-system, sans-serif', color: '#1a1a1a' }}>
+      
+      {/* HEADER */}
+      <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '16px 0', position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <img src={LOGO_URL} alt="VSVV" style={{ height: 40 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {customer && (
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>{customer.first_name} {customer.last_name}</p>
+                <p style={{ fontSize: 11, margin: '3px 0 0', color: '#6b7280' }}>{customer.email}</p>
               </div>
-            ))}
+            )}
+            <button 
+              onClick={handleLogout}
+              style={{
+                background: '#f3f4f6',
+                border: '1px solid #e5e7eb',
+                borderRadius: 6,
+                padding: '8px 14px',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 500,
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => { e.target.style.background = '#e5e7eb' }}
+              onMouseLeave={e => { e.target.style.background = '#f3f4f6' }}
+            >
+              Abmelden
+            </button>
           </div>
-
-          {totalYearly > 0 && (
-            <div style={{ marginTop: 18, padding: '14px 16px', background: `${ACCENT}0d`, borderRadius: 10, border: `1px solid ${ACCENT}22` }}>
-              <p style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 4px' }}>Gesamte Jahresprämie</p>
-              <p style={{ color: NAVY, fontSize: 20, fontWeight: 700, margin: 0 }}>
-                CHF {totalYearly.toLocaleString('de-CH', { minimumFractionDigits: 2 })}
-              </p>
-              <p style={{ color: '#9ca3af', fontSize: 11, margin: '2px 0 0' }}>basierend auf {contracts.length} Vertrag{contracts.length !== 1 ? 'en' : ''}</p>
-            </div>
-          )}
         </div>
+      </header>
+
+      {/* TEST HEADER */}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '20px 40px', background: '#fff3cd', borderBottom: '1px solid #ffeaa7' }}>
+        <h2 style={{ margin: 0, color: '#856404', fontSize: 14, fontWeight: 700 }}>TEST VSVV SICHTBAR</h2>
       </div>
 
-      <style>{`@media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr !important; } }`}</style>
+      {/* MAIN CONTENT */}
+      <main style={{ maxWidth: 1200, margin: '0 auto', padding: '60px 40px' }}>
+        
+        {/* 1. BEGRÜSSUNG */}
+        <section style={{ marginBottom: 80 }}>
+          <h1 style={{ fontSize: 36, fontWeight: 700, margin: '0 0 16px', lineHeight: 1.2, color: '#0f172a' }}>
+            Willkommen bei VSVV
+          </h1>
+          <p style={{ fontSize: 16, color: '#4b5563', margin: '0 0 8px', lineHeight: 1.6 }}>
+            Ihrem unabhängigen Partner für strukturierte und transparente Versicherungslösungen.
+          </p>
+          <p style={{ fontSize: 16, color: '#6b7280', margin: '0 0 32px', lineHeight: 1.6 }}>
+            Behalten Sie jederzeit den Überblick über Ihre Versicherungen und Dokumente.
+          </p>
+          <a href="https://wa.me/41787170007" target="_blank" rel="noopener noreferrer">
+            <button style={{
+              background: '#25D366',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              padding: '12px 24px',
+              cursor: 'pointer',
+              fontSize: 14,
+              fontWeight: 600,
+              transition: 'all 0.2s',
+              boxShadow: '0 2px 8px rgba(37, 211, 102, 0.2)',
+            }}
+            onMouseEnter={e => { e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 4px 12px rgba(37, 211, 102, 0.3)' }}
+            onMouseLeave={e => { e.target.style.transform = 'translateY(0)'; e.target.style.boxShadow = '0 2px 8px rgba(37, 211, 102, 0.2)' }}
+            >
+              💬 Beratung per WhatsApp
+            </button>
+          </a>
+        </section>
+
+        {/* 2. KUNDENDATEN */}
+        {customer && (
+          <section style={{ marginBottom: 80, paddingBottom: 60, borderBottom: '1px solid #e5e7eb' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 40 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ marginBottom: 24 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 8px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Name</p>
+                  <p style={{ fontSize: 16, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.first_name} {customer.last_name}</p>
+                </div>
+                {customer.street && (
+                  <div style={{ marginBottom: 24 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 8px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Adresse</p>
+                    <p style={{ fontSize: 16, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>
+                      {customer.street}, {customer.zip_code} {customer.city}
+                    </p>
+                  </div>
+                )}
+                <div style={{ marginBottom: 24 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 8px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>E-Mail</p>
+                  <p style={{ fontSize: 16, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.email}</p>
+                </div>
+                {customer.phone && (
+                  <div>
+                    <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 8px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Telefon</p>
+                    <p style={{ fontSize: 16, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.phone}</p>
+                  </div>
+                )}
+              </div>
+              <button style={{
+                background: '#f3f4f6',
+                border: '1px solid #e5e7eb',
+                borderRadius: 6,
+                padding: '10px 16px',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#1f2937',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => { e.target.style.background = '#e5e7eb' }}
+              onMouseLeave={e => { e.target.style.background = '#f3f4f6' }}
+              >
+                ✎ Daten bearbeiten
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* 3. VERSICHERUNGSÜBERSICHT */}
+        <section style={{ marginBottom: 80, paddingBottom: 60, borderBottom: '1px solid #e5e7eb' }}>
+          <h2 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 40px', color: '#0f172a' }}>Ihre Versicherungsübersicht</h2>
+          
+          <div style={{ background: '#0f172a', color: '#fff', borderRadius: 8, padding: 40 }}>
+            <div style={{ marginBottom: 48 }}>
+              <p style={{ fontSize: 12, fontWeight: 700, margin: '0 0 12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5 }}>Monatsprämie</p>
+              <p style={{ fontSize: 42, fontWeight: 800, margin: 0, lineHeight: 1 }}>
+                CHF {totalPremiumMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+
+            <div style={{ marginBottom: 48 }}>
+              <p style={{ fontSize: 12, fontWeight: 700, margin: '0 0 12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5 }}>Jahresprämie</p>
+              <p style={{ fontSize: 42, fontWeight: 800, margin: 0, lineHeight: 1 }}>
+                CHF {totalPremiumYearly.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
+              </p>
+            </div>
+
+            <div>
+              <p style={{ fontSize: 12, fontWeight: 700, margin: '0 0 12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5 }}>Aktive Verträge</p>
+              <p style={{ fontSize: 42, fontWeight: 800, margin: 0, lineHeight: 1 }}>
+                {activeContracts}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. VERTRÄGE */}
+        <section style={{ marginBottom: 80, paddingBottom: 60, borderBottom: '1px solid #e5e7eb' }}>
+          <h2 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 32px', color: '#0f172a' }}>Ihre Verträge</h2>
+          
+          {contracts.length === 0 ? (
+            <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 40, textAlign: 'center', color: '#6b7280' }}>
+              Keine Verträge vorhanden
+            </div>
+          ) : (
+            <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+                      <th style={{ padding: '16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Versicherung</th>
+                      <th style={{ padding: '16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Anbieter</th>
+                      <th style={{ padding: '16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Status</th>
+                      <th style={{ padding: '16px', textAlign: 'right', fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Monatsprämie</th>
+                      <th style={{ padding: '16px', textAlign: 'right', fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Jahresprämie</th>
+                      <th style={{ padding: '16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {contracts.map((contract, idx) => (
+                      <tr key={contract.id} style={{ borderBottom: idx < contracts.length - 1 ? '1px solid #f3f4f6' : 'none', transition: 'background 0.2s' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#f9fafb' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                      >
+                        <td style={{ padding: '16px', fontSize: 14, fontWeight: 500, color: '#1a1a1a' }}>{contract.insurance_type || '–'}</td>
+                        <td style={{ padding: '16px', fontSize: 14, color: '#4b5563' }}>{contract.insurer || '–'}</td>
+                        <td style={{ padding: '16px' }}>
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '4px 10px',
+                            borderRadius: 4,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            background: contract.status === 'active' ? '#dcfce7' : '#f3f4f6',
+                            color: contract.status === 'active' ? '#166534' : '#6b7280',
+                          }}>
+                            {contract.status === 'active' ? 'Aktiv' : contract.status === 'cancelled' ? 'Gekündigt' : contract.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px', textAlign: 'right', fontSize: 14, fontWeight: 500, color: '#1a1a1a' }}>
+                          CHF {(contract.premium_monthly || 0).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ padding: '16px', textAlign: 'right', fontSize: 14, fontWeight: 700, color: '#1a1a1a' }}>
+                          CHF {(contract.premium_yearly || 0).toLocaleString('de-CH', { maximumFractionDigits: 0 })}
+                        </td>
+                        <td style={{ padding: '16px', fontSize: 13, color: '#6b7280' }}>
+                          {contract.start_date ? formatDate(contract.start_date) : '–'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* 5. DOKUMENTE */}
+        <section style={{ marginBottom: 80 }}>
+          <h2 style={{ fontSize: 24, fontWeight: 700, margin: '0 0 32px', color: '#0f172a' }}>Ihre Dokumente</h2>
+          
+          {documents.length === 0 ? (
+            <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 40, textAlign: 'center', color: '#6b7280' }}>
+              Keine Dokumente vorhanden
+            </div>
+          ) : (
+            <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: 24 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                {documents.map((doc, idx) => (
+                  <div key={doc.id} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '16px 0',
+                    borderBottom: idx < documents.length - 1 ? '1px solid #f3f4f6' : 'none',
+                  }}>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 500, margin: '0 0 4px', color: '#1a1a1a' }}>{doc.name}</p>
+                      <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>{formatDate(doc.created_date)}</p>
+                    </div>
+                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                      <button style={{
+                        background: '#f3f4f6',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: 6,
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: '#1f2937',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={e => { e.target.style.background = '#e5e7eb' }}
+                      onMouseLeave={e => { e.target.style.background = '#f3f4f6' }}
+                      >
+                        📥 Herunterladen
+                      </button>
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      </main>
+
+      {/* FOOTER */}
+      <footer style={{ padding: '40px', textAlign: 'center', fontSize: 12, color: '#9ca3af', borderTop: '1px solid #e5e7eb', marginTop: 80 }}>
+        © 2025 VSVV – Ihre Versicherungsplattform
+      </footer>
+
+      {/* FLOATING WHATSAPP BUTTON */}
+      <a
+        href="https://wa.me/41787170007"
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Beratung per WhatsApp"
+        style={{
+          position: 'fixed',
+          bottom: 32,
+          right: 32,
+          zIndex: 100,
+          width: 56,
+          height: 56,
+          background: '#25D366',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 4px 12px rgba(37, 211, 102, 0.3)',
+          textDecoration: 'none',
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+          fontSize: 24,
+        }}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.boxShadow = '0 8px 20px rgba(37, 211, 102, 0.4)' }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 211, 102, 0.3)' }}
+      >
+        💬
+      </a>
     </div>
   )
 }
