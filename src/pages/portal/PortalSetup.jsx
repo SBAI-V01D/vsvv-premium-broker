@@ -117,7 +117,7 @@ export default function PortalSetup() {
 
         {/* Logo in the middle */}
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '8%', zIndex: 10 }}>
-          <img src={LOGO_URL} alt="VSVV" style={{ height: 80, objectFit: 'contain', filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.3))' }} />
+          <img src={LOGO_URL} alt="VSVV" style={{ height: 80, objectFit: 'contain', opacity: 0.88, mixBlendMode: 'soft-light', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.2)) saturate(0.85)', transition: 'opacity 0.3s ease' }} />
         </div>
       </div>
 
