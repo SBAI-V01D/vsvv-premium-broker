@@ -113,7 +113,7 @@ export default function PortalSetup() {
         }}
       >
         {/* Subtle fade to right panel */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 45%, rgba(11,30,55,0.2) 65%, rgba(11,30,55,0.5) 85%, rgba(10,35,75,0.8) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 70%, rgba(10,35,75,0.6) 100%)' }} />
       </div>
 
       {/* RIGHT — Login panel */}
@@ -132,6 +132,11 @@ export default function PortalSetup() {
       >
         {/* Main content */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: '12vh', paddingBottom: '80px' }}>
+          {/* Logo */}
+          <div style={{ marginLeft: 40, marginTop: 32, marginBottom: 28 }}>
+            <img src={LOGO_URL} alt="VSVV" style={{ height: 120, objectFit: 'contain', opacity: 0.9, filter: 'hue-rotate(5deg) brightness(0.95)' }} />
+          </div>
+
           <div className="content-wrapper" style={{ marginLeft: 60, marginRight: 50, maxWidth: 420 }}>
             {!mustChangePassword ? (
               <>
