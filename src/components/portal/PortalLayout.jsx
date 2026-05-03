@@ -91,55 +91,58 @@ export default function PortalLayout({ children }) {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F5F8FC', display: 'flex', fontFamily: 'Inter, sans-serif' }}>
+    <div style={{ height: '100vh', background: '#F5F8FC', display: 'flex', flexDirection: 'column', fontFamily: 'Inter, sans-serif' }}>
 
-      {/* Desktop sidebar */}
-      <div style={{ width: 240, background: NAVY, flexShrink: 0, display: 'none' }} className="md-sidebar">
-        <SidebarContent />
-      </div>
-
-      {/* Desktop sidebar (visible) */}
-      <aside style={{ width: 240, background: NAVY, flexShrink: 0 }} className="hidden md:block">
-        <SidebarContent />
-      </aside>
-
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40 }}
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      {/* Mobile sidebar */}
-      <aside style={{
-        position: 'fixed', top: 0, left: mobileOpen ? 0 : -260,
-        width: 240, height: '100vh', background: NAVY,
-        zIndex: 50, transition: 'left 0.25s',
-      }} className="md:hidden">
-        <button
-          onClick={() => setMobileOpen(false)}
-          style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}
-        >
-          <X size={20} />
-        </button>
-        <SidebarContent />
-      </aside>
-
-      {/* Main */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        {/* Topbar mobile */}
-        <div style={{ background: NAVY, padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} className="md:hidden">
-          <button onClick={() => setMobileOpen(true)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer' }}>
-            <Menu size={22} />
-          </button>
-          <img src={LOGO_URL} alt="VSVV" style={{ height: 36 }} />
-          <div style={{ width: 22 }} />
+      {/* Desktop sidebar + Main */}
+      <div style={{ display: 'flex', flex: 1, minWidth: 0 }}>
+        {/* Desktop sidebar */}
+        <div style={{ width: 240, background: NAVY, flexShrink: 0, display: 'none' }} className="md-sidebar">
+          <SidebarContent />
         </div>
 
-        <main style={{ flex: 1, padding: '28px 24px', maxWidth: 1100, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
-          {children}
-        </main>
+        {/* Desktop sidebar (visible) */}
+        <aside style={{ width: 240, background: NAVY, flexShrink: 0 }} className="hidden md:block">
+          <SidebarContent />
+        </aside>
+
+        {/* Mobile overlay */}
+        {mobileOpen && (
+          <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40 }}
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
+
+        {/* Mobile sidebar */}
+        <aside style={{
+          position: 'fixed', top: 0, left: mobileOpen ? 0 : -260,
+          width: 240, height: '100vh', background: NAVY,
+          zIndex: 50, transition: 'left 0.25s',
+        }} className="md:hidden">
+          <button
+            onClick={() => setMobileOpen(false)}
+            style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}
+          >
+            <X size={20} />
+          </button>
+          <SidebarContent />
+        </aside>
+
+        {/* Main */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowY: 'auto' }}>
+          {/* Topbar mobile */}
+          <div style={{ background: NAVY, padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} className="md:hidden">
+            <button onClick={() => setMobileOpen(true)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', cursor: 'pointer' }}>
+              <Menu size={22} />
+            </button>
+            <img src={LOGO_URL} alt="VSVV" style={{ height: 36 }} />
+            <div style={{ width: 22 }} />
+          </div>
+
+          <main style={{ flex: 1, padding: '28px 24px', maxWidth: 1100, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+            {children}
+          </main>
+        </div>
       </div>
 
       {/* WhatsApp floating button */}
