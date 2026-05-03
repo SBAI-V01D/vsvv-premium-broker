@@ -13,6 +13,7 @@ export default function PortalDashboard() {
   const [uploadCategory, setUploadCategory] = useState('other')
   const [uploadingDoc, setUploadingDoc] = useState(false)
   const [uploadError, setUploadError] = useState('')
+  const [uploadSuccess, setUploadSuccess] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState(false)
   const [savingCustomer, setSavingCustomer] = useState(false)
   const [customerError, setCustomerError] = useState('')
@@ -152,11 +153,17 @@ export default function PortalDashboard() {
           
           setUploadFile(null)
           setUploadCategory('other')
-          setShowUpload(false)
           setUploadingDoc(false)
+          setUploadSuccess(true)
           
           // Refresh document list immediately
           invalidateCache()
+          
+          // Close dialog and reset success after 3 seconds
+          setTimeout(() => {
+            setShowUpload(false)
+            setUploadSuccess(false)
+          }, 2000)
         } catch (err) {
           setUploadError('Fehler beim Hochladen: ' + err.message)
           setUploadingDoc(false)
@@ -703,6 +710,12 @@ export default function PortalDashboard() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 12, padding: 32, maxWidth: 500, width: '100%', boxShadow: '0 20px 25px rgba(0,0,0,0.1)' }}>
             <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: '#0f172a' }}>Dokument hochladen</h3>
+
+            {uploadSuccess && (
+              <div style={{ background: '#dcfce7', border: '2px solid #86efac', borderRadius: 8, padding: '12px 14px', marginBottom: 16, fontSize: 13, color: '#166534', fontWeight: 500 }}>
+                ✓ Dokument erfolgreich hochgeladen!
+              </div>
+            )}
 
             {uploadError && (
               <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '12px 14px', marginBottom: 16, fontSize: 13, color: '#dc2626' }}>
