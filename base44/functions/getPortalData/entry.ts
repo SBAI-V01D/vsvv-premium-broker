@@ -1,4 +1,6 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25'
+import { createClient } from 'npm:@base44/sdk@0.8.25'
+
+const base44 = createClient({ appId: Deno.env.get('BASE44_APP_ID') })
 
 Deno.serve(async (req) => {
   try {
@@ -8,8 +10,6 @@ Deno.serve(async (req) => {
     if (!customer_id) {
       return Response.json({ error: 'customer_id erforderlich' }, { status: 400 })
     }
-
-    const base44 = createClientFromRequest(req)
 
     // Update action — only allowed fields from the customer themselves
     if (action === 'update_customer') {

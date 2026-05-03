@@ -1,4 +1,6 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25'
+import { createClient } from 'npm:@base44/sdk@0.8.25'
+
+const base44 = createClient({ appId: Deno.env.get('BASE44_APP_ID') })
 
 async function hashPassword(password) {
   const encoder = new TextEncoder()
@@ -15,43 +17,30 @@ async function verifyPassword(password, hash) {
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req)
     const body = await req.json()
     const { action, customer_id, password, email } = body
 
-    // Public actions (no auth required — used by portal login / password change)
+    // Public actions — used by portal login (no Base44 user auth available)
     const publicActions = ['verify', 'lookup_customer', 'reset_password']
 
     if (!publicActions.includes(action)) {
-      const user = await base44.auth.me()
-      if (!user) {
-        return Response.json({ error: 'Unauthorized' }, { status: 401 })
-      }
-      if (user.role !== 'admin') {
-        return Response.json({ error: 'Access denied' }, { status: 403 })
-      }
+      // For admin actions, require a Base44 user token
+      const { createClientFromRequest } = await import('npm:@base44/sdk@0.8.25')
+      const authedClient = createClientFromRequest(req)
+      const user = await authedClient.auth.me()
+      if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+      if (user.role !== 'admin') return Response.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    // Lookup customer by email — public, used by portal login before we have customer_id
     if (action === 'lookup_customer') {
-      if (!email) {
-        return Response.json({ error: 'email erforderlich' }, { status: 400 })
-      }
+      if (!email) return Response.json({ error: 'email erforderlich' }, { status: 400 })
       const customers = await base44.asServiceRole.entities.Customer.filter({ email })
       const customer = customers.find(c => c.email?.toLowerCase() === email.toLowerCase())
-      if (!customer) {
-        return Response.json({ found: false })
-      }
-      // Check if password change is required:
-      // 1. Explicit flag set (first login / admin reset)
-      // 2. Last password change was more than 28 days ago
+      if (!customer) return Response.json({ found: false })
+
       const FOUR_WEEKS_MS = 28 * 24 * 60 * 60 * 1000
-      const lastChange = customer.portal_last_password_change
-        ? new Date(customer.portal_last_password_change)
-        : null
-      const passwordExpired = lastChange
-        ? (Date.now() - lastChange.getTime()) > FOUR_WEEKS_MS
-        : false
+      const lastChange = customer.portal_last_password_change ? new Date(customer.portal_last_password_change) : null
+      const passwordExpired = lastChange ? (Date.now() - lastChange.getTime()) > FOUR_WEEKS_MS : false
       const mustChange = customer.portal_password_must_change || passwordExpired
 
       return Response.json({
@@ -64,21 +53,15 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'verify') {
-      if (!customer_id || !password) {
-        return Response.json({ error: 'customer_id und password erforderlich' }, { status: 400 })
-      }
+      if (!customer_id || !password) return Response.json({ error: 'customer_id und password erforderlich' }, { status: 400 })
       const customer = await base44.asServiceRole.entities.Customer.get(customer_id)
-      if (!customer) {
-        return Response.json({ error: 'Kunde nicht gefunden' }, { status: 404 })
-      }
+      if (!customer) return Response.json({ error: 'Kunde nicht gefunden' }, { status: 404 })
       const valid = await verifyPassword(password, customer.portal_password_hash)
       return Response.json({ valid })
     }
 
     if (action === 'set_password') {
-      if (!customer_id || !password) {
-        return Response.json({ error: 'customer_id und password erforderlich' }, { status: 400 })
-      }
+      if (!customer_id || !password) return Response.json({ error: 'customer_id und password erforderlich' }, { status: 400 })
       const passwordHash = await hashPassword(password)
       await base44.asServiceRole.entities.Customer.update(customer_id, {
         portal_password_hash: passwordHash,
@@ -89,9 +72,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'reset_password') {
-      if (!customer_id || !password) {
-        return Response.json({ error: 'customer_id und password erforderlich' }, { status: 400 })
-      }
+      if (!customer_id || !password) return Response.json({ error: 'customer_id und password erforderlich' }, { status: 400 })
       const passwordHash = await hashPassword(password)
       await base44.asServiceRole.entities.Customer.update(customer_id, {
         portal_password_hash: passwordHash,
