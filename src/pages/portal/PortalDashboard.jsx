@@ -183,7 +183,7 @@ export default function PortalDashboard() {
           <section style={{ marginBottom: 64, paddingBottom: 48, borderBottom: '1px solid #e5e7eb' }}>
             {!editingCustomer ? (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 60 }}>
-                <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px 48px' }}>
+                <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '32px 48px' }}>
                   <div>
                     <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>Name</p>
                     <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.first_name} {customer.last_name}</p>
