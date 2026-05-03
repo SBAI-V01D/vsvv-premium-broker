@@ -147,53 +147,43 @@ export default function PortalCustomerDashboard() {
         padding: '40px 24px',
       }}>
 
-        {/* HERO SECTION (PROMINENT) */}
+        {/* HERO SECTION (DOMINANT) */}
         <div style={{
-          background: 'linear-gradient(135deg, rgba(91,163,232,0.1) 0%, rgba(91,163,232,0.05) 100%)',
-          border: '1px solid rgba(91,163,232,0.12)',
-          borderRadius: 16,
-          padding: '48px 40px',
-          marginBottom: 60,
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 40,
-          alignItems: 'center',
+          background: 'linear-gradient(135deg, rgba(91,163,232,0.15) 0%, rgba(91,163,232,0.08) 100%)',
+          border: '2px solid rgba(91,163,232,0.2)',
+          borderRadius: 20,
+          padding: '56px 48px',
+          marginBottom: 72,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 32,
         }}>
+          {/* Title */}
           <div>
             <h1 style={{
-              fontSize: 40,
+              fontSize: 48,
               fontWeight: 700,
-              margin: '0 0 12px',
+              margin: 0,
               color: '#EAF1F7',
-              lineHeight: 1.2,
+              lineHeight: 1.1,
+              letterSpacing: '-1px',
             }}>
               Ihre Versicherungsübersicht
             </h1>
-            <p style={{
-              fontSize: 15,
-              color: '#8A9BB0',
-              margin: 0,
-              lineHeight: 1.6,
-            }}>
-              Alle Ihre Verträge zentral und transparent verwaltet
-            </p>
           </div>
+
+          {/* Metrics */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
-            gap: 24,
+            gap: 48,
           }}>
-            <div style={{
-              background: 'rgba(255,255,255,0.03)',
-              borderRadius: 12,
-              padding: 24,
-              textAlign: 'center',
-            }}>
+            <div>
               <p style={{
                 color: '#8A9BB0',
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: 500,
-                margin: 0,
+                margin: '0 0 12px',
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
               }}>
@@ -201,24 +191,19 @@ export default function PortalCustomerDashboard() {
               </p>
               <p style={{
                 color: '#5B9FE6',
-                fontSize: 44,
-                fontWeight: 700,
-                margin: '12px 0 0',
+                fontSize: 56,
+                fontWeight: 800,
+                margin: 0,
               }}>
                 {activeContracts}
               </p>
             </div>
-            <div style={{
-              background: 'rgba(255,255,255,0.03)',
-              borderRadius: 12,
-              padding: 24,
-              textAlign: 'center',
-            }}>
+            <div>
               <p style={{
                 color: '#8A9BB0',
-                fontSize: 12,
-                fontWeight: 500,
-                margin: 0,
+                fontSize: 13,
+                fontWeight: 5,
+                margin: '0 0 12px',
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
               }}>
@@ -226,22 +211,48 @@ export default function PortalCustomerDashboard() {
               </p>
               <p style={{
                 color: '#4ac66e',
-                fontSize: 44,
-                fontWeight: 700,
-                margin: '12px 0 0',
+                fontSize: 56,
+                fontWeight: 800,
+                margin: 0,
               }}>
                 CHF {totalPremium.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
               </p>
             </div>
           </div>
+
+          {/* Status Badge */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            paddingTop: 16,
+            borderTop: '1px solid rgba(91,163,232,0.15)',
+          }}>
+            <div style={{
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              background: '#4ac66e',
+              boxShadow: '0 0 8px rgba(74,198,110,0.4)',
+            }} />
+            <p style={{
+              color: '#4ac66e',
+              fontSize: 14,
+              fontWeight: 600,
+              margin: 0,
+            }}>
+              Alles aktuell – Ihr Portfolio ist in Ordnung
+            </p>
+          </div>
         </div>
 
-        {/* KPI CARDS (COMPACT) */}
+        {/* KPI CARDS (SECONDARY) */}
         <div className="kpi-grid" style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(2, 1fr)',
           gap: 16,
-          marginBottom: 60,
+          marginBottom: 72,
+          opacity: 0.85,
         }}>
           <KPICard
             icon={() => <FileText size={20} />}
