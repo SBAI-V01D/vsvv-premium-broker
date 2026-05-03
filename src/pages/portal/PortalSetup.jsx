@@ -1,15 +1,14 @@
 import React, { useState } from 'react'
 import { base44 } from '@/api/base44Client'
-import { Eye, EyeOff, AlertCircle, Lock, ShieldCheck, Handshake, TrendingUp } from 'lucide-react'
+import { Eye, EyeOff, Lock, CheckCircle, Shield, FileSearch, Award } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
-const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/daa966436_VSVV.png'
 const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/3704c4574_BildohneLogo.png'
 
-const PILLARS = [
-  { icon: ShieldCheck, title: 'Kompetent', text: 'Fachwissen, Erfahrung und Netzwerk für Ihre besten Interessen.' },
-  { icon: Handshake, title: 'Zuverlässig', text: 'Neutral und frei von Bindungen – ausschliesslich für Sie da.' },
-  { icon: TrendingUp, title: 'Zukunftsorientiert', text: 'Wir setzen uns heute für Ihre Sicherheit von morgen ein.' },
+const TRUST_ITEMS = [
+  { icon: Award, text: 'Unabhängige Beratung ohne Interessenskonflikte' },
+  { icon: FileSearch, text: 'Volle Transparenz über Ihre Versicherungen' },
+  { icon: Shield, text: 'Schweizer Datenschutz & höchste Sicherheitsstandards' },
 ]
 
 export default function PortalSetup() {
@@ -17,6 +16,7 @@ export default function PortalSetup() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [mustChangePassword, setMustChangePassword] = useState(false)
@@ -24,33 +24,43 @@ export default function PortalSetup() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [focusedField, setFocusedField] = useState(null)
 
-  const inputStyle = {
+  const inputBase = {
     width: '100%',
-    height: 46,
-    background: 'rgba(255,255,255,0.1)',
-    border: '1px solid rgba(255,255,255,0.15)',
-    borderRadius: 8,
+    height: 48,
+    background: 'rgba(255,255,255,0.07)',
+    border: '1px solid rgba(255,255,255,0.14)',
+    borderRadius: 10,
     padding: '0 14px',
-    color: '#fff',
+    color: '#EAF1F7',
     fontSize: 14,
     outline: 'none',
     boxSizing: 'border-box',
-    transition: 'border-color 0.2s',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+    fontFamily: 'Inter, Helvetica, sans-serif',
+  }
+
+  const inputFocused = {
+    borderColor: 'rgba(79,124,255,0.7)',
+    boxShadow: '0 0 0 3px rgba(79,124,255,0.12)',
   }
 
   const labelStyle = {
-    color: 'rgba(255,255,255,0.55)',
+    color: '#A8B3C2',
     fontSize: 11,
     fontWeight: 600,
-    letterSpacing: '0.6px',
+    letterSpacing: '0.7px',
     textTransform: 'uppercase',
     display: 'block',
     marginBottom: 7,
+    fontFamily: 'Inter, Helvetica, sans-serif',
   }
 
-  const handleFocus = e => { e.target.style.borderColor = 'rgba(79,124,255,0.8)' }
-  const handleBlur = e => { e.target.style.borderColor = 'rgba(255,255,255,0.15)' }
+  const getInputStyle = (field) => ({
+    ...inputBase,
+    ...(focusedField === field ? inputFocused : {}),
+  })
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -58,17 +68,17 @@ export default function PortalSetup() {
     setLoading(true)
     try {
       const lookupResult = await base44.functions.invoke('managePortalPassword', { action: 'lookup_customer', email })
-      if (!lookupResult.data?.found) { setError('E-Mail-Adresse nicht gefunden.'); setLoading(false); return }
+      if (!lookupResult.data?.found) { setError('Bitte überprüfen Sie Ihre Eingaben.'); setLoading(false); return }
       const { customer_id, portal_access_enabled, portal_password_must_change } = lookupResult.data
       if (!portal_access_enabled) { setError('Portal-Zugriff nicht aktiviert. Kontaktieren Sie Ihren Broker.'); setLoading(false); return }
       const verifyResult = await base44.functions.invoke('managePortalPassword', { action: 'verify', customer_id, password })
-      if (!verifyResult.data?.valid) { setError('E-Mail oder Passwort ist falsch.'); setLoading(false); return }
+      if (!verifyResult.data?.valid) { setError('Bitte überprüfen Sie Ihre Eingaben.'); setLoading(false); return }
       if (portal_password_must_change) { setMustChangePassword(true); setLoading(false); return }
       localStorage.setItem('portal_customer_id', customer_id)
       localStorage.setItem('portal_email', email)
       navigate('/portal')
     } catch (err) {
-      setError(`Fehler: ${err.message}`)
+      setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.')
     }
     setLoading(false)
   }
@@ -76,8 +86,8 @@ export default function PortalSetup() {
   const handleChangePassword = async (e) => {
     e.preventDefault()
     if (!newPassword.trim()) { setError('Bitte geben Sie ein neues Passwort ein.'); return }
-    if (newPassword !== confirmPassword) { setError('Passwörter stimmen nicht überein.'); return }
-    if (newPassword.length < 8) { setError('Passwort muss mindestens 8 Zeichen lang sein.'); return }
+    if (newPassword !== confirmPassword) { setError('Die Passwörter stimmen nicht überein.'); return }
+    if (newPassword.length < 8) { setError('Das Passwort muss mindestens 8 Zeichen lang sein.'); return }
     setLoading(true); setError('')
     try {
       const lookupResult = await base44.functions.invoke('managePortalPassword', { action: 'lookup_customer', email })
@@ -87,7 +97,7 @@ export default function PortalSetup() {
       localStorage.setItem('portal_email', email)
       navigate('/portal')
     } catch (err) {
-      setError(`Fehler: ${err.message}`)
+      setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.')
     }
     setLoading(false)
   }
@@ -95,192 +105,344 @@ export default function PortalSetup() {
   return (
     <div style={{
       minHeight: '100vh',
-      position: 'relative',
-      fontFamily: 'Inter, sans-serif',
+      display: 'flex',
+      fontFamily: 'Inter, Helvetica, sans-serif',
       overflow: 'hidden',
+      animation: 'fadeIn 0.4s ease-out',
     }}>
-      {/* Background image */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        backgroundImage: `url(${BG_URL})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }} />
-      {/* Dark overlay */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: 'rgba(10, 25, 45, 0.78)',
-      }} />
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @media (max-width: 768px) {
+          .login-left { display: none !important; }
+          .login-right { width: 100% !important; }
+        }
+      `}</style>
 
-      {/* Logo — top left */}
-      <div style={{ position: 'absolute', top: 30, left: 36, zIndex: 10 }}>
-        <img src={LOGO_URL} alt="VSVV" style={{ height: 78, objectFit: 'contain' }} />
-      </div>
-
-      {/* Footer */}
-      <div style={{ position: 'absolute', bottom: 20, left: 0, right: 0, textAlign: 'center', zIndex: 10 }}>
-        <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11, margin: 0 }}>
-          © {new Date().getFullYear()} VSVV Versicherungsbroker · Schweiz
-        </p>
-      </div>
-
-      {/* Main content */}
-      <div style={{
-        position: 'relative', zIndex: 10,
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '120px 24px 60px',
-      }}>
-
-        {/* Welcome headline */}
-        <h1 style={{
-          color: '#FFFFFF',
-          fontSize: 'clamp(26px, 4vw, 40px)',
-          fontWeight: 600,
-          textAlign: 'center',
-          maxWidth: 680,
-          lineHeight: 1.35,
-          letterSpacing: '-0.4px',
-          marginBottom: 10,
-        }}>
-          Herzlich Willkommen auf Ihrem<br />Kundenportal bei VSVV
-        </h1>
-
-        {/* Pillars row */}
+      {/* LEFT ZONE — 60% — Background Image visible */}
+      <div
+        className="login-left"
+        style={{
+          width: '60%',
+          position: 'relative',
+          overflow: 'hidden',
+          flexShrink: 0,
+        }}
+      >
         <div style={{
-          display: 'flex',
-          gap: 32,
-          justifyContent: 'center',
-          flexWrap: 'wrap',
-          marginTop: 20,
-          marginBottom: 32,
-          maxWidth: 720,
-        }}>
-          {PILLARS.map(({ icon: Icon, title, text }) => (
-            <div key={title} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, maxWidth: 210 }}>
-              <Icon style={{ width: 18, height: 18, color: '#7fa8ff', flexShrink: 0, marginTop: 2 }} />
-              <div>
-                <p style={{ color: '#E6EEF8', fontWeight: 600, fontSize: 14, margin: '0 0 2px 0' }}>{title}</p>
-                <p style={{ color: 'rgba(230,238,248,0.55)', fontSize: 12.5, margin: 0, lineHeight: 1.5 }}>{text}</p>
-              </div>
-            </div>
-          ))}
+          position: 'absolute', inset: 0,
+          backgroundImage: `url(${BG_URL})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }} />
+        {/* Subtle vignette only on right edge to blend into right panel */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(to right, rgba(11,31,58,0.15) 0%, rgba(11,31,58,0.55) 100%)',
+        }} />
+
+        {/* Bottom left branding */}
+        <div style={{ position: 'absolute', bottom: 36, left: 44, zIndex: 10 }}>
+          <p style={{ color: 'rgba(234,241,247,0.35)', fontSize: 12, margin: 0, letterSpacing: '0.3px' }}>
+            © {new Date().getFullYear()} VSVV Versicherungsbroker · Schweiz
+          </p>
         </div>
+      </div>
 
-        {/* Login box */}
+      {/* RIGHT ZONE — 40% — Navy panel */}
+      <div
+        className="login-right"
+        style={{
+          width: '40%',
+          minWidth: 380,
+          background: 'rgba(11,31,58,0.92)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          padding: '60px 52px',
+          position: 'relative',
+          borderLeft: '1px solid rgba(255,255,255,0.06)',
+        }}
+      >
+        {/* Mobile background (only shown on mobile) */}
         <div style={{
-          width: '100%',
-          maxWidth: 370,
-          background: 'rgba(255,255,255,0.08)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255,255,255,0.15)',
-          borderRadius: 14,
-          padding: '30px 28px',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.45)',
-        }}>
+          position: 'absolute', inset: 0, zIndex: 0,
+          backgroundImage: `url(${BG_URL})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          display: 'none',
+        }} className="mobile-bg" />
+        <div style={{ position: 'relative', zIndex: 1 }}>
 
           {!mustChangePassword ? (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(79,124,255,0.2)', border: '1px solid rgba(79,124,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Lock style={{ width: 15, height: 15, color: '#7fa8ff' }} />
-                </div>
-                <div>
-                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0 }}>Login</p>
-                  <p style={{ color: 'rgba(255,255,255,0.38)', fontSize: 12, margin: 0 }}>Bitte geben Sie Ihre Zugangsdaten ein</p>
-                </div>
+              {/* Headline block */}
+              <div style={{ marginBottom: 44 }}>
+                <h1 style={{
+                  color: '#EAF1F7',
+                  fontSize: 28,
+                  fontWeight: 600,
+                  margin: '0 0 14px',
+                  lineHeight: 1.3,
+                  letterSpacing: '-0.3px',
+                }}>
+                  Willkommen bei VSVV
+                </h1>
+                <p style={{
+                  color: '#A8B3C2',
+                  fontSize: 14,
+                  lineHeight: 1.65,
+                  margin: '0 0 10px',
+                  fontWeight: 400,
+                }}>
+                  Ihre unabhängige Plattform für fundierte Versicherungsentscheidungen – transparent, kompetent und konsequent in Ihrem Interesse.
+                </p>
+                <p style={{
+                  color: 'rgba(168,179,194,0.7)',
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                  margin: 0,
+                }}>
+                  Greifen Sie jederzeit sicher auf Ihre Verträge, Dokumente und persönliche Beratung zu.
+                </p>
               </div>
 
-              <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div>
-                  <label style={labelStyle}>E-Mail</label>
-                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoFocus placeholder="ihre@email.ch" style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Passwort</label>
-                  <div style={{ position: 'relative' }}>
-                    <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" style={{ ...inputStyle, paddingRight: 42 }} onFocus={handleFocus} onBlur={handleBlur} />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', padding: 0, display: 'flex' }}>
-                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
+              {/* Login form */}
+              <div style={{
+                background: 'rgba(255,255,255,0.06)',
+                backdropFilter: 'blur(14px)',
+                WebkitBackdropFilter: 'blur(14px)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 16,
+                padding: '32px 28px',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.35)',
+                marginBottom: 36,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 26 }}>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 10,
+                    background: 'rgba(79,124,255,0.15)',
+                    border: '1px solid rgba(79,124,255,0.25)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Lock size={14} color="rgba(127,168,255,0.9)" />
+                  </div>
+                  <div>
+                    <p style={{ color: '#EAF1F7', fontWeight: 600, fontSize: 15, margin: 0 }}>Sicherer Login</p>
+                    <p style={{ color: 'rgba(168,179,194,0.6)', fontSize: 12, margin: 0 }}>Geben Sie Ihre Zugangsdaten ein</p>
                   </div>
                 </div>
 
-                {error && (
-                  <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, padding: '9px 12px', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                    <AlertCircle style={{ width: 14, height: 14, color: '#f87171', flexShrink: 0, marginTop: 1 }} />
-                    <p style={{ color: '#fca5a5', fontSize: 12.5, margin: 0 }}>{error}</p>
+                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <label style={labelStyle}>E-Mail-Adresse</label>
+                    <input
+                      type="email" value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      required autoFocus
+                      placeholder="ihre@email.ch"
+                      style={getInputStyle('email')}
+                      onFocus={() => setFocusedField('email')}
+                      onBlur={() => setFocusedField(null)}
+                    />
                   </div>
-                )}
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{ width: '100%', height: 46, borderRadius: 8, border: 'none', background: loading ? 'rgba(79,124,255,0.35)' : 'linear-gradient(135deg, #4F7CFF 0%, #6AA3FF 100%)', color: '#fff', fontWeight: 600, fontSize: 15, cursor: loading ? 'not-allowed' : 'pointer', marginTop: 4, transition: 'opacity 0.2s', boxShadow: loading ? 'none' : '0 4px 18px rgba(79,124,255,0.35)' }}
-                  onMouseEnter={e => { if (!loading) e.target.style.opacity = '0.85' }}
-                  onMouseLeave={e => { e.target.style.opacity = '1' }}
-                >
-                  {loading ? 'Anmelden...' : 'Anmelden'}
-                </button>
-              </form>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
+                      <label style={{ ...labelStyle, marginBottom: 0 }}>Passwort</label>
+                      <button type="button" style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: 'rgba(168,179,194,0.55)', fontSize: 11, fontFamily: 'inherit',
+                        padding: 0, letterSpacing: '0.2px',
+                      }}>
+                        Passwort vergessen?
+                      </button>
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        required placeholder="••••••••"
+                        style={{ ...getInputStyle('password'), paddingRight: 44 }}
+                        onFocus={() => setFocusedField('password')}
+                        onBlur={() => setFocusedField(null)}
+                      />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} style={{
+                        position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: 'rgba(168,179,194,0.5)', padding: 0, display: 'flex',
+                      }}>
+                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
+                  </div>
 
-              <p style={{ color: 'rgba(255,255,255,0.22)', fontSize: 11.5, textAlign: 'center', marginTop: 20, marginBottom: 0 }}>
+                  {/* Remember me */}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
+                    <div
+                      onClick={() => setRememberMe(!rememberMe)}
+                      style={{
+                        width: 16, height: 16, borderRadius: 4,
+                        border: `1px solid ${rememberMe ? 'rgba(79,124,255,0.7)' : 'rgba(255,255,255,0.2)'}`,
+                        background: rememberMe ? 'rgba(79,124,255,0.25)' : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0, transition: 'all 0.15s',
+                      }}
+                    >
+                      {rememberMe && <CheckCircle size={10} color="#7fa8ff" />}
+                    </div>
+                    <span style={{ color: 'rgba(168,179,194,0.7)', fontSize: 12 }}>Angemeldet bleiben</span>
+                  </label>
+
+                  {/* Error */}
+                  {error && (
+                    <div style={{
+                      background: 'rgba(180,150,100,0.08)',
+                      border: '1px solid rgba(200,170,110,0.2)',
+                      borderRadius: 8, padding: '10px 14px',
+                    }}>
+                      <p style={{ color: '#c8a96e', fontSize: 13, margin: 0 }}>{error}</p>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    style={{
+                      width: '100%', height: 48, borderRadius: 10, border: 'none',
+                      background: loading ? 'rgba(44,70,120,0.5)' : 'linear-gradient(135deg, #1C3D5A 0%, #2F5D8A 100%)',
+                      color: '#EAF1F7', fontWeight: 600, fontSize: 15,
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      marginTop: 4,
+                      transition: 'transform 0.15s, box-shadow 0.15s, background 0.2s',
+                      boxShadow: loading ? 'none' : '0 4px 20px rgba(28,61,90,0.5)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                      fontFamily: 'Inter, Helvetica, sans-serif',
+                    }}
+                    onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(28,61,90,0.65)'; e.currentTarget.style.background = 'linear-gradient(135deg, #224670 0%, #376b9e 100%)' } }}
+                    onMouseLeave={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(28,61,90,0.5)'; e.currentTarget.style.background = 'linear-gradient(135deg, #1C3D5A 0%, #2F5D8A 100%)' } }}
+                  >
+                    {loading ? (
+                      <>
+                        <div style={{ width: 16, height: 16, border: '2px solid rgba(234,241,247,0.3)', borderTopColor: '#EAF1F7', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                        Anmelden…
+                      </>
+                    ) : 'Anmelden'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Trust items */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {TRUST_ITEMS.map(({ icon: Icon, text }) => (
+                  <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Icon size={13} color="rgba(168,179,194,0.7)" />
+                    </div>
+                    <span style={{ color: 'rgba(168,179,194,0.65)', fontSize: 12.5, lineHeight: 1.4 }}>{text}</span>
+                  </div>
+                ))}
+              </div>
+
+              <p style={{ color: 'rgba(168,179,194,0.3)', fontSize: 11.5, marginTop: 40, marginBottom: 0, textAlign: 'center', letterSpacing: '0.2px' }}>
                 Kein Zugang? Kontaktieren Sie Ihren Versicherungsbroker.
               </p>
             </>
           ) : (
+            /* Password change view */
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(79,124,255,0.2)', border: '1px solid rgba(79,124,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Lock style={{ width: 15, height: 15, color: '#7fa8ff' }} />
-                </div>
-                <div>
-                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, margin: 0 }}>Passwort ändern</p>
-                  <p style={{ color: 'rgba(255,255,255,0.38)', fontSize: 12, margin: 0 }}>Bitte setzen Sie ein neues Passwort</p>
-                </div>
+              <div style={{ marginBottom: 30 }}>
+                <h1 style={{ color: '#EAF1F7', fontSize: 24, fontWeight: 600, margin: '0 0 8px', letterSpacing: '-0.2px' }}>
+                  Passwort festlegen
+                </h1>
+                <p style={{ color: '#A8B3C2', fontSize: 13, margin: 0, lineHeight: 1.6 }}>
+                  Bitte wählen Sie ein persönliches Passwort für Ihren Zugang.
+                </p>
               </div>
 
-              <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div>
-                  <label style={labelStyle}>Neues Passwort</label>
-                  <div style={{ position: 'relative' }}>
-                    <input type={showNew ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} required autoFocus placeholder="Min. 8 Zeichen" style={{ ...inputStyle, paddingRight: 42 }} onFocus={handleFocus} onBlur={handleBlur} />
-                    <button type="button" onClick={() => setShowNew(!showNew)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', padding: 0, display: 'flex' }}>
-                      {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
+              <div style={{
+                background: 'rgba(255,255,255,0.06)',
+                backdropFilter: 'blur(14px)',
+                WebkitBackdropFilter: 'blur(14px)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 16, padding: '32px 28px',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.35)',
+              }}>
+                <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div>
+                    <label style={labelStyle}>Neues Passwort</label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type={showNew ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={e => setNewPassword(e.target.value)}
+                        required autoFocus placeholder="Min. 8 Zeichen"
+                        style={{ ...getInputStyle('newpw'), paddingRight: 44 }}
+                        onFocus={() => setFocusedField('newpw')}
+                        onBlur={() => setFocusedField(null)}
+                      />
+                      <button type="button" onClick={() => setShowNew(!showNew)} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(168,179,194,0.5)', padding: 0, display: 'flex' }}>
+                        {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <label style={labelStyle}>Passwort bestätigen</label>
-                  <div style={{ position: 'relative' }}>
-                    <input type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required placeholder="Passwort wiederholen" style={{ ...inputStyle, paddingRight: 42 }} onFocus={handleFocus} onBlur={handleBlur} />
-                    <button type="button" onClick={() => setShowConfirm(!showConfirm)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', padding: 0, display: 'flex' }}>
-                      {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
+                  <div>
+                    <label style={labelStyle}>Passwort bestätigen</label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type={showConfirm ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                        required placeholder="Passwort wiederholen"
+                        style={{ ...getInputStyle('confirmpw'), paddingRight: 44 }}
+                        onFocus={() => setFocusedField('confirmpw')}
+                        onBlur={() => setFocusedField(null)}
+                      />
+                      <button type="button" onClick={() => setShowConfirm(!showConfirm)} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(168,179,194,0.5)', padding: 0, display: 'flex' }}>
+                        {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                {error && (
-                  <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, padding: '9px 12px', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                    <AlertCircle style={{ width: 14, height: 14, color: '#f87171', flexShrink: 0, marginTop: 1 }} />
-                    <p style={{ color: '#fca5a5', fontSize: 12.5, margin: 0 }}>{error}</p>
-                  </div>
-                )}
+                  {error && (
+                    <div style={{ background: 'rgba(180,150,100,0.08)', border: '1px solid rgba(200,170,110,0.2)', borderRadius: 8, padding: '10px 14px' }}>
+                      <p style={{ color: '#c8a96e', fontSize: 13, margin: 0 }}>{error}</p>
+                    </div>
+                  )}
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{ width: '100%', height: 46, borderRadius: 8, border: 'none', background: loading ? 'rgba(79,124,255,0.35)' : 'linear-gradient(135deg, #4F7CFF 0%, #6AA3FF 100%)', color: '#fff', fontWeight: 600, fontSize: 15, cursor: loading ? 'not-allowed' : 'pointer', marginTop: 4, boxShadow: loading ? 'none' : '0 4px 18px rgba(79,124,255,0.35)' }}
-                  onMouseEnter={e => { if (!loading) e.target.style.opacity = '0.85' }}
-                  onMouseLeave={e => { e.target.style.opacity = '1' }}
-                >
-                  {loading ? 'Wird gespeichert...' : 'Passwort ändern'}
-                </button>
-              </form>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    style={{
+                      width: '100%', height: 48, borderRadius: 10, border: 'none',
+                      background: loading ? 'rgba(44,70,120,0.5)' : 'linear-gradient(135deg, #1C3D5A 0%, #2F5D8A 100%)',
+                      color: '#EAF1F7', fontWeight: 600, fontSize: 15,
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      transition: 'transform 0.15s, box-shadow 0.15s',
+                      boxShadow: loading ? 'none' : '0 4px 20px rgba(28,61,90,0.5)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                      fontFamily: 'Inter, Helvetica, sans-serif',
+                    }}
+                    onMouseEnter={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.background = 'linear-gradient(135deg, #224670 0%, #376b9e 100%)' } }}
+                    onMouseLeave={e => { if (!loading) { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.background = 'linear-gradient(135deg, #1C3D5A 0%, #2F5D8A 100%)' } }}
+                  >
+                    {loading ? (
+                      <>
+                        <div style={{ width: 16, height: 16, border: '2px solid rgba(234,241,247,0.3)', borderTopColor: '#EAF1F7', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                        Wird gespeichert…
+                      </>
+                    ) : 'Passwort festlegen'}
+                  </button>
+                </form>
+              </div>
             </>
           )}
         </div>
