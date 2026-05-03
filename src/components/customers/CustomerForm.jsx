@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { base44 } from '@/api/base44Client'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -54,36 +56,42 @@ const COUNTRIES = [
 ]
 
 export default function CustomerForm({ customer, primaryCustomers = [], onSave, onCancel, saving }) {
-  const [form, setForm] = useState(customer || {
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    mobile: '',
-    street: '',
-    zip_code: '',
-    city: '',
-    canton: '',
-    birthdate: '',
-    ahv_number: '',
-    profession: '',
-    civil_status: 'single',
-    nationality: 'CH',
-    drivers_license_date: '',
-    risk_profile: 'medium',
-    customer_type: 'private',
-    status: 'active',
-    mandate_status: 'active',
-    association_membership: 'none',
-    permit_type: 'none',
-    is_family_member: false,
-    primary_customer_id: '',
-    family_role: 'primary',
-    notes: '',
-  })
+   const [form, setForm] = useState(customer || {
+     first_name: '',
+     last_name: '',
+     email: '',
+     phone: '',
+     mobile: '',
+     street: '',
+     zip_code: '',
+     city: '',
+     canton: '',
+     birthdate: '',
+     ahv_number: '',
+     profession: '',
+     civil_status: 'single',
+     nationality: 'CH',
+     drivers_license_date: '',
+     risk_profile: 'medium',
+     customer_type: 'private',
+     status: 'active',
+     mandate_status: 'active',
+     association_membership: 'none',
+     permit_type: 'none',
+     is_family_member: false,
+     primary_customer_id: '',
+     family_role: 'primary',
+     notes: '',
+     assigned_broker: '',
+   })
 
-  const [autoFilled, setAutoFilled] = useState(false)
-  const { plzError, plzSuggestions, handlePostalCodeChange, selectSuggestion } = usePostalCodeLookup()
+   const [autoFilled, setAutoFilled] = useState(false)
+   const { plzError, plzSuggestions, handlePostalCodeChange, selectSuggestion } = usePostalCodeLookup()
+
+   const { data: brokers = [] } = useQuery({
+     queryKey: ['brokers'],
+     queryFn: () => base44.entities.Broker.list(),
+   })
 
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
 
@@ -276,6 +284,20 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      <div>
+        <Label>Beratender Broker</Label>
+        <Select value={form.assigned_broker} onValueChange={v => set('assigned_broker', v)}>
+          <SelectTrigger className="mt-1"><SelectValue placeholder="Broker auswählen..." /></SelectTrigger>
+          <SelectContent>
+            {brokers.map(b => (
+              <SelectItem key={b.id} value={b.email}>
+                {b.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
