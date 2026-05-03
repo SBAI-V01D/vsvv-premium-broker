@@ -26,7 +26,7 @@ export default function PortalCustomerOverviewV2() {
     <div style={{ background: '#f8f9fa', minHeight: '100vh' }}>
       {/* TEST ÜBERSCHRIFT */}
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px 40px', background: '#fff3cd', borderBottom: '1px solid #ffeaa7' }}>
-        <h2 style={{ margin: 0, color: '#856404', fontSize: 14, fontWeight: 700 }}>TEST VSVV – ÄNDERUNG AKTIV</h2>
+        <h2 style={{ margin: 0, color: '#856404', fontSize: 14, fontWeight: 700 }}>TEST VSVV SICHTBAR</h2>
       </div>
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '60px 40px' }}>
