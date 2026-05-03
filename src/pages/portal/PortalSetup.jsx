@@ -4,7 +4,6 @@ import { Eye, EyeOff, Shield, BarChart2, UserCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/469756d65_HintergrundbildKundenportal.png'
-const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/57d6261ba_VSVV.png'
 
 export default function PortalSetup() {
   const navigate = useNavigate()
@@ -114,11 +113,6 @@ export default function PortalSetup() {
       >
         {/* Subtle fade to right panel */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 70%, rgba(10,35,75,0.6) 100%)' }} />
-        
-        {/* Subtiles Logo im rechten dunklen Bereich */}
-        <div style={{ position: 'absolute', right: '2%', top: '32%', width: '42%', height: '28%', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5 }}>
-          <img src={LOGO_URL} alt="VSVV" style={{ height: '100%', maxHeight: 160, objectFit: 'contain', opacity: 0.82, filter: 'brightness(0.75) saturate(0.25)' }} />
-        </div>
       </div>
 
       {/* RIGHT — Login panel */}
