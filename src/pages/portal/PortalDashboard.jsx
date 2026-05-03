@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { base44 } from '@/api/base44Client'
 import { usePortalData } from '@/hooks/usePortalData'
 import { usePortalCustomer } from '@/hooks/usePortalCustomer'
@@ -23,6 +23,21 @@ export default function PortalDashboard() {
     phone: customer?.phone || '',
     mobile: customer?.mobile || '',
   })
+
+  useEffect(() => {
+    if (customer && !editingCustomer) {
+      setEditForm({
+        first_name: customer.first_name || '',
+        last_name: customer.last_name || '',
+        street: customer.street || '',
+        zip_code: customer.zip_code || '',
+        city: customer.city || '',
+        email: customer.email || '',
+        phone: customer.phone || '',
+        mobile: customer.mobile || '',
+      })
+    }
+  }, [customer, editingCustomer])
 
   const handleLogout = () => {
     localStorage.removeItem('portal_customer_id')
@@ -131,11 +146,11 @@ export default function PortalDashboard() {
               Ihrem Partner für transparente und strukturierte Versicherungslösungen. Behalten Sie jederzeit den Überblick über Ihre Versicherungen.
             </p>
           </div>
-          <a href="https://wa.me/41787170007" target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8, color: '#5B9FE6', fontSize: 13, fontWeight: 500, transition: 'color 0.2s', padding: '8px 0' }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#4A8DD4' }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#5B9FE6' }}
+          <a href="https://wa.me/41787170007" target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, color: '#6b7280', fontSize: 13, fontWeight: 500, transition: 'all 0.2s', padding: '6px 12px', borderRadius: 6, background: 'rgba(91, 163, 232, 0.08)' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#4A8DD4'; e.currentTarget.style.background = 'rgba(91, 163, 232, 0.14)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = 'rgba(91, 163, 232, 0.08)' }}
           >
-            💬 Beratung via WhatsApp
+            💬 Beratung
           </a>
         </section>
 
