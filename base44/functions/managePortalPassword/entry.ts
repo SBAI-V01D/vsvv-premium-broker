@@ -17,16 +17,18 @@ async function verifyPassword(password, hash) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req)
-    const user = await base44.auth.me()
-
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Only admin can manage passwords for other users
     const { action, customer_id, password } = await req.json()
-    if (user.role !== 'admin' && user.email !== customer_id) {
-      return Response.json({ error: 'Access denied' }, { status: 403 })
+
+    // 'verify' is public (used by portal login — no app user auth required)
+    if (action !== 'verify') {
+      const user = await base44.auth.me()
+      if (!user) {
+        return Response.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      // Only admin can set/reset passwords
+      if (user.role !== 'admin') {
+        return Response.json({ error: 'Access denied' }, { status: 403 })
+      }
     }
 
     if (action === 'set_password') {
@@ -65,7 +67,7 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'customer_id und password erforderlich' }, { status: 400 })
       }
 
-      const customer = await base44.entities.Customer.get(customer_id)
+      const customer = await base44.asServiceRole.entities.Customer.get(customer_id)
       if (!customer) {
         return Response.json({ error: 'Kunde nicht gefunden' }, { status: 404 })
       }
