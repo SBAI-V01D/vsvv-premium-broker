@@ -4,7 +4,7 @@ import { Eye, EyeOff, Shield, BarChart2, UserCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 const BG_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/469756d65_HintergrundbildKundenportal.png'
-const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/0cde67ef2_LogoVSVV2.png'
+const LOGO_URL = 'https://media.base44.com/images/public/69f07890d7d9106eb68a2c98/57d6261ba_VSVV.png'
 
 export default function PortalSetup() {
   const navigate = useNavigate()
@@ -134,7 +134,7 @@ export default function PortalSetup() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: '12vh', paddingBottom: '80px' }}>
           {/* Logo */}
           <div style={{ marginLeft: 40, marginTop: 32, marginBottom: 28 }}>
-            <img src={LOGO_URL} alt="VSVV" style={{ height: 120, objectFit: 'contain', opacity: 0.9, filter: 'hue-rotate(5deg) brightness(0.95)' }} />
+            <img src={LOGO_URL} alt="VSVV" style={{ height: 110, objectFit: 'contain', opacity: 0.85 }} />
           </div>
 
           <div className="content-wrapper" style={{ marginLeft: 60, marginRight: 50, maxWidth: 420 }}>
