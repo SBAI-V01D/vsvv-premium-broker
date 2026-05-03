@@ -23,8 +23,17 @@ export default function PortalDocuments() {
 
   const { data: documents = [], isLoading: loadingDocs } = useQuery({
     queryKey: ['portal-documents', customerId],
-    queryFn: () => base44.entities.Document.filter({ customer_id: customerId })
-      .then(docs => docs.filter(d => d.visible_in_portal !== false)),
+    queryFn: async () => {
+      // Load docs linked directly or via primary_customer_id (broker-uploaded)
+      const [direct, viaPrimary] = await Promise.all([
+        base44.entities.Document.filter({ customer_id: customerId }),
+        base44.entities.Document.filter({ primary_customer_id: customerId }),
+      ])
+      const map = {}
+      ;[...direct, ...viaPrimary].forEach(d => { map[d.id] = d })
+      // Only show docs not explicitly hidden from portal
+      return Object.values(map).filter(d => d.visible_in_portal !== false)
+    },
     enabled: !!customerId,
     staleTime: 20_000,
   })
@@ -99,6 +108,15 @@ export default function PortalDocuments() {
           </label>
         </div>
       </div>
+
+      {/* Debug banner */}
+      {!loadingDocs && documents.length === 0 && (
+        <div style={{ background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 9, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <span style={{ fontSize: 13, color: '#92400e' }}>
+            Dokumente geladen: <strong>0</strong> — Keine Dokumente mit diesem Kunden verknüpft (ID: {customerId})
+          </span>
+        </div>
+      )}
 
       {/* Drop zone */}
       <div
