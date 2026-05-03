@@ -110,6 +110,7 @@ export default function CustomerDetail() {
           <CardContent className="p-4 space-y-2">
             {customer.birthdate && <div className="text-sm"><span className="text-muted-foreground">Geburtsdatum:</span> {new Date(customer.birthdate).toLocaleDateString('de-CH')}</div>}
             {customer.profession && <div className="text-sm"><span className="text-muted-foreground">Beruf:</span> {customer.profession}</div>}
+            {customer.assigned_broker && <div className="text-sm"><span className="text-muted-foreground">Berater:</span> {customer.assigned_broker}</div>}
             <div className="text-sm"><span className="text-muted-foreground">Status:</span> {label(STATUS_LABELS, customer.status)}</div>
           </CardContent>
         </Card>
