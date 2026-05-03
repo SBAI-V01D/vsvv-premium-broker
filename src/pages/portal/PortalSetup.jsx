@@ -87,7 +87,7 @@ export default function PortalSetup() {
   }
 
   return (
-    <div style={{ height: '100vh', display: 'flex', fontFamily: 'Inter, Helvetica, sans-serif' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', fontFamily: 'Inter, Helvetica, sans-serif' }}>
       <style>{`
         @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
         input::placeholder { color: rgba(168,179,194,0.4); }
@@ -136,7 +136,7 @@ export default function PortalSetup() {
         }}
       >
         {/* Main content */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: 0, paddingBottom: '80px' }}>
 
           <div className="content-wrapper" style={{ marginLeft: 60, marginRight: 50, maxWidth: 420 }}>
             {!mustChangePassword ? (
@@ -321,17 +321,18 @@ export default function PortalSetup() {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="footer-section" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '20px 60px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10.5, color: 'rgba(255,255,255,0.55)' }}>
-          <span>© 2025 VSVV – Ihre Versicherungsplattform</span>
-          <div style={{ display: 'flex', gap: 18 }}>
-            {['Impressum', 'Datenschutz', 'AGB'].map((item, i, arr) => (
-              <React.Fragment key={item}>
-                <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', padding: 0, transition: 'opacity 0.2s' }} onMouseEnter={e => e.currentTarget.style.opacity = '0.8'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}>{item}</button>
-                {i < arr.length - 1 && <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>}
-              </React.Fragment>
-            ))}
-          </div>
+      </div>
+
+      {/* Footer — outside right section, as separate flex item */}
+      <div className="footer-section" style={{ flexShrink: 0, background: 'linear-gradient(135deg, rgba(15,45,85,0.95) 0%, rgba(10,35,75,0.99) 100%)', padding: '18px 60px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 10.5, color: 'rgba(255,255,255,0.55)' }}>
+        <span>© 2025 VSVV – Ihre Versicherungsplattform</span>
+        <div style={{ display: 'flex', gap: 18 }}>
+          {['Impressum', 'Datenschutz', 'AGB'].map((item, i, arr) => (
+            <React.Fragment key={item}>
+              <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 'inherit', fontFamily: 'inherit', padding: 0, transition: 'opacity 0.2s' }} onMouseEnter={e => e.currentTarget.style.opacity = '0.8'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}>{item}</button>
+              {i < arr.length - 1 && <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>}
+            </React.Fragment>
+          ))}
         </div>
       </div>
     </div>
