@@ -9,6 +9,10 @@ export default function PortalDashboard() {
   const { customer } = usePortalCustomer()
   const { contracts = [], documents = [] } = usePortalData()
   const [showUpload, setShowUpload] = useState(false)
+  const [uploadFile, setUploadFile] = useState(null)
+  const [uploadCategory, setUploadCategory] = useState('other')
+  const [uploadingDoc, setUploadingDoc] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const [editingCustomer, setEditingCustomer] = useState(false)
   const [savingCustomer, setSavingCustomer] = useState(false)
   const [customerError, setCustomerError] = useState('')
@@ -124,6 +128,35 @@ export default function PortalDashboard() {
   const formatDate = (dateStr) => {
     if (!dateStr) return '–'
     return new Date(dateStr).toLocaleDateString('de-CH')
+  }
+
+  const handleDocumentUpload = async (e) => {
+    e.preventDefault()
+    if (!uploadFile) return
+    
+    setUploadingDoc(true)
+    setUploadError('')
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file: uploadFile })
+      
+      await base44.entities.Document.create({
+        customer_id: localStorage.getItem('portal_customer_id'),
+        customer_name: `${customer.first_name} ${customer.last_name}`,
+        name: uploadFile.name.replace(/\.[^.]+$/, ''),
+        file_url,
+        category: uploadCategory,
+        uploaded_by_role: 'customer',
+        visible_in_portal: true,
+      })
+      
+      setUploadFile(null)
+      setUploadCategory('other')
+      setShowUpload(false)
+      window.location.reload()
+    } catch (err) {
+      setUploadError('Fehler beim Hochladen: ' + err.message)
+    }
+    setUploadingDoc(false)
   }
 
   return (
@@ -560,8 +593,28 @@ export default function PortalDashboard() {
         </section>
 
         {/* 5. DOKUMENTE */}
-         <section style={{ marginBottom: 40 }}>
-           <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 20px', color: '#0f172a' }}>Ihre Dokumente</h2>
+        <section style={{ marginBottom: 40 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: '#0f172a' }}>Ihre Dokumente</h2>
+            <button
+              onClick={() => setShowUpload(true)}
+              style={{
+                background: '#0f172a',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 6,
+                padding: '10px 16px',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 600,
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={e => { e.target.style.background = '#1a2a3a' }}
+              onMouseLeave={e => { e.target.style.background = '#0f172a' }}
+            >
+              + Dokument hochladen
+            </button>
+          </div>
 
            {documents.length === 0 ? (
              <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 40, textAlign: 'center', color: '#6b7280' }}>
@@ -631,12 +684,92 @@ export default function PortalDashboard() {
          </section>
       </main>
 
+      {/* UPLOAD DIALOG */}
+      {showUpload && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 32, maxWidth: 500, width: '100%', boxShadow: '0 20px 25px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 20px', color: '#0f172a' }}>Dokument hochladen</h3>
+
+            {uploadError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '12px 14px', marginBottom: 16, fontSize: 13, color: '#dc2626' }}>
+                {uploadError}
+              </div>
+            )}
+
+            <form onSubmit={handleDocumentUpload} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 8, textTransform: 'uppercase' }}>Kategorie</label>
+                <select
+                  value={uploadCategory}
+                  onChange={e => setUploadCategory(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                >
+                  <option value="contract">Policen</option>
+                  <option value="correspondence">Kundeninformation und Mandat</option>
+                  <option value="other">Generelle Dokumente</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 8, textTransform: 'uppercase' }}>Datei</label>
+                <input
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                  onChange={e => setUploadFile(e.target.files?.[0] || null)}
+                  required
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' }}
+                />
+                <p style={{ fontSize: 12, color: '#9ca3af', margin: '6px 0 0' }}>PDF, Bilder oder Dokumente (max. 10MB)</p>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => { setShowUpload(false); setUploadFile(null); setUploadError('') }}
+                  disabled={uploadingDoc}
+                  style={{
+                    background: '#f3f4f6',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 6,
+                    padding: '10px 20px',
+                    cursor: uploadingDoc ? 'not-allowed' : 'pointer',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: '#6b7280',
+                    opacity: uploadingDoc ? 0.6 : 1,
+                  }}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploadingDoc || !uploadFile}
+                  style={{
+                    background: '#0f172a',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 6,
+                    padding: '10px 20px',
+                    cursor: uploadingDoc || !uploadFile ? 'not-allowed' : 'pointer',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    opacity: uploadingDoc || !uploadFile ? 0.6 : 1,
+                  }}
+                >
+                  {uploadingDoc ? 'Wird hochgeladen...' : 'Hochladen'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* FOOTER */}
       <footer style={{ padding: '16px 40px', textAlign: 'center', fontSize: 11, color: '#9ca3af', borderTop: '1px solid #e5e7eb', marginTop: 32 }}>
         © 2025 VSVV
       </footer>
 
 
-    </div>
-  )
-}
+      </div>
+      )
+      }
