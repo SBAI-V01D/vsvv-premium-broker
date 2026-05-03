@@ -62,13 +62,13 @@ export default function PortalSetup() {
 
   const inputStyle = (field) => ({
     width: '100%',
-    height: 44,
+    height: 38,
     background: 'rgba(255,255,255,0.08)',
     border: `1px solid ${focused === field ? '#5BA3E8' : 'rgba(255,255,255,0.12)'}`,
     borderRadius: 8,
-    padding: '0 14px',
+    padding: '0 12px',
     color: '#EAF1F7',
-    fontSize: 14,
+    fontSize: 13,
     outline: 'none',
     boxSizing: 'border-box',
     fontFamily: 'Inter, Helvetica, sans-serif',
@@ -113,19 +113,19 @@ export default function PortalSetup() {
         flexDirection: 'column',
         justifyContent: 'flex-start',
         alignItems: 'flex-end',
-        paddingTop: '80px',
+        paddingTop: '60px',
         paddingRight: '9%',
       }}>
 
         <div className="content-wrapper" style={{
-          maxWidth: 380,
+          maxWidth: 320,
           width: '100%',
         }}>
 
           {!mustChangePassword ? (
             <>
               {/* HEADLINE + DESCRIPTION */}
-              <div style={{ marginBottom: 32 }}>
+              <div style={{ marginBottom: 20 }}>
                 <h1 style={{
                   color: '#EAF1F7',
                   fontSize: 32,
@@ -160,11 +160,11 @@ export default function PortalSetup() {
                 background: 'rgba(255,255,255,0.05)',
                 border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: 12,
-                padding: 24,
-                marginBottom: 24,
+                padding: 18,
+                marginBottom: 18,
                 boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
               }}>
-                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
                   {/* EMAIL */}
                   <div>
@@ -283,7 +283,7 @@ export default function PortalSetup() {
                     disabled={loading}
                     style={{
                       width: '100%',
-                      height: 46,
+                      height: 40,
                       borderRadius: 8,
                       border: 'none',
                       background: loading
@@ -291,9 +291,9 @@ export default function PortalSetup() {
                         : 'linear-gradient(135deg, #3A6BA8 0%, #5BA3E8 100%)',
                       color: '#EAF1F7',
                       fontWeight: 600,
-                      fontSize: 14,
+                      fontSize: 13,
                       cursor: loading ? 'not-allowed' : 'pointer',
-                      marginTop: 8,
+                      marginTop: 6,
                       transition: 'transform 0.2s, box-shadow 0.2s, background 0.2s',
                       boxShadow: loading ? 'none' : '0 4px 18px rgba(91,163,232,0.3)',
                       display: 'flex',
@@ -335,7 +335,7 @@ export default function PortalSetup() {
               </div>
 
               {/* TRUST SECTION */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
                   { icon: Shield, title: 'Unabhängige Beratung', text: 'Ohne Interessenskonflikte – nur Ihre Ziele zählen' },
                   { icon: BarChart2, title: 'Volle Transparenz', text: 'Jederzeit vollständiger Überblick über Ihre Policen' },
@@ -399,10 +399,10 @@ export default function PortalSetup() {
                 background: 'rgba(255,255,255,0.05)',
                 border: '1px solid rgba(255,255,255,0.10)',
                 borderRadius: 12,
-                padding: 24,
-                marginBottom: 24,
+                padding: 18,
+                marginBottom: 18,
               }}>
-                <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {/* NEW PASSWORD */}
                   <div>
                     <label style={labelStyle}>Neues Passwort</label>
@@ -492,7 +492,7 @@ export default function PortalSetup() {
                     disabled={loading}
                     style={{
                       width: '100%',
-                      height: 44,
+                      height: 40,
                       borderRadius: 8,
                       border: 'none',
                       background: loading
@@ -500,9 +500,9 @@ export default function PortalSetup() {
                         : 'linear-gradient(135deg, #2F5D8A 0%, #4A8DD4 100%)',
                       color: '#EAF1F7',
                       fontWeight: 600,
-                      fontSize: 14,
+                      fontSize: 13,
                       cursor: loading ? 'not-allowed' : 'pointer',
-                      marginTop: 8,
+                      marginTop: 6,
                       transition: 'transform 0.15s, background 0.2s',
                       boxShadow: '0 4px 16px rgba(47,93,138,0.35)',
                       display: 'flex',
