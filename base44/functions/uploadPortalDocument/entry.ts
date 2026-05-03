@@ -9,12 +9,16 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Convert base64 to Buffer for upload
-    const buffer = Buffer.from(file_base64, 'base64');
+    // Convert base64 to Uint8Array for upload
+    const binaryString = atob(file_base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
 
     // Upload file
     const { file_url } = await base44.asServiceRole.integrations.Core.UploadFile({ 
-      file: buffer
+      file: bytes
     });
 
     // Create document record
