@@ -74,6 +74,11 @@
       "format": "date",
       "description": "K\u00fcndigungsfrist"
     },
+    "storno_period_months": {
+      "type": "number",
+      "default": 12,
+      "description": "Stornoperiode in Monaten (Standard: 12 Monate)"
+    },
     "status": {
       "type": "string",
       "enum": [

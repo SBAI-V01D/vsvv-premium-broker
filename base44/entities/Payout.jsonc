@@ -1,0 +1,74 @@
+{
+  "name": "Payout",
+  "type": "object",
+  "properties": {
+    "advisor_id": {
+      "type": "string",
+      "description": "Berater-ID"
+    },
+    "advisor_name": {
+      "type": "string",
+      "description": "Berater-Name (Cache)"
+    },
+    "organization_id": {
+      "type": "string",
+      "description": "Organisations-ID"
+    },
+    "organization_name": {
+      "type": "string",
+      "description": "Organisationsname (Cache)"
+    },
+    "payout_month": {
+      "type": "string",
+      "format": "date",
+      "description": "Auszahlungsmonat (YYYY-MM-01)"
+    },
+    "total_amount": {
+      "type": "number",
+      "description": "Gesamtauszahlungsbetrag (CHF)"
+    },
+    "commission_count": {
+      "type": "number",
+      "description": "Anzahl Provisionen in dieser Auszahlung"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "approved",
+        "paid",
+        "cancelled"
+      ],
+      "default": "draft",
+      "description": "Status: draft\u2192approved\u2192paid"
+    },
+    "approved_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Genehmigungsdatum"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Genehmigt durch (E-Mail)"
+    },
+    "paid_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Auszahlungsdatum"
+    },
+    "bank_reference": {
+      "type": "string",
+      "description": "Bank\u00fcberweisung-Referenz / Tracking-ID"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notizen / Bemerkungen"
+    }
+  },
+  "required": [
+    "advisor_id",
+    "organization_id",
+    "payout_month",
+    "total_amount"
+  ]
+}

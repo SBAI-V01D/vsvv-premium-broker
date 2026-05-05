@@ -58,16 +58,65 @@
       "type": "string",
       "enum": [
         "pending",
-        "active",
+        "invoiced",
+        "received",
+        "earned",
+        "paid",
         "cancelled"
       ],
       "default": "pending",
-      "description": "Status"
+      "description": "Status: pending\u2192invoiced\u2192received\u2192earned\u2192paid|cancelled"
     },
     "entry_date": {
       "type": "string",
       "format": "date",
       "description": "Buchungsdatum"
+    },
+    "invoiced_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Datum an Versicherer gemeldet"
+    },
+    "received_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Datum Zahlung erhalten"
+    },
+    "received_amount": {
+      "type": "number",
+      "description": "Tats\u00e4chlich erhaltener Betrag (CHF)"
+    },
+    "earned_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Datum freigegeben f\u00fcr Auszahlung"
+    },
+    "paid_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Datum ausbezahlt"
+    },
+    "payout_id": {
+      "type": "string",
+      "description": "Zugeh\u00f6rige Payout-ID"
+    },
+    "storno_period_months": {
+      "type": "number",
+      "description": "Stornoperiode in Monaten (erbt von Policy)"
+    },
+    "storno_eligible_until": {
+      "type": "string",
+      "format": "date",
+      "description": "Commission stornierbar bis (entry_date + storno_period)"
+    },
+    "is_storno": {
+      "type": "boolean",
+      "default": false,
+      "description": "Ist eine Storno-Entry (negative)"
+    },
+    "storno_reference_id": {
+      "type": "string",
+      "description": "Original Commission ID (wenn Storno)"
     },
     "notes": {
       "type": "string",
