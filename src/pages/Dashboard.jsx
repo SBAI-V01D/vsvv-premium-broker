@@ -30,6 +30,7 @@ export default function Dashboard() {
   const [formData, setFormData] = useState({ status: '', notes: '', due_date: '' })
   const [filterOrg, setFilterOrg] = useState('all')
   const [filterAdvisor, setFilterAdvisor] = useState('all')
+  const [kpiDetail, setKpiDetail] = useState(null)
   const queryClient = useQueryClient()
 
   // Data fetching – all parallel
@@ -150,13 +151,21 @@ export default function Dashboard() {
     }
   }
 
+  // KPI detail data builders
+  const kpiDetailData = {
+    customers: { items: customers, label: 'Kunde', columns: ['first_name', 'last_name', 'email', 'city'] },
+    activeContracts: { items: activeContracts.sort((a, b) => new Date(a.end_date || 0) - new Date(b.end_date || 0)), label: 'Policy', columns: ['policy_number', 'customer_name', 'insurer', 'end_date'] },
+    advisors: { items: filteredAdvisors, label: 'Berater', columns: ['firstname', 'lastname', 'email'] },
+    organizations: { items: organizations.filter(o => o.status === 'active'), label: 'Organisation', columns: ['name', 'type'] },
+  }
+
   const kpis = [
     {
       label: 'Kunden Total',
       value: customers.length,
       icon: Users,
       color: { border: 'border-l-blue-500', bg: 'bg-blue-50', icon: 'text-blue-600' },
-      path: '/kunden',
+      onDetail: () => setKpiDetail({ type: 'customers', data: kpiDetailData.customers }),
     },
     {
       label: 'Aktive Policen',
@@ -164,7 +173,7 @@ export default function Dashboard() {
       sub: `von ${filteredContracts.length} gesamt`,
       icon: FileText,
       color: { border: 'border-l-green-500', bg: 'bg-green-50', icon: 'text-green-600' },
-      path: '/vertraege',
+      onDetail: () => setKpiDetail({ type: 'activeContracts', data: kpiDetailData.activeContracts }),
     },
     {
       label: 'Monatsprämien',
@@ -172,7 +181,7 @@ export default function Dashboard() {
       sub: 'Aktive Verträge',
       icon: TrendingUp,
       color: { border: 'border-l-primary', bg: 'bg-primary/10', icon: 'text-primary' },
-      path: '/vertraege',
+      onDetail: () => setKpiDetail({ type: 'activeContracts', data: kpiDetailData.activeContracts }),
     },
     {
       label: 'Provisionen MTD',
@@ -180,7 +189,7 @@ export default function Dashboard() {
       sub: new Date().toLocaleString('de-CH', { month: 'long', year: 'numeric' }),
       icon: Wallet,
       color: { border: 'border-l-amber-500', bg: 'bg-amber-50', icon: 'text-amber-600' },
-      path: '/provisionen-courtagen',
+      onDetail: () => navigate('/provisionen-courtagen'),
     },
     {
       label: 'Berater',
@@ -188,7 +197,7 @@ export default function Dashboard() {
       sub: filterOrg !== 'all' ? organizations.find(o => o.id === filterOrg)?.name : 'Alle Organisationen',
       icon: UserCheck,
       color: { border: 'border-l-purple-500', bg: 'bg-purple-50', icon: 'text-purple-600' },
-      path: '/berater-organisation',
+      onDetail: () => setKpiDetail({ type: 'advisors', data: kpiDetailData.advisors }),
     },
     {
       label: 'Organisationen',
@@ -196,7 +205,7 @@ export default function Dashboard() {
       sub: `${organizations.length} Total`,
       icon: Building2,
       color: { border: 'border-l-slate-500', bg: 'bg-slate-100', icon: 'text-slate-600' },
-      path: '/berater-organisation',
+      onDetail: () => setKpiDetail({ type: 'organizations', data: kpiDetailData.organizations }),
     },
   ]
 
@@ -232,7 +241,11 @@ export default function Dashboard() {
 
       {/* 1. KPI CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-        {kpis.map(k => <KpiCard key={k.label} {...k} />)}
+        {kpis.map(k => (
+          <div key={k.label} onClick={k.onDetail} className="cursor-pointer">
+            <KpiCard {...k} />
+          </div>
+        ))}
       </div>
 
       {/* 2. OPERATIVE ZONE HEADER */}
@@ -359,6 +372,37 @@ export default function Dashboard() {
                 {updateMutation.isPending || createMutation.isPending ? 'Speichern...' : 'Speichern'}
               </Button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* KPI DETAIL DIALOG */}
+      <Dialog open={!!kpiDetail} onOpenChange={(open) => { if (!open) setKpiDetail(null) }}>
+        <DialogContent className="max-w-2xl max-h-96 overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{kpiDetail?.data?.items?.length || 0} {kpiDetail?.data?.label}(n)</DialogTitle>
+          </DialogHeader>
+          {kpiDetail?.data?.items?.length === 0 ? (
+            <p className="text-muted-foreground">Keine Einträge vorhanden</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <tbody className="divide-y">
+                  {kpiDetail?.data?.items?.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-muted/50">
+                      {kpiDetail?.data?.columns?.map((col, cIdx) => (
+                        <td key={cIdx} className="px-4 py-2 text-muted-foreground">
+                          {col === 'end_date' ? formatDate(item[col]) : String(item[col] || '–').substring(0, 40)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setKpiDetail(null)}>Schliessen</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

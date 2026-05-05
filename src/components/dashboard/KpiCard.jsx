@@ -2,12 +2,12 @@ import React from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { useNavigate } from 'react-router-dom'
 
-export default function KpiCard({ label, value, sub, icon: Icon, color, path, trend }) {
+export default function KpiCard({ label, value, sub, icon: Icon, color, path, trend, onDetail }) {
   const navigate = useNavigate()
   return (
     <Card
       className={`cursor-pointer hover:shadow-lg transition-all border-l-4 ${color?.border || 'border-l-primary'}`}
-      onClick={() => path && navigate(path)}
+      onClick={() => onDetail ? onDetail() : path && navigate(path)}
     >
       <CardContent className="p-5 flex items-center justify-between gap-3">
         <div className="flex-1 min-w-0">
