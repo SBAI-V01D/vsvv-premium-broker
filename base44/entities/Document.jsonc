@@ -24,6 +24,18 @@
       "default": false,
       "description": "Kunde wurde manuell gesetzt \u2013 KI darf nicht \u00fcberschreiben"
     },
+    "policy_holder_name": {
+      "type": "string",
+      "description": "Versicherungsnehmer (aus 'Ihre Adresse' oder 'Versicherungsnehmer')"
+    },
+    "driver_name": {
+      "type": "string",
+      "description": "Lenker/Fahrer (aus Rollen-Feld, NIEMALS als Kunde)"
+    },
+    "insured_person_name": {
+      "type": "string",
+      "description": "Versicherte Person (optional, weitere Person)"
+    },
     "name": {
       "type": "string",
       "description": "Dokumentname"

@@ -400,9 +400,15 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
 
     setStep('link', 'running')
     try {
+      // STEP 2 FIX: Speichere auch Rollen-Felder
+      const policyHolderName = extraction?.normalized?.role_classification?.policy_holder?.name
+      const driverName = extraction?.normalized?.role_classification?.driver?.name
+      
       await base44.entities.Document.update(document.id, {
         customer_id: cid,
         customer_name: customerName,
+        policy_holder_name: policyHolderName,
+        driver_name: driverName,
         linked_application_id: newApp.id,
         doc_type: 'antrag',
         classification_status: 'klassifiziert',
@@ -523,10 +529,15 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     setStep('create', 'ok', `Antrag-ID: ${newApp.id}`)
     setStep('link', 'running')
     try {
-      // Dokument: customer_id + application-Link persistent speichern
+      // Dokument: customer_id + application-Link + Rollen-Felder persistent speichern
+      const policyHolderName = extraction?.normalized?.role_classification?.policy_holder?.name
+      const driverName = extraction?.normalized?.role_classification?.driver?.name
+      
       await base44.entities.Document.update(document.id, {
         customer_id: cid,       // ← einzige Wahrheit, kommt von lockedCustomer
         customer_name: customerName,
+        policy_holder_name: policyHolderName,
+        driver_name: driverName,
         linked_application_id: newApp.id,
         doc_type: 'antrag',
         classification_status: 'klassifiziert',
