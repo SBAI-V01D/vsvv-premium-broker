@@ -1,0 +1,37 @@
+{
+  "name": "Organization",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Organisationsname"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "strukturvertrieb",
+        "broker",
+        "partner",
+        "sonstiges"
+      ],
+      "default": "broker",
+      "description": "Organisationstyp"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "default": "active",
+      "description": "Status"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notizen"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

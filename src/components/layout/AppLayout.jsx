@@ -1,6 +1,6 @@
 import React from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Users, FileText, CheckCircle2, ClipboardList, FileCheck, Mail, Send, LogOut, Settings2, Wallet } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, CheckCircle2, ClipboardList, FileCheck, Mail, Send, LogOut, Settings2, Wallet, Building2 } from 'lucide-react'
 import { base44 } from '@/api/base44Client'
 import { Button } from '@/components/ui/button'
 
@@ -18,6 +18,7 @@ export default function AppLayout() {
     { path: '/email-templates', label: 'E-Mail Vorlagen', icon: Mail },
     { path: '/email-kampagnen', label: 'Kampagnen', icon: Send },
     { path: '/status-verwaltung', label: 'Statusverwaltung', icon: Settings2 },
+    { path: '/berater-organisation', label: 'Berater & Organisation', icon: Building2 },
   ]
 
   const handleLogout = async () => {

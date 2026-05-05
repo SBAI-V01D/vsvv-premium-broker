@@ -1,0 +1,54 @@
+{
+  "name": "Advisor",
+  "type": "object",
+  "properties": {
+    "firstname": {
+      "type": "string",
+      "description": "Vorname"
+    },
+    "lastname": {
+      "type": "string",
+      "description": "Nachname"
+    },
+    "email": {
+      "type": "string",
+      "description": "E-Mail"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefon"
+    },
+    "organization_id": {
+      "type": "string",
+      "description": "Organisation (Pflicht)"
+    },
+    "organization_name": {
+      "type": "string",
+      "description": "Organisationsname (Cache)"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "advisor",
+        "team_lead"
+      ],
+      "default": "advisor",
+      "description": "Rolle (advisor = Berater, team_lead = Teamleiter)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "default": "active",
+      "description": "Status"
+    }
+  },
+  "required": [
+    "firstname",
+    "lastname",
+    "email",
+    "organization_id"
+  ]
+}
