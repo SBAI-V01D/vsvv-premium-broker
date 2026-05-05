@@ -9,7 +9,8 @@ import { base44 } from '@/api/base44Client';
 
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
-  { label: '👑 CEO Cockpit', icon: TrendingUp, path: '/ceo-dashboard' },
+  { label: '👑 CEO Cockpit', icon: TrendingUp, path: '/ceo-cockpit' },
+  { label: 'CEO Dashboard', icon: TrendingUp, path: '/ceo-dashboard' },
   { label: 'Kunden', icon: Users, path: '/kunden' },
   { label: 'Verträge', icon: FileText, path: '/vertraege' },
   { label: 'Anträge', icon: FileText, path: '/antraege' },

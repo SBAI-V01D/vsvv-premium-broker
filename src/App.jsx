@@ -22,6 +22,7 @@ import BeratungOrganisation from './pages/BeratungOrganisation'
 import SystemLogs from './pages/SystemLogs'
 import FinanceDashboard from './pages/FinanceDashboard'
 import CEODashboard from './components/ceo/CEODashboard'
+import CEOCockpit from './pages/CEOCockpit'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -95,6 +96,7 @@ const AuthenticatedApp = () => {
         <Route path="/berater-organisation" element={<BeratungOrganisation />} />
         <Route path="/finanz-dashboard" element={<FinanceDashboard />} />
         <Route path="/ceo-dashboard" element={<CEODashboard />} />
+        <Route path="/ceo-cockpit" element={<CEOCockpit />} />
         <Route path="/system-logs" element={<SystemLogs />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
