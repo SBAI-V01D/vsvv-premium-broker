@@ -20,6 +20,9 @@ import ControllingSection from '@/components/dashboard/ControllingSection'
 import RenewalWidget from '@/components/dashboard/RenewalWidget'
 import RenewalsSection from '@/components/dashboard/RenewalsSection'
 import PricingOptimizationPanel from '@/components/dashboard/PricingOptimizationPanel'
+import ActionStrip from '@/components/dashboard/ActionStrip'
+import FlowPipeline from '@/components/dashboard/FlowPipeline'
+import SupportSection from '@/components/dashboard/SupportSection'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -31,6 +34,7 @@ export default function Dashboard() {
 
   // Data fetching – all parallel
   const { data: customers = [] } = useQuery({ queryKey: ['customers'], queryFn: () => base44.entities.Customer.list() })
+  const { data: leads = [] } = useQuery({ queryKey: ['leads'], queryFn: () => base44.entities.Lead.list() })
   const { data: contracts = [] } = useQuery({ queryKey: ['contracts'], queryFn: () => base44.entities.Contract.list() })
   const { data: applications = [] } = useQuery({ queryKey: ['applications'], queryFn: () => base44.entities.Application.list() })
   const { data: tasks = [] } = useQuery({ queryKey: ['tasks'], queryFn: () => base44.entities.Task.list() })
@@ -198,153 +202,94 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* HEADER */}
+      {/* HEADER + FILTER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground mt-1 text-sm">CEO / Broker Control Panel · {new Date().toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+          <h1 className="text-3xl font-bold">Dashboard 3.0</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Sales-Maschine – Action First, Clear Flow</p>
         </div>
-        {/* Global Filter */}
         <div className="flex gap-2 flex-wrap">
           <Select value={filterOrg} onValueChange={v => { setFilterOrg(v); setFilterAdvisor('all') }}>
-            <SelectTrigger className="w-48 bg-background">
-              <SelectValue placeholder="Alle Organisationen" />
+            <SelectTrigger className="w-44 bg-background text-xs">
+              <SelectValue placeholder="Org" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle Organisationen</SelectItem>
+              <SelectItem value="all">Alle Org.</SelectItem>
               {organizations.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filterAdvisor} onValueChange={setFilterAdvisor}>
-            <SelectTrigger className="w-44 bg-background">
-              <SelectValue placeholder="Alle Berater" />
+            <SelectTrigger className="w-40 bg-background text-xs">
+              <SelectValue placeholder="Advisor" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle Berater</SelectItem>
-              {filteredAdvisors.map(a => <SelectItem key={a.id} value={a.email}>{a.firstname} {a.lastname}</SelectItem>)}
+              <SelectItem value="all">Alle Advisors</SelectItem>
+              {filteredAdvisors.map(a => <SelectItem key={a.id} value={a.email}>{a.firstname}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      {/* SCHNELLAKTIONEN */}
-      <QuickActions />
+      {/* 1. ACTION STRIP (STICKY TOP) */}
+      <ActionStrip 
+        leads={leads}
+        contracts={filteredContracts}
+        tasks={openTasks}
+        applications={applications}
+      />
 
-      {/* KPI CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      {/* 2. KPI CARDS */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         {kpis.map(k => <KpiCard key={k.label} {...k} />)}
       </div>
 
-      {/* 3. VERTRAGSABLÄUFE (TOP PRIORITÄT) */}
+      {/* 3. FLOW PIPELINE (KERNELEMENT) */}
       <div>
-        <h2 className="text-lg font-bold mb-4">⏰ Vertragsabläufe (Bestand = Geld)</h2>
-        <RenewalsSection />
-      </div>
-
-      {/* 4. GEBURTSTAGE */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">🎂 Geburtstage (30 Tage) – Verkaufschance</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {upcomingBirthdays.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-muted-foreground">Keine Geburtstage in den nächsten 30 Tagen</p>
-          ) : (
-            <div className="divide-y">
-              {upcomingBirthdays.map(b => (
-                <div key={b.customer.id} className="px-6 py-3 flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-medium">{b.customer.first_name} {b.customer.last_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {b.daysUntil === 0 ? '🎉 Heute!' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`}
-                    </p>
-                  </div>
-                  <span className="text-xl">🎂</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 5. OFFENE AUFGABEN */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <CardTitle className="text-base font-semibold">📋 Offene Aufgaben</CardTitle>
-          <Button size="sm" onClick={handleNewTask}>+ Neu</Button>
-        </CardHeader>
-        <CardContent className="p-0">
-          {openTasks.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-muted-foreground">Keine offenen Aufgaben</p>
-          ) : (
-            <div className="divide-y max-h-72 overflow-y-auto">
-              {openTasks.slice(0, 10).map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => handleTaskClick(t)}
-                  className="w-full flex items-center justify-between px-6 py-3 hover:bg-muted/50 transition-colors text-left gap-2"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{t.title}</p>
-                    {t.due_date && <p className="text-xs text-muted-foreground">Fällig: {formatDate(t.due_date)}</p>}
-                  </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${t.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
-                    {t.status === 'in_progress' ? 'Aktiv' : 'Offen'}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 6. PREISOPTIMIERUNG */}
-      <div>
-        <h2 className="text-lg font-bold mb-4">💰 Preisoptimierung (Fokus: Einsparpotenzial + Upsell)</h2>
-        <PricingOptimizationPanel />
-      </div>
-
-      {/* 7. LETZTE AKTIVITÄTEN */}
-      <div>
-        <h2 className="text-lg font-bold mb-4">📊 Letzte Aktivitäten</h2>
-        <ActivityFeed
-          customers={customers}
+        <h2 className="text-lg font-bold mb-3">📊 Sales Flow Pipeline</h2>
+        <FlowPipeline 
+          leads={leads}
+          applications={applications}
           contracts={filteredContracts}
-          commissionEntries={filteredCommissions}
+          pricing={[]}
         />
       </div>
 
-      {/* 8. FINANZ-OVERVIEW (GANZ UNTEN – ERGEBNIS) */}
+      {/* 4. SUPPORT SECTION (KOMPAKT) */}
       <div>
-        <h2 className="text-lg font-bold mb-4">💰 Finanz-Overview (Ergebnis der Aktionen)</h2>
+        <h2 className="text-lg font-bold mb-3">📋 Support & Überblick</h2>
+        <SupportSection 
+          tasks={openTasks}
+          customers={customers}
+          activities={['Neue Policen', 'Dokumente hochgeladen', 'Änderungen gespeichert']}
+        />
+      </div>
+
+      {/* 5. RENEWALS (DETAIL) */}
+      <div>
+        <h2 className="text-lg font-bold mb-3">⏰ Vertragsabläufe (Detail)</h2>
+        <RenewalsSection />
+      </div>
+
+      {/* 6. PREISOPTIMIERUNG */}
+      <div>
+        <h2 className="text-lg font-bold mb-3">💰 Preisoptimierung</h2>
+        <PricingOptimizationPanel />
+      </div>
+
+      {/* 7. FINANZEN (REDUZIERT, UNTEN) */}
+      <div>
+        <h2 className="text-lg font-bold mb-3">💰 Finanzen – Ergebnis</h2>
         <FinanceWidget />
       </div>
 
-      {/* CHART + TOP ADVISORS (ZUSATZ) */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div>
-          <RevenueChart contracts={filteredContracts} commissionEntries={filteredCommissions} />
-        </div>
-        <div>
-          <TopAdvisors
-            advisors={filteredAdvisors}
-            organizations={organizations}
-            commissionEntries={filteredCommissions}
-            contracts={filteredContracts}
-          />
-        </div>
-      </div>
-
-      {/* CONTROLLING SECTION (BONUS) */}
-      <div>
-        <h2 className="text-lg font-bold mb-4">🔍 Controlling</h2>
-        <ControllingSection
-          commissionEntries={filteredCommissions}
-          organizations={organizations}
+      {/* OPTIONAL: CHARTS + CONTROLLING */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <RevenueChart contracts={filteredContracts} commissionEntries={filteredCommissions} />
+        <TopAdvisors
           advisors={filteredAdvisors}
+          organizations={organizations}
+          commissionEntries={filteredCommissions}
           contracts={filteredContracts}
-          applications={applications}
-          documents={documents}
         />
       </div>
 
