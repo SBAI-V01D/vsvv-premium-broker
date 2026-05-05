@@ -46,7 +46,10 @@ export default function Documents() {
   const handleReclassify = (doc, newType) => {
     updateMutation.mutate({
       id: doc.id,
-      data: { doc_type: newType, classification_status: 'manuell' },
+      data: {
+        doc_type: newType,
+        classification_status: newType === 'antrag' ? 'klassifiziert' : 'manuell',
+      },
     })
   }
 

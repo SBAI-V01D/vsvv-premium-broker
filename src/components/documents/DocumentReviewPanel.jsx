@@ -151,6 +151,9 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   // Whether auto-save was triggered and user aborted to manual review
   const [manualOverride, setManualOverride] = useState(false)
 
+  // Ref for scrolling to confirm button
+  const confirmRef = useRef(null)
+
   const { data: customers = [], isSuccess: customersLoaded } = useQuery({
     queryKey: ['customers-all'],
     queryFn: () => base44.entities.Customer.list(null, 1000),
@@ -250,6 +253,10 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     setStep('review', 'waiting', `Bitte Daten prüfen und bestätigen (Konfidenz ${data.confidence}%)`)
     setPhase('review')
     setProcessing(false)
+    // Scroll to confirm button after short delay so form is rendered
+    setTimeout(() => {
+      confirmRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 300)
   }
 
   // ── Auto-save helper (called with fully resolved data, no state deps) ─────────
@@ -673,7 +680,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
               </div>
 
               {/* ── CONFIRM BUTTON ── */}
-              <div className="px-3 py-4">
+              <div className="px-3 py-4" ref={confirmRef}>
                 {phase === 'saving' ? (
                   <div className="flex items-center justify-center gap-2 py-3">
                     <Loader2 className="w-5 h-5 animate-spin text-primary" />
