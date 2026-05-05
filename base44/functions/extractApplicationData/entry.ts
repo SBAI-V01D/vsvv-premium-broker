@@ -261,6 +261,27 @@ function normalizeData(raw) {
   const resolvedLastName = lenkerName && lastName && lenkerName.toLowerCase().includes(lastName.toLowerCase())
     ? null : lastName;
 
+  // ─── ROLLEN-KLASSIFIZIERUNG (STEP 1) ──────────────────────────────────
+  // Detektiere klar: policy_holder vs driver vs insured_person
+  const roleClassification = {
+    policy_holder: {
+      type: companyName ? 'company' : 'person',
+      name: companyName || `${resolvedFirstName || ''} ${resolvedLastName || ''}`.trim(),
+      source: 'person_field', // "Ihre Adresse" / "Versicherungsnehmer"
+      detected: !!(companyName || resolvedFirstName || resolvedLastName),
+    },
+    driver: {
+      name: lenkerName,
+      source: 'rollen_field', // "Lenker"
+      detected: !!lenkerName,
+    },
+    insured_person: {
+      name: null, // Optional: weitere versicherte Person
+      source: 'rollen_field',
+      detected: false,
+    },
+  };
+
   return {
     // Person (policy_holder only)
     company_name: companyName,
@@ -269,6 +290,8 @@ function normalizeData(raw) {
     birthdate:  raw?.person?.geburtsdatum ?? null,
     // Rollen (nur für Debug/Info, nicht als Kunde)
     lenker_name: lenkerName,
+    // STEP 1: ROLLEN-KLASSIFIZIERUNG
+    role_classification: roleClassification,
     // Contact
     phone:      raw?.kontaktperson?.telefon ?? null,
     email:      raw?.kontaktperson?.email ?? null,
@@ -494,6 +517,11 @@ Extrahiere in EXAKT dieser Struktur:`,
     console.log(`[normalizeData] produkte=${JSON.stringify(normalized.produkte)}`);
     if (missingFields.length > 0) console.warn(`[normalizeData] MISSING: ${missingFields.join(', ')}`);
 
+    // ─── STEP 1 DEBUG LOGGING ────────────────────────────────────────
+    console.log('[extractApplicationData] STEP 1 - ROLE CLASSIFICATION:');
+    console.log(`  policy_holder: ${JSON.stringify(normalized.role_classification.policy_holder)}`);
+    console.log(`  driver: ${JSON.stringify(normalized.role_classification.driver)}`);
+
     return Response.json({
       success: true,
       structured: raw,
@@ -505,6 +533,8 @@ Extrahiere in EXAKT dieser Struktur:`,
       premium_monthly:         normalized.premium_monthly,
       premium_yearly:          normalized.premium_yearly,
       gesundheitsdeklaration:  normalized.gesundheitsdeklaration,
+      // STEP 1: Role Classification
+      role_classification:     normalized.role_classification,
       confidence,
       status,
       missing_fields: missingFields,
