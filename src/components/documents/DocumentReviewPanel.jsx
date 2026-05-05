@@ -822,8 +822,9 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                     <button
                       type="button"
                       onClick={() => {
-                        // Lock aufheben damit neuer Kunde gewählt werden kann
+                        // Lock + Override vollständig zurücksetzen
                         setCustomerLocked(false)
+                        setOverrideCustomer(null)
                         setShowCustomerSearch(true)
                       }}
                       className="text-xs text-primary underline"
