@@ -239,22 +239,66 @@ Commissions (10% rate):
 
 ---
 
-## 🚀 **DEPLOYMENT CHECKLIST**
+## ✅ **TEST 11: Mutations-System**
+
+### Setup:
+```
+1. Kunde loggt sich ins Portal ein
+   → Vertragsübersicht
+   → aktive Policy angezeigt
+   → Button "Änderung beantragen" sichtbar
+
+2. Kunde klickt "Änderung beantragen"
+   → Dialog mit Form öffnet
+   → Anfrage-Typ + Beschreibung
+   → Submit → MutationRequest.created (status=pending)
+
+3. Admin sieht Anfrage
+   → MutationRequestsPanel
+   → "Genehmigen" oder "Ablehnen"
+
+4. Admin genehmigt
+   → approveMutationRequest Function
+   → Neue Policy erstellt (version+1)
+   → alte Policy.status = archived
+   → MutationRequest.status = approved
+
+5. Kunde sieht neue Policy
+   → alte Policy archiviert (unsichtbar)
+   → neue Policy mit neuem Stand aktiv
+```
+
+### Expected:
+- ✅ Anfrage wird gestellt
+- ✅ Admin kann genehmigen/ablehnen
+- ✅ Neue Policy-Version entsteht
+- ✅ Alte Policy bleibt unverändert (archiviert)
+- ✅ Lifecycle + Finance OK
+
+---
+
+## 🚀 **DEPLOYMENT CHECKLIST – FINAL**
 
 - [ ] Entity User.json aktualisiert: role = admin | advisor | customer
 - [ ] Entity Customer.json aktualisiert: mandate_status, portal_enabled, portal_must_change_password, portal_password_last_changed
+- [ ] Entity MutationRequest.json erstellt
 - [ ] guardPortalLogin Function deployed: mandate_status + 28-Tage-Rotation
 - [ ] guardPortalAccess Function deployed: role-based + customer_id filter
+- [ ] approveMutationRequest Function deployed: neue Policy-Version
 - [ ] Customers Page updated: role-based filtering
 - [ ] PortalActivationPanel Component: mandate_status = valid setzen
 - [ ] PortalSetup Page: Passwort-Policy-Hints angezeigt
-- [ ] 3+ Guard Functions deployed: guardPortalLogin, guardPortalAccess, guardDoublePayment, guardPeriodClosed
+- [ ] PortalContracts Page: Button "Änderung beantragen" hinzugefügt
+- [ ] MutationRequestDialog Component erstellt
+- [ ] MutationRequestsPanel Component für Admin erstellt
+- [ ] 4+ Guard Functions deployed: guardPortalLogin, guardPortalAccess, guardDoublePayment, guardPeriodClosed, guardPipelineStuck
 - [ ] 2+ Helper Functions deployed: updatePortalPassword, managePortalPassword
+- [ ] 1+ Mutations Functions deployed: approveMutationRequest
 - [ ] 1 CEO Function deployed: createCEODashboard
 - [ ] 1 Admin Function deployed: closePeriod
 - [ ] CEODashboard Component + Route
-- [ ] Sidebar aktualisiert mit CEO Cockpit Link
-- [ ] Tests 1–10 durchgeführt ✓
+- [ ] Sidebar aktualisiert mit CEO Cockpit Link + Admin Panel
+- [ ] Tests 1–11 durchgeführt ✓
 - [ ] CEO hat Signoff gegeben
 
 ---

@@ -1,0 +1,65 @@
+{
+  "name": "MutationRequest",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Kunden-ID \u2013 owner filter"
+    },
+    "policy_id": {
+      "type": "string",
+      "description": "Betroffene Policy-ID (aktiv)"
+    },
+    "policy_number": {
+      "type": "string",
+      "description": "Police-Nummer (cache)"
+    },
+    "request_type": {
+      "type": "string",
+      "enum": [
+        "address_change",
+        "coverage_change",
+        "vehicle_change",
+        "other"
+      ],
+      "description": "Art der \u00c4nderung"
+    },
+    "description": {
+      "type": "string",
+      "description": "Freitext-Begr\u00fcndung"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Workflow-Status"
+    },
+    "reviewed_by": {
+      "type": "string",
+      "description": "Admin/Berater E-Mail (der pr\u00fcft/genehmigt)"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Zeitstempel der Entscheidung"
+    },
+    "new_policy_id": {
+      "type": "string",
+      "description": "Neue Policy-ID (nach Genehmigung)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notizen des Admins"
+    }
+  },
+  "required": [
+    "customer_id",
+    "policy_id",
+    "request_type",
+    "description"
+  ]
+}

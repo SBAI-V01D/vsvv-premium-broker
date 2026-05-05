@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
-import { FileText, AlertCircle, Shield, Upload, Loader2 } from 'lucide-react'
+import { FileText, AlertCircle, Shield, Upload, Loader2, Edit2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { base44 } from '@/api/base44Client'
 import { usePortalData, yearlyPremium } from '@/hooks/usePortalData'
 import { useQueryClient } from '@tanstack/react-query'
+import MutationRequestDialog from '@/components/portal/MutationRequestDialog'
 
 const NAVY = '#0B1C2C'
 const ACCENT = '#4F7CFF'
@@ -38,6 +39,8 @@ export default function PortalContracts() {
   const queryClient = useQueryClient()
   const [uploading, setUploading] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState(false)
+  const [selectedContract, setSelectedContract] = useState(null)
+  const [showMutationDialog, setShowMutationDialog] = useState(false)
 
   const handleUpload = async (files, contractId) => {
     if (!files || !files.length || uploading) return
@@ -170,6 +173,16 @@ export default function PortalContracts() {
                       <Shield size={12} /> Police öffnen
                     </a>
                   )}
+                  {c.status === 'active' && (
+                    <button
+                      onClick={() => { setSelectedContract(c); setShowMutationDialog(true); }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#f97316', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: '6px 12px', background: '#fed7aa0d', borderRadius: 7, border: '1px solid #fdba7466', transition: 'all 0.2s' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#fed7aa18'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = '#fed7aa0d'; }}
+                    >
+                      <Edit2 size={12} /> Änderung beantragen
+                    </button>
+                  )}
                   <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: uploading ? '#9ca3af' : '#16a34a', fontSize: 12, fontWeight: 600, cursor: uploading ? 'not-allowed' : 'pointer', padding: '6px 12px', background: uploading ? '#f3f4f6' : '#dcfce70d', borderRadius: 7, border: uploading ? '1px solid #d1d5db' : '1px solid #86efac66', opacity: uploading ? 0.6 : 1, transition: 'all 0.2s' }}>
                     {uploading ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={12} />}
                     {uploading ? 'Wird hochgeladen...' : 'Dokument hochladen'}
@@ -181,6 +194,15 @@ export default function PortalContracts() {
           })}
           </div>
         </>
+      )}
+
+      {selectedContract && (
+        <MutationRequestDialog
+          contract={selectedContract}
+          customerId={customerId}
+          open={showMutationDialog}
+          onOpenChange={setShowMutationDialog}
+        />
       )}
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
