@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Search, MoreHorizontal, Edit, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, Edit, Trash2, ChevronDown, ChevronUp, User, Building2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,7 @@ import { searchCustomers } from '@/lib/customerSearch'
 export default function Customers() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [newCustomerType, setNewCustomerType] = useState('private')
   const [search, setSearch] = useState('')
   const [expandedFamily, setExpandedFamily] = useState(null)
   const queryClient = useQueryClient()
@@ -92,9 +93,21 @@ export default function Customers() {
           <h1 className="text-3xl font-bold">Kunden</h1>
           <p className="text-muted-foreground mt-1">{primaryCustomers.length} Hauptkunden</p>
         </div>
-        <Button onClick={() => { setEditing(null); setShowForm(true); }}>
-          <Plus className="w-4 h-4 mr-2" /> Neuer Kunde
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" /> Neuer Kunde
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}>
+              <User className="w-4 h-4 mr-2 text-blue-600" /> Privatkunde
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}>
+              <Building2 className="w-4 h-4 mr-2 text-purple-600" /> Firmenkunde
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="mb-6">
@@ -245,10 +258,14 @@ export default function Customers() {
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editing ? (editing.is_family_member ? 'Familienmitglied bearbeiten' : 'Kunde bearbeiten') : 'Neuer Kunde'}</DialogTitle>
+            <DialogTitle>
+            {editing
+              ? (editing.is_family_member ? 'Familienmitglied bearbeiten' : 'Kunde bearbeiten')
+              : newCustomerType === 'business' ? 'Neuer Firmenkunde' : 'Neuer Privatkunde'}
+          </DialogTitle>
           </DialogHeader>
           <CustomerForm
-            customer={editing}
+            customer={editing || { customer_type: newCustomerType }}
             primaryCustomers={primaryCustomers}
             onSave={handleSave}
             onCancel={() => { setShowForm(false); setEditing(null); }}
