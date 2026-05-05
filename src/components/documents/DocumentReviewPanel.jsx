@@ -835,21 +835,19 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                        {activeCustomer.birthdate && <p className="text-muted-foreground">Geb. {activeCustomer.birthdate}</p>}
                        {activeCustomer.organization_id && <p className="text-muted-foreground">Org: {activeCustomer.organization_id}</p>}
                      </div>
-                     {!customerLocked && (
-                       {!customerLocked && !lockConfirmed && (
-                         <button
-                           type="button"
-                           onClick={() => {
-                             overrideCustomerRef.current = null
-                             setCustomerLocked(false)
-                             setOverrideCustomer(null)
-                             setShowCustomerSearch(true)
-                           }}
-                           className="text-xs text-primary underline"
-                         >
-                           Ändern
-                         </button>
-                       )}
+                     {!customerLocked && !lockConfirmed && (
+                       <button
+                         type="button"
+                         onClick={() => {
+                           overrideCustomerRef.current = null
+                           setCustomerLocked(false)
+                           setOverrideCustomer(null)
+                           setShowCustomerSearch(true)
+                         }}
+                         className="text-xs text-primary underline"
+                       >
+                         Ändern
+                       </button>
                      )}
                    </div>
                  )}
