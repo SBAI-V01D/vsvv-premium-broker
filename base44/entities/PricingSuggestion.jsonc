@@ -1,0 +1,104 @@
+{
+  "name": "PricingSuggestion",
+  "type": "object",
+  "properties": {
+    "policy_id": {
+      "type": "string",
+      "description": "Betroffene Policy-ID"
+    },
+    "policy_number": {
+      "type": "string",
+      "description": "Police-Nummer (Cache)"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Kunden-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Kundenname (Cache)"
+    },
+    "insurer": {
+      "type": "string",
+      "description": "Versicherungsgesellschaft"
+    },
+    "product": {
+      "type": "string",
+      "description": "Produkt/Sparte"
+    },
+    "premium_current": {
+      "type": "number",
+      "description": "Aktuelle Jahrespr\u00e4mie (CHF)"
+    },
+    "premium_benchmark": {
+      "type": "number",
+      "description": "Benchmark/Durchschnitt (CHF)"
+    },
+    "premium_suggested": {
+      "type": "number",
+      "description": "Empfohlene Jahrespr\u00e4mie (CHF)"
+    },
+    "saving_amount": {
+      "type": "number",
+      "description": "Einsparpotenzial absolut (CHF)"
+    },
+    "saving_percent": {
+      "type": "number",
+      "description": "Einsparpotenzial prozentual (%)"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "default": "low",
+      "description": "Priorit\u00e4t: high (>20%), medium (10-20%), low (<10%)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected",
+        "implemented"
+      ],
+      "default": "pending",
+      "description": "Workflow-Status"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Genehmigt durch (E-Mail)"
+    },
+    "approved_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Genehmigungsdatum"
+    },
+    "implemented_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Umsetzungsdatum"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Grund f\u00fcr Ablehnung (falls rejected)"
+    },
+    "renewal_opportunity": {
+      "type": "boolean",
+      "default": false,
+      "description": "Kann bei n\u00e4chster Verl\u00e4ngerung umgesetzt werden"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notizen"
+    }
+  },
+  "required": [
+    "policy_id",
+    "customer_id",
+    "premium_current",
+    "premium_benchmark"
+  ]
+}

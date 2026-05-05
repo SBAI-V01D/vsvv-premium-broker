@@ -68,6 +68,18 @@
       "type": "number",
       "description": "Jahrespr\u00e4mie (CHF)"
     },
+    "premium_current": {
+      "type": "number",
+      "description": "Aktuelle Jahrespr\u00e4mie (f\u00fcr Vergleich)"
+    },
+    "premium_previous": {
+      "type": "number",
+      "description": "Vorherige Jahrespr\u00e4mie (f\u00fcr Trend)"
+    },
+    "premium_benchmark": {
+      "type": "number",
+      "description": "Durchschnittspr\u00e4mie \u00e4hnlicher Policies"
+    },
     "start_date": {
       "type": "string",
       "format": "date",
@@ -220,6 +232,20 @@
       "type": "string",
       "format": "date",
       "description": "Annahmedatum"
+    },
+    "pricing_status": {
+      "type": "string",
+      "enum": [
+        "normal",
+        "high",
+        "optimized"
+      ],
+      "default": "normal",
+      "description": "Preisstatus: normal (OK), high (zu teuer), optimized (optimiert)"
+    },
+    "pricing_suggestion_id": {
+      "type": "string",
+      "description": "Verkn. Preisoptimierungs-Vorschlag"
     },
     "notes": {
       "type": "string",

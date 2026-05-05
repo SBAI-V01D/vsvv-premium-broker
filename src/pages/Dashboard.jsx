@@ -19,6 +19,7 @@ import FinanceWidget from '@/components/dashboard/FinanceWidget'
 import ControllingSection from '@/components/dashboard/ControllingSection'
 import RenewalWidget from '@/components/dashboard/RenewalWidget'
 import RenewalsSection from '@/components/dashboard/RenewalsSection'
+import PricingOptimizationPanel from '@/components/dashboard/PricingOptimizationPanel'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -327,6 +328,12 @@ export default function Dashboard() {
       <div>
         <h2 className="text-lg font-bold mb-4">🔄 Verlängerungen (Renewals)</h2>
         <RenewalsSection />
+      </div>
+
+      {/* PRICING OPTIMIZATION */}
+      <div>
+        <h2 className="text-lg font-bold mb-4">💰 Preisoptimierung</h2>
+        <PricingOptimizationPanel />
       </div>
 
       {/* CONTROLLING SECTION */}
