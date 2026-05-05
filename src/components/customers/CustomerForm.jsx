@@ -85,11 +85,15 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
             family_role: 'primary',
             notes: '',
             assigned_broker: '',
+            organization_id: '',
+            advisor_id: '',
          }
       }
       return {
          ...customer,
          assigned_broker: customer.assigned_broker || '',
+         organization_id: customer.organization_id || '',
+         advisor_id: customer.advisor_id || '',
       }
    })
 
