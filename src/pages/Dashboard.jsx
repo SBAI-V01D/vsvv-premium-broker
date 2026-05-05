@@ -21,7 +21,6 @@ import RenewalWidget from '@/components/dashboard/RenewalWidget'
 import RenewalsSection from '@/components/dashboard/RenewalsSection'
 import RenewalPipelineKanbanV2 from '@/components/dashboard/RenewalPipelineKanbanV2'
 import UpsellPipelineKanban from '@/components/dashboard/UpsellPipelineKanban'
-import PricingOptimizationPanel from '@/components/dashboard/PricingOptimizationPanel'
 import FlowPipeline from '@/components/dashboard/FlowPipeline'
 import SupportSection from '@/components/dashboard/SupportSection'
 
@@ -269,10 +268,20 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* 6. UPSELL POTENZIAL */}
-      <div className="mt-6">
-        <h3 className="text-lg font-bold mb-4 text-slate-900">💰 Mehr Umsatz bei Bestehenden Kunden</h3>
+      {/* 6. UPSATZPOTENZIAL (DECKUNG, UPGRADE, BERATUNG) */}
+      <div className="mt-6 bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-lg border border-amber-200">
+        <h3 className="text-lg font-bold mb-4 text-slate-900">💰 Umsatzpotenzial – Mehr Deckung / Upgrade / Beratung</h3>
         <UpsellPipelineKanban contracts={filteredContracts} />
+      </div>
+
+      {/* 7. LETZTE AKTIVITÄTEN */}
+      <div className="mt-6">
+        <h3 className="text-lg font-bold mb-4 text-slate-900">🔄 Letzte Aktivitäten</h3>
+        <ActivityFeed 
+          customers={customers}
+          contracts={filteredContracts}
+          commissions={filteredCommissions}
+        />
       </div>
 
       {/* MANAGEMENT ZONE */}
