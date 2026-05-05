@@ -13,7 +13,7 @@ function timeAgo(dateStr) {
   return `vor ${days}d`
 }
 
-export default function ActivityFeed({ customers, contracts, commissionEntries }) {
+export default function ActivityFeed({ customers = [], contracts = [], commissionEntries = [] }) {
   const items = [
     ...customers.slice(0, 10).map(c => ({
       type: 'customer',
