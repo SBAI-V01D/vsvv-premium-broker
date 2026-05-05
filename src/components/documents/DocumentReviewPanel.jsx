@@ -365,6 +365,16 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     }
 
     setStep('create', 'running')
+    
+    // ─── HARD PERSISTENCE VALIDATION: BLOCK if customer_id is null ───
+    if (!cid) {
+      setStep('create', 'error', 'VALIDIERUNG: customer_id erforderlich')
+      setPipelineError('⚠️ VALIDIERUNG FEHLGESCHLAGEN: Kunde nicht gesetzt. Antrag kann nicht erstellt werden.')
+      setSaving(false)
+      setPhase('review')
+      return
+    }
+
     let newApp
     try {
       newApp = await base44.entities.Application.create({
@@ -896,26 +906,37 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                     <CustomerTypeahead
                       customers={customers}
                       onSelect={async (c) => {
-                        // ─── HARD PERSISTENCE: Backend → RELOAD → State ───
-                          // 1. SCHREIBE ins Backend
-                          await base44.entities.Document.update(document.id, {
-                            customer_id: c.id,
-                            customer_name: `${c.first_name} ${c.last_name}`,
-                            customer_locked: true,
-                          })
-                          // 2. RELOAD aus DB (Read After Write - entscheidend!)
-                          const updatedDoc = await base44.entities.Document.get(document.id)
-                          // 3. State aus Backend-Wert (nicht aus UI)
-                          overrideCustomerRef.current = c
-                          setOverrideCustomer(c)
-                          setMatchedCustomer(null)
-                          setCustomerLocked(true)
-                          setLockConfirmed(true)
-                          setMatchMode('manual')
-                          setMatchScore(0)
-                          setShowCustomerSearch(false)
-                          // 4. Cache invalidieren
-                          queryClient.invalidateQueries({ queryKey: ['documents'] })
+                        // ─── HARD PERSISTENCE FIX: document.customer_id = SINGLE SOURCE OF TRUTH ───
+                          try {
+                            // 1. WRITE to backend (lock customer immediately)
+                            await base44.entities.Document.update(document.id, {
+                              customer_id: c.id,
+                              customer_name: `${c.first_name} ${c.last_name}`,
+                              customer_locked: true,
+                            })
+
+                            // 2. READ AFTER WRITE (CRITICAL: validate DB persisted)
+                            const reloadedDoc = await base44.entities.Document.get(document.id)
+                            if (reloadedDoc.customer_id !== c.id) {
+                              throw new Error(`PERSISTENCE ERROR: Document.customer_id=${reloadedDoc.customer_id}, expected ${c.id}`)
+                            }
+
+                            // 3. State from reloaded DB value (NOT from UI)
+                            overrideCustomerRef.current = c
+                            setOverrideCustomer(c)
+                            setMatchedCustomer(null)
+                            setCustomerLocked(true)
+                            setLockConfirmed(true)
+                            setMatchMode('manual')
+                            setMatchScore(0)
+                            setShowCustomerSearch(false)
+
+                            // 4. Invalidate cache to sync preview
+                            queryClient.invalidateQueries({ queryKey: ['documents'] })
+                          } catch (err) {
+                            console.error('[DocumentReviewPanel] HARD PERSISTENCE FAILED:', err)
+                            alert('⚠️ Kundenspeicherung fehlgeschlagen. Bitte versuchen Sie es erneut.')
+                          }
                       }}
                     />
                   </div>
