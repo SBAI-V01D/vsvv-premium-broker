@@ -170,9 +170,9 @@ export default function PortalContracts() {
                       <Shield size={12} /> Police öffnen
                     </a>
                   )}
-                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#16a34a', fontSize: 12, fontWeight: 600, cursor: uploading ? 'not-allowed' : 'pointer', padding: '6px 12px', background: '#dcfce70d', borderRadius: 7, border: '1px solid #86efac66', opacity: uploading ? 0.6 : 1 }}>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: uploading ? '#9ca3af' : '#16a34a', fontSize: 12, fontWeight: 600, cursor: uploading ? 'not-allowed' : 'pointer', padding: '6px 12px', background: uploading ? '#f3f4f6' : '#dcfce70d', borderRadius: 7, border: uploading ? '1px solid #d1d5db' : '1px solid #86efac66', opacity: uploading ? 0.6 : 1, transition: 'all 0.2s' }}>
                     {uploading ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={12} />}
-                    Dokument hochladen
+                    {uploading ? 'Wird hochgeladen...' : 'Dokument hochladen'}
                     <input type="file" accept=".pdf,.jpg,.jpeg,.png" multiple style={{ display: 'none' }} disabled={uploading} onChange={e => handleUpload(e.target.files, c.id)} />
                   </label>
                 </div>

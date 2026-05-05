@@ -614,16 +614,23 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
 
       {/* Header – fixiert */}
       <div className="flex items-center justify-between px-4 py-3 border-b bg-card" style={{ flexShrink: 0 }}>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-1">
           <Button variant="ghost" size="sm" onClick={onClose} className="gap-1.5 text-muted-foreground">
             <X className="w-4 h-4" /> Zurück
           </Button>
           <div className="h-4 w-px bg-border" />
-          <div>
+          <div className="flex-1">
             <h2 className="font-semibold text-sm">{document.name}</h2>
-            <p className="text-xs text-muted-foreground">
-              KI-Review · {phase === 'review' ? '⚠ Konfidenz < 90% – manuelle Prüfung erforderlich' : phase === 'done' ? '✅ Verarbeitet' : 'Analysiert...'}
-            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-xs text-muted-foreground">
+                {phase === 'review' ? '⚠ Konfidenz < 90%' : phase === 'done' ? '✅ Verarbeitet' : '📄 ' + (document.processing_stage || 'uploaded')}
+              </p>
+              {document.processing_stage && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+                  {document.processing_stage}
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">

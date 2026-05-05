@@ -255,7 +255,12 @@ export default function PortalDashboard() {
                     </div>
                     <div>
                       <p style={{ fontSize: 11, fontWeight: 700, margin: '0 0 6px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 }}>E-Mail</p>
-                      <p style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#1a1a1a' }}>{customer.email}</p>
+                      <a 
+                        href={`mailto:${encodeURIComponent(customer.email)}`}
+                        style={{ fontSize: 15, fontWeight: 500, margin: 0, color: '#4f7cff', textDecoration: 'none' }}
+                      >
+                        {customer.email}
+                      </a>
                     </div>
                     {customer.street && (
                       <div>
@@ -282,24 +287,26 @@ export default function PortalDashboard() {
                   </div>
                   <button 
                     onClick={startEditCustomer}
+                    disabled={savingCustomer}
                     style={{
-                      background: '#f3f4f6',
+                      background: savingCustomer ? '#e5e7eb' : '#f3f4f6',
                       border: '1px solid #e5e7eb',
                       borderRadius: 6,
                       padding: '10px 16px',
-                      cursor: 'pointer',
+                      cursor: savingCustomer ? 'not-allowed' : 'pointer',
                       fontSize: 13,
                       fontWeight: 600,
-                      color: '#1f2937',
+                      color: savingCustomer ? '#9ca3af' : '#1f2937',
                       whiteSpace: 'nowrap',
                       transition: 'all 0.2s',
                       alignSelf: 'flex-start',
                       marginTop: 0,
+                      opacity: savingCustomer ? 0.6 : 1,
                     }}
-                    onMouseEnter={e => { e.target.style.background = '#e5e7eb' }}
-                    onMouseLeave={e => { e.target.style.background = '#f3f4f6' }}
+                    onMouseEnter={e => { if (!savingCustomer) e.target.style.background = '#e5e7eb' }}
+                    onMouseLeave={e => { if (!savingCustomer) e.target.style.background = '#f3f4f6' }}
                   >
-                    ✎ Bearbeiten
+                    {savingCustomer ? '⏳ Speichert...' : '✎ Bearbeiten'}
                   </button>
                 </div>
               </>
