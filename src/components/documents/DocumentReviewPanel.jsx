@@ -407,7 +407,8 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   }
 
   // ── Speichern ─────────────────────────────────────────────────────────────────
-  const doSaveWithData = async (normalized, flat, produkteData) => {
+  // lockedCustomer wird direkt von handleConfirm übergeben — kein State-Read
+  const doSaveWithData = async (normalized, flat, produkteData, lockedCustomer) => {
     setSaving(true)
     setStep('create', 'running')
 
@@ -419,10 +420,9 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       setSparteOverwriteWarning('Sparte-Locking-Fehler: Ursprüngliche Sparte verloren!')
     }
 
-    // ── SINGLE SOURCE OF TRUTH: overrideCustomer hat absolute Priorität ────────
-    const activeCustomer = overrideCustomer || matchedCustomer
-    let cid = activeCustomer?.id || null
-    let resolvedCustomer = activeCustomer
+    // ── SINGLE SOURCE OF TRUTH: lockedCustomer (direkt übergeben) hat absolute Priorität ────────
+    let cid = lockedCustomer?.id || null
+    let resolvedCustomer = lockedCustomer
 
     if (!cid) {
       try {
@@ -508,8 +508,9 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     setStep('create', 'ok', `Antrag-ID: ${newApp.id}`)
     setStep('link', 'running')
     try {
+      // Dokument: customer_id + application-Link persistent speichern
       await base44.entities.Document.update(document.id, {
-        customer_id: cid,
+        customer_id: cid,       // ← einzige Wahrheit, kommt von lockedCustomer
         customer_name: customerName,
         linked_application_id: newApp.id,
         doc_type: 'antrag',
@@ -538,7 +539,9 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     })
     setStep('review', 'ok', 'Manuell bestätigt')
     setPhase('saving')
-    await doSaveWithData(extraction?.normalized || {}, form, produkte)
+    // Übergabe der gesperrten Customer-Referenz direkt als Parameter — kein State-Race
+    const lockedCustomer = overrideCustomer || matchedCustomer
+    await doSaveWithData(extraction?.normalized || {}, form, produkte, lockedCustomer)
   }
 
   const setField = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
@@ -841,9 +844,16 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                     </p>
                     <CustomerTypeahead
                       customers={customers}
-                      onSelect={c => {
+                      onSelect={async (c) => {
+                        // 1. Sofort ins Backend schreiben — KEINE temporäre Variable
+                        await base44.entities.Document.update(document.id, {
+                          customer_id: c.id,
+                          customer_name: `${c.first_name} ${c.last_name}`,
+                        })
+                        queryClient.invalidateQueries({ queryKey: ['documents'] })
+                        // 2. State sperren — KI darf nicht mehr überschreiben
                         setOverrideCustomer(c)
-                        setCustomerLocked(true)   // 🔒 LOCK — KI kann nicht mehr überschreiben
+                        setCustomerLocked(true)
                         setMatchMode('manual')
                         setMatchScore(0)
                         setShowCustomerSearch(false)
