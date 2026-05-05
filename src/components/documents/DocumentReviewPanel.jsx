@@ -726,9 +726,9 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                 {ageGroup && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{ageGroup}</span>}
                 {productType && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">{productType}</span>}
                 {gesundheitsdeklaration && <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">GD erforderlich</span>}
-                {missingFields.length > 0 && (
+                {missingFields.filter(f => !['KVG/VVG','Altersgruppe','Produkte'].includes(f)).length > 0 && (
                   <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
-                    {missingFields.length} Feld{missingFields.length > 1 ? 'er' : ''} fehlt
+                    {missingFields.filter(f => !['KVG/VVG','Altersgruppe','Produkte'].includes(f)).length} Feld(er) fehlt
                   </span>
                 )}
               </div>
@@ -890,9 +890,9 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                     Daten prüfen & bestätigen
                   </Button>
                 )}
-                {missingFields.length > 0 && (
+                {missingFields.filter(f => !['KVG/VVG','Altersgruppe','Produkte'].includes(f)).length > 0 && (
                   <p className="text-xs text-amber-600 mt-2 text-center">
-                    ⚠ {missingFields.length} Pflichtfeld{missingFields.length > 1 ? 'er' : ''} fehlt – trotzdem speichern möglich.
+                    ⚠ Fehlende Felder: {missingFields.filter(f => !['KVG/VVG','Altersgruppe','Produkte'].includes(f)).join(', ')} – trotzdem speichern möglich.
                   </p>
                 )}
               </div>
