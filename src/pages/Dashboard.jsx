@@ -15,6 +15,7 @@ import RevenueChart from '@/components/dashboard/RevenueChart'
 import TopAdvisors from '@/components/dashboard/TopAdvisors'
 import ActivityFeed from '@/components/dashboard/ActivityFeed'
 import QuickActions from '@/components/dashboard/QuickActions'
+import FinanceWidget from '@/components/dashboard/FinanceWidget'
 import ControllingSection from '@/components/dashboard/ControllingSection'
 
 export default function Dashboard() {
@@ -229,6 +230,12 @@ export default function Dashboard() {
       {/* KPI CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {kpis.map(k => <KpiCard key={k.label} {...k} />)}
+      </div>
+
+      {/* FINANCE WIDGET */}
+      <div>
+        <h2 className="text-lg font-bold mb-4">💰 Finanz-Overview</h2>
+        <FinanceWidget />
       </div>
 
       {/* CHART + TOP ADVISORS */}

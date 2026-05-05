@@ -222,6 +222,77 @@ Deno.serve(async (req) => {
       doc = await updateStage(base44, document_id, 'policy_created');
     }
 
+    // ─── STAGE 6: COMMISSION CALCULATION (NACH policy_created) ───
+    if (doc.processing_stage === 'policy_created' && doc.linked_contract_id) {
+      console.log('[automationPipeline] STAGE 6: Calculating commissions');
+      
+      try {
+        // Fetch contract (= policy)
+        const contract = await base44.entities.Contract.get(doc.linked_contract_id);
+        const customer = await base44.entities.Customer.get(contract.customer_id);
+
+        // DUPLICATE CHECK: Commission für diese Policy existiert bereits?
+        const existingCommissions = await base44.entities.CommissionEntry.filter({
+          policy_id: contract.id,
+        });
+        
+        if (existingCommissions.length === 0) {
+          // Berechne Commission
+          const premiumYearly = contract.premium_yearly || 0;
+          const commissionRate = contract.commission_rate || 0.10; // Default 10%
+          const commissionAmount = Math.round(premiumYearly * commissionRate * 100) / 100;
+
+          // CREATE CommissionEntry
+          const commission = await base44.entities.CommissionEntry.create({
+            policy_id: contract.id,
+            policy_number: contract.policy_number,
+            advisor_id: contract.advisor_id,
+            advisor_name: customer.first_name + ' ' + customer.last_name,
+            organization_id: contract.organization_id,
+            organization_name: customer.organization_id, // Cache
+            customer_id: contract.customer_id,
+            customer_name: contract.customer_name,
+            insurer: contract.insurer,
+            product_category: contract.sparte || 'other',
+            premium_yearly: premiumYearly,
+            commission_percentage: commissionRate * 100,
+            commission_amount: commissionAmount,
+            status: 'pending', // Initially pending
+            entry_date: new Date().toISOString().split('T')[0],
+          });
+
+          console.log(`[automationPipeline] ✅ Commission created: ${commission.id} amount=${commissionAmount}`);
+
+          // CREATE AccountingEntry (automatische Buchung)
+          const accountingEntry = await base44.entities.AccountingEntry.create({
+            entry_date: new Date().toISOString().split('T')[0],
+            entry_type: 'commission',
+            amount: commissionAmount,
+            advisor_id: contract.advisor_id,
+            advisor_name: customer.first_name + ' ' + customer.last_name,
+            organization_id: contract.organization_id,
+            organization_name: customer.organization_id,
+            policy_id: contract.id,
+            policy_number: contract.policy_number,
+            insurer: contract.insurer,
+            customer_id: contract.customer_id,
+            customer_name: contract.customer_name,
+            status: 'pending',
+            reference_type: 'commission_entry',
+            reference_id: commission.id,
+            notes: `Commission für Policy ${contract.policy_number}`,
+          });
+
+          console.log(`[automationPipeline] ✅ Accounting entry created: ${accountingEntry.id}`);
+        } else {
+          console.log(`[automationPipeline] ⏭️ Commission already exists for policy ${contract.id}`);
+        }
+      } catch (commissionError) {
+        console.warn(`[automationPipeline] ⚠️ Commission calculation failed: ${commissionError.message}`);
+        // Don't fail the entire pipeline for commission issues
+      }
+    }
+
     // ─── FINAL STATE ───
     console.log(`[automationPipeline] ✅ PIPELINE COMPLETE: doc=${document_id} stage=${doc.processing_stage}`);
 
