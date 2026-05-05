@@ -58,60 +58,33 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
     setUploading(true)
     setStep('uploading')
 
+    // Step 1: Upload file (fast)
     const { file_url } = await base44.integrations.Core.UploadFile({ file })
 
-    // For Antrag: trigger sparte classification and application extraction
     if (uploadMode === 'antrag') {
-      try {
-        // Extract text from document (using backend function)
-        const extracted = await base44.functions.invoke('extractApplicationData', { 
-          file_url,
-          file_name: form.name
-        })
+      // Step 2: Save document immediately with status "queued"
+      const doc = await base44.entities.Document.create({
+        name: form.name,
+        file_url,
+        category: 'application',
+        doc_type: 'antrag',
+        classification_status: 'ausstehend',
+        notes: form.notes || undefined,
+        uploaded_by: 'broker',
+      })
 
-        // Classify sparte from extracted data
-        const classification = await base44.functions.invoke('classifySparteFromDocument', {
-          extractedText: extracted.data?.structured?.versicherung?.sparte || ''
-        })
+      // Step 3: Queue background KI job (fire & forget – don't await)
+      base44.entities.AutomationQueue.create({
+        job_type: 'ki_extraction',
+        status: 'pending',
+        related_document_id: doc.id,
+        related_entity_type: 'Document',
+        related_entity_id: doc.id,
+        payload: JSON.stringify({ file_url, file_name: form.name, document_id: doc.id }),
+      }).catch(err => console.error('Queue creation failed:', err))
 
-        // Save document with classification metadata
-        // Normalize confidence to 0-100 scale
-        const rawConfidence = classification.data?.confidence ?? 0
-        const normalizedConfidence = rawConfidence > 1 ? rawConfidence : rawConfidence * 100
-
-        const doc = await base44.entities.Document.create({
-          name: form.name,
-          file_url,
-          category: 'application',
-          doc_type: 'antrag',
-          classification_status: normalizedConfidence >= 80 ? 'klassifiziert' : 'ausstehend',
-          classification_confidence: normalizedConfidence,
-          notes: form.notes || undefined,
-          uploaded_by: 'broker',
-        })
-
-        // Store classification metadata in document notes for debug & traceability
-        if (classification.data?.sparte) {
-          const debugInfo = `[KLASSIFIZIERUNG] Sparte: ${classification.data.sparte} | Regel: ${classification.data.rule} | Keywords: ${(classification.data.matchedKeywords || []).join(', ')}`
-          await base44.entities.Document.update(doc.id, {
-            notes: (form.notes ? form.notes + ' | ' : '') + debugInfo
-          })
-        }
-      } catch (error) {
-        console.error('Classification error:', error)
-        // Fall back to basic document creation if classification fails
-        await base44.entities.Document.create({
-          name: form.name,
-          file_url,
-          category: 'application',
-          doc_type: 'antrag',
-          classification_status: 'ausstehend',
-          notes: form.notes || undefined,
-          uploaded_by: 'broker',
-        })
-      }
     } else {
-      // For Anlage: save with optional customer & contract link
+      // Anlage: save directly, no KI needed
       await base44.entities.Document.create({
         name: form.name,
         file_url,
@@ -245,9 +218,11 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
           <div className="py-8 flex flex-col items-center gap-4 text-center">
             <Loader2 className="w-10 h-10 animate-spin text-primary" />
             <div>
-              <p className="font-semibold">Dokument wird hochgeladen...</p>
+              <p className="font-semibold">Dokument wird gespeichert...</p>
               <p className="text-sm text-muted-foreground mt-1">
-                {uploadMode === 'antrag' ? 'Danach startet die automatische KI-Verarbeitung' : 'Wird gespeichert...'}
+                {uploadMode === 'antrag'
+                  ? 'Upload abgeschlossen – KI-Verarbeitung läuft im Hintergrund'
+                  : 'Wird gespeichert...'}
               </p>
             </div>
           </div>

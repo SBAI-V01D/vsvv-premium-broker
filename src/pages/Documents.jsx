@@ -8,7 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import {
   Search, Plus, MoreHorizontal, FileText, ExternalLink,
-  Zap, Paperclip, Tag, Trash2, Eye
+  Zap, Paperclip, Tag, Trash2, Eye, RefreshCw, Clock
 } from 'lucide-react'
 import DocumentTypeBadge from '@/components/documents/DocumentTypeBadge'
 import DocumentUploadDialog from '@/components/documents/DocumentUploadDialog'
@@ -48,6 +48,19 @@ export default function Documents() {
       id: doc.id,
       data: { doc_type: newType, classification_status: 'manuell' },
     })
+  }
+
+  const handleRequeue = async (doc) => {
+    // Re-queue a failed/pending document for KI processing
+    await base44.entities.AutomationQueue.create({
+      job_type: 'ki_extraction',
+      status: 'pending',
+      related_document_id: doc.id,
+      related_entity_type: 'Document',
+      related_entity_id: doc.id,
+      payload: JSON.stringify({ file_url: doc.file_url, file_name: doc.name, document_id: doc.id }),
+    })
+    updateMutation.mutate({ id: doc.id, data: { classification_status: 'ausstehend' } })
   }
 
   const filtered = documents.filter(doc => {
@@ -189,9 +202,13 @@ export default function Documents() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{doc.name}</p>
-                    {doc.classification_reason && (
+                    {doc.classification_status === 'ausstehend' && doc.doc_type === 'antrag' ? (
+                      <p className="text-xs text-amber-600 flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> KI-Verarbeitung ausstehend...
+                      </p>
+                    ) : doc.classification_reason ? (
                       <p className="text-xs text-muted-foreground truncate">{doc.classification_reason}</p>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
@@ -232,6 +249,11 @@ export default function Documents() {
                       {doc.doc_type === 'antrag' && (
                         <DropdownMenuItem onClick={() => setReviewDoc(doc)}>
                           <Zap className="w-4 h-4 mr-2 text-primary" /> KI-Extraktion starten
+                        </DropdownMenuItem>
+                      )}
+                      {doc.doc_type === 'antrag' && ['ausstehend', 'pruefung_erforderlich'].includes(doc.classification_status) && (
+                        <DropdownMenuItem onClick={() => handleRequeue(doc)}>
+                          <RefreshCw className="w-4 h-4 mr-2 text-amber-600" /> Neu verarbeiten
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem onClick={() => handleReclassify(doc, 'antrag')}>
