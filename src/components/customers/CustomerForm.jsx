@@ -88,9 +88,9 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
    const [autoFilled, setAutoFilled] = useState(false)
    const { plzError, plzSuggestions, handlePostalCodeChange, selectSuggestion } = usePostalCodeLookup()
 
-   const { data: brokers = [] } = useQuery({
-     queryKey: ['brokers'],
-     queryFn: () => base44.entities.Broker.list(),
+   const { data: advisors = [] } = useQuery({
+     queryKey: ['advisors'],
+     queryFn: () => base44.entities.Advisor.filter({ status: 'active' }),
    })
 
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
@@ -287,17 +287,17 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
       </div>
 
       <div>
-        <Label>Beratender Broker</Label>
+        <Label>Beratender Berater</Label>
         <Select value={form.assigned_broker} onValueChange={v => set('assigned_broker', v)}>
-          <SelectTrigger className="mt-1"><SelectValue placeholder="Broker auswählen..." /></SelectTrigger>
+          <SelectTrigger className="mt-1"><SelectValue placeholder="Berater auswählen..." /></SelectTrigger>
           <SelectContent>
-            <SelectItem value={null}>– Kein Broker –</SelectItem>
-            {brokers.length === 0 ? (
-              <div className="p-2 text-sm text-muted-foreground">Keine Broker vorhanden</div>
+            <SelectItem value={null}>– Kein Berater –</SelectItem>
+            {advisors.length === 0 ? (
+              <div className="p-2 text-sm text-muted-foreground">Keine Berater vorhanden</div>
             ) : (
-              brokers.map(b => (
-                <SelectItem key={b.id} value={b.email || b.name}>
-                  {b.name}
+              advisors.map(a => (
+                <SelectItem key={a.id} value={a.email}>
+                  {a.firstname} {a.lastname}
                 </SelectItem>
               ))
             )}
