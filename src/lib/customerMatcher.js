@@ -32,13 +32,34 @@ function dateEqual(a, b) {
 }
 
 function scoreCustomer(c, f) {
+  let score = 0
+
+  // ── Firmenname-Matching (Priorität für business customers) ──────────────────
+  if (f.company_name && c.company_name) {
+    const companyMatch = normalize(c.company_name).includes(normalize(f.company_name)) ||
+      normalize(f.company_name).includes(normalize(c.company_name))
+    if (companyMatch) {
+      score = 50 // company name baseline
+      const plzMatch = f.zip_code && normalize(c.zip_code) === normalize(f.zip_code)
+      const emailMatch = f.email && normalize(c.email) === normalize(f.email)
+      const phoneMatch = f.phone && (
+        normalize(c.phone) === normalize(f.phone) ||
+        normalize(c.mobile) === normalize(f.phone)
+      )
+      if (plzMatch) score += 25
+      if (emailMatch || phoneMatch) score += 25
+      return score
+    }
+  }
+
+  // ── Personen-Matching ───────────────────────────────────────────────────────
   const nameMatch =
     normalize(c.first_name) === normalize(f.first_name) &&
     normalize(c.last_name) === normalize(f.last_name)
 
   if (!nameMatch) return 0
 
-  let score = 40 // name baseline
+  score = 40 // name baseline
 
   const birthdateMatch = dateEqual(c.birthdate, f.birthdate)
   const plzMatch = f.zip_code && normalize(c.zip_code) === normalize(f.zip_code)
@@ -62,7 +83,8 @@ function scoreCustomer(c, f) {
  * @returns {{ autoMatch, candidates, topScore }}
  */
 export function matchCustomers(form, customers) {
-  if (!form.first_name || !form.last_name) {
+  // Allow matching even with only company_name
+  if (!form.first_name && !form.last_name && !form.company_name) {
     return { autoMatch: null, candidates: [], topScore: 0 }
   }
 

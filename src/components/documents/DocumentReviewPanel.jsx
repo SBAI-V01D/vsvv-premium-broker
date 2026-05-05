@@ -165,6 +165,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const [matchCandidates, setMatchCandidates] = useState([])
   const [matchMode, setMatchMode] = useState('pending')
   const [overrideCustomer, setOverrideCustomer] = useState(null)
+  const overrideCustomerRef = useRef(null) // Ref für sync-sicheren Zugriff in handleConfirm
   const [customerLocked, setCustomerLocked] = useState(false)
   const [showCustomerSearch, setShowCustomerSearch] = useState(false)
 
@@ -236,6 +237,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     }
 
     const flat = {
+      company_name:              normalized.company_name,
       first_name:                normalized.first_name,
       last_name:                 normalized.last_name,
       birthdate:                 normalized.birthdate,
@@ -539,8 +541,8 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     })
     setStep('review', 'ok', 'Manuell bestätigt')
     setPhase('saving')
-    // Übergabe der gesperrten Customer-Referenz direkt als Parameter — kein State-Race
-    const lockedCustomer = overrideCustomer || matchedCustomer
+    // Ref hat immer den aktuellen Wert — kein React State-Race
+    const lockedCustomer = overrideCustomerRef.current || matchedCustomer
     await doSaveWithData(extraction?.normalized || {}, form, produkte, lockedCustomer)
   }
 
@@ -823,6 +825,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                       type="button"
                       onClick={() => {
                         // Lock + Override vollständig zurücksetzen
+                        overrideCustomerRef.current = null
                         setCustomerLocked(false)
                         setOverrideCustomer(null)
                         setShowCustomerSearch(true)
@@ -860,7 +863,8 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                           customer_name: `${c.first_name} ${c.last_name}`,
                         })
                         queryClient.invalidateQueries({ queryKey: ['documents'] })
-                        // 2. State setzen — Lock aktiv für diese Session
+                        // 2. State + Ref setzen — Lock aktiv für diese Session
+                        overrideCustomerRef.current = c
                         setOverrideCustomer(c)
                         setMatchedCustomer(null)
                         setCustomerLocked(true)

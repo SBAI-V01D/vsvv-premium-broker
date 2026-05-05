@@ -250,6 +250,7 @@ function normalizeData(raw) {
 
   return {
     // Person
+    company_name: raw?.person?.firma ?? null,
     first_name: raw?.person?.vorname ?? null,
     last_name:  raw?.person?.nachname ?? null,
     birthdate:  raw?.person?.geburtsdatum ?? null,
@@ -328,6 +329,11 @@ KRITISCHE REGELN:
 - E-Mail: validieren, bei ungültig → null
 - confidence: 0-100 (Gesamtkonfidenz der Extraktion)
 
+VERSICHERUNGSNEHMER (KRITISCH):
+- person.firma: Falls der Versicherungsnehmer eine Firma/Organisation/GmbH/AG ist, trage den FIRMENAMEN hier ein (z.B. "VSV Management GmbH", "Musterfirma AG"). Wenn Privatperson → null.
+- person.vorname / person.nachname: Bei Privatpersonen Name eintragen. Bei Firmen: Kontaktperson falls vorhanden, sonst null.
+- Schaue zuerst auf "Versicherungsnehmer", "Ihre Adresse", "Antragsteller" – steht dort ein Firmenname → person.firma setzen!
+
 Dateiname: "${file_name || ''}"
 
 PRODUKTE (KRITISCH – EXAKT SO EXTRAHIEREN):
@@ -365,11 +371,12 @@ Extrahiere in EXAKT dieser Struktur:`,
           person: {
             type: 'object',
             properties: {
+              firma:        { type: ['string','null'] },
               vorname:      { type: ['string','null'] },
               nachname:     { type: ['string','null'] },
               geburtsdatum: { type: ['string','null'] }
             },
-            required: ['vorname','nachname','geburtsdatum']
+            required: ['firma','vorname','nachname','geburtsdatum']
           },
           kontaktperson: {
             type: 'object',
