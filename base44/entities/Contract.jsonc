@@ -35,6 +35,15 @@
       "type": "string",
       "description": "Policen-Nummer"
     },
+    "version_number": {
+      "type": "number",
+      "default": 1,
+      "description": "Versionsnummer (1, 2, 3...)"
+    },
+    "parent_policy_id": {
+      "type": "string",
+      "description": "ID der Vorg\u00e4nger-Policy (bei Verl\u00e4ngerung/Mutation)"
+    },
     "insurance_type": {
       "type": "string",
       "enum": [
@@ -69,26 +78,48 @@
       "format": "date",
       "description": "Vertragsende"
     },
+    "renewal_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Verl\u00e4ngerungsdatum (z.B. 30 Tage vor end_date)"
+    },
+    "auto_renew": {
+      "type": "boolean",
+      "default": true,
+      "description": "Automatische Verl\u00e4ngerung"
+    },
     "cancellation_deadline": {
       "type": "string",
       "format": "date",
       "description": "K\u00fcndigungsfrist"
     },
+    "cancel_date": {
+      "type": "string",
+      "format": "date",
+      "description": "K\u00fcndigungsdatum"
+    },
+    "cancel_reason": {
+      "type": "string",
+      "description": "K\u00fcndigungsgrund"
+    },
     "storno_period_months": {
       "type": "number",
       "default": 12,
-      "description": "Stornoperiode in Monaten (Standard: 12 Monate)"
+      "description": "Stornoperiode in Monaten"
     },
     "status": {
       "type": "string",
       "enum": [
+        "draft",
         "active",
+        "pending_change",
+        "renewal_due",
+        "renewed",
         "cancelled",
-        "paused",
         "expired"
       ],
-      "default": "active",
-      "description": "Status (Legacy)"
+      "default": "draft",
+      "description": "Status: draft\u2192active\u2192(pending_change)\u2192renewal_due\u2192renewed|cancelled\u2192expired"
     },
     "custom_status": {
       "type": "string",
@@ -121,7 +152,7 @@
     },
     "source_application_id": {
       "type": "string",
-      "description": "Quellen-Antrags-ID (Verkn\u00fcpfung zu Application)"
+      "description": "Quellen-Antrags-ID"
     },
     "notes": {
       "type": "string",
