@@ -116,7 +116,7 @@
         "business"
       ],
       "default": "private",
-      "description": "Kundentyp"
+      "description": "Kundentyp (private = Privatkunde, business = Unternehmen)"
     },
     "status": {
       "type": "string",
@@ -211,6 +211,30 @@
       "type": "string",
       "format": "date-time",
       "description": "Letzter Login ins Portal"
+    },
+    "company_name": {
+      "type": "string",
+      "description": "Unternehmensname (nur f\u00fcr Firmenkunden)"
+    },
+    "legal_form": {
+      "type": "string",
+      "description": "Rechtsform (AG, GmbH, etc.) \u2013 nur Firmenkunden"
+    },
+    "uid_number": {
+      "type": "string",
+      "description": "UID-Nummer / CHE-Nummer \u2013 nur Firmenkunden"
+    },
+    "industry": {
+      "type": "string",
+      "description": "Branche \u2013 nur Firmenkunden"
+    },
+    "contact_person_firstname": {
+      "type": "string",
+      "description": "Vorname Kontaktperson \u2013 nur Firmenkunden"
+    },
+    "contact_person_lastname": {
+      "type": "string",
+      "description": "Nachname Kontaktperson \u2013 nur Firmenkunden"
     }
   },
   "required": [

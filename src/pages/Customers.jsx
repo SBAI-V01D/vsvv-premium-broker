@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import CustomerForm from '../components/customers/CustomerForm'
+import CompanyForm from '../components/customers/CompanyForm'
 import EmailLink from '../components/common/EmailLink'
 import { STATUS_LABELS, FAMILY_ROLE_LABELS, label } from '@/lib/labels'
 import { searchCustomers } from '@/lib/customerSearch'
@@ -18,6 +19,7 @@ export default function Customers() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
   const [newCustomerType, setNewCustomerType] = useState('private')
+  const [filterType, setFilterType] = useState('all')
   const [search, setSearch] = useState('')
   const [expandedFamily, setExpandedFamily] = useState(null)
   const queryClient = useQueryClient()
@@ -66,12 +68,20 @@ export default function Customers() {
   const filteredIds = new Set([...matchedPrimaryIds, ...familyMatchParentIds])
 
   // Sort: direct primary matches first, then family-only matches
-  const filtered = search.trim()
+  const filteredBySearch = search.trim()
     ? [
         ...matchedPrimary.filter(c => filteredIds.has(c.id)),
         ...primaryCustomers.filter(c => familyMatchParentIds.has(c.id) && !matchedPrimaryIds.has(c.id)),
       ]
     : primaryCustomers
+
+  const filtered = filterType === 'all'
+    ? filteredBySearch
+    : filteredBySearch.filter(c =>
+        filterType === 'business'
+          ? c.customer_type === 'business'
+          : c.customer_type !== 'business'
+      )
 
   // When searching, auto-expand families that have a matched member
   const autoExpanded = search.trim() ? familyMatchParentIds : new Set()
@@ -108,6 +118,27 @@ export default function Customers() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+      </div>
+
+      {/* Kundentyp Filter */}
+      <div className="flex gap-2 mb-4">
+        {[
+          { key: 'all', label: 'Alle' },
+          { key: 'private', label: 'Privatkunden' },
+          { key: 'business', label: 'Unternehmen' },
+        ].map(f => (
+          <button
+            key={f.key}
+            onClick={() => setFilterType(f.key)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+              filterType === f.key
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background text-muted-foreground border-border hover:bg-muted'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
       <div className="mb-6">
@@ -168,9 +199,15 @@ export default function Customers() {
                           {familyMembers.length} Familienmitglieder
                         </span>
                       )}
-                      <span className="text-xs bg-secondary text-secondary-foreground px-3 py-1 rounded-full font-medium">
-                        Hauptkunde
-                      </span>
+                      {customer.customer_type === 'business' ? (
+                        <span className="text-xs bg-purple-100 text-purple-700 border border-purple-200 px-3 py-1 rounded-full font-medium flex items-center gap-1">
+                          <Building2 className="w-3 h-3" /> Unternehmen
+                        </span>
+                      ) : (
+                        <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 rounded-full font-medium flex items-center gap-1">
+                          <User className="w-3 h-3" /> Privatkunde
+                        </span>
+                      )}
                     </div>
 
                     <DropdownMenu>
@@ -259,18 +296,29 @@ export default function Customers() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-            {editing
-              ? (editing.is_family_member ? 'Familienmitglied bearbeiten' : 'Kunde bearbeiten')
-              : newCustomerType === 'business' ? 'Neuer Firmenkunde' : 'Neuer Privatkunde'}
-          </DialogTitle>
+              {editing
+                ? (editing.is_family_member ? 'Familienmitglied bearbeiten' : (editing.customer_type === 'business' ? 'Unternehmen bearbeiten' : 'Privatkunde bearbeiten'))
+                : newCustomerType === 'business' ? 'Neuer Firmenkunde' : 'Neuer Privatkunde'}
+            </DialogTitle>
           </DialogHeader>
-          <CustomerForm
-            customer={editing || { customer_type: newCustomerType }}
-            primaryCustomers={primaryCustomers}
-            onSave={handleSave}
-            onCancel={() => { setShowForm(false); setEditing(null); }}
-            saving={createMutation.isPending || updateMutation.isPending}
-          />
+
+          {/* Striktes Formular je nach Kundentyp – kein Mischen */}
+          {(editing?.customer_type === 'business' || (!editing && newCustomerType === 'business')) ? (
+            <CompanyForm
+              customer={editing}
+              onSave={handleSave}
+              onCancel={() => { setShowForm(false); setEditing(null); }}
+              saving={createMutation.isPending || updateMutation.isPending}
+            />
+          ) : (
+            <CustomerForm
+              customer={editing || { customer_type: 'private' }}
+              primaryCustomers={primaryCustomers}
+              onSave={handleSave}
+              onCancel={() => { setShowForm(false); setEditing(null); }}
+              saving={createMutation.isPending || updateMutation.isPending}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
