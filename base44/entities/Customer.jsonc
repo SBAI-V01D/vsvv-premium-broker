@@ -235,11 +235,24 @@
     "contact_person_lastname": {
       "type": "string",
       "description": "Nachname Kontaktperson \u2013 nur Firmenkunden"
+    },
+    "organization_id": {
+      "type": "string",
+      "description": "Organisations-ID (Pflicht) \u2013 definiert Zugeh\u00f6rigkeit zu Makler/Strukturvertrieb"
+    },
+    "teamlead_id": {
+      "type": "string",
+      "description": "ID des Teamleiters (optional) \u2013 muss aus derselben Organisation sein"
+    },
+    "advisor_id": {
+      "type": "string",
+      "description": "ID des Beraters (optional) \u2013 muss aus derselben Organisation sein"
     }
   },
   "required": [
     "first_name",
     "last_name",
-    "email"
+    "email",
+    "organization_id"
   ]
 }

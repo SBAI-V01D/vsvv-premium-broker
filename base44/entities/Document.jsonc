@@ -19,6 +19,11 @@
       "default": false,
       "description": "Dokument geh\u00f6rt zu Familienmitglied"
     },
+    "customer_locked": {
+      "type": "boolean",
+      "default": false,
+      "description": "Kunde wurde manuell gesetzt \u2013 KI darf nicht \u00fcberschreiben"
+    },
     "name": {
       "type": "string",
       "description": "Dokumentname"

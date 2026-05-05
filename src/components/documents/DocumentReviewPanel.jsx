@@ -166,7 +166,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const [matchMode, setMatchMode] = useState('pending')
   const [overrideCustomer, setOverrideCustomer] = useState(null)
   const overrideCustomerRef = useRef(null) // Ref für sync-sicheren Zugriff in handleConfirm
-  const [customerLocked, setCustomerLocked] = useState(false)
+  const [customerLocked, setCustomerLocked] = useState(document?.customer_locked || false)
   const [showCustomerSearch, setShowCustomerSearch] = useState(false)
 
   // Phase: 'extracting' | 'auto_processing' | 'review' | 'saving' | 'done'
@@ -261,13 +261,25 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     setProdukte(normalized.produkte || [])
     setStep('extract', 'ok', `Konfidenz: ${data.confidence}% · ${data.status}`)
 
-    // STEP 2: Match — NUR wenn customer NICHT manuell gesperrt
+    // STEP 2: Match — NUR wenn customer NICHT manuell gesperrt (via document.customer_locked)
     setStep('match', 'running')
     const { candidates, topScore } = matchCustomers(flat, customers)
     setMatchCandidates(candidates)
     setMatchScore(topScore)
 
-    if (!customerLocked) {
+    // Prüfe ob Kunde schon im Dokument gespeichert + gesperrt ist
+    if (document?.customer_id && document?.customer_locked) {
+      // Dokument hat bereits einen gesperrten Kunden
+      const lockedCust = customers.find(c => c.id === document.customer_id)
+      if (lockedCust) {
+        overrideCustomerRef.current = lockedCust
+        setOverrideCustomer(lockedCust)
+        setMatchedCustomer(null)
+        setCustomerLocked(true)
+        setMatchMode('manual')
+        setStep('match', 'ok', `🔒 Dokumentkunde gesperrt: ${lockedCust.first_name} ${lockedCust.last_name} – wird nicht geändert`)
+      }
+    } else if (!customerLocked) {
       // KI setzt Kunde nur wenn noch kein Lock gesetzt
       if (topScore >= 80) {
         setMatchedCustomer(candidates[0].customer)
@@ -806,36 +818,39 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kundenzuordnung</p>
 
                 {activeCustomer && (
-                  <div className={`flex items-center gap-2 p-2.5 rounded-lg border ${customerLocked ? 'bg-blue-50 border-blue-300' : matchMode === 'auto' ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
-                    {customerLocked
-                      ? <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                      : matchMode === 'auto'
-                        ? <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                        : <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                    }
-                    <div className="flex-1 text-xs">
-                      <p className={`font-medium ${customerLocked ? 'text-blue-800' : matchMode === 'auto' ? 'text-green-800' : 'text-amber-800'}`}>
-                        {activeCustomer.first_name} {activeCustomer.last_name}
-                        {!customerLocked && matchScore > 0 && <span className="font-normal ml-1">({matchScore}%)</span>}
-                        {customerLocked && <span className="ml-1 font-semibold">🔒 manuell gesetzt – nicht überschreibbar</span>}
-                      </p>
-                      {activeCustomer.birthdate && <p className="text-muted-foreground">Geb. {activeCustomer.birthdate}</p>}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // Lock + Override vollständig zurücksetzen
-                        overrideCustomerRef.current = null
-                        setCustomerLocked(false)
-                        setOverrideCustomer(null)
-                        setShowCustomerSearch(true)
-                      }}
-                      className="text-xs text-primary underline"
-                    >
-                      Ändern
-                    </button>
-                  </div>
-                )}
+                   <div className={`flex items-center gap-2 p-2.5 rounded-lg border ${customerLocked ? 'bg-blue-50 border-blue-300' : matchMode === 'auto' ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+                     {customerLocked
+                       ? <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                       : matchMode === 'auto'
+                         ? <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                         : <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                     }
+                     <div className="flex-1 text-xs">
+                       <p className={`font-medium ${customerLocked ? 'text-blue-800' : matchMode === 'auto' ? 'text-green-800' : 'text-amber-800'}`}>
+                         {activeCustomer.first_name} {activeCustomer.last_name}
+                         {!customerLocked && matchScore > 0 && <span className="font-normal ml-1">({matchScore}%)</span>}
+                         {customerLocked && <span className="ml-1 font-semibold">🔒 DOKUMENTKUNDE GESPERRT</span>}
+                       </p>
+                       {activeCustomer.birthdate && <p className="text-muted-foreground">Geb. {activeCustomer.birthdate}</p>}
+                       {activeCustomer.organization_id && <p className="text-muted-foreground">Org: {activeCustomer.organization_id}</p>}
+                     </div>
+                     {!customerLocked && (
+                       <button
+                         type="button"
+                         onClick={() => {
+                           // Lock + Override vollständig zurücksetzen
+                           overrideCustomerRef.current = null
+                           setCustomerLocked(false)
+                           setOverrideCustomer(null)
+                           setShowCustomerSearch(true)
+                         }}
+                         className="text-xs text-primary underline"
+                       >
+                         Ändern
+                       </button>
+                     )}
+                   </div>
+                 )}
 
                 {matchMode === 'new_auto' && !overrideCustomer && !customerLocked && (
                   <div className="flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
@@ -857,10 +872,11 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                     <CustomerTypeahead
                       customers={customers}
                       onSelect={async (c) => {
-                        // 1. Sofort ins Backend schreiben
+                        // 1. Sofort ins Backend schreiben + LOCK setzen
                         await base44.entities.Document.update(document.id, {
                           customer_id: c.id,
                           customer_name: `${c.first_name} ${c.last_name}`,
+                          customer_locked: true,
                         })
                         queryClient.invalidateQueries({ queryKey: ['documents'] })
                         // 2. State + Ref setzen — Lock aktiv für diese Session

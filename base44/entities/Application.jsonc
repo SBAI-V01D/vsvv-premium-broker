@@ -19,6 +19,14 @@
       "default": false,
       "description": "Antrag geh\u00f6rt zu Familienmitglied"
     },
+    "organization_id": {
+      "type": "string",
+      "description": "Organisations-ID (aus Kunde geerbt)"
+    },
+    "advisor_id": {
+      "type": "string",
+      "description": "Berater-ID (aus Kunde geerbt)"
+    },
     "kundentyp": {
       "type": "string",
       "enum": [
@@ -116,6 +124,7 @@
   },
   "required": [
     "customer_id",
-    "insurer"
+    "insurer",
+    "organization_id"
   ]
 }

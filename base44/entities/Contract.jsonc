@@ -19,6 +19,14 @@
       "default": false,
       "description": "Vertrag geh\u00f6rt zu Familienmitglied"
     },
+    "organization_id": {
+      "type": "string",
+      "description": "Organisations-ID (aus Kunde geerbt)"
+    },
+    "advisor_id": {
+      "type": "string",
+      "description": "Berater-ID (aus Kunde geerbt)"
+    },
     "insurer": {
       "type": "string",
       "description": "Versicherungsgesellschaft"
@@ -81,6 +89,15 @@
       "type": "string",
       "description": "Dynamischer Status-Schl\u00fcssel (aus StatusDefinition)"
     },
+    "sparte": {
+      "type": "string",
+      "description": "Versicherungssparte"
+    },
+    "sparte_data": {
+      "type": "object",
+      "description": "Spartenspezifische Daten",
+      "additionalProperties": true
+    },
     "commission_rate": {
       "type": "number",
       "description": "Provisionsquote (%)"
@@ -105,6 +122,7 @@
   "required": [
     "customer_id",
     "insurer",
-    "insurance_type"
+    "insurance_type",
+    "organization_id"
   ]
 }
