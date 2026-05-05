@@ -300,7 +300,7 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
 
       <div>
         <Label>Beratender Berater</Label>
-        <Select value={form.assigned_broker || ''} onValueChange={v => set('assigned_broker', v)}>
+        <Select value={form.advisor_id || ''} onValueChange={v => set('advisor_id', v === '' ? '' : v)}>
           <SelectTrigger className="mt-1"><SelectValue placeholder="Berater auswählen..." /></SelectTrigger>
           <SelectContent>
             <SelectItem value={null}>– Kein Berater –</SelectItem>
@@ -308,7 +308,7 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
               <div className="p-2 text-sm text-muted-foreground">Keine Berater vorhanden</div>
             ) : (
               advisors.map(a => (
-                <SelectItem key={a.id} value={a.email}>
+                <SelectItem key={a.id} value={a.id}>
                   {a.firstname} {a.lastname}
                 </SelectItem>
               ))
