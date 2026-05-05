@@ -197,6 +197,24 @@
       "default": "low",
       "description": "KI-Priorisierung: high (<60d), medium (60-120d), low (>120d)"
     },
+    "renewal_stage": {
+      "type": "string",
+      "enum": [
+        "early",
+        "contact",
+        "offer",
+        "negotiation",
+        "renewed",
+        "lost"
+      ],
+      "default": "early",
+      "description": "Sales Pipeline Stage: early (180-120d) \u2192 contact (120-60d) \u2192 offer \u2192 negotiation \u2192 renewed|lost"
+    },
+    "renewal_stage_updated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Wann wurde die Stage zuletzt aktualisiert"
+    },
     "renewal_offer_created": {
       "type": "boolean",
       "default": false,
@@ -232,6 +250,11 @@
       "type": "string",
       "format": "date",
       "description": "Annahmedatum"
+    },
+    "renewal_last_activity": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Letzter Kontakt/Aktivit\u00e4t in der Renewal"
     },
     "pricing_status": {
       "type": "string",

@@ -19,6 +19,7 @@ import FinanceWidget from '@/components/dashboard/FinanceWidget'
 import ControllingSection from '@/components/dashboard/ControllingSection'
 import RenewalWidget from '@/components/dashboard/RenewalWidget'
 import RenewalsSection from '@/components/dashboard/RenewalsSection'
+import RenewalPipelineKanban from '@/components/dashboard/RenewalPipelineKanban'
 import PricingOptimizationPanel from '@/components/dashboard/PricingOptimizationPanel'
 import ActionStrip from '@/components/dashboard/ActionStrip'
 import FlowPipeline from '@/components/dashboard/FlowPipeline'
@@ -264,10 +265,10 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* 5. RENEWALS (DETAIL) */}
+      {/* 5. RENEWAL PIPELINE (KANBAN – NEU) */}
       <div className="mt-6">
-        <h2 className="text-lg font-bold mb-4 text-slate-900">⏰ Vertragsabläufe (Detail)</h2>
-        <RenewalsSection />
+        <h2 className="text-lg font-bold mb-4 text-slate-900">🚀 Renewal Pipeline (Sales Engine)</h2>
+        <RenewalPipelineKanban contracts={filteredContracts} />
       </div>
 
       {/* 6. PREISOPTIMIERUNG */}
