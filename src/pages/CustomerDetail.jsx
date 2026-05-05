@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Link, useParams } from 'react-router-dom'
@@ -394,6 +394,7 @@ export default function CustomerDetail() {
           <div className="space-y-6">
             <CustomerForm
               customer={customer}
+              primaryCustomers={allCustomers.filter(c => !c.is_family_member)}
               onSave={(data) => updateMutation.mutate({ id: customer.id, data })}
               onCancel={() => setShowEdit(false)}
               saving={updateMutation.isPending}
