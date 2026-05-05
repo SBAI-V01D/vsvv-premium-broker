@@ -167,6 +167,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const [overrideCustomer, setOverrideCustomer] = useState(null)
   const overrideCustomerRef = useRef(null) // Ref für sync-sicheren Zugriff in handleConfirm
   const [customerLocked, setCustomerLocked] = useState(document?.customer_locked || false)
+  const [lockConfirmed, setLockConfirmed] = useState(false) // Verhindert Race Conditions
   const [showCustomerSearch, setShowCustomerSearch] = useState(false)
 
   // Phase: 'extracting' | 'auto_processing' | 'review' | 'saving' | 'done'
@@ -835,19 +836,20 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                        {activeCustomer.organization_id && <p className="text-muted-foreground">Org: {activeCustomer.organization_id}</p>}
                      </div>
                      {!customerLocked && (
-                       <button
-                         type="button"
-                         onClick={() => {
-                           // Lock + Override vollständig zurücksetzen
-                           overrideCustomerRef.current = null
-                           setCustomerLocked(false)
-                           setOverrideCustomer(null)
-                           setShowCustomerSearch(true)
-                         }}
-                         className="text-xs text-primary underline"
-                       >
-                         Ändern
-                       </button>
+                       {!customerLocked && !lockConfirmed && (
+                         <button
+                           type="button"
+                           onClick={() => {
+                             overrideCustomerRef.current = null
+                             setCustomerLocked(false)
+                             setOverrideCustomer(null)
+                             setShowCustomerSearch(true)
+                           }}
+                           className="text-xs text-primary underline"
+                         >
+                           Ändern
+                         </button>
+                       )}
                      )}
                    </div>
                  )}
@@ -884,6 +886,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                         setOverrideCustomer(c)
                         setMatchedCustomer(null)
                         setCustomerLocked(true)
+                        setLockConfirmed(true) // Lock ist jetzt bestätigt
                         setMatchMode('manual')
                         setMatchScore(0)
                         setShowCustomerSearch(false)

@@ -2,116 +2,84 @@
   "name": "CommissionEntry",
   "type": "object",
   "properties": {
-    "settlement_date": {
+    "policy_id": {
       "type": "string",
-      "format": "date",
-      "description": "Abrechnungsdatum"
+      "description": "Police-ID"
+    },
+    "policy_number": {
+      "type": "string",
+      "description": "Police-Nummer"
+    },
+    "advisor_id": {
+      "type": "string",
+      "description": "Berater-ID"
+    },
+    "advisor_name": {
+      "type": "string",
+      "description": "Berater-Name (Cache)"
+    },
+    "organization_id": {
+      "type": "string",
+      "description": "Organisations-ID"
+    },
+    "organization_name": {
+      "type": "string",
+      "description": "Organisationsname (Cache)"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Kunden-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Kundenname (Cache)"
     },
     "insurer": {
       "type": "string",
       "description": "Versicherungsgesellschaft"
     },
-    "broker_email": {
+    "product_category": {
       "type": "string",
-      "description": "Berater (E-Mail)"
+      "description": "Produktkategorie / Sparte"
     },
-    "broker_name": {
-      "type": "string",
-      "description": "Berater (Name)"
-    },
-    "customer_id": {
-      "type": "string",
-      "description": "Kunde-ID"
-    },
-    "customer_name": {
-      "type": "string",
-      "description": "Kunde / Versicherungsnehmer"
-    },
-    "sparte": {
-      "type": "string",
-      "description": "Versicherungssparte"
-    },
-    "product": {
-      "type": "string",
-      "description": "Produkt / Police"
-    },
-    "policy_number": {
-      "type": "string",
-      "description": "Policennummer"
-    },
-    "gross_commission": {
+    "premium_yearly": {
       "type": "number",
-      "description": "Brutto-Provision Gesellschaft (CHF)"
+      "description": "Jahrespr\u00e4mie (CHF)"
     },
-    "company_share_percent": {
+    "commission_percentage": {
       "type": "number",
-      "default": 40,
-      "description": "Anteil Gesellschaft (%)"
+      "description": "Provisionsquote (%)"
     },
-    "company_share_amount": {
+    "commission_amount": {
       "type": "number",
-      "description": "Anteil Gesellschaft (CHF) - auto-calculated"
-    },
-    "broker_share_percent": {
-      "type": "number",
-      "description": "Anteil Berater (%) - from rates or override"
-    },
-    "broker_share_amount": {
-      "type": "number",
-      "description": "Anteil Berater (CHF) - auto-calculated"
-    },
-    "storno_percent": {
-      "type": "number",
-      "default": 10,
-      "description": "Storno-Abzug (%)"
-    },
-    "storno_amount": {
-      "type": "number",
-      "description": "Storno-Abzug (CHF) - auto-calculated"
-    },
-    "net_payout": {
-      "type": "number",
-      "description": "Netto-Auszahlung Berater (CHF) - auto-calculated"
+      "description": "Provision (CHF) - auto-berechnet"
     },
     "status": {
       "type": "string",
       "enum": [
-        "erwartet",
-        "abgerechnet",
-        "teilweise_abgerechnet",
-        "storniert"
+        "pending",
+        "active",
+        "cancelled"
       ],
-      "default": "erwartet",
+      "default": "pending",
       "description": "Status"
     },
-    "linked_contract_id": {
+    "entry_date": {
       "type": "string",
-      "description": "Verkn. Vertrags-ID"
-    },
-    "linked_application_id": {
-      "type": "string",
-      "description": "Verkn. Antrags-ID"
-    },
-    "document_url": {
-      "type": "string",
-      "description": "Abrechnungsbeleg (PDF)"
+      "format": "date",
+      "description": "Buchungsdatum"
     },
     "notes": {
       "type": "string",
       "description": "Notizen"
-    },
-    "vat_applicable": {
-      "type": "boolean",
-      "default": false,
-      "description": "MwSt. relevant"
     }
   },
   "required": [
-    "settlement_date",
+    "policy_id",
+    "advisor_id",
+    "organization_id",
     "insurer",
-    "broker_email",
-    "customer_name",
-    "sparte",
-    "gross_commission"
+    "premium_yearly",
+    "commission_percentage"
   ]
 }

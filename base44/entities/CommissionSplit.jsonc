@@ -1,0 +1,74 @@
+{
+  "name": "CommissionSplit",
+  "type": "object",
+  "properties": {
+    "commission_entry_id": {
+      "type": "string",
+      "description": "Verkn\u00fcpfte CommissionEntry-ID"
+    },
+    "advisor_id": {
+      "type": "string",
+      "description": "Berater-ID"
+    },
+    "advisor_name": {
+      "type": "string",
+      "description": "Berater-Name (Cache)"
+    },
+    "teamlead_id": {
+      "type": "string",
+      "description": "Teamleiter-ID (optional)"
+    },
+    "teamlead_name": {
+      "type": "string",
+      "description": "Teamleiter-Name (Cache)"
+    },
+    "organization_id": {
+      "type": "string",
+      "description": "Organisations-ID"
+    },
+    "advisor_share_percent": {
+      "type": "number",
+      "default": 70,
+      "description": "Berater-Anteil (%)"
+    },
+    "advisor_share_amount": {
+      "type": "number",
+      "description": "Berater-Anteil (CHF)"
+    },
+    "teamlead_share_percent": {
+      "type": "number",
+      "default": 30,
+      "description": "Teamleiter-Anteil (%)"
+    },
+    "teamlead_share_amount": {
+      "type": "number",
+      "description": "Teamleiter-Anteil (CHF)"
+    },
+    "total_amount": {
+      "type": "number",
+      "description": "Gesamtbetrag"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "booked",
+        "paid"
+      ],
+      "default": "pending",
+      "description": "Status"
+    },
+    "created_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Erstellungsdatum"
+    }
+  },
+  "required": [
+    "commission_entry_id",
+    "advisor_id",
+    "organization_id",
+    "advisor_share_amount",
+    "total_amount"
+  ]
+}
