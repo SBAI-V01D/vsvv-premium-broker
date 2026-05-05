@@ -276,21 +276,32 @@ export default function Dashboard() {
         <PricingOptimizationPanel />
       </div>
 
-      {/* 7. FINANZEN (REDUZIERT, UNTEN) */}
-      <div>
-        <h2 className="text-lg font-bold mb-3">💰 Finanzen – Ergebnis</h2>
-        <FinanceWidget />
-      </div>
+      {/* SEPARATOR: OPERATIV → MANAGEMENT */}
+      <div className="border-t-2 border-slate-200 pt-6 mt-6">
+        <h2 className="text-xl font-bold mb-6 text-slate-600">📊 Management & Steuerung (Wie läuft das Geschäft?)</h2>
 
-      {/* OPTIONAL: CHARTS + CONTROLLING */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <RevenueChart contracts={filteredContracts} commissionEntries={filteredCommissions} />
-        <TopAdvisors
-          advisors={filteredAdvisors}
-          organizations={organizations}
-          commissionEntries={filteredCommissions}
-          contracts={filteredContracts}
-        />
+        {/* 7. FINANZEN – UMSATZ & PROVISION */}
+        <div className="mb-6">
+          <h3 className="text-lg font-bold mb-3">💰 Umsatz & Provision</h3>
+          <FinanceWidget />
+        </div>
+
+        {/* 8. PERFORMANCE + KPIs */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div>
+            <h3 className="text-lg font-bold mb-3">📈 Umsatz-Trend</h3>
+            <RevenueChart contracts={filteredContracts} commissionEntries={filteredCommissions} />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold mb-3">👥 Berater Performance</h3>
+            <TopAdvisors
+              advisors={filteredAdvisors}
+              organizations={organizations}
+              commissionEntries={filteredCommissions}
+              contracts={filteredContracts}
+            />
+          </div>
+        </div>
       </div>
 
       {/* TASK DIALOG */}
