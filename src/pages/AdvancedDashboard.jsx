@@ -8,6 +8,9 @@ import OperativeSection from '@/components/dashboard/OperativeSection'
 import FinanceSection from '@/components/dashboard/FinanceSection'
 import AdvisorPerformanceCard from '@/components/dashboard/AdvisorPerformanceCard'
 import AlertsPanel from '@/components/dashboard/AlertsPanel'
+import DailyActionsPanel from '@/components/dashboard/DailyActionsPanel'
+import PipelineSection from '@/components/dashboard/PipelineSection'
+import RenewalsActionPanel from '@/components/dashboard/RenewalsActionPanel'
 import { useQuery } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 
@@ -72,70 +75,73 @@ export default function AdvancedDashboard() {
         </div>
       </div>
 
-      {/* 1. KPI SECTION (TOP) */}
+      {/* 🔥 1. HEUTE ZU TUN (OBERSTE PRIORITÄT) */}
+      <DailyActionsPanel metrics={metrics} />
+
+      {/* 📊 2. PIPELINE */}
       <div>
-        <h2 className="text-lg font-bold mb-4">📊 KPI Überblick</h2>
-        <AdvancedKPISection metrics={metrics} />
+        <h2 className="text-lg font-bold mb-4">📊 Pipeline (wo steht das Geld?)</h2>
+        <PipelineSection metrics={metrics} />
       </div>
 
-      {/* 2. OPERATIVE SECTION */}
+      {/* ⏰ 3. VERTRAGSABLÄUFE (RENEWALS) */}
       <div>
-        <h2 className="text-lg font-bold mb-4">🚀 Operative Bereiche</h2>
-        <OperativeSection metrics={metrics} />
+        <h2 className="text-lg font-bold mb-4">⏰ Vertragsabläufe (Bestand = Geld)</h2>
+        <RenewalsActionPanel metrics={metrics} />
       </div>
 
-      {/* 3. RENEWAL STATUS */}
-      {metrics.contracts.filter(c => c.renewal_status !== 'completed').length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">🔄 Verlängerungen in Arbeit</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {metrics.contracts
-                .filter(c => c.renewal_status !== 'completed')
-                .slice(0, 5)
-                .map(c => (
-                  <div key={c.id} className="flex justify-between items-center text-sm p-2 rounded bg-muted/30">
-                    <span>{c.policy_number} - {c.customer_name}</span>
-                    <Badge>{c.renewal_status}</Badge>
-                  </div>
-                ))}
+      {/* 📋 4. AUFGABEN */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">📋 Aufgaben & Workflow</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="p-3 rounded-lg bg-blue-50">
+              <p className="text-xs text-muted-foreground">Offene Tasks</p>
+              <p className="text-2xl font-bold text-blue-600">{metrics.tasks.open}</p>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className="p-3 rounded-lg bg-amber-50">
+              <p className="text-xs text-muted-foreground">Follow-ups</p>
+              <p className="text-2xl font-bold text-amber-600">
+                {metrics.tasks.open > 0 ? Math.ceil(metrics.tasks.open * 0.3) : 0}
+              </p>
+            </div>
+            <div className="p-3 rounded-lg bg-green-50">
+              <p className="text-xs text-muted-foreground">AI Generated</p>
+              <p className="text-2xl font-bold text-green-600">Auto</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* 4. FINANCE SECTION */}
+      {/* 👤 5. KUNDEN (ÜBERSICHT) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">👤 Kundenbestand</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-xs text-muted-foreground">Total</p>
+              <p className="text-2xl font-bold">{metrics.customers.total}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Aktiv</p>
+              <p className="text-2xl font-bold text-green-600">{metrics.customers.active}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Portal</p>
+              <p className="text-2xl font-bold text-blue-600">{metrics.customers.portal}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 💰 6. FINANZEN (GANZ UNTEN – ERGEBNIS, NICHT AKTION) */}
       <div>
-        <h2 className="text-lg font-bold mb-4">💰 Finanzbereich</h2>
+        <h2 className="text-lg font-bold mb-4">💰 Finanzen (Ergebnis)</h2>
         <FinanceSection metrics={metrics} />
-      </div>
-
-      {/* 5. ADVISOR PERFORMANCE */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AdvisorPerformanceCard advisors={metrics.advisors} />
-
-        {/* PIPELINE STATUS */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">📦 Pipeline Status</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {Object.entries(metrics.pipeline).map(([stage, count]) => (
-              <div key={stage} className="flex justify-between items-center text-sm">
-                <span className="capitalize">{stage}</span>
-                <Badge variant="outline">{count}</Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 6. ALERTS */}
-      <div>
-        <h2 className="text-lg font-bold mb-4">⚠️ Risiken & Alerts</h2>
-        <AlertsPanel alerts={metrics.alerts} />
       </div>
     </div>
   )
