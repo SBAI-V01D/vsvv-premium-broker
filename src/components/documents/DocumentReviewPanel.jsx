@@ -144,6 +144,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const [matchCandidates, setMatchCandidates] = useState([])
   const [matchMode, setMatchMode] = useState('pending')
   const [overrideCustomer, setOverrideCustomer] = useState(null)
+  const [customerLocked, setCustomerLocked] = useState(false)  // manuelle Auswahl hat immer Priorität
   const [showCustomerSearch, setShowCustomerSearch] = useState(false)
 
   // Phase: 'extracting' | 'review' | 'saving' | 'done'
@@ -166,6 +167,15 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   useEffect(() => {
     if (customersLoaded && !extraction && !processing) runExtract()
   }, [customersLoaded])
+
+  // Scroll to confirm button when review phase starts (after DOM is rendered)
+  useEffect(() => {
+    if (phase === 'review' && confirmRef.current) {
+      setTimeout(() => {
+        confirmRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }, 150)
+    }
+  }, [phase])
 
   // ── STEP 1+2: Extract + Match ────────────────────────────────────────────────
   const runExtract = async () => {
@@ -236,27 +246,29 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     setMatchCandidates(candidates)
     setMatchScore(topScore)
 
-    if (topScore >= 80) {
-      setMatchedCustomer(candidates[0].customer)
-      setMatchMode('auto')
-      setStep('match', 'ok', `Match: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (${topScore}%)`)
-    } else if (topScore >= 60) {
-      setMatchedCustomer(candidates[0].customer)
-      setMatchMode('auto_low')
-      setStep('match', 'ok', `Unsicherer Match: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (${topScore}%)`)
+    // Nur automatisch zuordnen wenn der User noch NICHT manuell gewählt hat
+    if (!customerLocked) {
+      if (topScore >= 80) {
+        setMatchedCustomer(candidates[0].customer)
+        setMatchMode('auto')
+        setStep('match', 'ok', `Match: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (${topScore}%)`)
+      } else if (topScore >= 60) {
+        setMatchedCustomer(candidates[0].customer)
+        setMatchMode('auto_low')
+        setStep('match', 'ok', `Unsicherer Match: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (${topScore}%)`)
+      } else {
+        setMatchMode('new_auto')
+        setStep('match', 'ok', `${customers.length} geprüft · kein Match → neuer Kunde`)
+      }
     } else {
-      setMatchMode('new_auto')
-      setStep('match', 'ok', `${customers.length} geprüft · kein Match → neuer Kunde`)
+      // Manuell gesperrter Kunde bleibt — KI darf nicht überschreiben
+      setStep('match', 'ok', `Manuell gesetzt: ${overrideCustomer.first_name} ${overrideCustomer.last_name} (gesperrt)`)
     }
 
     // STEP 3: Always show review form — user must confirm manually
     setStep('review', 'waiting', `Bitte Daten prüfen und bestätigen (Konfidenz ${data.confidence}%)`)
     setPhase('review')
     setProcessing(false)
-    // Scroll to confirm button after short delay so form is rendered
-    setTimeout(() => {
-      confirmRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }, 300)
   }
 
   // ── Auto-save helper (called with fully resolved data, no state deps) ─────────
@@ -639,16 +651,18 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kundenzuordnung</p>
 
                 {activeCustomer && (
-                  <div className={`flex items-center gap-2 p-2.5 rounded-lg border ${matchMode === 'auto' ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
-                    {matchMode === 'auto'
-                      ? <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                      : <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <div className={`flex items-center gap-2 p-2.5 rounded-lg border ${customerLocked ? 'bg-blue-50 border-blue-300' : matchMode === 'auto' ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+                    {customerLocked
+                      ? <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                      : matchMode === 'auto'
+                        ? <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
+                        : <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
                     }
                     <div className="flex-1 text-xs">
-                      <p className={`font-medium ${matchMode === 'auto' ? 'text-green-800' : 'text-amber-800'}`}>
+                      <p className={`font-medium ${customerLocked ? 'text-blue-800' : matchMode === 'auto' ? 'text-green-800' : 'text-amber-800'}`}>
                         {activeCustomer.first_name} {activeCustomer.last_name}
-                        {matchScore > 0 && <span className="font-normal ml-1">({matchScore}%)</span>}
-                        {overrideCustomer && <span className="ml-1 text-blue-600">(manuell)</span>}
+                        {!customerLocked && matchScore > 0 && <span className="font-normal ml-1">({matchScore}%)</span>}
+                        {customerLocked && <span className="ml-1 font-semibold">🔒 manuell gesetzt</span>}
                       </p>
                       {activeCustomer.birthdate && <p className="text-muted-foreground">Geb. {activeCustomer.birthdate}</p>}
                     </div>
@@ -656,7 +670,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                   </div>
                 )}
 
-                {matchMode === 'new_auto' && !overrideCustomer && (
+                {matchMode === 'new_auto' && !overrideCustomer && !customerLocked && (
                   <div className="flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
                     <UserPlus className="w-4 h-4 text-blue-600 flex-shrink-0" />
                     <div className="flex-1 text-xs">
@@ -671,7 +685,8 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                     <p className="text-xs text-muted-foreground mb-1.5">Kunden suchen:</p>
                     <CustomerTypeahead customers={customers} onSelect={c => {
                       setOverrideCustomer(c)
-                      setMatchMode('auto')
+                      setCustomerLocked(true)   // 🔒 Manuelle Auswahl sperren — KI kann nicht mehr überschreiben
+                      setMatchMode('manual')
                       setMatchScore(0)
                       setShowCustomerSearch(false)
                     }} />
