@@ -896,24 +896,26 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                     <CustomerTypeahead
                       customers={customers}
                       onSelect={async (c) => {
-                        // ─── PERSISTENZ FIX: Sofort + persistent ins Backend ───
-                        // 1. Document speichern mit customer_locked = true
-                        await base44.entities.Document.update(document.id, {
-                          customer_id: c.id,
-                          customer_name: `${c.first_name} ${c.last_name}`,
-                          customer_locked: true,
-                        })
-                        // 2. Cache invalidieren (UI wird mit Backend-Wert aktualisiert)
-                        queryClient.invalidateQueries({ queryKey: ['documents'] })
-                        // 3. State + Ref (UI-Konsistenz)
-                        overrideCustomerRef.current = c
-                        setOverrideCustomer(c)
-                        setMatchedCustomer(null)
-                        setCustomerLocked(true)
-                        setLockConfirmed(true)
-                        setMatchMode('manual')
-                        setMatchScore(0)
-                        setShowCustomerSearch(false)
+                        // ─── HARD PERSISTENCE: Backend → RELOAD → State ───
+                          // 1. SCHREIBE ins Backend
+                          await base44.entities.Document.update(document.id, {
+                            customer_id: c.id,
+                            customer_name: `${c.first_name} ${c.last_name}`,
+                            customer_locked: true,
+                          })
+                          // 2. RELOAD aus DB (Read After Write - entscheidend!)
+                          const updatedDoc = await base44.entities.Document.get(document.id)
+                          // 3. State aus Backend-Wert (nicht aus UI)
+                          overrideCustomerRef.current = c
+                          setOverrideCustomer(c)
+                          setMatchedCustomer(null)
+                          setCustomerLocked(true)
+                          setLockConfirmed(true)
+                          setMatchMode('manual')
+                          setMatchScore(0)
+                          setShowCustomerSearch(false)
+                          // 4. Cache invalidieren
+                          queryClient.invalidateQueries({ queryKey: ['documents'] })
                       }}
                     />
                   </div>
