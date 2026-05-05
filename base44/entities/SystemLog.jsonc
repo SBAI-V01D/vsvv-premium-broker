@@ -1,0 +1,51 @@
+{
+  "name": "SystemLog",
+  "type": "object",
+  "properties": {
+    "level": {
+      "type": "string",
+      "enum": [
+        "info",
+        "warn",
+        "error",
+        "critical"
+      ],
+      "default": "info",
+      "description": "Log-Level"
+    },
+    "source": {
+      "type": "string",
+      "description": "Quelle (z.B. 'ki_extraktion', 'automation', 'upload')"
+    },
+    "message": {
+      "type": "string",
+      "description": "Log-Nachricht"
+    },
+    "details": {
+      "type": "string",
+      "description": "Technische Details / Stack Trace (JSON oder Text)"
+    },
+    "related_entity_type": {
+      "type": "string",
+      "description": "Betroffener Entit\u00e4tstyp (z.B. 'Document', 'Application')"
+    },
+    "related_entity_id": {
+      "type": "string",
+      "description": "Betroffene Entit\u00e4ts-ID"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Ausl\u00f6sender Nutzer (E-Mail)"
+    },
+    "resolved": {
+      "type": "boolean",
+      "default": false,
+      "description": "Fehler behoben"
+    }
+  },
+  "required": [
+    "level",
+    "source",
+    "message"
+  ]
+}

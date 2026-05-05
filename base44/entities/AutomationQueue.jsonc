@@ -1,0 +1,71 @@
+{
+  "name": "AutomationQueue",
+  "type": "object",
+  "properties": {
+    "job_type": {
+      "type": "string",
+      "enum": [
+        "ki_extraction",
+        "document_classification",
+        "customer_sync",
+        "commission_calc",
+        "notification",
+        "other"
+      ],
+      "description": "Job-Typ"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "processing",
+        "done",
+        "failed"
+      ],
+      "default": "pending",
+      "description": "Job-Status"
+    },
+    "related_document_id": {
+      "type": "string",
+      "description": "Verkn\u00fcpfte Dokument-ID"
+    },
+    "related_entity_type": {
+      "type": "string",
+      "description": "Verkn\u00fcpfter Entit\u00e4tstyp"
+    },
+    "related_entity_id": {
+      "type": "string",
+      "description": "Verkn\u00fcpfte Entit\u00e4ts-ID"
+    },
+    "payload": {
+      "type": "string",
+      "description": "Job-Parameter als JSON"
+    },
+    "result": {
+      "type": "string",
+      "description": "Job-Ergebnis als JSON"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Fehlermeldung (wenn failed)"
+    },
+    "retry_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Anzahl Wiederholungsversuche"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Startzeit"
+    },
+    "completed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Abschlusszeit"
+    }
+  },
+  "required": [
+    "job_type"
+  ]
+}

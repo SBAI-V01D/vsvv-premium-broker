@@ -15,6 +15,7 @@ import RevenueChart from '@/components/dashboard/RevenueChart'
 import TopAdvisors from '@/components/dashboard/TopAdvisors'
 import ActivityFeed from '@/components/dashboard/ActivityFeed'
 import QuickActions from '@/components/dashboard/QuickActions'
+import ControllingSection from '@/components/dashboard/ControllingSection'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -32,6 +33,7 @@ export default function Dashboard() {
   const { data: advisors = [] } = useQuery({ queryKey: ['advisors'], queryFn: () => base44.entities.Advisor.list() })
   const { data: organizations = [] } = useQuery({ queryKey: ['organizations'], queryFn: () => base44.entities.Organization.list() })
   const { data: commissionEntries = [] } = useQuery({ queryKey: ['commissionEntries'], queryFn: () => base44.entities.CommissionEntry.list() })
+  const { data: documents = [] } = useQuery({ queryKey: ['documents'], queryFn: () => base44.entities.Document.list() })
 
   // Global filter: filter advisors by org
   const filteredAdvisors = useMemo(() => {
@@ -307,6 +309,19 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* CONTROLLING SECTION */}
+      <div>
+        <h2 className="text-lg font-bold mb-4">Controlling</h2>
+        <ControllingSection
+          commissionEntries={filteredCommissions}
+          organizations={organizations}
+          advisors={filteredAdvisors}
+          contracts={filteredContracts}
+          applications={applications}
+          documents={documents}
+        />
       </div>
 
       {/* TASK DIALOG */}

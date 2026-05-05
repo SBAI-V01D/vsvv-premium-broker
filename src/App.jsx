@@ -19,6 +19,7 @@ import EmailCampaigns from './pages/EmailCampaigns'
 import StatusVerwaltung from './pages/StatusVerwaltung'
 import CommissionsAndCourtage from './pages/CommissionsAndCourtage'
 import BeratungOrganisation from './pages/BeratungOrganisation'
+import SystemLogs from './pages/SystemLogs'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -90,6 +91,7 @@ const AuthenticatedApp = () => {
         <Route path="/status-verwaltung" element={<StatusVerwaltung />} />
         <Route path="/provisionen-courtagen" element={<CommissionsAndCourtage />} />
         <Route path="/berater-organisation" element={<BeratungOrganisation />} />
+        <Route path="/system-logs" element={<SystemLogs />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
