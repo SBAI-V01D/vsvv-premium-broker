@@ -5,7 +5,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
 import {
   Search, Plus, MoreHorizontal, FileText, ExternalLink,
   Zap, Paperclip, Tag, Trash2, Eye, RefreshCw, Clock
@@ -89,6 +88,22 @@ export default function Documents() {
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('de-CH') : '–'
   const isImage = (url) => url?.match(/\.(jpg|jpeg|png)$/i)
+
+  // Full-Page Review Mode — ersetzt die ganze Seite, kein Modal
+  if (reviewDoc) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'hsl(var(--background))', display: 'flex', flexDirection: 'column' }}>
+        <DocumentReviewPanel
+          document={reviewDoc}
+          onClose={() => setReviewDoc(null)}
+          onSaved={() => {
+            setReviewDoc(null)
+            queryClient.invalidateQueries({ queryKey: ['documents'] })
+          }}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5">
@@ -292,21 +307,6 @@ export default function Documents() {
         onOpenChange={setUploadOpen}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['documents'] })}
       />
-
-      <Dialog open={!!reviewDoc} onOpenChange={(open) => { if (!open) setReviewDoc(null) }}>
-        <DialogContent className="max-w-7xl w-[95vw] h-[90vh] p-0 overflow-hidden">
-          {reviewDoc && (
-            <DocumentReviewPanel
-              document={reviewDoc}
-              onClose={() => setReviewDoc(null)}
-              onSaved={() => {
-                setReviewDoc(null)
-                queryClient.invalidateQueries({ queryKey: ['documents'] })
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

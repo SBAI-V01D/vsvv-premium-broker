@@ -168,8 +168,10 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const [customerLocked, setCustomerLocked] = useState(false)
   const [showCustomerSearch, setShowCustomerSearch] = useState(false)
 
-  // Phase: 'extracting' | 'review' | 'saving' | 'done'
+  // Phase: 'extracting' | 'auto_processing' | 'review' | 'saving' | 'done'
   const [phase, setPhase] = useState('extracting')
+  // Auto-Result: Feedback nach Auto-Mode
+  const [autoResult, setAutoResult] = useState(null) // { customerName, appId }
 
   // Refs for scroll
   const rightPanelRef = useRef(null)
@@ -283,9 +285,125 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       setStep('match', 'ok', `🔒 Manuell gesetzt: ${locked?.first_name} ${locked?.last_name} – wird beibehalten`)
     }
 
-    setStep('review', 'waiting', `Daten prüfen und bestätigen (Konfidenz ${data.confidence}%)`)
+    // ── AUTO MODE: Konfidenz >= 90 → direkt speichern, kein Review ────────────
+    if (data.confidence >= 90) {
+      setStep('review', 'ok', `Auto-Mode: Konfidenz ${data.confidence}% ≥ 90% → direkt verarbeiten`)
+      setPhase('auto_processing')
+      setProcessing(false)
+      // Speichern mit den soeben gesetzten lokalen Werten (kein State-Read)
+      await doSaveAutoMode(data.normalized || {}, flat, normalized.produkte || [], candidates, topScore)
+      return
+    }
+
+    // ── REVIEW MODE: Konfidenz < 90 → User muss prüfen ────────────────────────
+    setStep('review', 'waiting', `Konfidenz ${data.confidence}% < 90% → Bitte Daten prüfen`)
     setPhase('review')
     setProcessing(false)
+  }
+
+  // ── Auto-Mode Speichern (ohne State-Deps, alles als Parameter) ───────────────
+  const doSaveAutoMode = async (normalized, flat, produkteData, candidates, topScore) => {
+    const premiumMonthly = normalized.premium_monthly ?? (flat.estimated_premium_monthly ? Number(flat.estimated_premium_monthly) : null)
+    const premiumYearly  = normalized.premium_yearly ?? (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null)
+    const sparte         = normalized.sparte || null
+
+    // Customer: Auto-Match oder neuer Kunde
+    let cid = null
+    let customerName = `${flat.first_name || ''} ${flat.last_name || ''}`.trim()
+
+    if (topScore >= 80 && candidates.length > 0) {
+      cid = candidates[0].customer.id
+      customerName = `${candidates[0].customer.first_name} ${candidates[0].customer.last_name}`
+      setStep('match', 'ok', `✅ Auto-Match: ${customerName} (${topScore}%)`)
+    } else {
+      // Neuen Kunden anlegen
+      try {
+        const syncResult = await base44.functions.invoke('syncCustomerFromApplication', {
+          first_name: flat.first_name || 'Unbekannt',
+          last_name:  flat.last_name || 'Unbekannt',
+          email:      flat.email || '',
+          phone:      flat.phone || '',
+          street:     flat.street || '',
+          zip_code:   flat.zip_code || '',
+          city:       flat.city || '',
+          birthdate:  flat.birthdate || '',
+          nationality: 'CH',
+        })
+        if (syncResult.data?.customer_id) {
+          cid = syncResult.data.customer_id
+        }
+      } catch (_) {
+        const newC = await base44.entities.Customer.create({
+          first_name: flat.first_name || 'Unbekannt',
+          last_name:  flat.last_name || 'Unbekannt',
+          email:      flat.email || undefined,
+          phone:      flat.phone || undefined,
+          birthdate:  flat.birthdate || undefined,
+          status: 'prospect',
+          customer_type: 'private',
+        })
+        cid = newC.id
+      }
+    }
+
+    setStep('create', 'running')
+    let newApp
+    try {
+      newApp = await base44.entities.Application.create({
+        customer_id: cid,
+        customer_name: customerName,
+        insurer: flat.insurer || 'Andere',
+        sparte,
+        insurance_type: sparte,
+        product: flat.product_label || normalized.product_label || normalized.product_type || undefined,
+        contract_start_date: flat.contract_start_date || undefined,
+        contract_end_date:   flat.contract_end_date || undefined,
+        estimated_premium_monthly: premiumMonthly || undefined,
+        estimated_premium_yearly:  premiumYearly || undefined,
+        sparte_data: {
+          franchise:         flat.franchise || undefined,
+          model:             flat.kassenmodell || normalized.kassenmodell || undefined,
+          age_group:         normalized.age_group || undefined,
+          produkte:          produkteData.length > 0 ? produkteData : undefined,
+          product_type:      normalized.product_type || undefined,
+          zahlungsintervall: normalized.zahlungsintervall || undefined,
+          health_declaration: normalized.gesundheitsdeklaration ? 'Ja' : 'Nein',
+          zusatz_type:       normalized.zusatz_type || undefined,
+        },
+        status: 'submitted',
+        custom_status: 'in_pruefung',
+        status_changed_at: new Date().toISOString(),
+        notes: `Auto-verarbeitet aus Dokument: ${document.name}`,
+      })
+      setStep('create', 'ok', `Antrag-ID: ${newApp.id}`)
+    } catch (err) {
+      setStep('create', 'error', err.message)
+      setPipelineError(`Antrag konnte nicht erstellt werden: ${err.message}`)
+      setPhase('review') // Fallback zu Review
+      return
+    }
+
+    setStep('link', 'running')
+    try {
+      await base44.entities.Document.update(document.id, {
+        customer_id: cid,
+        customer_name: customerName,
+        linked_application_id: newApp.id,
+        doc_type: 'antrag',
+        classification_status: 'klassifiziert',
+      })
+      setStep('link', 'ok', 'Dokument → Antrag verknüpft')
+    } catch (err) {
+      setStep('link', 'error', err.message)
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['applications'] })
+    queryClient.invalidateQueries({ queryKey: ['documents'] })
+    queryClient.invalidateQueries({ queryKey: ['customers'] })
+    setAutoResult({ customerName, appId: newApp.id })
+    setPhase('done')
+    onSaved?.()
+    setTimeout(() => onClose(), 3000)
   }
 
   // ── Speichern ─────────────────────────────────────────────────────────────────
@@ -444,9 +562,17 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
 
       {/* Header – fixiert */}
       <div className="flex items-center justify-between px-4 py-3 border-b bg-card" style={{ flexShrink: 0 }}>
-        <div>
-          <h2 className="font-semibold text-sm">{document.name}</h2>
-          <p className="text-xs text-muted-foreground">OCR → Extraktion → Abgleich → Bestätigung → Speichern</p>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onClose} className="gap-1.5 text-muted-foreground">
+            <X className="w-4 h-4" /> Zurück
+          </Button>
+          <div className="h-4 w-px bg-border" />
+          <div>
+            <h2 className="font-semibold text-sm">{document.name}</h2>
+            <p className="text-xs text-muted-foreground">
+              KI-Review · {phase === 'review' ? '⚠ Konfidenz < 90% – manuelle Prüfung erforderlich' : phase === 'done' ? '✅ Verarbeitet' : 'Analysiert...'}
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {extraction && (
@@ -457,7 +583,16 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
               <Bug className="w-3 h-3" /> Debug
             </button>
           )}
-          <Button variant="ghost" size="icon" onClick={onClose}><X className="w-4 h-4" /></Button>
+          {phase === 'review' && (
+            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">
+              Review-Modus
+            </span>
+          )}
+          {(phase === 'extracting' || phase === 'auto_processing') && (
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin" /> Verarbeitung...
+            </span>
+          )}
         </div>
       </div>
 
@@ -519,14 +654,30 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
             </div>
           )}
 
+          {/* Auto-Processing */}
+          {phase === 'auto_processing' && !pipelineError && (
+            <div className="flex flex-col items-center justify-center gap-3 p-12 text-center">
+              <Loader2 className="w-10 h-10 animate-spin text-green-600" />
+              <div>
+                <p className="font-semibold text-green-700">⚡ Auto-Mode – hohe Konfidenz</p>
+                <p className="text-sm text-muted-foreground mt-1">Antrag wird automatisch erstellt...</p>
+              </div>
+            </div>
+          )}
+
           {/* Fertig */}
           {phase === 'done' && (
-            <div className="flex flex-col items-center justify-center gap-3 p-12 text-center">
-              <CheckCircle2 className="w-12 h-12 text-green-500" />
-              <div>
-                <p className="font-semibold text-green-700">Antrag erfolgreich erstellt</p>
-                <p className="text-sm text-muted-foreground mt-1">Dokument verknüpft – Fenster schließt automatisch</p>
+            <div className="flex flex-col items-center justify-center gap-4 p-12 text-center">
+              <CheckCircle2 className="w-16 h-16 text-green-500" />
+              <div className="space-y-2">
+                <p className="font-bold text-lg text-green-700">✅ Automatisch verarbeitet</p>
+                {autoResult?.customerName && (
+                  <p className="text-sm text-muted-foreground">Kunde: <span className="font-semibold text-foreground">{autoResult.customerName}</span></p>
+                )}
+                <p className="text-sm text-green-600 font-medium">Antrag erstellt</p>
+                <p className="text-xs text-muted-foreground mt-2">Fenster schließt automatisch...</p>
               </div>
+              <Button variant="outline" onClick={onClose}>Jetzt schliessen</Button>
             </div>
           )}
 
