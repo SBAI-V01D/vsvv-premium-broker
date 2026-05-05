@@ -80,10 +80,13 @@ export default function CustomerDetail() {
       <div className="flex justify-between items-start mb-6">
         <div className="flex items-center gap-4 flex-1">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
-            {customer.first_name?.[0]}{customer.last_name?.[0]}
+            {customer.company_name ? customer.company_name[0] : `${customer.first_name?.[0] || ''}${customer.last_name?.[0] || ''}`}
           </div>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold">{customer.first_name} {customer.last_name}</h1>
+            <h1 className="text-3xl font-bold">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</h1>
+            {customer.company_name && (customer.contact_person_firstname || customer.contact_person_lastname) && (
+              <p className="text-sm text-muted-foreground">Kontakt: {customer.contact_person_firstname} {customer.contact_person_lastname}</p>
+            )}
             <p className="text-muted-foreground mt-1"><EmailLink email={customer.email} /></p>
           </div>
         </div>
@@ -153,7 +156,7 @@ export default function CustomerDetail() {
                       <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors">
                         {/* Kunde */}
                         <div className="min-w-0">
-                          <p className="font-semibold text-xs truncate">{relatedCustomer ? `${relatedCustomer.first_name} ${relatedCustomer.last_name}` : c.customer_name}</p>
+                          <p className="font-semibold text-xs truncate">{relatedCustomer ? (relatedCustomer.company_name || `${relatedCustomer.first_name} ${relatedCustomer.last_name}`) : c.customer_name}</p>
                           {relatedCustomer?.ahv_number && (
                             <p className="text-xs font-mono text-muted-foreground mt-0.5">{relatedCustomer.ahv_number}</p>
                           )}
@@ -269,7 +272,7 @@ export default function CustomerDetail() {
                       <div className="flex justify-between items-start gap-4">
                       <div className="flex-1 min-w-0">
                         <div>
-                          <p className="text-xs text-muted-foreground mb-1">{relatedCustomer?.first_name && relatedCustomer?.last_name ? `${relatedCustomer.first_name} ${relatedCustomer.last_name}` : a.customer_name}</p>
+                          <p className="text-xs text-muted-foreground mb-1">{relatedCustomer ? (relatedCustomer.company_name || `${relatedCustomer.first_name} ${relatedCustomer.last_name}`) : a.customer_name}</p>
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-semibold text-sm">{a.insurer || '–'}</p>
                               <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
