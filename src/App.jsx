@@ -24,6 +24,7 @@ import FinanceDashboard from './pages/FinanceDashboard'
 import CEODashboard from './components/ceo/CEODashboard'
 import CEOCockpit from './pages/CEOCockpit'
 import AdvancedDashboard from './pages/AdvancedDashboard'
+import ExecutionMode from './pages/ExecutionMode'
 import Leads from './pages/Leads'
 
 // Portal
@@ -100,6 +101,7 @@ const AuthenticatedApp = () => {
         <Route path="/ceo-dashboard" element={<CEODashboard />} />
         <Route path="/ceo-cockpit" element={<CEOCockpit />} />
         <Route path="/advanced-dashboard" element={<AdvancedDashboard />} />
+        <Route path="/execution-mode" element={<ExecutionMode />} />
         <Route path="/leads" element={<Leads />} />
         <Route path="/system-logs" element={<SystemLogs />} />
       </Route>

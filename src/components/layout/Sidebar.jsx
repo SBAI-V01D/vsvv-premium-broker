@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
-  MessageSquare, ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink, AlertCircle, Bell, Megaphone, Kanban, TrendingUp, CalendarClock, Mail
+  MessageSquare, ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink, AlertCircle, Bell, Megaphone, Kanban, TrendingUp, CalendarClock, Mail, Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
 
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
+  { label: '🚀 Execution Mode', icon: Zap, path: '/execution-mode' },
   { label: '💼 Advanced Cockpit', icon: LayoutDashboard, path: '/advanced-dashboard' },
   { label: '👑 CEO Cockpit', icon: TrendingUp, path: '/ceo-cockpit' },
   { label: 'CEO Dashboard', icon: TrendingUp, path: '/ceo-dashboard' },
