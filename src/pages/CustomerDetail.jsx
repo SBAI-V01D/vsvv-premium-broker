@@ -13,7 +13,7 @@ import EmailLink from '../components/common/EmailLink'
 import { STATUS_LABELS, INSURANCE_TYPE_LABELS, FAMILY_ROLE_LABELS, label } from '@/lib/labels'
 import { getSparteLabel } from '@/lib/insuranceSparten'
 import StatusBadge from '@/components/status/StatusBadge'
-import PortalAccessPanel from '@/components/customers/PortalAccessPanel'
+import PortalActivationPanel from '@/components/customers/PortalActivationPanel'
 
 export default function CustomerDetail() {
   const { id } = useParams()
@@ -408,10 +408,7 @@ export default function CustomerDetail() {
               saving={updateMutation.isPending}
             />
             <div className="border-t pt-6">
-              <PortalAccessPanel 
-                customer={customer} 
-                onUpdate={() => queryClient.invalidateQueries({ queryKey: ['customers'] })}
-              />
+              <PortalActivationPanel customer={customer} />
             </div>
           </div>
         </DialogContent>
