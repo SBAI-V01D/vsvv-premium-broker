@@ -819,7 +819,15 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                       </p>
                       {activeCustomer.birthdate && <p className="text-muted-foreground">Geb. {activeCustomer.birthdate}</p>}
                     </div>
-                    <button type="button" onClick={() => setShowCustomerSearch(p => !p)} className="text-xs text-primary underline">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Lock aufheben damit neuer Kunde gewählt werden kann
+                        setCustomerLocked(false)
+                        setShowCustomerSearch(true)
+                      }}
+                      className="text-xs text-primary underline"
+                    >
                       Ändern
                     </button>
                   </div>
@@ -845,14 +853,15 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                     <CustomerTypeahead
                       customers={customers}
                       onSelect={async (c) => {
-                        // 1. Sofort ins Backend schreiben — KEINE temporäre Variable
+                        // 1. Sofort ins Backend schreiben
                         await base44.entities.Document.update(document.id, {
                           customer_id: c.id,
                           customer_name: `${c.first_name} ${c.last_name}`,
                         })
                         queryClient.invalidateQueries({ queryKey: ['documents'] })
-                        // 2. State sperren — KI darf nicht mehr überschreiben
+                        // 2. State setzen — Lock aktiv für diese Session
                         setOverrideCustomer(c)
+                        setMatchedCustomer(null)
                         setCustomerLocked(true)
                         setMatchMode('manual')
                         setMatchScore(0)
