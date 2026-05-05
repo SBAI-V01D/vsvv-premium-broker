@@ -235,110 +235,109 @@ export default function Dashboard() {
         {kpis.map(k => <KpiCard key={k.label} {...k} />)}
       </div>
 
-      {/* FINANCE WIDGET */}
+      {/* 3. VERTRAGSABLÄUFE (TOP PRIORITÄT) */}
       <div>
-        <h2 className="text-lg font-bold mb-4">💰 Finanz-Overview</h2>
+        <h2 className="text-lg font-bold mb-4">⏰ Vertragsabläufe (Bestand = Geld)</h2>
+        <RenewalsSection />
+      </div>
+
+      {/* 4. GEBURTSTAGE */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold">🎂 Geburtstage (30 Tage) – Verkaufschance</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {upcomingBirthdays.length === 0 ? (
+            <p className="px-6 pb-6 text-sm text-muted-foreground">Keine Geburtstage in den nächsten 30 Tagen</p>
+          ) : (
+            <div className="divide-y">
+              {upcomingBirthdays.map(b => (
+                <div key={b.customer.id} className="px-6 py-3 flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium">{b.customer.first_name} {b.customer.last_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {b.daysUntil === 0 ? '🎉 Heute!' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`}
+                    </p>
+                  </div>
+                  <span className="text-xl">🎂</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 5. OFFENE AUFGABEN */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="text-base font-semibold">📋 Offene Aufgaben</CardTitle>
+          <Button size="sm" onClick={handleNewTask}>+ Neu</Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          {openTasks.length === 0 ? (
+            <p className="px-6 pb-6 text-sm text-muted-foreground">Keine offenen Aufgaben</p>
+          ) : (
+            <div className="divide-y max-h-72 overflow-y-auto">
+              {openTasks.slice(0, 10).map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => handleTaskClick(t)}
+                  className="w-full flex items-center justify-between px-6 py-3 hover:bg-muted/50 transition-colors text-left gap-2"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{t.title}</p>
+                    {t.due_date && <p className="text-xs text-muted-foreground">Fällig: {formatDate(t.due_date)}</p>}
+                  </div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${t.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {t.status === 'in_progress' ? 'Aktiv' : 'Offen'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 6. PREISOPTIMIERUNG */}
+      <div>
+        <h2 className="text-lg font-bold mb-4">💰 Preisoptimierung (Fokus: Einsparpotenzial + Upsell)</h2>
+        <PricingOptimizationPanel />
+      </div>
+
+      {/* 7. LETZTE AKTIVITÄTEN */}
+      <div>
+        <h2 className="text-lg font-bold mb-4">📊 Letzte Aktivitäten</h2>
+        <ActivityFeed
+          customers={customers}
+          contracts={filteredContracts}
+          commissionEntries={filteredCommissions}
+        />
+      </div>
+
+      {/* 8. FINANZ-OVERVIEW (GANZ UNTEN – ERGEBNIS) */}
+      <div>
+        <h2 className="text-lg font-bold mb-4">💰 Finanz-Overview (Ergebnis der Aktionen)</h2>
         <FinanceWidget />
       </div>
 
-      {/* CHART + TOP ADVISORS + RENEWAL */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2">
+      {/* CHART + TOP ADVISORS (ZUSATZ) */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div>
           <RevenueChart contracts={filteredContracts} commissionEntries={filteredCommissions} />
         </div>
-        <div className="space-y-6">
+        <div>
           <TopAdvisors
             advisors={filteredAdvisors}
             organizations={organizations}
             commissionEntries={filteredCommissions}
             contracts={filteredContracts}
           />
-          <RenewalWidget />
         </div>
       </div>
 
-      {/* ACTIVITY + TASKS + BIRTHDAYS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Activity Feed */}
-        <ActivityFeed
-          customers={customers}
-          contracts={filteredContracts}
-          commissionEntries={filteredCommissions}
-        />
-
-        {/* Aufgaben */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base font-semibold">Offene Aufgaben</CardTitle>
-            <Button size="sm" onClick={handleNewTask}>+ Neu</Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            {openTasks.length === 0 ? (
-              <p className="px-6 pb-6 text-sm text-muted-foreground">Keine offenen Aufgaben</p>
-            ) : (
-              <div className="divide-y max-h-72 overflow-y-auto">
-                {openTasks.slice(0, 10).map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => handleTaskClick(t)}
-                    className="w-full flex items-center justify-between px-6 py-3 hover:bg-muted/50 transition-colors text-left gap-2"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{t.title}</p>
-                      {t.due_date && <p className="text-xs text-muted-foreground">Fällig: {formatDate(t.due_date)}</p>}
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${t.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {t.status === 'in_progress' ? 'Aktiv' : 'Offen'}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Geburtstage */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">🎂 Geburtstage (30 Tage)</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {upcomingBirthdays.length === 0 ? (
-              <p className="px-6 pb-6 text-sm text-muted-foreground">Keine Geburtstage in den nächsten 30 Tagen</p>
-            ) : (
-              <div className="divide-y">
-                {upcomingBirthdays.map(b => (
-                  <div key={b.customer.id} className="px-6 py-3 flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-medium">{b.customer.first_name} {b.customer.last_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {b.daysUntil === 0 ? '🎉 Heute!' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`}
-                      </p>
-                    </div>
-                    <span className="text-xl">🎂</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* RENEWALS SECTION */}
+      {/* CONTROLLING SECTION (BONUS) */}
       <div>
-        <h2 className="text-lg font-bold mb-4">🔄 Verlängerungen (Renewals)</h2>
-        <RenewalsSection />
-      </div>
-
-      {/* PRICING OPTIMIZATION */}
-      <div>
-        <h2 className="text-lg font-bold mb-4">💰 Preisoptimierung</h2>
-        <PricingOptimizationPanel />
-      </div>
-
-      {/* CONTROLLING SECTION */}
-      <div>
-        <h2 className="text-lg font-bold mb-4">Controlling</h2>
+        <h2 className="text-lg font-bold mb-4">🔍 Controlling</h2>
         <ControllingSection
           commissionEntries={filteredCommissions}
           organizations={organizations}
