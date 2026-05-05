@@ -248,12 +248,27 @@ function normalizeData(raw) {
     }
   }
 
+  // ROLLENLOGIK: policy_holder (Versicherungsnehmer) hat absolute Priorität.
+  // Lenker/Fahrer sind NIEMALS der Kunde.
+  const companyName = raw?.person?.firma ?? null;
+  const firstName   = raw?.person?.vorname ?? null;
+  const lastName    = raw?.person?.nachname ?? null;
+
+  // Sicherheitscheck: wenn vorname/nachname mit Lenker übereinstimmt → auf null setzen
+  const lenkerName = raw?.rollen?.lenker_name ?? raw?.rollen?.fahrer_name ?? null;
+  const resolvedFirstName = lenkerName && firstName && lenkerName.toLowerCase().includes(firstName.toLowerCase())
+    ? null : firstName;
+  const resolvedLastName = lenkerName && lastName && lenkerName.toLowerCase().includes(lastName.toLowerCase())
+    ? null : lastName;
+
   return {
-    // Person
-    company_name: raw?.person?.firma ?? null,
-    first_name: raw?.person?.vorname ?? null,
-    last_name:  raw?.person?.nachname ?? null,
+    // Person (policy_holder only)
+    company_name: companyName,
+    first_name: resolvedFirstName,
+    last_name:  resolvedLastName,
     birthdate:  raw?.person?.geburtsdatum ?? null,
+    // Rollen (nur für Debug/Info, nicht als Kunde)
+    lenker_name: lenkerName,
     // Contact
     phone:      raw?.kontaktperson?.telefon ?? null,
     email:      raw?.kontaktperson?.email ?? null,
@@ -287,9 +302,10 @@ function normalizeData(raw) {
  */
 function validateNormalized(n) {
   const missing = [];
-  if (!n.first_name)          missing.push('Vorname');
-  if (!n.last_name)           missing.push('Nachname');
-  if (!n.birthdate)           missing.push('Geburtsdatum');
+  // Bei Firmenkunden: Firma reicht, Vorname/Nachname optional
+  if (!n.company_name && !n.first_name)  missing.push('Vorname');
+  if (!n.company_name && !n.last_name)   missing.push('Nachname');
+  if (!n.company_name && !n.birthdate)   missing.push('Geburtsdatum');
   if (!n.contract_start_date) missing.push('Vertragsbeginn');
   if (!n.insurer)             missing.push('Versicherungsgesellschaft');
   if (!n.product_type)        missing.push('KVG/VVG');
@@ -329,10 +345,25 @@ KRITISCHE REGELN:
 - E-Mail: validieren, bei ungültig → null
 - confidence: 0-100 (Gesamtkonfidenz der Extraktion)
 
-VERSICHERUNGSNEHMER (KRITISCH):
-- person.firma: Falls der Versicherungsnehmer eine Firma/Organisation/GmbH/AG ist, trage den FIRMENAMEN hier ein (z.B. "VSV Management GmbH", "Musterfirma AG"). Wenn Privatperson → null.
-- person.vorname / person.nachname: Bei Privatpersonen Name eintragen. Bei Firmen: Kontaktperson falls vorhanden, sonst null.
-- Schaue zuerst auf "Versicherungsnehmer", "Ihre Adresse", "Antragsteller" – steht dort ein Firmenname → person.firma setzen!
+VERSICHERUNGSNEHMER vs. ROLLEN (ABSOLUT KRITISCH):
+Das Dokument kann verschiedene Personen/Entitäten enthalten. Du MUSST die ROLLEN unterscheiden!
+
+SCHRITT 1 – VERSICHERUNGSNEHMER (= Kunde, höchste Priorität):
+Suche im Dokument nach: "Versicherungsnehmer", "Ihre Adresse", "Antragsteller", "Police für", "Versicherte Person"
+→ Diese Entität ist der KUNDE. Trage sie in person.* ein.
+→ Falls Firma (GmbH, AG, Genossenschaft, etc.) → person.firma setzen, vorname/nachname = null (oder Kontaktperson)
+→ Falls Privatperson → person.vorname + person.nachname setzen, firma = null
+
+SCHRITT 2 – ANDERE ROLLEN (NIEMALS als Kunde verwenden):
+Suche nach: "Lenker", "Fahrer", "Fahrzeughalter", "versicherte Person" (wenn ≠ VN), "Begünstigter"
+→ Diese Personen sind NICHT der Versicherungsnehmer/Kunde!
+→ Trage sie in rollen.* ein (lenker, fahrer, etc.)
+→ NIEMALS einen Lenker/Fahrer als person.vorname/nachname setzen!
+
+BEISPIEL (Motorfahrzeugversicherung):
+- "Versicherungsnehmer: VSV Management GmbH" → person.firma = "VSV Management GmbH"
+- "Lenker: Peter Martin Adam" → rollen.lenker_name = "Peter Martin Adam"
+- person.vorname/nachname = null (kein Privatname des VN)
 
 Dateiname: "${file_name || ''}"
 
@@ -422,6 +453,15 @@ Extrahiere in EXAKT dieser Struktur:`,
             },
             required: ['gesellschaft','beginn','ende','praemie_monat','franchise','kassenmodell','zahlungsintervall','gesundheitsdeklaration','produkte']
           },
+          rollen: {
+            type: 'object',
+            properties: {
+              lenker_name:    { type: ['string','null'] },
+              fahrer_name:    { type: ['string','null'] },
+              beguenstigter:  { type: ['string','null'] }
+            },
+            required: ['lenker_name','fahrer_name','beguenstigter']
+          },
           meta: {
             type: 'object',
             properties: {
@@ -431,7 +471,7 @@ Extrahiere in EXAKT dieser Struktur:`,
             required: ['confidence','incomplete']
           }
         },
-        required: ['person','kontaktperson','adresse','versicherung','meta']
+        required: ['person','kontaktperson','adresse','versicherung','rollen','meta']
       },
       model: 'gemini_3_flash'
     });
@@ -445,6 +485,7 @@ Extrahiere in EXAKT dieser Struktur:`,
                  : confidence < 85 ? 'pruefung_erforderlich'
                  : 'ok';
 
+    console.log(`[normalizeData] company=${normalized.company_name} first=${normalized.first_name} last=${normalized.last_name} lenker=${normalized.lenker_name}`);
     console.log(`[normalizeData] productType=${normalized.product_type} sparte=${normalized.sparte} ageGroup=${normalized.age_group}`);
     console.log(`[normalizeData] premiumMonthly=${normalized.premium_monthly} premiumYearly=${normalized.premium_yearly}`);
     console.log(`[normalizeData] kassenmodell=${normalized.kassenmodell} gd=${normalized.gesundheitsdeklaration}`);
