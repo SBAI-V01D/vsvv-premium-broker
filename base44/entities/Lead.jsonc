@@ -74,6 +74,53 @@
     "lost_reason": {
       "type": "string",
       "description": "Grund f\u00fcr Verlust (wenn status=lost)"
+    },
+    "lead_score": {
+      "type": "number",
+      "default": 0,
+      "description": "Lead Score (0-100)"
+    },
+    "autopilot_status": {
+      "type": "string",
+      "enum": [
+        "off",
+        "active",
+        "paused"
+      ],
+      "default": "off",
+      "description": "Autopilot: off=manuell, active=automatisiert, paused=pausiert"
+    },
+    "offer_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "preparing",
+        "ready",
+        "sent",
+        "accepted",
+        "rejected"
+      ],
+      "default": "none",
+      "description": "Angebots-Status"
+    },
+    "offer_prepared_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Datum Angebot vorbereitet"
+    },
+    "offer_sent_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Datum Angebot gesendet"
+    },
+    "last_followup_sent": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Letzte automatische Follow-up"
+    },
+    "conversion_probability": {
+      "type": "number",
+      "description": "AI-Abschlusswahrscheinlichkeit (%)"
     }
   },
   "required": [
