@@ -4,7 +4,9 @@ import { base44 } from '@/api/base44Client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Phone, FileText, CheckCircle2, AlertCircle, TrendingUp } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
+import { Phone, FileText, CheckCircle2, AlertCircle, TrendingUp, Zap, Clock, MessageSquare } from 'lucide-react'
 
 const STAGES = [
   { key: 'early', label: 'EARLY', days: '180–120d' },
@@ -21,95 +23,191 @@ function getUrgencyColor(daysLeft) {
   return 'border-l-green-500'
 }
 
-function RenewalCard({ contract, onActionClick }) {
+function calculateConversionChance(contract) {
+  let chance = 50
+  
+  if (contract.renewal_stage === 'contact') chance += 20
+  if (contract.renewal_offer_status === 'sent') chance += 30
+  if (contract.renewal_last_activity) {
+    const lastActivity = new Date(contract.renewal_last_activity)
+    const daysSinceActivity = Math.floor((new Date() - lastActivity) / (1000 * 60 * 60 * 24))
+    if (daysSinceActivity > 14) chance -= 20
+    else if (daysSinceActivity > 7) chance -= 10
+  } else {
+    chance -= 20
+  }
+  
+  return Math.max(0, Math.min(100, chance))
+}
+
+function getNextAction(contract) {
+  if (!contract.renewal_last_activity || 
+      (new Date() - new Date(contract.renewal_last_activity)) / (1000 * 60 * 60 * 24) > 5) {
+    return 'Kontaktieren'
+  }
+  if (contract.renewal_offer_status === 'none' || contract.renewal_offer_status === 'pending') {
+    return 'Angebot senden'
+  }
+  if (contract.renewal_offer_status === 'sent') {
+    return 'Nachfassen'
+  }
+  if (contract.renewal_customer_accepted) {
+    return 'Abschluss bestätigen'
+  }
+  return 'Folgeaktion'
+}
+
+function getStuckStatus(contract) {
+  if (!contract.renewal_last_activity) return 'no_contact'
+  const daysSinceActivity = Math.floor((new Date() - new Date(contract.renewal_last_activity)) / (1000 * 60 * 60 * 24))
+  if (daysSinceActivity > 14) return 'stuck'
+  if (daysSinceActivity > 7) return 'warning'
+  return null
+}
+
+function RenewalCard({ contract, onActionClick, isHotDeal = false }) {
   const daysLeft = contract.end_date
     ? Math.floor((new Date(contract.end_date) - new Date()) / (1000 * 60 * 60 * 24))
     : null
 
   const [showDetails, setShowDetails] = useState(false)
+  const [showMessage, setShowMessage] = useState(false)
+  
+  const conversionChance = calculateConversionChance(contract)
+  const nextAction = getNextAction(contract)
+  const stuckStatus = getStuckStatus(contract)
 
   return (
-    <Card
-      className={`border-l-4 ${getUrgencyColor(daysLeft)} flex-shrink-0 w-72 hover:shadow-lg transition-shadow cursor-default group`}
-      onMouseEnter={() => setShowDetails(true)}
-      onMouseLeave={() => setShowDetails(false)}
-    >
-      <CardContent className="p-4 space-y-3">
-        {/* HEADER: Name + Product */}
-        <div>
-          <p className="font-bold text-sm text-slate-900 truncate">{contract.customer_name}</p>
-          <p className="text-xs text-muted-foreground truncate">{contract.product || contract.insurance_type}</p>
-        </div>
-
-        {/* MIDDLE: Key Metrics */}
-        <div className="grid grid-cols-2 gap-2 text-xs">
+    <>
+      <Card
+        className={`border-l-4 ${getUrgencyColor(daysLeft)} flex-shrink-0 ${isHotDeal ? 'w-96 shadow-lg ring-2 ring-red-400' : 'w-72'} hover:shadow-lg transition-shadow cursor-default group`}
+        onMouseEnter={() => setShowDetails(true)}
+        onMouseLeave={() => setShowDetails(false)}
+      >
+        <CardContent className="p-4 space-y-3">
+          {/* HEADER: Name + Product + Hot Badge */}
           <div>
-            <p className="text-muted-foreground">Endet</p>
-            <p className="font-semibold text-slate-900">
-              {contract.end_date ? new Date(contract.end_date).toLocaleDateString('de-CH') : '–'}
-            </p>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1">
+                <p className="font-bold text-sm text-slate-900 truncate">{contract.customer_name}</p>
+                <p className="text-xs text-muted-foreground truncate">{contract.product || contract.insurance_type}</p>
+              </div>
+              {isHotDeal && <span className="text-lg flex-shrink-0">🔥</span>}
+            </div>
           </div>
-          <div>
-            <p className="text-muted-foreground">Prämie</p>
-            <p className="font-semibold text-slate-900">
-              CHF {contract.premium_yearly?.toLocaleString('de-CH', { maximumFractionDigits: 0 }) || '–'}
-            </p>
-          </div>
-        </div>
 
-        {/* URGENCY BADGE */}
-        {daysLeft !== null && daysLeft < 120 && (
-          <Badge className={daysLeft < 60 ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}>
-            {daysLeft < 0 ? 'ÜBERFÄLLIG' : `${daysLeft} Tage`}
+          {/* NEXT ACTION BADGE */}
+          <Badge className="w-full justify-center bg-blue-100 text-blue-700 font-semibold text-xs">
+            ➜ {nextAction}
           </Badge>
-        )}
 
-        {/* HOVER DETAILS */}
-        {showDetails && (
-          <div className="pt-2 border-t border-slate-200 space-y-1 text-xs">
-            {contract.assigned_broker && (
-              <p className="text-muted-foreground"><strong>Berater:</strong> {contract.assigned_broker}</p>
-            )}
-            {contract.renewal_last_activity && (
-              <p className="text-muted-foreground">
-                <strong>Zuletzt:</strong> {new Date(contract.renewal_last_activity).toLocaleDateString('de-CH')}
+          {/* MIDDLE: Key Metrics */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <p className="text-muted-foreground">Endet</p>
+              <p className="font-semibold text-slate-900">
+                {contract.end_date ? new Date(contract.end_date).toLocaleDateString('de-CH') : '–'}
               </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">Prämie</p>
+              <p className="font-semibold text-slate-900">
+                CHF {contract.premium_yearly?.toLocaleString('de-CH', { maximumFractionDigits: 0 }) || '–'}
+              </p>
+            </div>
+          </div>
+
+          {/* URGENCY + CONVERSION CHANCE */}
+          <div className="flex gap-2 flex-wrap">
+            {daysLeft !== null && daysLeft < 120 && (
+              <Badge className={daysLeft < 60 ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'}>
+                {daysLeft < 0 ? 'ÜBERFÄLLIG' : `${daysLeft}d`}
+              </Badge>
             )}
-            {contract.notes && (
-              <p className="text-muted-foreground italic">"{contract.notes.substring(0, 50)}..."</p>
+            <Badge className={conversionChance > 70 ? 'bg-green-100 text-green-700' : conversionChance > 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}>
+              {conversionChance}% Chance
+            </Badge>
+            {stuckStatus === 'stuck' && (
+              <Badge className="bg-red-100 text-red-700 font-bold">⚠️ STECKEN</Badge>
+            )}
+            {stuckStatus === 'warning' && (
+              <Badge className="bg-yellow-100 text-yellow-700">⏰ 7d inaktiv</Badge>
             )}
           </div>
-        )}
 
-        {/* ACTION BUTTONS */}
-        <div className="flex gap-2 pt-2 border-t border-slate-200">
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1 h-8 text-xs"
-            onClick={() => onActionClick('contact', contract)}
-          >
-            <Phone className="w-3 h-3 mr-1" /> Kontakt
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1 h-8 text-xs"
-            onClick={() => onActionClick('offer', contract)}
-          >
-            <FileText className="w-3 h-3 mr-1" /> Angebot
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="flex-1 h-8 text-xs"
-            onClick={() => onActionClick('close', contract)}
-          >
-            <CheckCircle2 className="w-3 h-3 mr-1" /> Schluss
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+          {/* HOVER DETAILS */}
+          {showDetails && (
+            <div className="pt-2 border-t border-slate-200 space-y-1.5 text-xs">
+              {contract.assigned_broker && (
+                <p className="text-muted-foreground"><strong>Berater:</strong> {contract.assigned_broker}</p>
+              )}
+              {contract.renewal_last_activity && (
+                <p className="text-muted-foreground">
+                  <strong>Zuletzt:</strong> {new Date(contract.renewal_last_activity).toLocaleDateString('de-CH')}
+                </p>
+              )}
+              <p className="text-muted-foreground">
+                <strong>Stage:</strong> {contract.renewal_stage || 'early'}
+              </p>
+              {contract.notes && (
+                <p className="text-muted-foreground italic">"{contract.notes.substring(0, 50)}..."</p>
+              )}
+            </div>
+          )}
+
+          {/* ACTION BUTTONS */}
+          <div className="flex gap-2 pt-2 border-t border-slate-200">
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 h-8 text-xs"
+              onClick={() => onActionClick('contact', contract)}
+            >
+              <Phone className="w-3 h-3 mr-1" /> Ruf
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 h-8 text-xs"
+              onClick={() => onActionClick('offer', contract)}
+            >
+              <FileText className="w-3 h-3 mr-1" /> Ang
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 h-8 text-xs"
+              onClick={() => setShowMessage(true)}
+            >
+              <MessageSquare className="w-3 h-3 mr-1" /> Msg
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* MESSAGE DIALOG */}
+      <Dialog open={showMessage} onOpenChange={setShowMessage}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Follow-Up Message: {contract.customer_name}</DialogTitle>
+          </DialogHeader>
+          <Textarea
+            defaultValue={`Sehr geehrte/r ${contract.customer_name},
+
+Ihr Versicherungsvertrag (${contract.policy_number}) läuft am ${new Date(contract.end_date).toLocaleDateString('de-CH')} aus.
+
+Gerne bespreche ich mit Ihnen die Verlängerung oder Optimierungsmöglichkeiten.
+
+Freundliche Grüsse`}
+            className="h-40"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowMessage(false)}>Abbrechen</Button>
+            <Button onClick={() => { onActionClick('message', contract); setShowMessage(false) }}>Senden</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
@@ -163,12 +261,38 @@ export default function RenewalPipelineKanbanV2({ contracts = [] }) {
       return daysLeft > 0 && daysLeft < 60
     })
     const expectedRevenue = activeContracts.reduce((sum, c) => sum + (c.premium_yearly || 0), 0)
+    
+    // Conversion metrics
+    const withActivity = activeContracts.filter(c => c.renewal_last_activity).length
+    const avgConversionChance = activeContracts.length > 0
+      ? Math.round(activeContracts.reduce((sum, c) => sum + calculateConversionChance(c), 0) / activeContracts.length)
+      : 0
 
     return {
       total: activeContracts.length,
       critical: critical.length,
       expectedRevenue: Math.round(expectedRevenue),
+      avgConversion: avgConversionChance,
+      conversionRate: activeContracts.length > 0 ? Math.round((withActivity / activeContracts.length) * 100) : 0,
     }
+  }, [activeContracts])
+
+  // Hot deals: <30 days OR >70% conversion
+  const hotDeals = useMemo(() => {
+    const today = new Date()
+    return activeContracts
+      .filter(c => {
+        if (!c.end_date) return false
+        const daysLeft = Math.floor((new Date(c.end_date) - today) / (1000 * 60 * 60 * 24))
+        const chance = calculateConversionChance(c)
+        return (daysLeft > 0 && daysLeft < 30) || chance > 70
+      })
+      .sort((a, b) => {
+        const aDays = a.end_date ? Math.floor((new Date(a.end_date) - new Date()) / (1000 * 60 * 60 * 24)) : 999
+        const bDays = b.end_date ? Math.floor((new Date(b.end_date) - new Date()) / (1000 * 60 * 60 * 24)) : 999
+        return aDays - bDays
+      })
+      .slice(0, 5)
   }, [activeContracts])
 
   // Organize contracts by stage with smart sorting
@@ -205,38 +329,60 @@ export default function RenewalPipelineKanbanV2({ contracts = [] }) {
   return (
     <div className="space-y-6">
       {/* KPI BAR */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <Card className="hover:shadow-md transition-shadow">
           <CardContent className="pt-4">
             <p className="text-xs text-muted-foreground">Total Renewals</p>
-            <p className="text-3xl font-bold text-primary mt-2">{kpis.total}</p>
+            <p className="text-2xl font-bold text-primary mt-1">{kpis.total}</p>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-shadow border-l-4 border-l-red-500">
           <CardContent className="pt-4">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <div>
-                <p className="text-xs text-muted-foreground">Kritisch (&lt;60d)</p>
-                <p className="text-3xl font-bold text-red-600 mt-2">{kpis.critical}</p>
-              </div>
-            </div>
+            <p className="text-xs text-muted-foreground">Kritisch &lt;60d</p>
+            <p className="text-2xl font-bold text-red-600 mt-1">{kpis.critical}</p>
           </CardContent>
         </Card>
         <Card className="hover:shadow-md transition-shadow border-l-4 border-l-green-500">
           <CardContent className="pt-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-green-600" />
-              <div>
-                <p className="text-xs text-muted-foreground">Erwarteter Umsatz</p>
-                <p className="text-2xl font-bold text-green-600 mt-2">
-                  CHF {kpis.expectedRevenue.toLocaleString('de-CH')}
-                </p>
-              </div>
-            </div>
+            <p className="text-xs text-muted-foreground">Erwarteter Umsatz</p>
+            <p className="text-lg font-bold text-green-600 mt-1">
+              CHF {(kpis.expectedRevenue / 1000).toFixed(0)}k
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
+          <CardContent className="pt-4">
+            <p className="text-xs text-muted-foreground">Ø Conversion Chance</p>
+            <p className="text-2xl font-bold text-blue-600 mt-1">{kpis.avgConversion}%</p>
+          </CardContent>
+        </Card>
+        <Card className="hover:shadow-md transition-shadow border-l-4 border-l-purple-500">
+          <CardContent className="pt-4">
+            <p className="text-xs text-muted-foreground">Mit Aktivität</p>
+            <p className="text-2xl font-bold text-purple-600 mt-1">{kpis.conversionRate}%</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* HOT RENEWALS SECTION */}
+      {hotDeals.length > 0 && (
+        <div className="bg-gradient-to-r from-red-50 to-orange-50 p-6 rounded-lg border-2 border-red-200">
+          <div className="flex items-center gap-2 mb-4">
+            <Zap className="w-5 h-5 text-red-600" />
+            <h3 className="text-lg font-bold text-red-900">🔥 HOT RENEWALS – Top {hotDeals.length} (Fokus jetzt!)</h3>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {hotDeals.map(deal => (
+              <RenewalCard
+                key={deal.id}
+                contract={deal}
+                onActionClick={(action, c) => console.log(`Action: ${action} on`, c)}
+                isHotDeal={true}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* KANBAN BOARD */}
       {visibleStages.length === 0 ? (
@@ -255,10 +401,17 @@ export default function RenewalPipelineKanbanV2({ contracts = [] }) {
         </div>
       )}
 
-      {/* HINT */}
-      <p className="text-xs text-muted-foreground text-center">
-        💡 Klick auf Kontakt / Angebot / Schluss für direkte Aktion
-      </p>
+      {/* HINTS */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+        <p className="text-xs text-blue-900"><strong>💡 Conversion Booster:</strong></p>
+        <ul className="text-xs text-blue-800 space-y-1 ml-4">
+          <li>✓ <strong>Next Action:</strong> automatisch berechnet – folge der Empfehlung</li>
+          <li>✓ <strong>Conversion Chance:</strong> zeigt Abschluss-Wahrscheinlichkeit</li>
+          <li>✓ <strong>Hot Renewals:</strong> die wichtigsten 5 Deals – diese sind dein Fokus</li>
+          <li>✓ <strong>Msg Button:</strong> sendet vorgefertigte Follow-Up-Nachricht</li>
+          <li>✓ <strong>⚠️ STECKEN:</strong> Deals ohne Aktivität &gt; 14 Tage</li>
+        </ul>
+      </div>
     </div>
   )
 }
