@@ -21,6 +21,7 @@ const ORG_TYPE_LABELS = {
 const ROLE_LABELS = {
   advisor: 'Berater',
   team_lead: 'Teamleiter',
+  address_broker: 'Adressvermittler',
 }
 
 function OrgForm({ org, onSave, onCancel, saving }) {
@@ -112,6 +113,7 @@ function AdvisorForm({ advisor, organizations, onSave, onCancel, saving }) {
             <SelectContent>
               <SelectItem value="advisor">Berater</SelectItem>
               <SelectItem value="team_lead">Teamleiter</SelectItem>
+              <SelectItem value="address_broker">Adressvermittler</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -240,7 +242,7 @@ export default function BeratungOrganisation() {
                           <p className="text-xs text-muted-foreground">{a.email} · {ROLE_LABELS[a.role]}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a.role === 'team_lead' ? 'bg-purple-100 text-purple-700' : 'bg-blue-50 text-blue-700'}`}>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${a.role === 'team_lead' ? 'bg-purple-100 text-purple-700' : a.role === 'address_broker' ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-700'}`}>
                             {ROLE_LABELS[a.role]}
                           </span>
                           <DropdownMenu>
@@ -276,7 +278,7 @@ export default function BeratungOrganisation() {
               </SelectContent>
             </Select>
             <div className="flex gap-2">
-              {[{ key: 'all', label: 'Alle Rollen' }, { key: 'team_lead', label: 'Teamleiter' }, { key: 'advisor', label: 'Berater' }].map(f => (
+              {[{ key: 'all', label: 'Alle Rollen' }, { key: 'team_lead', label: 'Teamleiter' }, { key: 'advisor', label: 'Berater' }, { key: 'address_broker', label: 'Adressvermittler' }].map(f => (
                 <button key={f.key} onClick={() => setFilterRole(f.key)}
                   className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${filterRole === f.key ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-border hover:bg-muted'}`}>
                   {f.label}
@@ -299,7 +301,7 @@ export default function BeratungOrganisation() {
                       <p className="text-xs text-muted-foreground mt-0.5">{org?.name || '–'}</p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${a.role === 'team_lead' ? 'bg-purple-100 text-purple-700' : 'bg-blue-50 text-blue-700'}`}>
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${a.role === 'team_lead' ? 'bg-purple-100 text-purple-700' : a.role === 'address_broker' ? 'bg-orange-100 text-orange-700' : 'bg-blue-50 text-blue-700'}`}>
                         {ROLE_LABELS[a.role]}
                       </span>
                       <span className={`text-xs px-2 py-1 rounded-full font-medium ${a.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
