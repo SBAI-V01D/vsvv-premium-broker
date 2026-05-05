@@ -11,6 +11,7 @@ const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
   { label: '👑 CEO Cockpit', icon: TrendingUp, path: '/ceo-cockpit' },
   { label: 'CEO Dashboard', icon: TrendingUp, path: '/ceo-dashboard' },
+  { label: '🚀 Leads', icon: TrendingUp, path: '/leads' },
   { label: 'Kunden', icon: Users, path: '/kunden' },
   { label: 'Verträge', icon: FileText, path: '/vertraege' },
   { label: 'Anträge', icon: FileText, path: '/antraege' },

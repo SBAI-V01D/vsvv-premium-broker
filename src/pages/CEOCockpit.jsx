@@ -42,6 +42,11 @@ export default function CEOCockpit() {
     queryFn: () => base44.entities.Organization.list(),
   })
 
+  const { data: leads = [] } = useQuery({
+    queryKey: ['leads'],
+    queryFn: () => base44.entities.Lead.list(),
+  })
+
   // ─── Filtering ───
   const filteredContracts = useMemo(() => {
     return contracts.filter(c => {
@@ -444,7 +449,57 @@ export default function CEOCockpit() {
         )}
 
         {/* ═══════════════════════════════════════════════════════════════ */}
-        {/* 5. KUNDENÜBERSICHT */}
+        {/* 5. GROWTH METRICS (LEAD-FUNNEL) */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        <div>
+          <h2 className="text-xl font-bold mb-4">🚀 Growth Metrics (Lead-Funnel)</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Leads</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">{leads.length}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Konvertiert</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-green-600">
+                  {leads.filter(l => l.status === 'converted').length}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Conversion Rate</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-blue-600">
+                  {leads.length > 0 ? ((leads.filter(l => l.status === 'converted').length / leads.length) * 100).toFixed(1) : 0}%
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Aktive Leads</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-purple-600">
+                  {leads.filter(l => ['new', 'contacted', 'qualified'].includes(l.status)).length}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* 6. KUNDENÜBERSICHT */}
         {/* ═══════════════════════════════════════════════════════════════ */}
         <div>
           <h2 className="text-xl font-bold mb-4">👥 Kundenübersicht</h2>

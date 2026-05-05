@@ -1,0 +1,84 @@
+{
+  "name": "Lead",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name des Leads"
+    },
+    "email": {
+      "type": "string",
+      "description": "E-Mail-Adresse"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefonnummer"
+    },
+    "company": {
+      "type": "string",
+      "description": "Unternehmen (optional)"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "website",
+        "referral",
+        "campaign",
+        "manual",
+        "import"
+      ],
+      "description": "Quelle des Leads"
+    },
+    "advisor_id": {
+      "type": "string",
+      "description": "Zugewiesener Berater"
+    },
+    "advisor_name": {
+      "type": "string",
+      "description": "Berater-Name (Cache)"
+    },
+    "organization_id": {
+      "type": "string",
+      "description": "Organisations-ID"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "contacted",
+        "qualified",
+        "converted",
+        "lost"
+      ],
+      "default": "new",
+      "description": "Lead-Status im Funnel"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Linked Customer ID (nach Konvertierung)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notizen zum Lead"
+    },
+    "last_contact_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Letzter Kontakt"
+    },
+    "converted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Konvertierungsdatum"
+    },
+    "lost_reason": {
+      "type": "string",
+      "description": "Grund f\u00fcr Verlust (wenn status=lost)"
+    }
+  },
+  "required": [
+    "name",
+    "email",
+    "source"
+  ]
+}
