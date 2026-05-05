@@ -281,25 +281,25 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
         setStep('match', 'ok', `🔒 GESPERRT (Backend): ${lockedCust.first_name} ${lockedCust.last_name}`)
       } else {
         // Backend sagt: kein Lock → AI darf matchen
-        candidates = matchCustomers(flat, customers).candidates
-        topScore = matchCustomers(flat, customers).topScore
+        const result = matchCustomers(flat, customers)
+        candidates = result.candidates
+        topScore = result.topScore
         setMatchCandidates(candidates)
         setMatchScore(topScore)
-      }
 
-      // KI-Matching (nur wenn kein Lock)
-      if (!document?.customer_id || !document?.customer_locked) {
-      if (topScore >= 80) {
-        setMatchedCustomer(candidates[0].customer)
-        setMatchMode('auto')
-        setStep('match', 'ok', `✅ Match: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (${topScore}%)`)
-      } else if (topScore >= 60) {
-        setMatchedCustomer(candidates[0].customer)
-        setMatchMode('auto_low')
-        setStep('match', 'ok', `⚠ Unsicher: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (${topScore}%)`)
-      } else {
-        setMatchMode('new_auto')
-        setStep('match', 'ok', `${customers.length} geprüft · kein Match → neuer Kunde`)
+        // KI-Matching (nur wenn kein Lock)
+        if (candidates.length > 0 && topScore >= 80) {
+          setMatchedCustomer(candidates[0].customer)
+          setMatchMode('auto')
+          setStep('match', 'ok', `✅ Match: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (${topScore}%)`)
+        } else if (candidates.length > 0 && topScore >= 60) {
+          setMatchedCustomer(candidates[0].customer)
+          setMatchMode('auto_low')
+          setStep('match', 'ok', `⚠ Unsicher: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (${topScore}%)`)
+        } else {
+          setMatchMode('new_auto')
+          setStep('match', 'ok', `${customers.length} geprüft · kein Match → neuer Kunde`)
+        }
       }
     }
 
