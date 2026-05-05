@@ -55,7 +55,7 @@ function CustomerTypeahead({ customers, onSelect }) {
           className="h-8 text-xs pl-8" autoFocus />
       </div>
       {results.length > 0 && (
-        <div className="mt-1 border rounded-lg bg-card shadow-md overflow-hidden absolute z-20 w-full">
+        <div className="mt-1 border rounded-lg bg-card shadow-md overflow-hidden relative z-20 w-full">
           {results.map(c => (
             <button key={c.id} onClick={() => { onSelect(c); setQuery('') }}
               className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/60 text-left text-xs border-b last:border-0">
@@ -478,12 +478,12 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       </div>
 
       {/* Split layout */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0">
 
         {/* Left: Document preview */}
-        <div className="w-1/2 border-r flex flex-col bg-muted/20 flex-shrink-0">
-          <div className="px-3 py-2 border-b text-xs font-semibold text-muted-foreground bg-muted/40">Originaldokument</div>
-          <div className="flex-1 overflow-auto p-2">
+        <div className="w-1/2 border-r flex flex-col bg-muted/20 flex-shrink-0 min-h-0">
+          <div className="px-3 py-2 border-b text-xs font-semibold text-muted-foreground bg-muted/40 flex-shrink-0">Originaldokument</div>
+          <div className="flex-1 overflow-auto p-2 min-h-0">
             {document.file_url?.match(/\.(jpg|jpeg|png)$/i) ? (
               <img src={document.file_url} alt="Dokument" className="w-full rounded shadow" />
             ) : (
@@ -493,7 +493,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
         </div>
 
         {/* Right: Processing + Review panel */}
-        <div className="w-1/2 flex flex-col overflow-y-auto">
+        <div className="w-1/2 flex flex-col min-h-0 overflow-y-auto">
 
           {/* Pipeline steps */}
           <div className="px-4 py-3 border-b bg-muted/30 space-y-1.5 flex-shrink-0">
@@ -682,7 +682,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
 
                 {showCustomerSearch && (
                   <div className="border rounded-lg p-2 bg-muted/20">
-                    <p className="text-xs text-muted-foreground mb-1.5">Kunden suchen:</p>
+                    <p className="text-xs text-muted-foreground mb-1.5">Kunden suchen ({customers.length} geladen):</p>
                     <CustomerTypeahead customers={customers} onSelect={c => {
                       setOverrideCustomer(c)
                       setCustomerLocked(true)   // 🔒 Manuelle Auswahl sperren — KI kann nicht mehr überschreiben
