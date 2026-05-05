@@ -264,13 +264,13 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
 
     // STEP 2: Match — NUR wenn customer NICHT manuell gesperrt (via document.customer_locked)
     setStep('match', 'running')
-    const { candidates, topScore } = matchCustomers(flat, customers)
-    setMatchCandidates(candidates)
-    setMatchScore(topScore)
+    let candidates = []
+    let topScore = 0
 
-    // Prüfe ob Kunde schon im Dokument gespeichert + gesperrt ist
+    // ─── PERSISTENZ FIX: Backend-Wert hat absolute Priorität ───
+    // Prüfe zuerst: Kunde schon im Document + customer_locked?
     if (document?.customer_id && document?.customer_locked) {
-      // Dokument hat bereits einen gesperrten Kunden
+      // Backend sagt: LOCK ist aktiv → keine AI-Überschreibung
       const lockedCust = customers.find(c => c.id === document.customer_id)
       if (lockedCust) {
         overrideCustomerRef.current = lockedCust
@@ -278,10 +278,17 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
         setMatchedCustomer(null)
         setCustomerLocked(true)
         setMatchMode('manual')
-        setStep('match', 'ok', `🔒 Dokumentkunde gesperrt: ${lockedCust.first_name} ${lockedCust.last_name} – wird nicht geändert`)
+        setStep('match', 'ok', `🔒 GESPERRT (Backend): ${lockedCust.first_name} ${lockedCust.last_name}`)
+      } else {
+        // Backend sagt: kein Lock → AI darf matchen
+        candidates = matchCustomers(flat, customers).candidates
+        topScore = matchCustomers(flat, customers).topScore
+        setMatchCandidates(candidates)
+        setMatchScore(topScore)
       }
-    } else if (!customerLocked) {
-      // KI setzt Kunde nur wenn noch kein Lock gesetzt
+
+      // KI-Matching (nur wenn kein Lock)
+      if (!document?.customer_id || !document?.customer_locked) {
       if (topScore >= 80) {
         setMatchedCustomer(candidates[0].customer)
         setMatchMode('auto')
@@ -294,10 +301,6 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
         setMatchMode('new_auto')
         setStep('match', 'ok', `${customers.length} geprüft · kein Match → neuer Kunde`)
       }
-    } else {
-      // Manuell gesperrter Kunde — KI überschreibt NICHT
-      const locked = overrideCustomer
-      setStep('match', 'ok', `🔒 Manuell gesetzt: ${locked?.first_name} ${locked?.last_name} – wird beibehalten`)
     }
 
     // ── AUTO MODE: Konfidenz >= 90 → direkt speichern, kein Review ────────────
@@ -441,7 +444,8 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       setSparteOverwriteWarning('Sparte-Locking-Fehler: Ursprüngliche Sparte verloren!')
     }
 
-    // ── SINGLE SOURCE OF TRUTH: lockedCustomer (direkt übergeben) hat absolute Priorität ────────
+    // ─── PERSISTENZ FIX: Backend-customer_id ist einzige Wahrheit ───
+    // Lade aktuellen Document-Wert aus DB (nicht aus UI-State)
     let cid = lockedCustomer?.id || null
     let resolvedCustomer = lockedCustomer
 
@@ -490,10 +494,19 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       ? `${customer.first_name} ${customer.last_name}`
       : `${flat.first_name || ''} ${flat.last_name || ''}`.trim()
 
+    // ─── VALIDIERUNG: Kunde muss gesetzt sein ───
+    if (!cid) {
+      setStep('create', 'error', 'Kunde erforderlich – bitte wählen')
+      setPipelineError('⚠️ Kunde nicht gesetzt. Wähle einen Kunden aus oder lege einen neuen an.')
+      setSaving(false)
+      setPhase('review')
+      return
+    }
+
     let newApp
     try {
       newApp = await base44.entities.Application.create({
-        customer_id: cid,  // ← IMMER von overrideCustomer oder matchedCustomer, nie von KI-Rohwert
+        customer_id: cid,  // ← Backend-customer_id
         customer_name: customerName,
         insurer: flat.insurer || 'Andere',
         sparte,
@@ -867,7 +880,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                   <div className="flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
                     <UserPlus className="w-4 h-4 text-blue-600 flex-shrink-0" />
                     <div className="flex-1 text-xs">
-                      <p className="font-medium text-blue-800">Neuer Kunde wird angelegt</p>
+                      <p className="font-medium text-blue-800">Neuer Kunde wird angelegt (sonst ändern)</p>
                     </div>
                     <button type="button" onClick={() => setShowCustomerSearch(p => !p)} className="text-xs text-primary underline">
                       Bestehenden wählen
@@ -883,19 +896,21 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                     <CustomerTypeahead
                       customers={customers}
                       onSelect={async (c) => {
-                        // 1. Sofort ins Backend schreiben + LOCK setzen
+                        // ─── PERSISTENZ FIX: Sofort + persistent ins Backend ───
+                        // 1. Document speichern mit customer_locked = true
                         await base44.entities.Document.update(document.id, {
                           customer_id: c.id,
                           customer_name: `${c.first_name} ${c.last_name}`,
                           customer_locked: true,
                         })
+                        // 2. Cache invalidieren (UI wird mit Backend-Wert aktualisiert)
                         queryClient.invalidateQueries({ queryKey: ['documents'] })
-                        // 2. State + Ref setzen — Lock aktiv für diese Session
+                        // 3. State + Ref (UI-Konsistenz)
                         overrideCustomerRef.current = c
                         setOverrideCustomer(c)
                         setMatchedCustomer(null)
                         setCustomerLocked(true)
-                        setLockConfirmed(true) // Lock ist jetzt bestätigt
+                        setLockConfirmed(true)
                         setMatchMode('manual')
                         setMatchScore(0)
                         setShowCustomerSearch(false)
