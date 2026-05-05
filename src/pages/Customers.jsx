@@ -24,9 +24,29 @@ export default function Customers() {
   const [expandedFamily, setExpandedFamily] = useState(null)
   const queryClient = useQueryClient()
 
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  })
+
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
-    queryFn: () => base44.entities.Customer.list('-created_date'),
+    queryFn: async () => {
+      const allCustomers = await base44.entities.Customer.list('-created_date')
+      
+      // Role-based filtering
+      if (currentUser?.role === 'admin') {
+        // Admin sees all
+        return allCustomers
+      } else if (currentUser?.role === 'advisor') {
+        // Advisor sees only assigned customers
+        return allCustomers.filter(c => c.advisor_id === currentUser.id)
+      } else {
+        // Customer (shouldn't normally access this page)
+        return []
+      }
+    },
+    enabled: !!currentUser,
   })
 
   const createMutation = useMutation({

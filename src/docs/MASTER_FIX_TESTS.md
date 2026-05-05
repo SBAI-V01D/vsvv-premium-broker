@@ -172,17 +172,45 @@ Commissions (10% rate):
 
 ---
 
+## ✅ **TEST 9: Role-Based Access Control (RBAC)**
+
+### Setup:
+```
+1. Admin Login (role=admin)
+   → base44.auth.me().role = 'admin'
+2. Seite /kunden öffnen
+   → Sieht ALLE Kunden (kein Filter)
+3. guardPortalAccess({ user_role: 'admin', entity_id: X })
+   → allowed=true (no customer_id check)
+4. Advisor Login (role=advisor, advisor_id=A001)
+   → Sieht NUR Kunden mit advisor_id=A001
+5. Customer Login (role=customer, customer_id=C001)
+   → Sieht NUR Daten mit customer_id=C001
+6. guardPortalAccess({ user_role: 'customer', customer_id: C001 })
+   → Allowed wenn customer_id match, blocked sonst
+```
+
+### Expected:
+- ✅ Admin: Unlimited access
+- ✅ Advisor: Only assigned customers
+- ✅ Customer: Only own data
+- ✅ guardPortalAccess respects roles
+
+---
+
 ## 🚀 **DEPLOYMENT CHECKLIST**
 
+- [ ] Entity User.json aktualisiert: role = admin | advisor | customer
 - [ ] Entity Customer.json aktualisiert: portal_enabled, portal_must_change_password, portal_password_last_changed
-- [ ] 3 Guard Functions deployed: guardPortalLogin, guardPortalAccess, guardDoublePayment
-- [ ] 2 Portal Functions deployed: updatePortalPassword, updatePortalPassword
+- [ ] guardPortalAccess Function deployed: role-based + customer_id filter
+- [ ] Customers Page updated: role-based filtering
+- [ ] PortalActivationPanel Component: Passwort-Reset Button hinzugefügt
+- [ ] 3 Guard Functions deployed: guardPortalLogin, guardDoublePayment, guardPeriodClosed
 - [ ] 1 CEO Function deployed: createCEODashboard
 - [ ] 1 Admin Function deployed: closePeriod
-- [ ] PortalActivationPanel Component (CEO kontrolliert Freischaltung)
 - [ ] CEODashboard Component + Route
 - [ ] Sidebar aktualisiert mit CEO Cockpit Link
-- [ ] Tests 1–8 durchgeführt
+- [ ] Tests 1–9 durchgeführt
 - [ ] CEO hat Signoff gegeben
 
 ---

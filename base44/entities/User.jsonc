@@ -6,11 +6,11 @@
       "type": "string",
       "enum": [
         "admin",
-        "broker",
-        "backoffice",
+        "advisor",
         "customer"
       ],
-      "default": "broker"
+      "default": "customer",
+      "description": "Benutzerrolle \u2013 admin (alle Daten), advisor (zugewiesene Kunden), customer (nur eigene Daten)"
     },
     "phone": {
       "type": "string",
@@ -20,5 +20,9 @@
       "type": "string",
       "description": "Profilbild URL"
     }
-  }
+  },
+  "required": [
+    "phone",
+    "avatar_url"
+  ]
 }

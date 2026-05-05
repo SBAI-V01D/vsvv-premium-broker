@@ -69,7 +69,7 @@ export default function PortalActivationPanel({ customer }) {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {!status ? (
             <Button
               size="sm"
@@ -80,14 +80,25 @@ export default function PortalActivationPanel({ customer }) {
               Portal aktivieren
             </Button>
           ) : (
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => deactivateMutation.mutate()}
-              disabled={deactivateMutation.isPending}
-            >
-              Portal deaktivieren
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowActivate(true)}
+                className="gap-2"
+              >
+                <Key className="w-4 h-4" />
+                Passwort zurücksetzen
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => deactivateMutation.mutate()}
+                disabled={deactivateMutation.isPending}
+              >
+                Portal deaktivieren
+              </Button>
+            </>
           )}
         </div>
 
@@ -102,10 +113,12 @@ export default function PortalActivationPanel({ customer }) {
 
       {/* Activation Dialog */}
       <Dialog open={showActivate} onOpenChange={setShowActivate}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Portal aktivieren für {customer.first_name} {customer.last_name}</DialogTitle>
-          </DialogHeader>
+       <DialogContent>
+         <DialogHeader>
+           <DialogTitle>
+             {status ? 'Passwort zurücksetzen' : 'Portal aktivieren'} für {customer.first_name} {customer.last_name}
+           </DialogTitle>
+         </DialogHeader>
 
           <div className="space-y-4">
             <div>
