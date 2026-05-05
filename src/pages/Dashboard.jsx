@@ -1,7 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { jsPDF } from 'jspdf'
 import { base44 } from '@/api/base44Client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -10,42 +9,68 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Users, FileText, ClipboardList, CheckCircle2, Download, TrendingUp } from 'lucide-react'
+import { Users, FileText, ClipboardList, CheckCircle2, Building2, UserCheck, Wallet, TrendingUp } from 'lucide-react'
+import KpiCard from '@/components/dashboard/KpiCard'
+import RevenueChart from '@/components/dashboard/RevenueChart'
+import TopAdvisors from '@/components/dashboard/TopAdvisors'
+import ActivityFeed from '@/components/dashboard/ActivityFeed'
+import QuickActions from '@/components/dashboard/QuickActions'
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const [selectedTask, setSelectedTask] = useState(null)
   const [formData, setFormData] = useState({ status: '', notes: '', due_date: '' })
-  const [exportFilter, setExportFilter] = useState('all')
+  const [filterOrg, setFilterOrg] = useState('all')
+  const [filterAdvisor, setFilterAdvisor] = useState('all')
   const queryClient = useQueryClient()
-  const { data: customers = [] } = useQuery({
-    queryKey: ['customers'],
-    queryFn: () => base44.entities.Customer.list(),
-  })
 
-  const { data: contracts = [] } = useQuery({
-    queryKey: ['contracts'],
-    queryFn: () => base44.entities.Contract.list(),
-  })
+  // Data fetching – all parallel
+  const { data: customers = [] } = useQuery({ queryKey: ['customers'], queryFn: () => base44.entities.Customer.list() })
+  const { data: contracts = [] } = useQuery({ queryKey: ['contracts'], queryFn: () => base44.entities.Contract.list() })
+  const { data: applications = [] } = useQuery({ queryKey: ['applications'], queryFn: () => base44.entities.Application.list() })
+  const { data: tasks = [] } = useQuery({ queryKey: ['tasks'], queryFn: () => base44.entities.Task.list() })
+  const { data: advisors = [] } = useQuery({ queryKey: ['advisors'], queryFn: () => base44.entities.Advisor.list() })
+  const { data: organizations = [] } = useQuery({ queryKey: ['organizations'], queryFn: () => base44.entities.Organization.list() })
+  const { data: commissionEntries = [] } = useQuery({ queryKey: ['commissionEntries'], queryFn: () => base44.entities.CommissionEntry.list() })
 
-  const { data: applications = [] } = useQuery({
-    queryKey: ['applications'],
-    queryFn: () => base44.entities.Application.list(),
-  })
+  // Global filter: filter advisors by org
+  const filteredAdvisors = useMemo(() => {
+    if (filterOrg === 'all') return advisors
+    return advisors.filter(a => a.organization_id === filterOrg)
+  }, [advisors, filterOrg])
 
-  const { data: tasks = [] } = useQuery({
-    queryKey: ['tasks'],
-    queryFn: () => base44.entities.Task.list(),
-  })
+  const filteredAdvisorEmails = useMemo(() => new Set(filteredAdvisors.map(a => a.email)), [filteredAdvisors])
 
-  const activeContracts = contracts.filter(c => c.status === 'active')
-  const inactiveContracts = contracts.filter(c => c.status !== 'active')
-  const openApplications = applications.filter(a => a.status !== 'approved' && a.status !== 'rejected')
-  const openTasks = tasks.filter(t => t.status === 'open')
-  const inProgressTasks = tasks.filter(t => t.status === 'in_progress')
-  const pendingTasks = [...openTasks, ...inProgressTasks]
+  // Apply advisor filter to data
+  const activeAdvisorEmail = filterAdvisor === 'all' ? null : filterAdvisor
 
-  // Geburtstage berechnen
+  const filteredContracts = useMemo(() => {
+    let c = contracts
+    if (filterOrg !== 'all') c = c.filter(x => filteredAdvisorEmails.has(x.assigned_broker))
+    if (activeAdvisorEmail) c = c.filter(x => x.assigned_broker === activeAdvisorEmail)
+    return c
+  }, [contracts, filterOrg, filteredAdvisorEmails, activeAdvisorEmail])
+
+  const filteredCommissions = useMemo(() => {
+    let c = commissionEntries
+    if (filterOrg !== 'all') c = c.filter(x => filteredAdvisorEmails.has(x.broker_email))
+    if (activeAdvisorEmail) c = c.filter(x => x.broker_email === activeAdvisorEmail)
+    return c
+  }, [commissionEntries, filterOrg, filteredAdvisorEmails, activeAdvisorEmail])
+
+  // KPI calculations
+  const activeContracts = filteredContracts.filter(c => c.status === 'active')
+  const totalMonthlyPremium = activeContracts.reduce((sum, c) => sum + (c.premium_monthly || 0), 0)
+
+  // MTD commissions (current month)
+  const nowStr = new Date().toISOString().slice(0, 7)
+  const mtdCommissions = filteredCommissions
+    .filter(ce => ce.settlement_date && ce.settlement_date.slice(0, 7) === nowStr)
+    .reduce((sum, ce) => sum + (ce.gross_commission || 0), 0)
+
+  const openTasks = tasks.filter(t => t.status === 'open' || t.status === 'in_progress')
+
+  // Geburtstage
   const today = new Date()
   const upcomingBirthdays = customers
     .filter(c => c.birthdate)
@@ -61,6 +86,7 @@ export default function Dashboard() {
     .sort((a, b) => a.daysUntil - b.daysUntil)
     .slice(0, 5)
 
+  // Task mutations
   const updateMutation = useMutation({
     mutationFn: async (data) => {
       const updateData = {
@@ -69,50 +95,35 @@ export default function Dashboard() {
         due_date: data.due_date !== undefined ? data.due_date : selectedTask.due_date,
         completion_date: data.completion_date !== undefined ? data.completion_date : selectedTask.completion_date,
       }
-      
-      if (data.file) {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file: data.file })
-        updateData.document_url = file_url
-      }
-      
       return base44.entities.Task.update(selectedTask.id, updateData)
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      setSelectedTask(null)
-      setFormData({ status: '', notes: '', due_date: '', completion_date: '', file: null })
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tasks'] }); setSelectedTask(null) },
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Task.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      setSelectedTask(null)
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tasks'] }); setSelectedTask(null) },
   })
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Task.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      setSelectedTask(null)
-      setFormData({ status: 'open', notes: '', due_date: '', completion_date: '', file: null })
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tasks'] }); setSelectedTask(null) },
   })
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '–'
     const date = new Date(dateStr + 'T00:00:00Z')
-    const day = String(date.getUTCDate()).padStart(2, '0')
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
-    const year = date.getUTCFullYear()
-    return `${day}.${month}.${year}`
+    return `${String(date.getUTCDate()).padStart(2, '0')}.${String(date.getUTCMonth() + 1).padStart(2, '0')}.${date.getUTCFullYear()}`
   }
 
   const handleTaskClick = (task) => {
     setSelectedTask(task)
-    setFormData({ status: task.status, notes: task.notes || '', due_date: task.due_date || '', completion_date: task.completion_date || '', file: null })
+    setFormData({ status: task.status, notes: task.notes || '', due_date: task.due_date || '', completion_date: task.completion_date || '' })
+  }
+
+  const handleNewTask = () => {
+    setSelectedTask({ id: null, title: '', status: 'open' })
+    setFormData({ title: '', status: 'open', notes: '', due_date: '', completion_date: '' })
   }
 
   const handleSave = () => {
@@ -129,227 +140,141 @@ export default function Dashboard() {
     }
   }
 
-  const handleNewTask = () => {
-    setSelectedTask({ id: null, title: '', status: 'open' })
-    setFormData({ title: '', status: 'open', notes: '', due_date: '', completion_date: '', file: null })
-  }
-
-  const handleExportPDF = () => {
-    const doc = new jsPDF()
-    const pageHeight = doc.internal.pageSize.getHeight()
-    const pageWidth = doc.internal.pageSize.getWidth()
-    let yPos = 10
-
-    if (exportFilter === 'all' || exportFilter === 'birthdays') {
-      doc.setFontSize(16)
-      doc.text('🎂 Kommende Geburtstage', pageWidth / 2, yPos, { align: 'center' })
-      yPos += 15
-      doc.setFontSize(10)
-      if (upcomingBirthdays.length === 0) {
-        doc.text('Keine Geburtstage in den nächsten 30 Tagen', 10, yPos)
-        yPos += 8
-      } else {
-        upcomingBirthdays.forEach(b => {
-          const daysText = b.daysUntil === 0 ? 'Heute' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`
-          doc.text(`${b.customer.first_name} ${b.customer.last_name} - ${daysText}`, 10, yPos)
-          yPos += 6
-          if (yPos > pageHeight - 20) {
-            doc.addPage()
-            yPos = 10
-          }
-        })
-      }
-    }
-
-    if (exportFilter === 'all') {
-      yPos += 10
-    }
-
-    if (exportFilter === 'all' || exportFilter === 'tasks') {
-      doc.setFontSize(16)
-      doc.text('Kommende Aufgaben', pageWidth / 2, yPos, { align: 'center' })
-      yPos += 15
-      doc.setFontSize(10)
-      if (pendingTasks.length === 0) {
-        doc.text('Keine ausstehenden Aufgaben', 10, yPos)
-      } else {
-        pendingTasks.forEach(t => {
-          const dueText = t.due_date ? ` (Fällig: ${formatDate(t.due_date)})` : ''
-          const text = `${t.title}${dueText}`
-          const splitText = doc.splitTextToSize(text, pageWidth - 20)
-          splitText.forEach(line => {
-            doc.text(line, 10, yPos)
-            yPos += 6
-            if (yPos > pageHeight - 10) {
-              doc.addPage()
-              yPos = 10
-            }
-          })
-        })
-      }
-    }
-
-    if (exportFilter === 'all' || exportFilter === 'contracts') {
-      if (exportFilter === 'all') {
-        yPos += 10
-      }
-      doc.setFontSize(16)
-      doc.text('Verträge - Status', pageWidth / 2, yPos, { align: 'center' })
-      yPos += 15
-      doc.setFontSize(10)
-      doc.text(`Aktive Verträge: ${activeContracts.length}`, 10, yPos)
-      yPos += 6
-      doc.text(`Inaktive Verträge: ${inactiveContracts.length}`, 10, yPos)
-      yPos += 6
-      doc.text(`Total: ${contracts.length} Verträge`, 10, yPos)
-    }
-
-    const fileName = exportFilter === 'all' ? 'Auswertung_Gesamt.pdf' : `Auswertung_${exportFilter}.pdf`
-    doc.save(fileName)
-  }
-
-  const handleExportExcel = () => {
-    const csvContent = []
-
-    if (exportFilter === 'all' || exportFilter === 'birthdays') {
-      csvContent.push(['GEBURTSTAGE'])
-      csvContent.push(['Name', 'Tage bis Geburtstag'])
-      csvContent.push(...upcomingBirthdays.map(b => [
-        `${b.customer.first_name} ${b.customer.last_name}`,
-        b.daysUntil === 0 ? 'Heute' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`
-      ]))
-    }
-
-    if (exportFilter === 'all') {
-      csvContent.push([])
-    }
-
-    if (exportFilter === 'all' || exportFilter === 'tasks') {
-      csvContent.push(['KOMMENDE AUFGABEN'])
-      csvContent.push(['Aufgabentitel', 'Fälligkeitsdatum', 'Status'])
-      csvContent.push(...pendingTasks.map(t => [
-        t.title,
-        t.due_date ? formatDate(t.due_date) : '-',
-        t.status
-      ]))
-    }
-
-    if (exportFilter === 'all') {
-      csvContent.push([])
-    }
-
-    if (exportFilter === 'all' || exportFilter === 'contracts') {
-      csvContent.push(['VERTRÄGE - STATUS'])
-      csvContent.push(['Status', 'Anzahl'])
-      csvContent.push(['Aktive Verträge', activeContracts.length])
-      csvContent.push(['Inaktive Verträge', inactiveContracts.length])
-      csvContent.push(['Total', contracts.length])
-    }
-
-    const csvString = csvContent.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n')
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    const fileName = exportFilter === 'all' ? 'Auswertung_Gesamt.csv' : `Auswertung_${exportFilter}.csv`
-    link.setAttribute('download', fileName)
-    link.click()
-  }
-
-  // Calculate total expected commission from applications
-  const totalExpectedCommission = applications.reduce((sum, app) => sum + (app.commission_estimate || 0), 0)
-
-  const stats = [
-    { label: 'Kunden', value: customers.length, icon: Users, color: 'bg-blue-50 text-blue-600', path: '/kunden' },
-    { label: 'Aktive Verträge', value: activeContracts.length, icon: FileText, color: 'bg-green-50 text-green-600', path: '/vertraege' },
-    { label: 'Offene Anträge', value: openApplications.length, icon: ClipboardList, color: 'bg-amber-50 text-amber-600', path: '/antraege' },
-    { label: 'Ausstehende Aufgaben', value: pendingTasks.length, icon: CheckCircle2, color: 'bg-purple-50 text-purple-600', path: '/aufgaben' },
+  const kpis = [
+    {
+      label: 'Kunden Total',
+      value: customers.length,
+      icon: Users,
+      color: { border: 'border-l-blue-500', bg: 'bg-blue-50', icon: 'text-blue-600' },
+      path: '/kunden',
+    },
+    {
+      label: 'Aktive Policen',
+      value: activeContracts.length,
+      sub: `von ${filteredContracts.length} gesamt`,
+      icon: FileText,
+      color: { border: 'border-l-green-500', bg: 'bg-green-50', icon: 'text-green-600' },
+      path: '/vertraege',
+    },
+    {
+      label: 'Monatsprämien',
+      value: `CHF ${totalMonthlyPremium.toLocaleString('de-CH', { maximumFractionDigits: 0 })}`,
+      sub: 'Aktive Verträge',
+      icon: TrendingUp,
+      color: { border: 'border-l-primary', bg: 'bg-primary/10', icon: 'text-primary' },
+      path: '/vertraege',
+    },
+    {
+      label: 'Provisionen MTD',
+      value: `CHF ${mtdCommissions.toLocaleString('de-CH', { maximumFractionDigits: 0 })}`,
+      sub: new Date().toLocaleString('de-CH', { month: 'long', year: 'numeric' }),
+      icon: Wallet,
+      color: { border: 'border-l-amber-500', bg: 'bg-amber-50', icon: 'text-amber-600' },
+      path: '/provisionen-courtagen',
+    },
+    {
+      label: 'Berater',
+      value: filteredAdvisors.length,
+      sub: filterOrg !== 'all' ? organizations.find(o => o.id === filterOrg)?.name : 'Alle Organisationen',
+      icon: UserCheck,
+      color: { border: 'border-l-purple-500', bg: 'bg-purple-50', icon: 'text-purple-600' },
+      path: '/berater-organisation',
+    },
+    {
+      label: 'Organisationen',
+      value: organizations.filter(o => o.status === 'active').length,
+      sub: `${organizations.length} Total`,
+      icon: Building2,
+      color: { border: 'border-l-slate-500', bg: 'bg-slate-100', icon: 'text-slate-600' },
+      path: '/berater-organisation',
+    },
   ]
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Willkommen in deinem CRM</p>
+          <p className="text-muted-foreground mt-1 text-sm">CEO / Broker Control Panel · {new Date().toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
         </div>
-        <div className="flex gap-2 items-center">
-          <Select value={exportFilter} onValueChange={setExportFilter}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Was exportieren?" />
+        {/* Global Filter */}
+        <div className="flex gap-2 flex-wrap">
+          <Select value={filterOrg} onValueChange={v => { setFilterOrg(v); setFilterAdvisor('all') }}>
+            <SelectTrigger className="w-48 bg-background">
+              <SelectValue placeholder="Alle Organisationen" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle Auswertungen</SelectItem>
-              <SelectItem value="contracts">Verträge - Status</SelectItem>
-              <SelectItem value="tasks">Kommende Aufgaben</SelectItem>
-              <SelectItem value="birthdays">Geburtstage</SelectItem>
+              <SelectItem value="all">Alle Organisationen</SelectItem>
+              {organizations.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Button onClick={handleExportPDF} variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" /> PDF
-          </Button>
-          <Button onClick={handleExportExcel} variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" /> Excel
-          </Button>
+          <Select value={filterAdvisor} onValueChange={setFilterAdvisor}>
+            <SelectTrigger className="w-44 bg-background">
+              <SelectValue placeholder="Alle Berater" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Berater</SelectItem>
+              {filteredAdvisors.map(a => <SelectItem key={a.id} value={a.email}>{a.firstname} {a.lastname}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map(({ label, value, icon: Icon, color, path }) => (
-          <Card key={label} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(path)}>
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${color}`}>
-                <Icon className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">{label}</p>
-                <p className="text-2xl font-bold">{value}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      {/* SCHNELLAKTIONEN */}
+      <QuickActions />
+
+      {/* KPI CARDS */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {kpis.map(k => <KpiCard key={k.label} {...k} />)}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/vertraege')}>
-          <CardHeader>
-            <CardTitle>Verträge - Status</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between p-2 bg-green-50 rounded">
-              <span className="text-sm font-medium">Aktive Verträge</span>
-              <span className="text-lg font-bold text-green-600">{activeContracts.length}</span>
-            </div>
-            <div className="flex justify-between p-2 bg-red-50 rounded">
-              <span className="text-sm font-medium">Inaktive Verträge</span>
-              <span className="text-lg font-bold text-red-600">{inactiveContracts.length}</span>
-            </div>
-            <div className="text-sm text-muted-foreground border-t pt-2 mt-2">
-              Total: {contracts.length} Verträge
-            </div>
-          </CardContent>
-        </Card>
+      {/* CHART + TOP ADVISORS */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="xl:col-span-2">
+          <RevenueChart contracts={filteredContracts} commissionEntries={filteredCommissions} />
+        </div>
+        <TopAdvisors
+          advisors={filteredAdvisors}
+          organizations={organizations}
+          commissionEntries={filteredCommissions}
+          contracts={filteredContracts}
+        />
+      </div>
 
-        <Card onClick={() => navigate('/aufgaben')} className="cursor-pointer hover:shadow-lg transition-shadow">
-          <CardHeader className="flex justify-between items-center">
-            <CardTitle>Kommende Aufgaben</CardTitle>
-            <Button size="sm" onClick={(e) => { e.stopPropagation(); handleNewTask() }}>+ Neue Aufgabe</Button>
+      {/* ACTIVITY + TASKS + BIRTHDAYS */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Activity Feed */}
+        <ActivityFeed
+          customers={customers}
+          contracts={filteredContracts}
+          commissionEntries={filteredCommissions}
+        />
+
+        {/* Aufgaben */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-base font-semibold">Offene Aufgaben</CardTitle>
+            <Button size="sm" onClick={handleNewTask}>+ Neu</Button>
           </CardHeader>
-          <CardContent>
-            {pendingTasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Keine ausstehenden Aufgaben</p>
+          <CardContent className="p-0">
+            {openTasks.length === 0 ? (
+              <p className="px-6 pb-6 text-sm text-muted-foreground">Keine offenen Aufgaben</p>
             ) : (
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {pendingTasks.map(t => (
+              <div className="divide-y max-h-72 overflow-y-auto">
+                {openTasks.slice(0, 10).map(t => (
                   <button
                     key={t.id}
-                    onClick={(e) => { e.stopPropagation(); handleTaskClick(t) }}
-                    className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded transition-colors text-left"
+                    onClick={() => handleTaskClick(t)}
+                    className="w-full flex items-center justify-between px-6 py-3 hover:bg-muted/50 transition-colors text-left gap-2"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{t.title}</p>
                       {t.due_date && <p className="text-xs text-muted-foreground">Fällig: {formatDate(t.due_date)}</p>}
                     </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${t.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {t.status === 'in_progress' ? 'Aktiv' : 'Offen'}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -357,72 +282,34 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/kunden')}>
-          <CardHeader>
-            <CardTitle>🎂 Kommende Geburtstage</CardTitle>
+        {/* Geburtstage */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold">🎂 Geburtstage (30 Tage)</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {upcomingBirthdays.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Keine Geburtstage in den nächsten 30 Tagen</p>
+              <p className="px-6 pb-6 text-sm text-muted-foreground">Keine Geburtstage in den nächsten 30 Tagen</p>
             ) : (
-              <div className="space-y-3">
+              <div className="divide-y">
                 {upcomingBirthdays.map(b => (
-                  <div key={b.customer.id} className="flex items-center justify-between p-2 bg-pink-50 rounded">
+                  <div key={b.customer.id} className="px-6 py-3 flex items-center justify-between gap-2">
                     <div>
                       <p className="text-sm font-medium">{b.customer.first_name} {b.customer.last_name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {b.daysUntil === 0 ? 'Heute' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`}
+                        {b.daysUntil === 0 ? '🎉 Heute!' : b.daysUntil === 1 ? 'Morgen' : `in ${b.daysUntil} Tagen`}
                       </p>
                     </div>
-                    <span className="text-lg">🎉</span>
+                    <span className="text-xl">🎂</span>
                   </div>
                 ))}
               </div>
             )}
           </CardContent>
         </Card>
+      </div>
 
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/kunden')}>
-          <CardHeader>
-            <CardTitle>Kürzlich hinzugefügte Kunden</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {customers.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Keine Kunden vorhanden</p>
-            ) : (
-              <div className="space-y-3">
-                {customers.slice(0, 5).map(c => (
-                  <div key={c.id} className="flex items-center justify-between p-2 bg-slate-50 rounded">
-                    <div>
-                      <p className="text-sm font-medium">{c.first_name} {c.last_name}</p>
-                      <p className="text-xs text-muted-foreground">{c.email}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/antraege')}>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Gesamte erwartete Provision</CardTitle>
-              <TrendingUp className="w-5 h-5 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-4xl font-bold text-primary">CHF {totalExpectedCommission.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <p className="text-sm text-muted-foreground">aus {applications.length} Anträgen</p>
-            <div className="text-xs text-muted-foreground pt-2 border-t">
-              <div>Ø pro Antrag: CHF {(applications.length > 0 ? totalExpectedCommission / applications.length : 0).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            </div>
-          </CardContent>
-        </Card>
-        </div>
-
-
-
+      {/* TASK DIALOG */}
       <Dialog open={!!selectedTask} onOpenChange={(open) => { if (!open) setSelectedTask(null) }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -433,20 +320,13 @@ export default function Dashboard() {
               {!selectedTask.id && (
                 <div>
                   <Label>Aufgabentitel *</Label>
-                  <Input
-                    value={formData.title || ''}
-                    onChange={(e) => setFormData(p => ({ ...p, title: e.target.value }))}
-                    placeholder="Aufgabentitel eingeben"
-                    className="mt-1"
-                  />
+                  <Input value={formData.title || ''} onChange={(e) => setFormData(p => ({ ...p, title: e.target.value }))} placeholder="Aufgabentitel" className="mt-1" />
                 </div>
               )}
               <div>
                 <Label>Status</Label>
                 <Select value={formData.status} onValueChange={(v) => setFormData(p => ({ ...p, status: v }))}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="open">Pendent</SelectItem>
                     <SelectItem value="in_progress">In Bearbeitung</SelectItem>
@@ -454,61 +334,23 @@ export default function Dashboard() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div>
                 <Label>Fälligkeitsdatum</Label>
-                <Input
-                  type="date"
-                  value={formData.due_date || ''}
-                  onChange={(e) => setFormData(p => ({ ...p, due_date: e.target.value }))}
-                  className="mt-1"
-                />
+                <Input type="date" value={formData.due_date || ''} onChange={(e) => setFormData(p => ({ ...p, due_date: e.target.value }))} className="mt-1" />
               </div>
-
-              <div>
-                <Label>Erledigungsdatum</Label>
-                <Input
-                  type="date"
-                  value={formData.completion_date || ''}
-                  onChange={(e) => setFormData(p => ({ ...p, completion_date: e.target.value }))}
-                  className="mt-1"
-                />
-              </div>
-
-              <div>
-                <Label>Dokument hochladen</Label>
-                <Input
-                  type="file"
-                  onChange={(e) => setFormData(p => ({ ...p, file: e.target.files?.[0] || null }))}
-                  className="mt-1"
-                />
-              </div>
-
               <div>
                 <Label>Notizen</Label>
-                <Textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData(p => ({ ...p, notes: e.target.value }))}
-                  placeholder="Prozessnotizen..."
-                  className="mt-1"
-                  rows={3}
-                />
+                <Textarea value={formData.notes} onChange={(e) => setFormData(p => ({ ...p, notes: e.target.value }))} placeholder="Prozessnotizen..." className="mt-1" rows={3} />
               </div>
             </div>
           )}
           <DialogFooter className="flex justify-between">
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (confirm('Aufgabe wirklich löschen?')) {
-                  deleteMutation.mutate(selectedTask.id)
-                }
-              }}
-              disabled={deleteMutation.isPending}
-            >
-              Löschen
-            </Button>
-            <div className="flex gap-2">
+            {selectedTask?.id && (
+              <Button variant="destructive" onClick={() => { if (confirm('Aufgabe wirklich löschen?')) deleteMutation.mutate(selectedTask.id) }} disabled={deleteMutation.isPending}>
+                Löschen
+              </Button>
+            )}
+            <div className="flex gap-2 ml-auto">
               <Button variant="outline" onClick={() => setSelectedTask(null)}>Schliessen</Button>
               <Button onClick={handleSave} disabled={updateMutation.isPending || createMutation.isPending}>
                 {updateMutation.isPending || createMutation.isPending ? 'Speichern...' : 'Speichern'}

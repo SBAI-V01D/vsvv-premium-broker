@@ -7,7 +7,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext'
 import UserNotRegisteredError from '@/components/UserNotRegisteredError'
 
 import AppLayout from './components/layout/AppLayout'
-import Dashboard from './pages/Dashboard'
+import Dashboard from './pages/Dashboard.jsx'
 import Customers from './pages/Customers'
 import CustomerDetail from './pages/CustomerDetail'
 import Contracts from './pages/Contracts'
