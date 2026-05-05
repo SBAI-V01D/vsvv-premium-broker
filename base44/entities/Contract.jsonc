@@ -114,6 +114,10 @@
       "type": "string",
       "description": "URL zum Policy-Dokument"
     },
+    "source_application_id": {
+      "type": "string",
+      "description": "Quellen-Antrags-ID (Verkn\u00fcpfung zu Application)"
+    },
     "notes": {
       "type": "string",
       "description": "Notizen"
