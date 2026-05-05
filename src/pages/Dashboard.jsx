@@ -19,7 +19,7 @@ import FinanceWidget from '@/components/dashboard/FinanceWidget'
 import ControllingSection from '@/components/dashboard/ControllingSection'
 import RenewalWidget from '@/components/dashboard/RenewalWidget'
 import RenewalsSection from '@/components/dashboard/RenewalsSection'
-import RenewalPipelineKanban from '@/components/dashboard/RenewalPipelineKanban'
+import RenewalPipelineKanbanV2 from '@/components/dashboard/RenewalPipelineKanbanV2'
 import UpsellPipelineKanban from '@/components/dashboard/UpsellPipelineKanban'
 import PricingOptimizationPanel from '@/components/dashboard/PricingOptimizationPanel'
 import ActionStrip from '@/components/dashboard/ActionStrip'
@@ -266,10 +266,10 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* 5. RENEWAL PIPELINE (KANBAN – NEU) */}
-      <div className="mt-6">
-        <h2 className="text-lg font-bold mb-4 text-slate-900">🚀 Renewal Pipeline (Sales Engine)</h2>
-        <RenewalPipelineKanban contracts={filteredContracts} />
+      {/* 5. RENEWAL PIPELINE (KANBAN – SALES READY) */}
+      <div className="mt-8 mb-8 bg-gradient-to-br from-slate-50 to-blue-50 p-6 rounded-lg border border-slate-200">
+        <h2 className="text-xl font-bold mb-6 text-slate-900">🚀 Renewal Pipeline (Sales Engine)</h2>
+        <RenewalPipelineKanbanV2 contracts={filteredContracts} />
       </div>
 
       {/* 6. UPSELL PIPELINE (NEU) */}
