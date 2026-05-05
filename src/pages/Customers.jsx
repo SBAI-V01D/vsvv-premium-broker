@@ -188,7 +188,16 @@ export default function Customers() {
                         </button>
                       )}
                       <Link to={`/kunden/${customer.id}`} className="flex-1 min-w-0 hover:text-primary group">
-                        <p className="font-bold text-base group-hover:text-primary">{customer.first_name} {customer.last_name}</p>
+                        <p className="font-bold text-base group-hover:text-primary">
+                          {customer.customer_type === 'business'
+                            ? (customer.company_name || `${customer.first_name} ${customer.last_name}`)
+                            : `${customer.first_name} ${customer.last_name}`}
+                        </p>
+                        {customer.customer_type === 'business' && (customer.contact_person_firstname || customer.contact_person_lastname) && (
+                          <p className="text-xs text-muted-foreground">
+                            Kontakt: {customer.contact_person_firstname} {customer.contact_person_lastname}
+                          </p>
+                        )}
                         <p className="text-xs text-muted-foreground"><EmailLink email={customer.email} /> • {customer.city || '–'}</p>
                       </Link>
                     </div>
