@@ -156,8 +156,9 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const confirmRef = useRef(null)
 
   const { data: customers = [], isSuccess: customersLoaded } = useQuery({
-    queryKey: ['customers-all'],
+    queryKey: ['customers'],
     queryFn: () => base44.entities.Customer.list(null, 1000),
+    staleTime: 60_000,
   })
 
   const setStep = (id, status, detail) =>
@@ -406,7 +407,6 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     queryClient.invalidateQueries({ queryKey: ['applications'] })
     queryClient.invalidateQueries({ queryKey: ['documents'] })
     queryClient.invalidateQueries({ queryKey: ['customers'] })
-    queryClient.invalidateQueries({ queryKey: ['customers-all'] })
     setSaving(false)
     setPhase('done')
     onSaved?.()
@@ -493,7 +493,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
         </div>
 
         {/* Right: Processing + Review panel */}
-        <div className="w-1/2 flex flex-col overflow-hidden">
+        <div className="w-1/2 flex flex-col overflow-y-auto">
 
           {/* Pipeline steps */}
           <div className="px-4 py-3 border-b bg-muted/30 space-y-1.5 flex-shrink-0">
@@ -544,7 +544,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
 
           {/* ── REVIEW FORM ── */}
           {(isReviewPhase || phase === 'saving') && form && (
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1">
 
               {/* Debug */}
               {showDebug && (
