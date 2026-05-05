@@ -198,19 +198,63 @@ Commissions (10% rate):
 
 ---
 
+## ✅ **TEST 10: Login-Verwaltung + Passwort-Policy**
+
+### Setup:
+```
+1. Admin aktiviert Portal für Kunde K001
+   → portal_enabled = true
+   → mandate_status = valid
+   → portal_must_change_password = true
+   → initial_password = [admin input]
+   → portal_password_last_changed = current_date
+
+2. Kunde versucht, sich einzuloggen
+   → guardPortalLogin prüft:
+      - portal_enabled = true ✓
+      - mandate_status = valid ✓
+      - must_change_password = true
+   → FORCE redirect zu PortalSetup (Passwort-Änderung)
+
+3. Kunde ändert Passwort
+   → updatePortalPassword:
+      - portal_must_change_password = false
+      - portal_password_last_changed = current_date
+
+4. Kunde loggt sich neu ein
+   → Login erfolgreich
+   → Kein Passwort-Zwang
+
+5. Nach 28 Tagen:
+   → guardPortalLogin: days > 28
+   → FORCE password change again
+```
+
+### Expected:
+- ✅ Erster Login: Passwort-Zwang
+- ✅ Ohne Mandat: Blockiert
+- ✅ Nach Änderung: Freigegeben
+- ✅ Nach 28 Tagen: Erneut Passwort-Pflicht
+- ✅ Portal nur ohne Portalzugriff: Blockiert
+
+---
+
 ## 🚀 **DEPLOYMENT CHECKLIST**
 
 - [ ] Entity User.json aktualisiert: role = admin | advisor | customer
-- [ ] Entity Customer.json aktualisiert: portal_enabled, portal_must_change_password, portal_password_last_changed
+- [ ] Entity Customer.json aktualisiert: mandate_status, portal_enabled, portal_must_change_password, portal_password_last_changed
+- [ ] guardPortalLogin Function deployed: mandate_status + 28-Tage-Rotation
 - [ ] guardPortalAccess Function deployed: role-based + customer_id filter
 - [ ] Customers Page updated: role-based filtering
-- [ ] PortalActivationPanel Component: Passwort-Reset Button hinzugefügt
-- [ ] 3 Guard Functions deployed: guardPortalLogin, guardDoublePayment, guardPeriodClosed
+- [ ] PortalActivationPanel Component: mandate_status = valid setzen
+- [ ] PortalSetup Page: Passwort-Policy-Hints angezeigt
+- [ ] 3+ Guard Functions deployed: guardPortalLogin, guardPortalAccess, guardDoublePayment, guardPeriodClosed
+- [ ] 2+ Helper Functions deployed: updatePortalPassword, managePortalPassword
 - [ ] 1 CEO Function deployed: createCEODashboard
 - [ ] 1 Admin Function deployed: closePeriod
 - [ ] CEODashboard Component + Route
 - [ ] Sidebar aktualisiert mit CEO Cockpit Link
-- [ ] Tests 1–9 durchgeführt
+- [ ] Tests 1–10 durchgeführt ✓
 - [ ] CEO hat Signoff gegeben
 
 ---

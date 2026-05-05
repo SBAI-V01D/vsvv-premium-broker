@@ -131,13 +131,13 @@
     "mandate_status": {
       "type": "string",
       "enum": [
-        "active",
-        "inactive",
+        "valid",
+        "invalid",
         "pending",
-        "terminated"
+        "expired"
       ],
-      "default": "active",
-      "description": "Status Mandat"
+      "default": "pending",
+      "description": "GUARD: Mandat-Status \u2013 nur mit 'valid' ist Portal-Login m\u00f6glich"
     },
     "association_membership": {
       "type": "string",
@@ -196,21 +196,21 @@
     "portal_enabled": {
       "type": "boolean",
       "default": false,
-      "description": "GUARD: Portal-Freischaltung durch Admin (mcf001, mcf007)"
+      "description": "GUARD: Portal-Freischaltung durch Admin"
     },
     "portal_password_hash": {
       "type": "string",
-      "description": "Passwort-Hash f\u00fcr Portal (intern, bcrypt)"
+      "description": "Passwort-Hash f\u00fcr Portal (bcrypt)"
     },
     "portal_must_change_password": {
       "type": "boolean",
       "default": true,
-      "description": "GUARD: Passwort muss beim ersten Login ge\u00e4ndert werden (mcf008, mcf009)"
+      "description": "GUARD: Passwort MUSS beim ersten Login ge\u00e4ndert werden"
     },
     "portal_password_last_changed": {
       "type": "string",
       "format": "date",
-      "description": "GUARD: Datum letzte Passwort\u00e4nderung f\u00fcr Rotation (mcf010, mcf011)"
+      "description": "GUARD: Datum letzte Passwort\u00e4nderung \u2013 f\u00fcr 28-Tage-Rotation"
     },
     "portal_last_login": {
       "type": "string",

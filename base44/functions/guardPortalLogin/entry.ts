@@ -41,6 +41,18 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ─── GUARD 1b: mandate_status = valid ───
+    if (customer.mandate_status !== 'valid') {
+      console.error(
+        `[guardPortalLogin] ❌ BLOCKED: mandate_status=${customer.mandate_status} (not 'valid')`
+      );
+      return Response.json({
+        allowed: false,
+        error: 'Mandat erforderlich. Kontaktiere deinen Berater.',
+        customer_id,
+      });
+    }
+
     // ─── GUARD 2: must_change_password (first login) ───
     if (customer.portal_must_change_password === true) {
       console.log(`[guardPortalLogin] ⚠️ FORCE: must_change_password=true (first login)`);

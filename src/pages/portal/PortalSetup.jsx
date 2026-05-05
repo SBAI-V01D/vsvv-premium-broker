@@ -352,6 +352,22 @@ export default function PortalSetup() {
                 </form>
               </div>
 
+              {/* PASSWORD POLICY INFO */}
+              <div style={{
+                background: 'rgba(91,163,232,0.08)',
+                border: '1px solid rgba(91,163,232,0.16)',
+                borderRadius: 10,
+                padding: '12px 14px',
+                marginBottom: 10,
+              }}>
+                <p style={{ color: '#5BA3E8', fontSize: 11, fontWeight: 600, margin: '0 0 8px' }}>🔒 Passwort-Richtlinie:</p>
+                <ul style={{ margin: 0, paddingLeft: 16, color: '#7A9BB5', fontSize: 11, lineHeight: 1.6 }}>
+                  <li>Beim ersten Login: Passwort ändern erforderlich</li>
+                  <li>Mindestens 8 Zeichen + 1 Zahl + 1 Sonderzeichen</li>
+                  <li>Alle 28 Tage Passwort-Wechsel erforderlich</li>
+                </ul>
+              </div>
+
               {/* TRUST SECTION */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
@@ -490,6 +506,21 @@ export default function PortalSetup() {
                         {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
                     </div>
+                  </div>
+
+                  {/* PASSWORD VALIDATION HINTS */}
+                  <div style={{
+                    background: 'rgba(91,163,232,0.08)',
+                    border: '1px solid rgba(91,163,232,0.16)',
+                    borderRadius: 7,
+                    padding: '10px 12px',
+                  }}>
+                    <p style={{ color: '#5BA3E8', fontSize: 11, fontWeight: 600, margin: '0 0 6px' }}>Sicherheit:</p>
+                    <ul style={{ margin: 0, paddingLeft: 16, color: '#7A9BB5', fontSize: 11 }}>
+                      <li>Mindestens 8 Zeichen</li>
+                      <li>Keine alten Passwörter wiederverwenden</li>
+                      <li>Nächster Wechsel in 28 Tagen</li>
+                    </ul>
                   </div>
 
                   {/* ERROR */}

@@ -15,11 +15,13 @@ export default function PortalActivationPanel({ customer }) {
 
   const activateMutation = useMutation({
     mutationFn: async () => {
-      // Aktiviere Portal + setze Initialpasswort
+      // Aktiviere Portal + setze Initialpasswort + Mandat
       await base44.entities.Customer.update(customer.id, {
         portal_enabled: true,
-        portal_password_hash: initialPassword, // In production: bcrypt hash
+        portal_password_hash: initialPassword,
         portal_must_change_password: true,
+        mandate_status: 'valid',
+        portal_password_last_changed: new Date().toISOString().split('T')[0],
       })
     },
     onSuccess: () => {
