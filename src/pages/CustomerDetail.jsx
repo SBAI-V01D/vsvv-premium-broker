@@ -241,7 +241,7 @@ export default function CustomerDetail() {
           )}
         </TabsContent>
 
-        <TabsContent value="anträge">
+        <TabsContent value="antraege">
           {relatedApplications.length === 0 ? (
             <Card><CardContent className="p-6 text-center text-muted-foreground">Keine Anträge vorhanden</CardContent></Card>
           ) : (
