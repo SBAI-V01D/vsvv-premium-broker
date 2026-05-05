@@ -154,6 +154,27 @@
       "type": "string",
       "description": "Quellen-Antrags-ID"
     },
+    "renewal_alert_start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Ablauf-Alert startet (end_date - 180 Tage)"
+    },
+    "renewal_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "notified",
+        "in_progress",
+        "completed"
+      ],
+      "default": "none",
+      "description": "Verl\u00e4ngerungs-Status (Steuerung)"
+    },
+    "renewal_last_reminder": {
+      "type": "string",
+      "format": "date",
+      "description": "Datum der letzten Erinnerung (f\u00fcr 14-Tage-Logik)"
+    },
     "notes": {
       "type": "string",
       "description": "Notizen"

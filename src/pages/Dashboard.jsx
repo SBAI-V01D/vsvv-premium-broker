@@ -17,6 +17,7 @@ import ActivityFeed from '@/components/dashboard/ActivityFeed'
 import QuickActions from '@/components/dashboard/QuickActions'
 import FinanceWidget from '@/components/dashboard/FinanceWidget'
 import ControllingSection from '@/components/dashboard/ControllingSection'
+import RenewalWidget from '@/components/dashboard/RenewalWidget'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -238,17 +239,20 @@ export default function Dashboard() {
         <FinanceWidget />
       </div>
 
-      {/* CHART + TOP ADVISORS */}
+      {/* CHART + TOP ADVISORS + RENEWAL */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2">
           <RevenueChart contracts={filteredContracts} commissionEntries={filteredCommissions} />
         </div>
-        <TopAdvisors
-          advisors={filteredAdvisors}
-          organizations={organizations}
-          commissionEntries={filteredCommissions}
-          contracts={filteredContracts}
-        />
+        <div className="space-y-6">
+          <TopAdvisors
+            advisors={filteredAdvisors}
+            organizations={organizations}
+            commissionEntries={filteredCommissions}
+            contracts={filteredContracts}
+          />
+          <RenewalWidget />
+        </div>
       </div>
 
       {/* ACTIVITY + TASKS + BIRTHDAYS */}

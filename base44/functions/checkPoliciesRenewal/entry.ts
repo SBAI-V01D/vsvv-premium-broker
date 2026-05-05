@@ -3,10 +3,11 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 /**
  * CHECK POLICIES RENEWAL
  * 
- * Scheduled daily: checks if any policies reach renewal_date
- * Sets status = renewal_due for auto_renew=true policies
+ * 1. Berechne renewal_alert_start_date (end_date - 180 Tage)
+ * 2. SEND erste Alert wenn erreicht
+ * 3. Setze renewal_status = notified
  * 
- * CRITICAL: Does NOT create new version yet (separate function)
+ * Läuft täglich als scheduled task
  */
 
 Deno.serve(async (req) => {
@@ -18,49 +19,45 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const today = new Date().toISOString().split('T')[0];
-    console.log(`[checkPoliciesRenewal] START date=${today}`);
+    console.log(`[checkPoliciesRenewal] START`);
 
     // ─── FETCH ALL ACTIVE POLICIES ───
-    const policies = await base44.entities.Contract.filter({
-      status: 'active',
-      auto_renew: true,
-    });
-
-    let renewalCount = 0;
-    const updates = [];
+    const policies = await base44.entities.Contract.filter({ status: 'active' }, '-end_date');
+    
+    let alerted = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     for (const policy of policies) {
-      if (!policy.renewal_date) continue;
+      if (!policy.end_date) continue;
 
-      // Check if today >= renewal_date
-      if (today >= policy.renewal_date) {
-        console.log(
-          `[checkPoliciesRenewal] ⚠️ Policy ${policy.id} ready for renewal (date=${policy.renewal_date})`
-        );
+      // ─── CALC RENEWAL ALERT DATE (180 days before end) ───
+      const endDate = new Date(policy.end_date);
+      const alertDate = new Date(endDate);
+      alertDate.setDate(alertDate.getDate() - 180);
+      alertDate.setHours(0, 0, 0, 0);
 
-        // Update status
-        await base44.entities.Contract.update(policy.id, {
-          status: 'renewal_due',
-        });
+      // ─── FIRST ALERT CHECK ───
+      if (today >= alertDate && policy.renewal_status !== 'completed') {
+        // Only set to notified if currently "none"
+        if (policy.renewal_status === 'none') {
+          await base44.entities.Contract.update(policy.id, {
+            renewal_status: 'notified',
+            renewal_last_reminder: today.toISOString().split('T')[0],
+            renewal_alert_start_date: alertDate.toISOString().split('T')[0],
+          });
 
-        updates.push({
-          policy_id: policy.id,
-          policy_number: policy.policy_number,
-          renewal_date: policy.renewal_date,
-        });
-
-        renewalCount++;
+          console.log(`[checkPoliciesRenewal] ✅ Alert triggered for policy ${policy.id} (${policy.policy_number})`);
+          alerted += 1;
+        }
       }
     }
 
-    console.log(`[checkPoliciesRenewal] ✅ COMPLETE: ${renewalCount} policies marked renewal_due`);
-
     return Response.json({
       success: true,
-      date: today,
-      policies_renewal_due: renewalCount,
-      updates,
+      message: `Renewal alerts checked`,
+      alerted,
+      total: policies.length,
     });
   } catch (error) {
     console.error(`[checkPoliciesRenewal] ERROR: ${error.message}`);
