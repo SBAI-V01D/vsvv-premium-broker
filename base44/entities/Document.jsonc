@@ -24,6 +24,19 @@
       "default": false,
       "description": "Kunde wurde manuell gesetzt \u2013 KI darf nicht \u00fcberschreiben"
     },
+    "processing_stage": {
+      "type": "string",
+      "enum": [
+        "uploaded",
+        "parsed",
+        "entities_detected",
+        "customer_mapped",
+        "application_created",
+        "policy_created"
+      ],
+      "default": "uploaded",
+      "description": "Pipeline-Status \u2013 kontrolliert Reihenfolge der Verarbeitung"
+    },
     "policy_holder_name": {
       "type": "string",
       "description": "Versicherungsnehmer (aus 'Ihre Adresse' oder 'Versicherungsnehmer')"

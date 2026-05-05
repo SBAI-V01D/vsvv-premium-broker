@@ -1,17 +1,78 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 /**
- * LINEAR AUTOMATION PIPELINE (Punkt 5)
+ * PIPELINE CONTROL LAYER – SEQUENZIELLE VERARBEITUNG
  * 
- * Reihenfolge (zwingend):
- * 1. upload → parsing
- * 2. entity detection → customer mapping
- * 3. application creation
- * 4. policy creation (contract)
- * 5. commission calculation
+ * ✅ PROCESSING STAGE PIPELINE:
+ * 1. uploaded → 2. parsed → 3. entities_detected → 4. customer_mapped 
+ * → 5. application_created → 6. policy_created
  * 
- * Jeder Schritt erst starten wenn vorheriger = completed
+ * RULES:
+ * ✓ Jeder Schritt ONLY wenn vorheriger stage = completed
+ * ✓ customer_locked blockiert ALLE AI-Änderungen
+ * ✓ Read-After-Write + DB-Reload nach jedem Update
+ * ✓ Duplikat-Check: application/policy nur 1x erstellen
+ * ✓ SKIP automation wenn stage ≠ expected
  */
+
+// ─── STAGE PROGRESSION RULES ───
+const STAGE_PROGRESSION = {
+  uploaded: 'parsed',
+  parsed: 'entities_detected',
+  entities_detected: 'customer_mapped',
+  customer_mapped: 'application_created',
+  application_created: 'policy_created',
+  policy_created: null, // Final stage
+};
+
+async function updateStage(base44, documentId, newStage) {
+  // SCHRITT 1: Write
+  console.log(`[automationPipeline] Updating stage: ${documentId} → ${newStage}`);
+  await base44.entities.Document.update(documentId, {
+    processing_stage: newStage,
+  });
+
+  // SCHRITT 2: Read-After-Write (Critical!)
+  const reloaded = await base44.entities.Document.get(documentId);
+  if (reloaded.processing_stage !== newStage) {
+    throw new Error(
+      `STAGE UPDATE FAILED: expected ${newStage}, got ${reloaded.processing_stage}`
+    );
+  }
+
+  console.log(`[automationPipeline] ✅ Stage updated to: ${newStage}`);
+  return reloaded;
+}
+
+async function checkStageGuard(stage, requiredStage) {
+  if (stage !== requiredStage) {
+    throw new Error(
+      `STAGE GUARD FAILED: expected ${requiredStage}, got ${stage}. Skipping automation.`
+    );
+  }
+}
+
+async function checkDuplicateApplication(base44, documentId) {
+  const existing = await base44.entities.Application.filter({
+    linked_document_id: documentId,
+  });
+  if (existing.length > 0) {
+    throw new Error(
+      `DUPLICATE GUARD: Application already exists for doc ${documentId}`
+    );
+  }
+}
+
+async function checkDuplicatePolicy(base44, applicationId) {
+  const existing = await base44.entities.Contract.filter({
+    source_application_id: applicationId,
+  });
+  if (existing.length > 0) {
+    throw new Error(
+      `DUPLICATE GUARD: Policy already exists for application ${applicationId}`
+    );
+  }
+}
 
 Deno.serve(async (req) => {
   try {
@@ -27,7 +88,7 @@ Deno.serve(async (req) => {
       document_id,
       file_url,
       file_name,
-      organization_id, // Wird vom Document/KI bestimmt
+      organization_id,
     } = payload;
 
     if (!document_id || !file_url) {
@@ -37,83 +98,146 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[automationPipeline] START doc=${document_id} org=${organization_id}`);
+    console.log(
+      `[automationPipeline] START doc=${document_id} stage=unknown`
+    );
 
-    // ─── SCHRITT 1: Extraktion (bereits gemacht, aber queue-State setzen) ───
-    await base44.entities.AutomationQueue.create({
-      job_type: 'ki_extraction',
-      status: 'pending',
-      related_document_id: document_id,
-      related_entity_type: 'Document',
-      related_entity_id: document_id,
-    });
+    // ─── LOAD DOCUMENT + CHECK CURRENT STAGE ───
+    let doc = await base44.entities.Document.get(document_id);
+    console.log(`[automationPipeline] Current stage: ${doc.processing_stage}`);
 
-    // ─── SCHRITT 2: Customer Mapping ───
-    // (In DocumentReviewPanel bereits gemacht + customer_locked gesetzt)
-    // Hier: Validierung dass customer_locked=true und customer_id vorhanden
-
-    const doc = await base44.entities.Document.get(document_id);
-    if (!doc.customer_id || !doc.customer_locked) {
-      throw new Error('Document: customer_id oder customer_locked nicht gesetzt');
+    // ─── STAGE 1: UPLOADED → PARSED ───
+    if (doc.processing_stage === 'uploaded') {
+      console.log('[automationPipeline] STAGE 1: uploaded → parsing');
+      // Parsing already done by extractApplicationData frontend call
+      doc = await updateStage(base44, document_id, 'parsed');
     }
 
-    const customer = await base44.entities.Customer.get(doc.customer_id);
-    if (!customer.organization_id) {
-      throw new Error('Customer: organization_id fehlt');
+    // ─── STAGE 2: PARSED → ENTITIES DETECTED ───
+    if (doc.processing_stage === 'parsed') {
+      console.log('[automationPipeline] STAGE 2: parsed → entities_detected');
+      // Entity detection done via extractApplicationData (role classification)
+      doc = await updateStage(base44, document_id, 'entities_detected');
     }
 
-    console.log(`[automationPipeline] Customer mapped: ${customer.id} org=${customer.organization_id}`);
+    // ─── STAGE 3: ENTITIES DETECTED → CUSTOMER MAPPED ───
+    if (doc.processing_stage === 'entities_detected') {
+      console.log('[automationPipeline] STAGE 3: entities_detected → customer_mapped');
+      
+      // GUARD: customer_locked prevents AI override
+      if (doc.customer_locked) {
+        console.log('[automationPipeline] ✅ customer_locked=true → skipping AI mapping');
+      } else {
+        console.log('[automationPipeline] ⚠️ customer_locked=false → AI mapping allowed (if implemented)');
+      }
 
-    // ─── SCHRITT 3: Application erstellen ───
-    const application = await base44.entities.Application.create({
-      customer_id: doc.customer_id,
-      customer_name: doc.customer_name,
-      organization_id: customer.organization_id,
-      advisor_id: customer.advisor_id || null,
-      status: 'submitted',
-      custom_status: 'eingereicht',
-      status_changed_at: new Date().toISOString(),
-      notes: `Automatisch aus Dokument ${document_id} erstellt`,
-    });
+      // Always progress to customer_mapped if customer_id is set
+      if (!doc.customer_id) {
+        throw new Error(
+          'VALIDATION FAILED: customer_id required before proceeding'
+        );
+      }
 
-    console.log(`[automationPipeline] Application created: ${application.id}`);
+      doc = await updateStage(base44, document_id, 'customer_mapped');
+    }
 
-    // ─── SCHRITT 4: Policy (Contract) erstellen ───
-    // Faktuell: Contract = Police in der Domäne
-    const contract = await base44.entities.Contract.create({
-      customer_id: doc.customer_id,
-      customer_name: doc.customer_name,
-      organization_id: customer.organization_id,
-      advisor_id: customer.advisor_id || null,
-      source_application_id: application.id, // ← Verknüpfung
-      status: 'active',
-      insurer: application.insurer || 'Andere',
-      insurance_type: application.insurance_type || 'other',
-      notes: `Policy zur Application ${application.id}`,
-    });
+    // ─── STAGE 4: CUSTOMER MAPPED → APPLICATION CREATED ───
+    if (doc.processing_stage === 'customer_mapped') {
+      console.log('[automationPipeline] STAGE 4: customer_mapped → application_created');
+      
+      await checkStageGuard(doc.processing_stage, 'customer_mapped');
 
-    console.log(`[automationPipeline] Contract created: ${contract.id}`);
+      // Fetch customer to get organization_id
+      const customer = await base44.entities.Customer.get(doc.customer_id);
+      if (!customer.organization_id) {
+        throw new Error('Customer organization_id is required');
+      }
 
-    // ─── SCHRITT 5: Commission berechnen (später) ───
-    // Für jetzt: Placeholder
-    console.log(`[automationPipeline] Commission calculation queued`);
+      // DUPLICATE CHECK
+      await checkDuplicateApplication(base44, document_id);
 
-    // ─── Finales Update: Document → Anwendungsverknüpfung ───
-    await base44.entities.Document.update(document_id, {
-      linked_application_id: application.id,
-      doc_type: 'antrag',
-      classification_status: 'klassifiziert',
-    });
+      // CREATE APPLICATION
+      const application = await base44.entities.Application.create({
+        customer_id: doc.customer_id,
+        customer_name: doc.customer_name,
+        organization_id: customer.organization_id,
+        advisor_id: customer.advisor_id || null,
+        status: 'submitted',
+        custom_status: 'eingereicht',
+        status_changed_at: new Date().toISOString(),
+        notes: `Automatisch aus Dokument ${document_id} erstellt`,
+      });
+
+      console.log(`[automationPipeline] ✅ Application created: ${application.id}`);
+
+      // Link document to application
+      await base44.entities.Document.update(document_id, {
+        linked_application_id: application.id,
+      });
+
+      // Stage transition
+      doc = await updateStage(base44, document_id, 'application_created');
+    }
+
+    // ─── STAGE 5: APPLICATION CREATED → POLICY CREATED ───
+    if (doc.processing_stage === 'application_created') {
+      console.log('[automationPipeline] STAGE 5: application_created → policy_created');
+      
+      await checkStageGuard(doc.processing_stage, 'application_created');
+
+      if (!doc.linked_application_id) {
+        throw new Error('linked_application_id required for policy creation');
+      }
+
+      // Fetch application + customer
+      const application = await base44.entities.Application.get(
+        doc.linked_application_id
+      );
+      const customer = await base44.entities.Customer.get(application.customer_id);
+
+      // DUPLICATE CHECK
+      await checkDuplicatePolicy(base44, application.id);
+
+      // CREATE POLICY (Contract)
+      const contract = await base44.entities.Contract.create({
+        customer_id: application.customer_id,
+        customer_name: application.customer_name,
+        organization_id: application.organization_id,
+        advisor_id: application.advisor_id || null,
+        source_application_id: application.id,
+        status: 'active',
+        insurer: application.insurer || 'Andere',
+        insurance_type: application.insurance_type || 'other',
+        notes: `Policy zur Application ${application.id}`,
+      });
+
+      console.log(`[automationPipeline] ✅ Contract created: ${contract.id}`);
+
+      // Link document to contract
+      await base44.entities.Document.update(document_id, {
+        linked_contract_id: contract.id,
+      });
+
+      // Stage transition
+      doc = await updateStage(base44, document_id, 'policy_created');
+    }
+
+    // ─── FINAL STATE ───
+    console.log(`[automationPipeline] ✅ PIPELINE COMPLETE: doc=${document_id} stage=${doc.processing_stage}`);
 
     return Response.json({
       success: true,
       document_id,
-      application_id: application.id,
-      contract_id: contract.id,
-      message: 'Pipeline abgeschlossen',
+      processing_stage: doc.processing_stage,
+      linked_application_id: doc.linked_application_id,
+      linked_contract_id: doc.linked_contract_id,
+      message: 'Pipeline completed successfully',
     });
   } catch (error) {
     console.error(`[automationPipeline] ERROR: ${error.message}`);
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
   }
 });
