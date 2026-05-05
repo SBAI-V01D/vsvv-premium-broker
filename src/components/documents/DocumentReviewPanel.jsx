@@ -40,40 +40,64 @@ function StepItem({ step }) {
 }
 
 // ─── Customer typeahead ────────────────────────────────────────────────────────
+// Mindestzeichen: 2, sucht first_name, last_name, company_name, email
 function CustomerTypeahead({ customers, onSelect }) {
   const [query, setQuery] = useState('')
-  const results = query.trim().length < 1 ? [] : customers
-    .filter(c => `${c.first_name} ${c.last_name} ${c.email || ''} ${c.phone || ''} ${c.mobile || ''}`
-      .toLowerCase().includes(query.toLowerCase()))
-    .slice(0, 8)
+
+  const results = query.trim().length < 2 ? [] : customers
+    .filter(c => {
+      const haystack = [
+        c.first_name,
+        c.last_name,
+        c.company_name,
+        c.email,
+      ].filter(Boolean).join(' ').toLowerCase()
+      return haystack.includes(query.trim().toLowerCase())
+    })
+    .slice(0, 10)
+
   return (
-    <div className="relative">
+    <div>
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <Input value={query} onChange={e => setQuery(e.target.value)}
-          placeholder="Vorname, Nachname, E-Mail..."
-          className="h-8 text-xs pl-8" autoFocus />
+        <Input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Min. 2 Zeichen: Name, Firma, E-Mail..."
+          className="h-8 text-xs pl-8"
+          autoFocus
+        />
       </div>
+
+      {query.trim().length >= 2 && results.length === 0 && (
+        <p className="mt-2 text-xs text-muted-foreground px-1">Kein Treffer für „{query}"</p>
+      )}
+
       {results.length > 0 && (
-        <div className="mt-1 border rounded-lg bg-card shadow-md overflow-hidden relative z-20 w-full">
+        <div className="mt-1 border rounded-lg bg-card shadow-md overflow-hidden">
           {results.map(c => (
-            <button key={c.id} onClick={() => { onSelect(c); setQuery('') }}
-              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/60 text-left text-xs border-b last:border-0">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold flex-shrink-0">
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => { onSelect(c); setQuery('') }}
+              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/60 text-left text-xs border-b last:border-0"
+            >
+              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold flex-shrink-0 text-xs">
                 {c.first_name?.[0]}{c.last_name?.[0]}
               </div>
               <div className="min-w-0">
-                <p className="font-medium truncate">{c.first_name} {c.last_name}</p>
+                <p className="font-medium truncate">
+                  {c.company_name ? c.company_name : `${c.first_name} ${c.last_name}`}
+                </p>
                 <p className="text-muted-foreground truncate">
-                  {c.birthdate || ''}{c.zip_code ? ` · PLZ ${c.zip_code}` : ''}{c.email ? ` · ${c.email}` : ''}
+                  {c.first_name} {c.last_name}
+                  {c.birthdate ? ` · Geb. ${c.birthdate}` : ''}
+                  {c.email ? ` · ${c.email}` : ''}
                 </p>
               </div>
             </button>
           ))}
         </div>
-      )}
-      {query.trim().length >= 1 && results.length === 0 && (
-        <p className="mt-1 text-xs text-muted-foreground px-1">Kein Treffer</p>
       )}
     </div>
   )
@@ -87,7 +111,7 @@ function DebugPanel({ raw, candidates, totalCustomers, missingFields }) {
         <Bug className="w-3 h-3" /> Debug
       </div>
       <div className="p-3 space-y-2">
-        <div><span className="text-slate-400">Kunden geprüft: </span><span>{totalCustomers}</span></div>
+        <div><span className="text-slate-400">Kunden geladen: </span><span>{totalCustomers}</span></div>
         {missingFields?.length > 0 && <div className="text-red-400">⚠ Fehlend: {missingFields.join(', ')}</div>}
         {candidates?.length > 0 && candidates.map(({ customer: c, score }) => (
           <div key={c.id} className={`px-2 py-1 rounded ${score >= 90 ? 'bg-green-900 text-green-300' : score >= 70 ? 'bg-amber-900 text-amber-300' : 'bg-slate-800 text-slate-400'}`}>
@@ -115,7 +139,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const INITIAL_STEPS = [
     { id: 'extract', label: 'Schritt 1: Datenextraktion (OCR + KI)', status: 'pending' },
     { id: 'match',   label: 'Schritt 2: Kunden-Matching',             status: 'pending' },
-    { id: 'review',  label: 'Schritt 3: Automatische Bestätigung',        status: 'pending' },
+    { id: 'review',  label: 'Schritt 3: Prüfung durch Benutzer',      status: 'pending' },
     { id: 'create',  label: 'Schritt 4: Antrag erstellen',            status: 'pending' },
     { id: 'link',    label: 'Schritt 5: Dokument verknüpfen',         status: 'pending' },
   ]
@@ -126,35 +150,31 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [showDebug, setShowDebug] = useState(false)
 
-  // Extraction data
   const [extraction, setExtraction] = useState(null)
-  // Editable form (pre-filled from normalized extraction)
   const [form, setForm] = useState(null)
   const [produkte, setProdukte] = useState([])
-  // Original extracted values for change detection (learning)
   const originalRef = useRef(null)
-  // Sparten-Locking: after classification, lock = true
   const [sparteLocked, setSparteLocked] = useState(false)
   const [sparteDetectionMethod, setSparteDetectionMethod] = useState(null)
   const [sparteOverwriteWarning, setSparteOverwriteWarning] = useState(null)
 
-  // Matching
+  // ── SINGLE SOURCE OF TRUTH: customerLocked + overrideCustomer ──────────────
+  // Wenn customerLocked = true → KI darf NIEMALS überschreiben
   const [matchedCustomer, setMatchedCustomer] = useState(null)
   const [matchScore, setMatchScore] = useState(0)
   const [matchCandidates, setMatchCandidates] = useState([])
   const [matchMode, setMatchMode] = useState('pending')
   const [overrideCustomer, setOverrideCustomer] = useState(null)
-  const [customerLocked, setCustomerLocked] = useState(false)  // manuelle Auswahl hat immer Priorität
+  const [customerLocked, setCustomerLocked] = useState(false)
   const [showCustomerSearch, setShowCustomerSearch] = useState(false)
 
   // Phase: 'extracting' | 'review' | 'saving' | 'done'
   const [phase, setPhase] = useState('extracting')
-  // Whether auto-save was triggered and user aborted to manual review
-  const [manualOverride, setManualOverride] = useState(false)
 
-  // Ref for scrolling to confirm button
-  const confirmRef = useRef(null)
+  // Refs for scroll
+  const rightPanelRef = useRef(null)
 
+  // ── Customers Query: gleicher Key wie Hauptseite → nutzt Cache ───────────────
   const { data: customers = [], isSuccess: customersLoaded } = useQuery({
     queryKey: ['customers'],
     queryFn: () => base44.entities.Customer.list(null, 1000),
@@ -164,21 +184,21 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const setStep = (id, status, detail) =>
     setSteps(prev => prev.map(s => s.id === id ? { ...s, status, detail: detail ?? s.detail } : s))
 
-  // Auto-start
+  // Auto-start nach Kunden-Load
   useEffect(() => {
     if (customersLoaded && !extraction && !processing) runExtract()
   }, [customersLoaded])
 
-  // Scroll to confirm button when review phase starts (after DOM is rendered)
+  // Nach Review-Phase: nach oben scrollen damit User Felder sieht
   useEffect(() => {
-    if (phase === 'review' && confirmRef.current) {
+    if (phase === 'review' && rightPanelRef.current) {
       setTimeout(() => {
-        confirmRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-      }, 150)
+        rightPanelRef.current.scrollTop = 0
+      }, 100)
     }
   }, [phase])
 
-  // ── STEP 1+2: Extract + Match ────────────────────────────────────────────────
+  // ── STEP 1+2: Extract + Match ─────────────────────────────────────────────────
   const runExtract = async () => {
     setProcessing(true)
     setPipelineError(null)
@@ -191,7 +211,6 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
         file_url: document.file_url,
         file_name: document.name,
       })
-
       if (!res.data?.success || !res.data?.structured) {
         setStep('extract', 'error', 'Extraktion fehlgeschlagen')
         setPipelineError('Datenextraktion fehlgeschlagen. Bitte erneut versuchen.')
@@ -206,16 +225,14 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     }
 
     const data = res.data
-    // Apply learned corrections on top of normalized data
     const normalized = applyLearned(data.normalized || {})
     setExtraction({ ...data, normalized })
-    
-    // SPARTEN-LOCKING: Lock if sparte is set from extraction
+
     if (normalized.sparte) {
       setSparteLocked(true)
       setSparteDetectionMethod(normalized.sparte_detection_method || 'extraction')
     }
-    
+
     const flat = {
       first_name:                normalized.first_name,
       last_name:                 normalized.last_name,
@@ -233,110 +250,93 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       kassenmodell:              normalized.kassenmodell,
       zusatz_type:               normalized.zusatz_type,
       product_label:             normalized.product_label,
-      sparte:                    normalized.sparte, // May be null if no detection
+      sparte:                    normalized.sparte,
     }
-    const produkte_local = normalized.produkte || []
     setForm(flat)
     originalRef.current = { ...flat }
-    setProdukte(produkte_local)
-    setStep('extract', 'ok', `Konfidenz: ${data.confidence}% · Status: ${data.status}`)
+    setProdukte(normalized.produkte || [])
+    setStep('extract', 'ok', `Konfidenz: ${data.confidence}% · ${data.status}`)
 
-    // STEP 2: Match
+    // STEP 2: Match — NUR wenn customer NICHT manuell gesperrt
     setStep('match', 'running')
     const { candidates, topScore } = matchCustomers(flat, customers)
     setMatchCandidates(candidates)
     setMatchScore(topScore)
 
-    // Nur automatisch zuordnen wenn der User noch NICHT manuell gewählt hat
     if (!customerLocked) {
+      // KI setzt Kunde nur wenn noch kein Lock gesetzt
       if (topScore >= 80) {
         setMatchedCustomer(candidates[0].customer)
         setMatchMode('auto')
-        setStep('match', 'ok', `Match: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (${topScore}%)`)
+        setStep('match', 'ok', `✅ Match: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (${topScore}%)`)
       } else if (topScore >= 60) {
         setMatchedCustomer(candidates[0].customer)
         setMatchMode('auto_low')
-        setStep('match', 'ok', `Unsicherer Match: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (${topScore}%)`)
+        setStep('match', 'ok', `⚠ Unsicher: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (${topScore}%)`)
       } else {
         setMatchMode('new_auto')
         setStep('match', 'ok', `${customers.length} geprüft · kein Match → neuer Kunde`)
       }
     } else {
-      // Manuell gesperrter Kunde bleibt — KI darf nicht überschreiben
-      setStep('match', 'ok', `Manuell gesetzt: ${overrideCustomer.first_name} ${overrideCustomer.last_name} (gesperrt)`)
+      // Manuell gesperrter Kunde — KI überschreibt NICHT
+      const locked = overrideCustomer
+      setStep('match', 'ok', `🔒 Manuell gesetzt: ${locked?.first_name} ${locked?.last_name} – wird beibehalten`)
     }
 
-    // STEP 3: Always show review form — user must confirm manually
-    setStep('review', 'waiting', `Bitte Daten prüfen und bestätigen (Konfidenz ${data.confidence}%)`)
+    setStep('review', 'waiting', `Daten prüfen und bestätigen (Konfidenz ${data.confidence}%)`)
     setPhase('review')
     setProcessing(false)
   }
 
-  // ── Auto-save helper (called with fully resolved data, no state deps) ─────────
-  const doSaveWithData = async (normalized, flat, produkteData, resolvedMatchMode) => {
+  // ── Speichern ─────────────────────────────────────────────────────────────────
+  const doSaveWithData = async (normalized, flat, produkteData) => {
     setSaving(true)
     setStep('create', 'running')
 
-    const computedAgeGroup    = normalized.age_group
-    const premiumMonthly      = normalized.premium_monthly ?? (flat.estimated_premium_monthly ? Number(flat.estimated_premium_monthly) : null)
-    const premiumYearly       = normalized.premium_yearly ?? (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null)
-    const productType         = normalized.product_type
-    const kassenmodell        = flat.kassenmodell || normalized.kassenmodell
-    const gesundheitsdeklaration = normalized.gesundheitsdeklaration ?? false
-    const zahlungsintervall   = normalized.zahlungsintervall || null
-    
-    // SPARTEN-OVERWRITE-SCHUTZ: Keep locked sparte, don't derive new one
-    const sparteFromNorm      = normalized.sparte || null
-    let sparte                = sparteFromNorm
-    
-    // If sparte was locked during extraction, use it – NO FALLBACK to derived
-    // If sparte is NULL, leave NULL (no default like 'kvg')
+    const premiumMonthly = normalized.premium_monthly ?? (flat.estimated_premium_monthly ? Number(flat.estimated_premium_monthly) : null)
+    const premiumYearly  = normalized.premium_yearly ?? (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null)
+    const sparte         = normalized.sparte || null
+
     if (!sparte && sparteLocked && sparteDetectionMethod) {
-      // Sparte was locked but somehow became null – this shouldn't happen
-      console.warn('[Overwrite-Schutz] Sparte war locked, ist aber null geworden – BUG!')
       setSparteOverwriteWarning('Sparte-Locking-Fehler: Ursprüngliche Sparte verloren!')
     }
 
-    // Customer matching (re-use already matched state)
+    // ── SINGLE SOURCE OF TRUTH: overrideCustomer hat absolute Priorität ────────
     const activeCustomer = overrideCustomer || matchedCustomer
     let cid = activeCustomer?.id || null
     let resolvedCustomer = activeCustomer
 
-    // Use sync function for automatic customer creation/update with duplicate check
     if (!cid) {
       try {
         const syncResult = await base44.functions.invoke('syncCustomerFromApplication', {
           first_name: flat.first_name || 'Unbekannt',
-          last_name: flat.last_name || 'Unbekannt',
-          email: flat.email || '',
-          phone: flat.phone || '',
-          mobile: flat.mobile || '',
-          street: flat.street || '',
-          zip_code: flat.zip_code || '',
-          city: flat.city || '',
-          canton: flat.canton || '',
-          birthdate: flat.birthdate || '',
+          last_name:  flat.last_name || 'Unbekannt',
+          email:      flat.email || '',
+          phone:      flat.phone || '',
+          mobile:     flat.mobile || '',
+          street:     flat.street || '',
+          zip_code:   flat.zip_code || '',
+          city:       flat.city || '',
+          canton:     flat.canton || '',
+          birthdate:  flat.birthdate || '',
           ahv_number: flat.ahv_number || '',
           nationality: flat.nationality || 'CH',
         })
-
         if (syncResult.data?.customer_id) {
           cid = syncResult.data.customer_id
           resolvedCustomer = customers.find(c => c.id === cid)
           queryClient.invalidateQueries({ queryKey: ['customers'] })
         }
       } catch (err) {
-        console.error('Customer sync error:', err)
-        // Fallback: create customer manually if sync fails
         const newC = await base44.entities.Customer.create({
           first_name: flat.first_name || 'Unbekannt',
-          last_name: flat.last_name || 'Unbekannt',
-          birthdate: flat.birthdate || undefined,
-          street: flat.street || undefined,
-          zip_code: flat.zip_code || undefined,
-          city: flat.city || undefined,
-          phone: flat.phone || undefined,
-          email: flat.email || undefined,
+          last_name:  flat.last_name || 'Unbekannt',
+          birthdate:  flat.birthdate || undefined,
+          street:     flat.street || undefined,
+          zip_code:   flat.zip_code || undefined,
+          city:       flat.city || undefined,
+          phone:      flat.phone || undefined,
+          email:      flat.email || undefined,
           status: 'prospect',
           customer_type: 'private',
           is_family_member: false,
@@ -351,35 +351,33 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       ? `${customer.first_name} ${customer.last_name}`
       : `${flat.first_name || ''} ${flat.last_name || ''}`.trim()
 
-    const appNotes = `Automatisch aus Dokument extrahiert: ${document.name}`
-
     let newApp
     try {
       newApp = await base44.entities.Application.create({
-        customer_id: cid,
+        customer_id: cid,  // ← IMMER von overrideCustomer oder matchedCustomer, nie von KI-Rohwert
         customer_name: customerName,
         insurer: flat.insurer || 'Andere',
         sparte,
         insurance_type: sparte,
-        product: flat.product_label || normalized.product_label || productType || undefined,
+        product: flat.product_label || normalized.product_label || normalized.product_type || undefined,
         contract_start_date: flat.contract_start_date || undefined,
         contract_end_date:   flat.contract_end_date || undefined,
         estimated_premium_monthly: premiumMonthly || undefined,
-        estimated_premium_yearly: premiumYearly || undefined,
+        estimated_premium_yearly:  premiumYearly || undefined,
         sparte_data: {
-          franchise:          flat.franchise || undefined,
-          model:              kassenmodell || undefined,
-          age_group:          computedAgeGroup || undefined,
-          produkte:           produkteData.length > 0 ? produkteData : undefined,
-          product_type:       productType || undefined,
-          zahlungsintervall:  zahlungsintervall || undefined,
-          health_declaration: gesundheitsdeklaration ? 'Ja' : 'Nein',
-          zusatz_type:        flat.zusatz_type || normalized.zusatz_type || undefined,
+          franchise:         flat.franchise || undefined,
+          model:             flat.kassenmodell || normalized.kassenmodell || undefined,
+          age_group:         normalized.age_group || undefined,
+          produkte:          produkteData.length > 0 ? produkteData : undefined,
+          product_type:      normalized.product_type || undefined,
+          zahlungsintervall: normalized.zahlungsintervall || undefined,
+          health_declaration: normalized.gesundheitsdeklaration ? 'Ja' : 'Nein',
+          zusatz_type:       flat.zusatz_type || normalized.zusatz_type || undefined,
         },
         status: 'submitted',
         custom_status: 'in_pruefung',
         status_changed_at: new Date().toISOString(),
-        notes: appNotes,
+        notes: `Automatisch aus Dokument extrahiert: ${document.name}`,
       })
     } catch (err) {
       setStep('create', 'error', err.message)
@@ -399,7 +397,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
         doc_type: 'antrag',
         classification_status: 'klassifiziert',
       })
-      setStep('link', 'ok', `Dokument → Antrag verknüpft`)
+      setStep('link', 'ok', 'Dokument → Antrag verknüpft')
     } catch (err) {
       setStep('link', 'error', err.message)
     }
@@ -413,53 +411,39 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     setTimeout(() => onClose(), 1500)
   }
 
-  // ── STEP 3 → manual confirm ──────────────────────────────────────────────────
+  // ── Bestätigen ────────────────────────────────────────────────────────────────
   const handleConfirm = async () => {
     if (!form) return
-
-    // Record any field corrections for learning
     const orig = originalRef.current || {}
-    const fieldsToLearn = ['kassenmodell', 'insurer', 'franchise']
-    fieldsToLearn.forEach(field => {
-      if (orig[field] !== form[field]) {
-        recordCorrection(field, orig[field], form[field])
-      }
+    ;['kassenmodell', 'insurer', 'franchise'].forEach(field => {
+      if (orig[field] !== form[field]) recordCorrection(field, orig[field], form[field])
     })
-
     setStep('review', 'ok', 'Manuell bestätigt')
     setPhase('saving')
-    const norm = extraction?.normalized || {}
-    await doSaveWithData(norm, form, produkte, matchMode)
+    await doSaveWithData(extraction?.normalized || {}, form, produkte)
   }
 
   const setField = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
 
-  // Confidence helpers (normalize to 0-100 scale if needed)
   const rawConfidence = extraction?.confidence ?? 0
-  const confidence = rawConfidence > 1 ? rawConfidence : rawConfidence * 100
+  const confidence    = rawConfidence > 1 ? rawConfidence : rawConfidence * 100
   const missingFields = extraction?.missing_fields ?? []
-
   const fc = (key, value) => getFieldConfidence(value, key, missingFields, confidence)
 
-  // Derived display values from normalized
-  const norm = extraction?.normalized || {}
-  const ageGroup = norm.age_group
-  const productType = norm.product_type
+  const norm              = extraction?.normalized || {}
+  const ageGroup          = norm.age_group
+  const productType       = norm.product_type
   const gesundheitsdeklaration = norm.gesundheitsdeklaration
-  const premiumYearly = norm.premium_yearly
-  // GD nur bei Krankenversicherung anzeigen
-  const isKvgLike = form?.sparte === 'kvg' || form?.sparte === 'kvg_vvg_kombi' || form?.sparte === 'vvg_zusatz'
-
-  const isReviewPhase = phase === 'review'
-  const isDone = phase === 'done'
-
-  // Active customer (override > matched)
-  const activeCustomer = overrideCustomer || matchedCustomer
+  const premiumYearly     = norm.premium_yearly
+  const isKvgLike         = form?.sparte === 'kvg' || form?.sparte === 'kvg_vvg_kombi' || form?.sparte === 'vvg_zusatz'
+  const activeCustomer    = overrideCustomer || matchedCustomer
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-card flex-shrink-0">
+    // Äusserer Container: volle Höhe, kein overflow-hidden
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+
+      {/* Header – fixiert */}
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-card" style={{ flexShrink: 0 }}>
         <div>
           <h2 className="font-semibold text-sm">{document.name}</h2>
           <p className="text-xs text-muted-foreground">OCR → Extraktion → Abgleich → Bestätigung → Speichern</p>
@@ -477,32 +461,36 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
         </div>
       </div>
 
-      {/* Split layout */}
-      <div className="flex flex-1 min-h-0">
+      {/* Body: 2-Spalten-Layout */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
-        {/* Left: Document preview */}
-        <div className="w-1/2 border-r flex flex-col bg-muted/20 flex-shrink-0 min-h-0">
-          <div className="px-3 py-2 border-b text-xs font-semibold text-muted-foreground bg-muted/40 flex-shrink-0">Originaldokument</div>
-          <div className="flex-1 overflow-auto p-2 min-h-0">
+        {/* Links: Dokument-Vorschau — eigener Scroll */}
+        <div style={{ width: '50%', display: 'flex', flexDirection: 'column', borderRight: '1px solid hsl(var(--border))' }}>
+          <div className="px-3 py-2 border-b text-xs font-semibold text-muted-foreground bg-muted/40" style={{ flexShrink: 0 }}>
+            Originaldokument
+          </div>
+          <div style={{ flex: 1, overflow: 'auto', padding: '8px' }}>
             {document.file_url?.match(/\.(jpg|jpeg|png)$/i) ? (
               <img src={document.file_url} alt="Dokument" className="w-full rounded shadow" />
             ) : (
-              <iframe src={document.file_url} className="w-full h-full rounded border" title="Dokument" style={{ minHeight: '500px' }} />
+              <iframe src={document.file_url} className="w-full rounded border" title="Dokument" style={{ height: '100%', minHeight: '500px' }} />
             )}
           </div>
         </div>
 
-        {/* Right: Processing + Review panel */}
-        <div className="w-1/2 flex flex-col min-h-0 overflow-y-auto">
-
-          {/* Pipeline steps */}
-          <div className="px-4 py-3 border-b bg-muted/30 space-y-1.5 flex-shrink-0">
+        {/* Rechts: Pipeline + Review — eigener Scroll */}
+        <div
+          ref={rightPanelRef}
+          style={{ width: '50%', display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}
+        >
+          {/* Pipeline-Schritte */}
+          <div className="px-4 py-3 border-b bg-muted/30 space-y-1.5" style={{ flexShrink: 0 }}>
             {steps.map(s => <StepItem key={s.id} step={s} />)}
           </div>
 
-          {/* Error */}
+          {/* Fehler */}
           {pipelineError && (
-            <div className="mx-3 mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 text-xs text-red-700 flex-shrink-0">
+            <div className="mx-3 mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 text-xs text-red-700">
               <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold">Fehler</p>
@@ -512,17 +500,17 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
             </div>
           )}
 
-          {/* Overwrite Warning */}
+          {/* Sparte-Warnung */}
           {sparteOverwriteWarning && (
-            <div className="mx-3 mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 text-xs text-red-700 flex-shrink-0">
+            <div className="mx-3 mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 text-xs text-red-700">
               <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <p className="font-semibold">{sparteOverwriteWarning}</p>
             </div>
           )}
 
-          {/* Loading */}
+          {/* Laden */}
           {phase === 'extracting' && !pipelineError && (
-            <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
+            <div className="flex flex-col items-center justify-center gap-3 p-12 text-center">
               <Loader2 className="w-10 h-10 animate-spin text-primary" />
               <div>
                 <p className="font-semibold">Dokument wird analysiert...</p>
@@ -531,9 +519,9 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
             </div>
           )}
 
-          {/* Done */}
-          {isDone && (
-            <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
+          {/* Fertig */}
+          {phase === 'done' && (
+            <div className="flex flex-col items-center justify-center gap-3 p-12 text-center">
               <CheckCircle2 className="w-12 h-12 text-green-500" />
               <div>
                 <p className="font-semibold text-green-700">Antrag erfolgreich erstellt</p>
@@ -542,9 +530,26 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
             </div>
           )}
 
-          {/* ── REVIEW FORM ── */}
-          {(isReviewPhase || phase === 'saving') && form && (
-            <div className="flex-1">
+          {/* ── REVIEW FORMULAR ── */}
+          {(phase === 'review' || phase === 'saving') && form && (
+            <div style={{ padding: '0 0 24px 0' }}>
+
+              {/* Feedback-Banner nach KI-Analyse */}
+              <div className="mx-3 mt-3 p-3 bg-green-50 border border-green-200 rounded-lg space-y-1">
+                <div className="flex items-center gap-2 text-xs font-semibold text-green-800">
+                  <CheckCircle2 className="w-4 h-4" /> Daten extrahiert
+                </div>
+                {activeCustomer && (
+                  <div className="flex items-center gap-2 text-xs text-green-700">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Kunde gesetzt: <span className="font-semibold">{activeCustomer.first_name} {activeCustomer.last_name}</span>
+                    {customerLocked && <span className="ml-1">🔒</span>}
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-xs text-green-700">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Antrag vorbereitet – bitte Daten prüfen
+                </div>
+              </div>
 
               {/* Debug */}
               {showDebug && (
@@ -556,7 +561,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                 />
               )}
 
-              {/* Confidence + status badges */}
+              {/* Konfidenz + Status Badges */}
               <div className="px-3 pt-3 flex items-center gap-2 flex-wrap">
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${confidence >= 80 ? 'bg-green-100 text-green-700' : confidence >= 60 ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
                   {confidence >= 80 ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
@@ -572,14 +577,14 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                 )}
               </div>
 
-              {/* Legend */}
+              {/* Legende */}
               <div className="px-3 pt-2 flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block" /> Sicher</span>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Unsicher</span>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" /> Fehlt</span>
               </div>
 
-              {/* Person */}
+              {/* Personendaten */}
               <div className="px-3 pt-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Personendaten</p>
                 <div className="grid grid-cols-2 gap-2">
@@ -594,7 +599,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                 </div>
               </div>
 
-              {/* Insurance */}
+              {/* Versicherungsdaten */}
               <div className="px-3 pt-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Versicherung</p>
                 <div className="grid grid-cols-2 gap-2">
@@ -607,22 +612,16 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                   <ReviewField label="Kassenmodell"       value={form.kassenmodell}          onChange={v => setField('kassenmodell', v)}          confidence={form.kassenmodell ? (confidence >= 85 ? 'high' : 'low') : 'missing'} />
                   <ReviewField label="Zusatzversicherungstyp" value={form.zusatz_type}       onChange={v => setField('zusatz_type', v)}           confidence={form.zusatz_type ? 'high' : 'missing'} />
                   <ReviewField label="Produkt / Tarif"    value={form.product_label}         onChange={v => setField('product_label', v)}         confidence={form.product_label ? 'high' : 'missing'} />
-                  {/* Computed / read-only fields */}
                   {ageGroup && <ReviewField label="Altersgruppe (berechnet)" value={ageGroup} confidence="high" readOnly />}
                   {productType && <ReviewField label="KVG / VVG (abgeleitet)" value={productType} confidence="high" readOnly />}
                   {norm.zahlungsintervall && <ReviewField label="Zahlungsintervall" value={norm.zahlungsintervall} confidence="high" readOnly />}
                   {isKvgLike && (
-                    <ReviewField
-                      label="Gesundheitserklärung nötig"
-                      value={gesundheitsdeklaration ? 'Ja' : 'Nein'}
-                      confidence="high"
-                      readOnly
-                    />
+                    <ReviewField label="Gesundheitserklärung nötig" value={gesundheitsdeklaration ? 'Ja' : 'Nein'} confidence="high" readOnly />
                   )}
                 </div>
               </div>
 
-              {/* Zusatzversicherungstypen aus Produkten */}
+              {/* Zusatzversicherungstypen */}
               {produkte.filter(p => p.zusatz_typ).length > 0 && (
                 <div className="px-3 pt-3">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Zusatzversicherungstypen</p>
@@ -637,7 +636,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                 </div>
               )}
 
-              {/* Products */}
+              {/* Produkte */}
               <div className="px-3 pt-3">
                 <div className="flex items-center gap-2 mb-2">
                   <Package className="w-3.5 h-3.5 text-muted-foreground" />
@@ -646,7 +645,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                 <ReviewProdukte produkte={produkte} onChange={setProdukte} />
               </div>
 
-              {/* Customer assignment */}
+              {/* Kundenzuordnung */}
               <div className="px-3 pt-3 space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kundenzuordnung</p>
 
@@ -662,11 +661,13 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                       <p className={`font-medium ${customerLocked ? 'text-blue-800' : matchMode === 'auto' ? 'text-green-800' : 'text-amber-800'}`}>
                         {activeCustomer.first_name} {activeCustomer.last_name}
                         {!customerLocked && matchScore > 0 && <span className="font-normal ml-1">({matchScore}%)</span>}
-                        {customerLocked && <span className="ml-1 font-semibold">🔒 manuell gesetzt</span>}
+                        {customerLocked && <span className="ml-1 font-semibold">🔒 manuell gesetzt – nicht überschreibbar</span>}
                       </p>
                       {activeCustomer.birthdate && <p className="text-muted-foreground">Geb. {activeCustomer.birthdate}</p>}
                     </div>
-                    <button onClick={() => setShowCustomerSearch(p => !p)} className="text-xs text-primary underline">Ändern</button>
+                    <button type="button" onClick={() => setShowCustomerSearch(p => !p)} className="text-xs text-primary underline">
+                      Ändern
+                    </button>
                   </div>
                 )}
 
@@ -676,45 +677,47 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
                     <div className="flex-1 text-xs">
                       <p className="font-medium text-blue-800">Neuer Kunde wird angelegt</p>
                     </div>
-                    <button onClick={() => setShowCustomerSearch(p => !p)} className="text-xs text-primary underline">Bestehenden wählen</button>
+                    <button type="button" onClick={() => setShowCustomerSearch(p => !p)} className="text-xs text-primary underline">
+                      Bestehenden wählen
+                    </button>
                   </div>
                 )}
 
                 {showCustomerSearch && (
-                  <div className="border rounded-lg p-2 bg-muted/20">
-                    <p className="text-xs text-muted-foreground mb-1.5">Kunden suchen ({customers.length} geladen):</p>
-                    <CustomerTypeahead customers={customers} onSelect={c => {
-                      setOverrideCustomer(c)
-                      setCustomerLocked(true)   // 🔒 Manuelle Auswahl sperren — KI kann nicht mehr überschreiben
-                      setMatchMode('manual')
-                      setMatchScore(0)
-                      setShowCustomerSearch(false)
-                    }} />
+                  <div className="border rounded-lg p-3 bg-muted/20">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">
+                      Kunden suchen ({customers.length} Kunden geladen):
+                    </p>
+                    <CustomerTypeahead
+                      customers={customers}
+                      onSelect={c => {
+                        setOverrideCustomer(c)
+                        setCustomerLocked(true)   // 🔒 LOCK — KI kann nicht mehr überschreiben
+                        setMatchMode('manual')
+                        setMatchScore(0)
+                        setShowCustomerSearch(false)
+                      }}
+                    />
                   </div>
                 )}
               </div>
 
-              {/* ── CONFIRM BUTTON ── */}
-              <div className="px-3 py-4" ref={confirmRef}>
+              {/* Bestätigen-Button */}
+              <div className="px-3 pt-4 pb-6">
                 {phase === 'saving' ? (
                   <div className="flex items-center justify-center gap-2 py-3">
                     <Loader2 className="w-5 h-5 animate-spin text-primary" />
                     <span className="text-sm text-muted-foreground">Antrag wird gespeichert...</span>
                   </div>
                 ) : (
-                  <Button
-                    className="w-full"
-                    size="lg"
-                    onClick={handleConfirm}
-                    disabled={saving}
-                  >
+                  <Button className="w-full" size="lg" onClick={handleConfirm} disabled={saving}>
                     <Save className="w-4 h-4 mr-2" />
-                    Daten bestätigen & Antrag erstellen
+                    Daten prüfen & bestätigen
                   </Button>
                 )}
                 {missingFields.length > 0 && (
                   <p className="text-xs text-amber-600 mt-2 text-center">
-                    ⚠ {missingFields.length} Pflichtfeld{missingFields.length > 1 ? 'er' : ''} fehlt – trotzdem speichern möglich, Antrag wird als unvollständig markiert.
+                    ⚠ {missingFields.length} Pflichtfeld{missingFields.length > 1 ? 'er' : ''} fehlt – trotzdem speichern möglich.
                   </p>
                 )}
               </div>
