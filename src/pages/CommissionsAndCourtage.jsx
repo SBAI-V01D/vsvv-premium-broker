@@ -7,9 +7,9 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { Search, Plus, Edit, Trash2, Settings, Download, MoreHorizontal } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, Settings, Download, MoreHorizontal, TrendingUp, Users, AlertTriangle } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { jsPDF } from 'jspdf'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const SWISS_INSURERS = [
   'Allianz', 'Axa', 'Baloise', 'CSS', 'Concordia', 'Die Mobiliar', 'Elvia', 'Generali',
@@ -189,6 +189,52 @@ export default function CommissionsAndCourtage() {
   const uniqueBrokers = [...new Set(entries.map(e => e.broker_email).filter(Boolean))]
   const uniqueInsurers = [...new Set(entries.map(e => e.insurer).filter(Boolean))]
 
+  // Berater-Drilldown: aggregate per broker
+  const brokerStats = useMemo(() => {
+    const map = {}
+    entries.filter(e => e.status !== 'storniert').forEach(e => {
+      const key = e.broker_email || e.broker_name || '–'
+      if (!map[key]) map[key] = { name: e.broker_name || e.broker_email || '–', gross: 0, net: 0, storno: 0, count: 0, earned: 0 }
+      map[key].gross += e.gross_commission || 0
+      map[key].net += e.net_payout || 0
+      map[key].storno += e.storno_amount || 0
+      map[key].count += 1
+      if (e.status === 'abgerechnet') map[key].earned += e.net_payout || 0
+    })
+    return Object.values(map).sort((a, b) => b.gross - a.gross)
+  }, [entries])
+
+  // Storno entries
+  const stornoEntries = useMemo(() => entries.filter(e => e.status === 'storniert'), [entries])
+  const stornoRisk = useMemo(() => entries.filter(e => e.status === 'erwartet').reduce((s, e) => s + (e.storno_amount || 0), 0), [entries])
+
+  // CSV Export
+  const handleCSVExport = () => {
+    const headers = ['Datum', 'Gesellschaft', 'Berater', 'Kunde', 'Sparte', 'Produkt', 'Policen-Nr.', 'Brutto (CHF)', 'Anteil Berater (CHF)', 'Storno (CHF)', 'Netto (CHF)', 'Status']
+    const rows = filteredEntries.map(e => [
+      e.settlement_date || '',
+      e.insurer || '',
+      e.broker_name || e.broker_email || '',
+      e.customer_name || '',
+      e.sparte || '',
+      e.product || '',
+      e.policy_number || '',
+      (e.gross_commission || 0).toFixed(2),
+      (e.broker_share_amount || 0).toFixed(2),
+      (e.storno_amount || 0).toFixed(2),
+      (e.net_payout || 0).toFixed(2),
+      e.status || '',
+    ])
+    const csvContent = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n')
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `provisionen_${filterYear}_${filterMonth}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -198,6 +244,9 @@ export default function CommissionsAndCourtage() {
           <p className="text-muted-foreground mt-1">Verwaltung aller Provisionen und Abgeltungen</p>
         </div>
         <div className="flex gap-2">
+          <Button onClick={handleCSVExport} variant="outline" size="sm">
+            <Download className="w-4 h-4 mr-2" /> CSV Export
+          </Button>
           <Button onClick={() => setShowSettings(true)} variant="outline" size="sm">
             <Settings className="w-4 h-4 mr-2" /> Einstellungen
           </Button>
@@ -283,6 +332,108 @@ export default function CommissionsAndCourtage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Storno Risk Banner */}
+      {stornoEntries.length > 0 && (
+        <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          <span><strong>{stornoEntries.length} stornierte</strong> Einträge · Storno-Risiko auf offene Provisionen: <strong>{formatCHF(stornoRisk)}</strong></span>
+        </div>
+      )}
+
+      <Tabs defaultValue="liste">
+        <TabsList>
+          <TabsTrigger value="liste">Abrechnungsliste</TabsTrigger>
+          <TabsTrigger value="berater">Berater-Auswertung ({brokerStats.length})</TabsTrigger>
+          <TabsTrigger value="storno">Stornos ({stornoEntries.length})</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="berater" className="mt-4">
+          <Card>
+            <CardContent className="p-0">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/40">
+                    <th className="text-left py-3 px-4 font-semibold">Berater</th>
+                    <th className="text-right py-3 px-4 font-semibold">Anzahl</th>
+                    <th className="text-right py-3 px-4 font-semibold">Brutto</th>
+                    <th className="text-right py-3 px-4 font-semibold">Storno-Abzug</th>
+                    <th className="text-right py-3 px-4 font-semibold">Netto</th>
+                    <th className="text-right py-3 px-4 font-semibold">Abgerechnet</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {brokerStats.length === 0 ? (
+                    <tr><td colSpan="6" className="text-center py-8 text-muted-foreground">Keine Daten</td></tr>
+                  ) : brokerStats.map((b, i) => (
+                    <tr key={i} className="border-b hover:bg-muted/30">
+                      <td className="py-3 px-4 font-medium">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                            {b.name[0]}
+                          </div>
+                          {b.name}
+                        </div>
+                      </td>
+                      <td className="text-right py-3 px-4 text-muted-foreground">{b.count}</td>
+                      <td className="text-right py-3 px-4 font-semibold">{formatCHF(b.gross)}</td>
+                      <td className="text-right py-3 px-4 text-red-600">–{formatCHF(b.storno)}</td>
+                      <td className="text-right py-3 px-4 font-bold text-green-600">{formatCHF(b.net)}</td>
+                      <td className="text-right py-3 px-4">{formatCHF(b.earned)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                {brokerStats.length > 0 && (
+                  <tfoot>
+                    <tr className="bg-muted/40 font-bold">
+                      <td className="py-3 px-4">Total</td>
+                      <td className="text-right py-3 px-4">{brokerStats.reduce((s, b) => s + b.count, 0)}</td>
+                      <td className="text-right py-3 px-4">{formatCHF(brokerStats.reduce((s, b) => s + b.gross, 0))}</td>
+                      <td className="text-right py-3 px-4 text-red-600">–{formatCHF(brokerStats.reduce((s, b) => s + b.storno, 0))}</td>
+                      <td className="text-right py-3 px-4 text-green-600">{formatCHF(brokerStats.reduce((s, b) => s + b.net, 0))}</td>
+                      <td className="text-right py-3 px-4">{formatCHF(brokerStats.reduce((s, b) => s + b.earned, 0))}</td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="storno" className="mt-4">
+          <Card>
+            <CardContent className="p-0">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/40">
+                    <th className="text-left py-3 px-4 font-semibold">Datum</th>
+                    <th className="text-left py-3 px-4 font-semibold">Gesellschaft</th>
+                    <th className="text-left py-3 px-4 font-semibold">Berater</th>
+                    <th className="text-left py-3 px-4 font-semibold">Kunde</th>
+                    <th className="text-right py-3 px-4 font-semibold">Brutto</th>
+                    <th className="text-right py-3 px-4 font-semibold text-red-600">Storno-Verlust</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stornoEntries.length === 0 ? (
+                    <tr><td colSpan="6" className="text-center py-8 text-muted-foreground">Keine Storni vorhanden ✓</td></tr>
+                  ) : stornoEntries.map(e => (
+                    <tr key={e.id} className="border-b hover:bg-red-50/40">
+                      <td className="py-3 px-4">{formatDate(e.settlement_date)}</td>
+                      <td className="py-3 px-4">{e.insurer}</td>
+                      <td className="py-3 px-4">{e.broker_name || e.broker_email}</td>
+                      <td className="py-3 px-4">{e.customer_name}</td>
+                      <td className="text-right py-3 px-4 line-through text-muted-foreground">{formatCHF(e.gross_commission)}</td>
+                      <td className="text-right py-3 px-4 font-bold text-red-600">–{formatCHF(e.net_payout)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="liste" className="mt-4">
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
@@ -585,6 +736,9 @@ export default function CommissionsAndCourtage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+        </TabsContent>
+      </Tabs>
 
       {/* Settings Dialog - placeholder for now */}
       <Dialog open={showSettings} onOpenChange={setShowSettings}>
