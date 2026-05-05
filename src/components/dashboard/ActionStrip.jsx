@@ -8,7 +8,6 @@ export default function ActionStrip({ leads = [], contracts = [], tasks = [], ap
     const items = []
     const today = new Date()
 
-    // Top 5 Leads by score
     leads
       .sort((a, b) => (b.lead_score || 0) - (a.lead_score || 0))
       .slice(0, 5)
@@ -19,11 +18,11 @@ export default function ActionStrip({ leads = [], contracts = [], tasks = [], ap
           title: l.name,
           sub: `Score: ${l.lead_score || 0}`,
           priority: 1,
-          color: 'border-l-red-500 bg-red-50',
+          color: 'border-l-red-500 bg-red-50/50',
+          badge: 'bg-red-100 text-red-700',
         })
       })
 
-    // 3 Renewals < 60 days
     contracts
       .filter(c => c.status === 'active' && c.end_date)
       .map(c => ({
@@ -34,17 +33,18 @@ export default function ActionStrip({ leads = [], contracts = [], tasks = [], ap
       .sort((a, b) => a.daysLeft - b.daysLeft)
       .slice(0, 3)
       .forEach(c => {
+        const isCritical = c.daysLeft < 30
         items.push({
           type: 'renewal',
           icon: '⏰',
           title: c.policy_number,
-          sub: `${c.daysLeft} days left`,
+          sub: `${c.daysLeft} Tage`,
           priority: 1.5,
-          color: c.daysLeft < 30 ? 'border-l-red-500 bg-red-50' : 'border-l-orange-500 bg-orange-50',
+          color: isCritical ? 'border-l-red-500 bg-red-50/50' : 'border-l-orange-500 bg-orange-50/50',
+          badge: isCritical ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700',
         })
       })
 
-    // 3 Follow-ups overdue
     tasks
       .filter(t => t.status === 'open' && t.task_type === 'follow_up' && new Date(t.due_date || new Date()) < today)
       .slice(0, 3)
@@ -53,13 +53,13 @@ export default function ActionStrip({ leads = [], contracts = [], tasks = [], ap
           type: 'followup',
           icon: '📞',
           title: t.title,
-          sub: t.customer_name || 'Customer',
+          sub: t.customer_name || 'Kunde',
           priority: 2,
-          color: 'border-l-yellow-500 bg-yellow-50',
+          color: 'border-l-yellow-500 bg-yellow-50/50',
+          badge: 'bg-yellow-100 text-yellow-700',
         })
       })
 
-    // 3 Open applications
     applications
       .filter(a => a.status === 'submitted' || a.status === 'under_review')
       .slice(0, 3)
@@ -68,9 +68,10 @@ export default function ActionStrip({ leads = [], contracts = [], tasks = [], ap
           type: 'application',
           icon: '📄',
           title: a.customer_name,
-          sub: a.product || 'Application',
+          sub: a.product || 'Antrag',
           priority: 2.5,
-          color: 'border-l-blue-500 bg-blue-50',
+          color: 'border-l-blue-500 bg-blue-50/50',
+          badge: 'bg-blue-100 text-blue-700',
         })
       })
 
@@ -78,22 +79,26 @@ export default function ActionStrip({ leads = [], contracts = [], tasks = [], ap
   }, [leads, contracts, tasks, applications])
 
   return (
-    <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b py-4 mb-6">
-      <div className="space-y-2 max-w-full">
-        <div className="flex items-center gap-2 mb-3">
+    <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-slate-200 py-4 mb-6">
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
           <Flame className="w-5 h-5 text-red-600" />
-          <h2 className="font-bold text-sm">🔥 HEUTE FOKUS – Max 12 Aktionen</h2>
+          <h2 className="font-bold text-base text-slate-900">🔥 Heute Fokus</h2>
+          <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600 font-medium">Max 12</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2 overflow-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3 overflow-auto pb-1">
           {stripItems.map((item, idx) => (
-            <Card key={idx} className={`border-l-4 ${item.color} flex-shrink-0 min-w-fit`}>
-              <CardContent className="p-2">
+            <Card key={idx} className={`border-l-4 ${item.color} flex-shrink-0 min-w-fit hover:shadow-md transition-shadow`}>
+              <CardContent className="p-3">
                 <div className="flex items-start gap-2">
                   <span className="text-lg flex-shrink-0">{item.icon}</span>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold truncate">{item.title}</p>
-                    <p className="text-xs text-muted-foreground truncate">{item.sub}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-bold text-slate-900 truncate">{item.title}</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <p className="text-xs text-slate-600 truncate flex-1">{item.sub}</p>
+                      <Badge className={`${item.badge} text-xs flex-shrink-0`} variant="secondary">{item.type === 'renewal' ? '⏰' : '✓'}</Badge>
+                    </div>
                   </div>
                 </div>
               </CardContent>

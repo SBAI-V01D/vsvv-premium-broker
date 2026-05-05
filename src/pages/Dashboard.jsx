@@ -244,8 +244,8 @@ export default function Dashboard() {
       </div>
 
       {/* 3. FLOW PIPELINE (KERNELEMENT) */}
-      <div>
-        <h2 className="text-lg font-bold mb-3">📊 Sales Flow Pipeline</h2>
+      <div className="mt-4">
+        <h2 className="text-lg font-bold mb-4 text-slate-900">📊 Sales Flow Pipeline</h2>
         <FlowPipeline 
           leads={leads}
           applications={applications}
@@ -255,8 +255,8 @@ export default function Dashboard() {
       </div>
 
       {/* 4. SUPPORT SECTION (KOMPAKT) */}
-      <div>
-        <h2 className="text-lg font-bold mb-3">📋 Support & Überblick</h2>
+      <div className="mt-6">
+        <h2 className="text-lg font-bold mb-4 text-slate-900">📋 Support & Überblick</h2>
         <SupportSection 
           tasks={openTasks}
           customers={customers}
@@ -265,35 +265,35 @@ export default function Dashboard() {
       </div>
 
       {/* 5. RENEWALS (DETAIL) */}
-      <div>
-        <h2 className="text-lg font-bold mb-3">⏰ Vertragsabläufe (Detail)</h2>
+      <div className="mt-6">
+        <h2 className="text-lg font-bold mb-4 text-slate-900">⏰ Vertragsabläufe (Detail)</h2>
         <RenewalsSection />
       </div>
 
       {/* 6. PREISOPTIMIERUNG */}
-      <div>
-        <h2 className="text-lg font-bold mb-3">💰 Preisoptimierung</h2>
+      <div className="mt-6">
+        <h2 className="text-lg font-bold mb-4 text-slate-900">💰 Preisoptimierung</h2>
         <PricingOptimizationPanel />
       </div>
 
       {/* SEPARATOR: OPERATIV → MANAGEMENT */}
-      <div className="border-t-2 border-slate-200 pt-6 mt-6">
-        <h2 className="text-xl font-bold mb-6 text-slate-600">📊 Management & Steuerung (Wie läuft das Geschäft?)</h2>
+      <div className="border-t-2 border-slate-200 pt-8 mt-8">
+        <h2 className="text-xl font-bold mb-6 text-slate-700">📊 Management & Steuerung</h2>
 
         {/* 7. FINANZEN – UMSATZ & PROVISION */}
         <div className="mb-6">
-          <h3 className="text-lg font-bold mb-3">💰 Umsatz & Provision</h3>
+          <h3 className="text-base font-bold mb-4 text-slate-800">💰 Umsatz & Provision</h3>
           <FinanceWidget />
         </div>
 
         {/* 8. PERFORMANCE + KPIs */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           <div>
-            <h3 className="text-lg font-bold mb-3">📈 Umsatz-Trend</h3>
+            <h3 className="text-base font-bold mb-4 text-slate-800">📈 Umsatz-Trend</h3>
             <RevenueChart contracts={filteredContracts} commissionEntries={filteredCommissions} />
           </div>
           <div>
-            <h3 className="text-lg font-bold mb-3">👥 Berater Performance</h3>
+            <h3 className="text-base font-bold mb-4 text-slate-800">👥 Berater Performance</h3>
             <TopAdvisors
               advisors={filteredAdvisors}
               organizations={organizations}

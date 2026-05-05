@@ -60,18 +60,18 @@ export default function FlowPipeline({ leads = [], applications = [], contracts 
       {stages.map(stage => {
         const Icon = stage.icon
         return (
-          <Card key={stage.title} className={`border-l-4 ${stage.color}`}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Icon className="w-4 h-4" /> {stage.title}
+          <Card key={stage.title} className={`border-l-4 ${stage.color} hover:shadow-lg transition-shadow`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2 text-slate-900">
+                <Icon className="w-5 h-5" /> {stage.title}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-2.5">
               {stage.items.map(item => (
-                <div key={item.label} className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">{item.label}</span>
-                  <Badge className={item.badge || 'bg-slate-100 text-slate-700'}>
-                    {item.value}
+                <div key={item.label} className="flex justify-between items-center p-2 rounded-lg bg-white/50">
+                  <span className="text-xs font-medium text-slate-700">{item.label}</span>
+                  <Badge className={item.badge || 'bg-slate-100 text-slate-700'} variant="secondary">
+                    <span className="font-bold">{item.value}</span>
                   </Badge>
                 </div>
               ))}
