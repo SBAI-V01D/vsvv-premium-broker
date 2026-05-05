@@ -22,7 +22,6 @@ import RenewalsSection from '@/components/dashboard/RenewalsSection'
 import RenewalPipelineKanbanV2 from '@/components/dashboard/RenewalPipelineKanbanV2'
 import UpsellPipelineKanban from '@/components/dashboard/UpsellPipelineKanban'
 import PricingOptimizationPanel from '@/components/dashboard/PricingOptimizationPanel'
-import ActionStrip from '@/components/dashboard/ActionStrip'
 import FlowPipeline from '@/components/dashboard/FlowPipeline'
 import SupportSection from '@/components/dashboard/SupportSection'
 
@@ -207,8 +206,8 @@ export default function Dashboard() {
       {/* HEADER + FILTER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard 3.0</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Sales-Maschine – Action First, Clear Flow</p>
+          <h1 className="text-3xl font-bold">Dashboard 4.0</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Operative Zone (Umsatz) + Management Zone (Steuerung)</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Select value={filterOrg} onValueChange={v => { setFilterOrg(v); setFilterAdvisor('all') }}>
@@ -232,22 +231,20 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 1. ACTION STRIP (STICKY TOP) */}
-      <ActionStrip 
-        leads={leads}
-        contracts={filteredContracts}
-        tasks={openTasks}
-        applications={applications}
-      />
-
-      {/* 2. KPI CARDS */}
+      {/* 1. KPI CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         {kpis.map(k => <KpiCard key={k.label} {...k} />)}
       </div>
 
-      {/* 3. FLOW PIPELINE (KERNELEMENT) */}
+      {/* 2. OPERATIVE ZONE HEADER */}
+      <div className="border-b-2 border-slate-300 pb-4">
+        <h2 className="text-2xl font-bold text-slate-900">🔴 OPERATIVE ZONE – Dein Geld</h2>
+        <p className="text-sm text-muted-foreground mt-1">Was du heute tun musst, um Umsatz zu machen</p>
+      </div>
+
+      {/* 3. SALES FLOW PIPELINE */}
       <div className="mt-4">
-        <h2 className="text-lg font-bold mb-4 text-slate-900">📊 Sales Flow Pipeline</h2>
+        <h3 className="text-lg font-bold mb-4 text-slate-900">📊 Sales Flow Pipeline (Neugeschäft)</h3>
         <FlowPipeline 
           leads={leads}
           applications={applications}
@@ -256,52 +253,46 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* 4. SUPPORT SECTION (KOMPAKT) */}
-      <div className="mt-6">
-        <h2 className="text-lg font-bold mb-4 text-slate-900">📋 Support & Überblick</h2>
-        <SupportSection 
-          tasks={openTasks}
-          customers={customers}
-          activities={['Neue Policen', 'Dokumente hochgeladen', 'Änderungen gespeichert']}
-        />
-      </div>
-
-      {/* 5. RENEWAL PIPELINE (KANBAN – SALES READY) */}
-      <div className="mt-8 mb-8 bg-gradient-to-br from-slate-50 to-blue-50 p-6 rounded-lg border border-slate-200">
-        <h2 className="text-xl font-bold mb-6 text-slate-900">🚀 Renewal Pipeline (Sales Engine)</h2>
+      {/* 4. RENEWAL PIPELINE */}
+      <div className="mt-6 bg-gradient-to-br from-slate-50 to-blue-50 p-6 rounded-lg border border-slate-200">
+        <h3 className="text-lg font-bold mb-4 text-slate-900">🔥 Verträge Laufen Aus – Renewal Pipeline</h3>
         <RenewalPipelineKanbanV2 contracts={filteredContracts} />
       </div>
 
-      {/* 6. UPSELL PIPELINE (NEU) */}
+      {/* 5. OFFENE AUFGABEN */}
       <div className="mt-6">
-        <h2 className="text-lg font-bold mb-4 text-slate-900">💰 Upsatzpotenzial Pipeline</h2>
+        <h3 className="text-lg font-bold mb-4 text-slate-900">✓ Offene Aufgaben (Top 10)</h3>
+        <SupportSection 
+          tasks={openTasks.slice(0, 10)}
+          customers={customers}
+          activities={[]}
+        />
+      </div>
+
+      {/* 6. UPSELL POTENZIAL */}
+      <div className="mt-6">
+        <h3 className="text-lg font-bold mb-4 text-slate-900">💰 Mehr Umsatz bei Bestehenden Kunden</h3>
         <UpsellPipelineKanban contracts={filteredContracts} />
       </div>
 
-      {/* 7. PREISOPTIMIERUNG (ALT) */}
-      <div className="mt-6">
-        <h2 className="text-lg font-bold mb-4 text-slate-900">📊 Preis-Analyse (Optional)</h2>
-        <PricingOptimizationPanel />
-      </div>
+      {/* MANAGEMENT ZONE */}
+      <div className="border-t-4 border-slate-400 pt-8 mt-12">
+        <h2 className="text-2xl font-bold mb-6 text-slate-800">⚫ MANAGEMENT ZONE – Steuerung & Kontrolle</h2>
 
-      {/* SEPARATOR: OPERATIV → MANAGEMENT */}
-      <div className="border-t-2 border-slate-200 pt-8 mt-8">
-        <h2 className="text-xl font-bold mb-6 text-slate-700">📊 Management & Steuerung</h2>
-
-        {/* 7. FINANZEN – UMSATZ & PROVISION */}
-        <div className="mb-6">
-          <h3 className="text-base font-bold mb-4 text-slate-800">💰 Umsatz & Provision</h3>
+        {/* A. UMSATZ & PROVISION */}
+        <div className="mb-8">
+          <h3 className="text-lg font-bold mb-4 text-slate-800">💰 Umsatz & Provision</h3>
           <FinanceWidget />
         </div>
 
-        {/* 8. PERFORMANCE + KPIs */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        {/* B. BERATER & ORGANISATION + PERFORMANCE */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div>
-            <h3 className="text-base font-bold mb-4 text-slate-800">📈 Umsatz-Trend</h3>
+            <h3 className="text-lg font-bold mb-4 text-slate-800">📈 Umsatz-Trend</h3>
             <RevenueChart contracts={filteredContracts} commissionEntries={filteredCommissions} />
           </div>
           <div>
-            <h3 className="text-base font-bold mb-4 text-slate-800">👥 Berater Performance</h3>
+            <h3 className="text-lg font-bold mb-4 text-slate-800">👥 Berater Performance & Organisation</h3>
             <TopAdvisors
               advisors={filteredAdvisors}
               organizations={organizations}
