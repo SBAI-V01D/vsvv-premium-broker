@@ -56,33 +56,41 @@ const COUNTRIES = [
 ]
 
 export default function CustomerForm({ customer, primaryCustomers = [], onSave, onCancel, saving }) {
-   const [form, setForm] = useState(customer || {
-     first_name: '',
-     last_name: '',
-     email: '',
-     phone: '',
-     mobile: '',
-     street: '',
-     zip_code: '',
-     city: '',
-     canton: '',
-     birthdate: '',
-     ahv_number: '',
-     profession: '',
-     civil_status: 'single',
-     nationality: 'CH',
-     drivers_license_date: '',
-     risk_profile: 'medium',
-     customer_type: 'private',
-     status: 'active',
-     mandate_status: 'active',
-     association_membership: 'none',
-     permit_type: 'none',
-     is_family_member: false,
-     primary_customer_id: '',
-     family_role: 'primary',
-     notes: '',
-     assigned_broker: '',
+   const [form, setForm] = useState(() => {
+      if (!customer) {
+         return {
+            first_name: '',
+            last_name: '',
+            email: '',
+            phone: '',
+            mobile: '',
+            street: '',
+            zip_code: '',
+            city: '',
+            canton: '',
+            birthdate: '',
+            ahv_number: '',
+            profession: '',
+            civil_status: 'single',
+            nationality: 'CH',
+            drivers_license_date: '',
+            risk_profile: 'medium',
+            customer_type: 'private',
+            status: 'active',
+            mandate_status: 'active',
+            association_membership: 'none',
+            permit_type: 'none',
+            is_family_member: false,
+            primary_customer_id: '',
+            family_role: 'primary',
+            notes: '',
+            assigned_broker: '',
+         }
+      }
+      return {
+         ...customer,
+         assigned_broker: customer.assigned_broker || '',
+      }
    })
 
    const [autoFilled, setAutoFilled] = useState(false)
@@ -288,7 +296,7 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
 
       <div>
         <Label>Beratender Berater</Label>
-        <Select value={form.assigned_broker} onValueChange={v => set('assigned_broker', v)}>
+        <Select value={form.assigned_broker || ''} onValueChange={v => set('assigned_broker', v)}>
           <SelectTrigger className="mt-1"><SelectValue placeholder="Berater auswählen..." /></SelectTrigger>
           <SelectContent>
             <SelectItem value={null}>– Kein Berater –</SelectItem>
