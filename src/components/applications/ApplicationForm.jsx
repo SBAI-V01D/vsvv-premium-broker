@@ -38,7 +38,16 @@ const grouped = ALL_SPARTEN.reduce((acc, s) => {
   return acc
 }, {})
 
-export default function ApplicationForm({ application, customers = [], onSave, onCancel, saving, classificationDebug }) {
+export default function ApplicationForm({ application, customers: externalCustomers = [], onSave, onCancel, saving, classificationDebug }) {
+  // Fetch ALL customers internally (no limit) so search is complete
+  const { data: allCustomers = [] } = useQuery({
+    queryKey: ['customers'],
+    queryFn: () => base44.entities.Customer.list(null, 5000),
+    staleTime: 60_000,
+  })
+  // Prefer internally fetched full list, fall back to externally passed customers
+  const customers = allCustomers.length > 0 ? allCustomers : externalCustomers
+
   const { data: brokers = [] } = useQuery({
     queryKey: ['brokers'],
     queryFn: () => base44.entities.Broker.filter({ is_active: true }),
@@ -150,7 +159,9 @@ export default function ApplicationForm({ application, customers = [], onSave, o
     const sparteKey = form.sparte || ''
     onSave({
       customer_id: form.customer_id,
-      customer_name: selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : form.customer_name,
+      customer_name: selectedCustomer
+        ? (selectedCustomer.company_name || `${selectedCustomer.first_name} ${selectedCustomer.last_name}`.trim())
+        : form.customer_name,
       primary_customer_id: selectedCustomer?.is_family_member ? selectedCustomer.primary_customer_id : (selectedCustomer?.id || form.primary_customer_id),
       is_family_member: selectedCustomer?.is_family_member || false,
       kundentyp: form.kundentyp || 'privat',
