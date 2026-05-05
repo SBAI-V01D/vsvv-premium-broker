@@ -18,6 +18,7 @@ import QuickActions from '@/components/dashboard/QuickActions'
 import FinanceWidget from '@/components/dashboard/FinanceWidget'
 import ControllingSection from '@/components/dashboard/ControllingSection'
 import RenewalWidget from '@/components/dashboard/RenewalWidget'
+import RenewalsSection from '@/components/dashboard/RenewalsSection'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -320,6 +321,12 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* RENEWALS SECTION */}
+      <div>
+        <h2 className="text-lg font-bold mb-4">🔄 Verlängerungen (Renewals)</h2>
+        <RenewalsSection />
       </div>
 
       {/* CONTROLLING SECTION */}

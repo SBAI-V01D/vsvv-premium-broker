@@ -175,6 +175,52 @@
       "format": "date",
       "description": "Datum der letzten Erinnerung (f\u00fcr 14-Tage-Logik)"
     },
+    "renewal_priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "default": "low",
+      "description": "KI-Priorisierung: high (<60d), medium (60-120d), low (>120d)"
+    },
+    "renewal_offer_created": {
+      "type": "boolean",
+      "default": false,
+      "description": "Angebot wurde vorbereitet"
+    },
+    "renewal_offer_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "pending",
+        "sent",
+        "accepted",
+        "rejected"
+      ],
+      "default": "none",
+      "description": "Status des Angebots"
+    },
+    "renewal_offer_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Angebot erstellt am"
+    },
+    "renewal_offer_policy_id": {
+      "type": "string",
+      "description": "Kopie der Policy als Angebot (Entwurf)"
+    },
+    "renewal_customer_accepted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Kunde hat Angebot angenommen"
+    },
+    "renewal_accepted_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Annahmedatum"
+    },
     "notes": {
       "type": "string",
       "description": "Notizen"
