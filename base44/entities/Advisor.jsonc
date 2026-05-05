@@ -30,10 +30,11 @@
       "type": "string",
       "enum": [
         "advisor",
-        "team_lead"
+        "team_lead",
+        "address_broker"
       ],
       "default": "advisor",
-      "description": "Rolle (advisor = Berater, team_lead = Teamleiter)"
+      "description": "Rolle (advisor = Berater, team_lead = Teamleiter, address_broker = Adressvermittler)"
     },
     "status": {
       "type": "string",
