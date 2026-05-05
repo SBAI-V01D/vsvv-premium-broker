@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Search, MoreHorizontal, Edit, Trash2, ChevronDown, ChevronUp, User, Building2 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Plus, Search, MoreHorizontal, Edit, Trash2, ChevronDown, ChevronUp, User, Building2, ArrowRight } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +16,7 @@ import { STATUS_LABELS, FAMILY_ROLE_LABELS, label } from '@/lib/labels'
 import { searchCustomers } from '@/lib/customerSearch'
 
 export default function Customers() {
+  const navigate = useNavigate()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
   const [newCustomerType, setNewCustomerType] = useState('private')
@@ -239,28 +240,37 @@ export default function Customers() {
                       )}
                     </div>
 
+                    <Button
+                       size="sm"
+                       variant="outline"
+                       onClick={() => navigate(`/kunden/${customer.id}/360`)}
+                       className="flex-shrink-0"
+                     >
+                       <ArrowRight className="w-4 h-4" /> 360
+                     </Button>
+
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
-                          <Edit className="w-4 h-4 mr-2" /> Bearbeiten
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => {
-                            if (confirm('Kunde und alle Familienmitglieder löschen?')) {
-                              deleteMutation.mutate(customer.id)
-                            }
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" /> Löschen
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                       <DropdownMenuTrigger asChild>
+                         <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                           <MoreHorizontal className="w-4 h-4" />
+                         </Button>
+                       </DropdownMenuTrigger>
+                       <DropdownMenuContent align="end">
+                         <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
+                           <Edit className="w-4 h-4 mr-2" /> Bearbeiten
+                         </DropdownMenuItem>
+                         <DropdownMenuItem
+                           className="text-destructive"
+                           onClick={() => {
+                             if (confirm('Kunde und alle Familienmitglieder löschen?')) {
+                               deleteMutation.mutate(customer.id)
+                             }
+                           }}
+                         >
+                           <Trash2 className="w-4 h-4 mr-2" /> Löschen
+                         </DropdownMenuItem>
+                       </DropdownMenuContent>
+                     </DropdownMenu>
                   </div>
 
                   {/* FAMILIENMITGLIEDER */}
