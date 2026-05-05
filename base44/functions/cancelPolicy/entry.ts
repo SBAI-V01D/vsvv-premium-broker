@@ -76,6 +76,7 @@ Deno.serve(async (req) => {
           // Mark original as cancelled
           await base44.entities.CommissionEntry.update(commission.id, {
             status: 'cancelled',
+            is_paid: false, // Reset in case of storno
           });
 
           // Create storno entry (negative)

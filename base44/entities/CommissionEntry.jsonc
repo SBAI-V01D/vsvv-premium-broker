@@ -118,6 +118,11 @@
       "type": "string",
       "description": "Original Commission ID (wenn Storno)"
     },
+    "is_paid": {
+      "type": "boolean",
+      "default": false,
+      "description": "GUARD: Wurde bereits ausbezahlt (verhindert Doppelzahlung)"
+    },
     "notes": {
       "type": "string",
       "description": "Notizen"

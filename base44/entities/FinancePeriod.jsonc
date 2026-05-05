@@ -1,0 +1,44 @@
+{
+  "name": "FinancePeriod",
+  "type": "object",
+  "properties": {
+    "month": {
+      "type": "string",
+      "format": "date",
+      "description": "Monat (YYYY-MM-01)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "closed"
+      ],
+      "default": "open",
+      "description": "Status: open = \u00e4nderbar, closed = immutable"
+    },
+    "closed_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Datum Abschluss"
+    },
+    "closed_by": {
+      "type": "string",
+      "description": "Geschlossen von (E-Mail)"
+    },
+    "total_commissions": {
+      "type": "number",
+      "description": "Gesamtproviision f\u00fcr Monat (CHF) - Cache"
+    },
+    "total_payouts": {
+      "type": "number",
+      "description": "Gesamtauszahlung f\u00fcr Monat (CHF) - Cache"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notizen / Bemerkungen"
+    }
+  },
+  "required": [
+    "month"
+  ]
+}

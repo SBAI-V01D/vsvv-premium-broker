@@ -44,6 +44,21 @@
       ],
       "default": "active",
       "description": "Status"
+    },
+    "total_commission": {
+      "type": "number",
+      "default": 0,
+      "description": "KPI: Gesamtprovision aller Policies (CHF) - Cache"
+    },
+    "paid_commission": {
+      "type": "number",
+      "default": 0,
+      "description": "KPI: Bereits ausbezahlte Provision (CHF) - Cache"
+    },
+    "open_commission": {
+      "type": "number",
+      "default": 0,
+      "description": "KPI: Noch zu zahlende Provision (CHF) - Cache"
     }
   },
   "required": [

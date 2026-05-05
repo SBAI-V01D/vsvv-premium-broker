@@ -247,6 +247,11 @@
     "advisor_id": {
       "type": "string",
       "description": "ID des Beraters (optional) \u2013 muss aus derselben Organisation sein"
+    },
+    "total_premium": {
+      "type": "number",
+      "default": 0,
+      "description": "KPI: Gesamte Jahrespr\u00e4mie aller aktiven Policies (CHF) - Cache"
     }
   },
   "required": [

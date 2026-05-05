@@ -78,10 +78,12 @@ Deno.serve(async (req) => {
     console.log(`[executePayoutTransfers] ✅ Payout marked paid`);
 
     // ─── UPDATE COMMISSIONS → PAID ───
+    // CRITICAL: Set is_paid = true to prevent double payment
     for (const commission of commissions) {
       await base44.entities.CommissionEntry.update(commission.id, {
         status: 'paid',
         paid_date: paid_date,
+        is_paid: true, // GUARD: Mark as paid
       });
     }
 
