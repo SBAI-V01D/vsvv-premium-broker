@@ -23,6 +23,7 @@ import SystemLogs from './pages/SystemLogs'
 import FinanceDashboard from './pages/FinanceDashboard'
 import CEODashboard from './components/ceo/CEODashboard'
 import CEOCockpit from './pages/CEOCockpit'
+import AdvancedDashboard from './pages/AdvancedDashboard'
 import Leads from './pages/Leads'
 
 // Portal
@@ -98,6 +99,7 @@ const AuthenticatedApp = () => {
         <Route path="/finanz-dashboard" element={<FinanceDashboard />} />
         <Route path="/ceo-dashboard" element={<CEODashboard />} />
         <Route path="/ceo-cockpit" element={<CEOCockpit />} />
+        <Route path="/advanced-dashboard" element={<AdvancedDashboard />} />
         <Route path="/leads" element={<Leads />} />
         <Route path="/system-logs" element={<SystemLogs />} />
       </Route>
