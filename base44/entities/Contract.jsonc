@@ -256,6 +256,72 @@
       "format": "date-time",
       "description": "Letzter Kontakt/Aktivit\u00e4t in der Renewal"
     },
+    "upsell_stage": {
+      "type": "string",
+      "enum": [
+        "identified",
+        "contact",
+        "offer",
+        "negotiation",
+        "won",
+        "lost"
+      ],
+      "default": "identified",
+      "description": "Upsell Pipeline Stage: identified \u2192 contact \u2192 offer \u2192 negotiation \u2192 won|lost"
+    },
+    "upsell_stage_updated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Wann wurde die Upsell-Stage zuletzt aktualisiert"
+    },
+    "upsell_identified_reason": {
+      "type": "string",
+      "description": "Grund f\u00fcr Upsell-Erkennung (z.B. high_pricing, product_gap, renewal_approaching)"
+    },
+    "upsell_potential_value": {
+      "type": "number",
+      "description": "Gesch\u00e4tzter Upsell-Wert (CHF/Jahr)"
+    },
+    "upsell_potential_percent": {
+      "type": "number",
+      "description": "Potenzial in Prozent (z.B. 25% mehr Pr\u00e4mie)"
+    },
+    "upsell_offer_created": {
+      "type": "boolean",
+      "default": false,
+      "description": "Upsell-Angebot wurde erstellt"
+    },
+    "upsell_offer_status": {
+      "type": "string",
+      "enum": [
+        "none",
+        "pending",
+        "sent",
+        "accepted",
+        "rejected"
+      ],
+      "default": "none",
+      "description": "Status des Upsell-Angebots"
+    },
+    "upsell_offer_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Upsell-Angebot erstellt am"
+    },
+    "upsell_offer_value": {
+      "type": "number",
+      "description": "Angebotener zus\u00e4tzlicher Betrag (CHF/Jahr)"
+    },
+    "upsell_accepted_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Upsell-Annahmedatum"
+    },
+    "upsell_last_activity": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Letzte Aktivit\u00e4t im Upsell-Prozess"
+    },
     "pricing_status": {
       "type": "string",
       "enum": [

@@ -20,6 +20,7 @@ import ControllingSection from '@/components/dashboard/ControllingSection'
 import RenewalWidget from '@/components/dashboard/RenewalWidget'
 import RenewalsSection from '@/components/dashboard/RenewalsSection'
 import RenewalPipelineKanban from '@/components/dashboard/RenewalPipelineKanban'
+import UpsellPipelineKanban from '@/components/dashboard/UpsellPipelineKanban'
 import PricingOptimizationPanel from '@/components/dashboard/PricingOptimizationPanel'
 import ActionStrip from '@/components/dashboard/ActionStrip'
 import FlowPipeline from '@/components/dashboard/FlowPipeline'
@@ -271,9 +272,15 @@ export default function Dashboard() {
         <RenewalPipelineKanban contracts={filteredContracts} />
       </div>
 
-      {/* 6. PREISOPTIMIERUNG */}
+      {/* 6. UPSELL PIPELINE (NEU) */}
       <div className="mt-6">
-        <h2 className="text-lg font-bold mb-4 text-slate-900">💰 Preisoptimierung</h2>
+        <h2 className="text-lg font-bold mb-4 text-slate-900">💰 Upsatzpotenzial Pipeline</h2>
+        <UpsellPipelineKanban contracts={filteredContracts} />
+      </div>
+
+      {/* 7. PREISOPTIMIERUNG (ALT) */}
+      <div className="mt-6">
+        <h2 className="text-lg font-bold mb-4 text-slate-900">📊 Preis-Analyse (Optional)</h2>
         <PricingOptimizationPanel />
       </div>
 
