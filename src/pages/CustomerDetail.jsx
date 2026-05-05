@@ -25,6 +25,11 @@ export default function CustomerDetail() {
     queryFn: () => base44.entities.Customer.list(),
   })
 
+  const { data: allAdvisors = [] } = useQuery({
+    queryKey: ['advisors'],
+    queryFn: () => base44.entities.Advisor.list(),
+  })
+
   const customer = allCustomers.find(x => x.id === id)
 
   const { data: contracts = [] } = useQuery({
@@ -115,7 +120,10 @@ export default function CustomerDetail() {
           <CardContent className="p-4 space-y-2">
             {customer.birthdate && <div className="text-sm"><span className="text-muted-foreground">Geburtsdatum:</span> {new Date(customer.birthdate).toLocaleDateString('de-CH')}</div>}
             {customer.profession && <div className="text-sm"><span className="text-muted-foreground">Beruf:</span> {customer.profession}</div>}
-            {customer.assigned_broker && <div className="text-sm"><span className="text-muted-foreground">Berater:</span> {customer.assigned_broker}</div>}
+            {customer.advisor_id && (() => {
+              const advisor = allAdvisors.find(a => a.id === customer.advisor_id);
+              return advisor ? <div className="text-sm"><span className="text-muted-foreground">Berater:</span> {advisor.firstname} {advisor.lastname}</div> : null;
+            })()}
             <div className="text-sm"><span className="text-muted-foreground">Status:</span> {label(STATUS_LABELS, customer.status)}</div>
           </CardContent>
         </Card>
