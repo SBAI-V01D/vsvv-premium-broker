@@ -246,21 +246,10 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
       setStep('match', 'ok', `${customers.length} geprüft · kein Match → neuer Kunde`)
     }
 
-    // STEP 3: Auto-confirm if confidence >= 80 (no manual review blocker)
-    // Confidence values are normalized to 0-100 scale
-    const canAutoConfirm = data.confidence >= 80
-
-    if (canAutoConfirm) {
-      setStep('review', 'ok', `Automatisch bestätigt (Konfidenz ${data.confidence}%)`)
-      setPhase('saving')
-      setProcessing(false)
-      setTimeout(() => doSaveWithData(normalized, flat, produkte_local, topScore >= 80 ? 'auto' : 'new_auto'), 0)
-    } else {
-      // For confidence < 80: still proceed to review, but allow auto-save (no blocking)
-      setStep('review', 'ok', `Bereit zur Überprüfung (Konfidenz ${data.confidence}%)`)
-      setPhase('review')
-      setProcessing(false)
-    }
+    // STEP 3: Always show review form — user must confirm manually
+    setStep('review', 'waiting', `Bitte Daten prüfen und bestätigen (Konfidenz ${data.confidence}%)`)
+    setPhase('review')
+    setProcessing(false)
   }
 
   // ── Auto-save helper (called with fully resolved data, no state deps) ─────────
