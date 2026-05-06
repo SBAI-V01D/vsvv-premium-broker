@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { TrendingUp, DollarSign, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 export default function FinanceWidget() {
+  const navigate = useNavigate()
   const { data: commissions = [] } = useQuery({
     queryKey: ['commissions'],
     queryFn: () => base44.entities.CommissionEntry.list(null, 1000),
@@ -40,7 +42,7 @@ export default function FinanceWidget() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       {/* Total Commission */}
-      <Card>
+      <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/provisionen-courtagen')}>
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -55,7 +57,7 @@ export default function FinanceWidget() {
       </Card>
 
       {/* Earned Commission */}
-      <Card>
+      <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/provisionen-courtagen')}>
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -70,7 +72,7 @@ export default function FinanceWidget() {
       </Card>
 
       {/* Pending Commission */}
-      <Card>
+      <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/provisionen-courtagen')}>
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -85,7 +87,7 @@ export default function FinanceWidget() {
       </Card>
 
       {/* Storno Loss */}
-      <Card>
+      <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/provisionen-courtagen')}>
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>

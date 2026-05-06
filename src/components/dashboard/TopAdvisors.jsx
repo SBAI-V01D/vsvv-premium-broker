@@ -1,8 +1,10 @@
 import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Trophy } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 export default function TopAdvisors({ advisors, organizations, commissionEntries, contracts }) {
+  const navigate = useNavigate()
   const advisorStats = advisors.map(a => {
     const org = organizations.find(o => o.id === a.organization_id)
     const provision = commissionEntries
@@ -23,7 +25,7 @@ export default function TopAdvisors({ advisors, organizations, commissionEntries
   const medals = ['🥇', '🥈', '🥉', '4.', '5.']
 
   return (
-    <Card>
+    <Card className="cursor-pointer" onClick={() => navigate('/berater-organisation')}>
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
           <Trophy className="w-4 h-4 text-amber-500" /> Top Berater
@@ -35,7 +37,7 @@ export default function TopAdvisors({ advisors, organizations, commissionEntries
         ) : (
           <div className="divide-y">
             {advisorStats.map((a, idx) => (
-              <div key={a.id} className="px-6 py-3 flex items-center gap-3">
+              <div key={a.id} className="px-6 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors">
                 <span className="text-base w-6 text-center">{medals[idx]}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">{a.name}</p>

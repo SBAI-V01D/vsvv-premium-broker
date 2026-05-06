@@ -256,17 +256,18 @@ export default function Dashboard() {
 
       {/* 3. VERTRAGSABLÄUFE */}
       <div className="mt-4 bg-gradient-to-br from-slate-50 to-blue-50 p-6 rounded-lg border border-slate-200">
-        <h3 className="text-lg font-bold mb-4 text-slate-900">🔥 Vertragsabläufe</h3>
+        <h3 className="text-lg font-bold mb-4 text-slate-900 cursor-pointer hover:text-primary transition-colors inline-flex items-center gap-2" onClick={() => navigate('/vertraege')}>🔥 Vertragsabläufe →</h3>
         <RenewalPipelineKanbanV2 contracts={filteredContracts} />
       </div>
 
       {/* 4. OFFENE AUFGABEN + LETZTE AKTIVITÄTEN */}
       <div className="mt-6">
-        <h3 className="text-lg font-bold mb-4 text-slate-900">✓ Offene Aufgaben (Top 10)</h3>
+        <h3 className="text-lg font-bold mb-4 text-slate-900 cursor-pointer hover:text-primary transition-colors" onClick={() => navigate('/aufgaben')}>✓ Offene Aufgaben (Top 10) →</h3>
         <SupportSection 
           tasks={openTasks.slice(0, 10)}
           customers={customers}
           activities={[]}
+          onTaskClick={handleTaskClick}
         />
       </div>
 
@@ -285,13 +286,13 @@ export default function Dashboard() {
 
         {/* A. UMSATZ & PROVISION */}
         <div className="mb-8">
-          <h3 className="text-lg font-bold mb-4 text-slate-800">💰 Umsatz & Provision</h3>
+          <h3 className="text-lg font-bold mb-4 text-slate-800 cursor-pointer hover:text-primary transition-colors inline-flex items-center gap-2" onClick={() => navigate('/provisionen-courtagen')}>💰 Umsatz & Provision →</h3>
           <FinanceWidget />
         </div>
 
         {/* B. UMSATZPOTENZIAL / CONVERSION BOOSTER */}
         <div className="mb-8 bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-lg border border-amber-200">
-          <h3 className="text-lg font-bold mb-4 text-slate-800">💰 Umsatzpotenzial – Mehr Deckung / Upgrade / Beratung</h3>
+          <h3 className="text-lg font-bold mb-4 text-slate-800 cursor-pointer hover:text-primary transition-colors inline-flex items-center gap-2" onClick={() => navigate('/vertraege')}>💰 Umsatzpotenzial – Mehr Deckung / Upgrade / Beratung →</h3>
           <UpsellPipelineKanban contracts={filteredContracts} />
         </div>
 
@@ -302,7 +303,7 @@ export default function Dashboard() {
             <RevenueChart contracts={filteredContracts} commissionEntries={filteredCommissions} />
           </div>
           <div>
-            <h3 className="text-lg font-bold mb-4 text-slate-800">👥 Berater Performance & Organisation</h3>
+            <h3 className="text-lg font-bold mb-4 text-slate-800 cursor-pointer hover:text-primary transition-colors inline-flex items-center gap-2" onClick={() => navigate('/berater-organisation')}>👥 Berater Performance & Organisation →</h3>
             <TopAdvisors
               advisors={filteredAdvisors}
               organizations={organizations}
