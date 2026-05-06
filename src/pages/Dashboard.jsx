@@ -254,24 +254,13 @@ export default function Dashboard() {
         <p className="text-sm text-muted-foreground mt-1">Was du heute tun musst, um Umsatz zu machen</p>
       </div>
 
-      {/* 3. SALES FLOW PIPELINE */}
-      <div className="mt-4">
-        <h3 className="text-lg font-bold mb-4 text-slate-900">📊 Sales Flow Pipeline (Neugeschäft)</h3>
-        <FlowPipeline 
-          leads={leads}
-          applications={applications}
-          contracts={filteredContracts}
-          pricing={[]}
-        />
-      </div>
-
-      {/* 4. RENEWAL PIPELINE */}
-      <div className="mt-6 bg-gradient-to-br from-slate-50 to-blue-50 p-6 rounded-lg border border-slate-200">
-        <h3 className="text-lg font-bold mb-4 text-slate-900">🔥 Verträge Laufen Aus – Renewal Pipeline</h3>
+      {/* 3. VERTRAGSABLÄUFE */}
+      <div className="mt-4 bg-gradient-to-br from-slate-50 to-blue-50 p-6 rounded-lg border border-slate-200">
+        <h3 className="text-lg font-bold mb-4 text-slate-900">🔥 Vertragsabläufe</h3>
         <RenewalPipelineKanbanV2 contracts={filteredContracts} />
       </div>
 
-      {/* 5. OFFENE AUFGABEN */}
+      {/* 4. OFFENE AUFGABEN */}
       <div className="mt-6">
         <h3 className="text-lg font-bold mb-4 text-slate-900">✓ Offene Aufgaben (Top 10)</h3>
         <SupportSection 
@@ -281,13 +270,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* 6. UPSATZPOTENZIAL (DECKUNG, UPGRADE, BERATUNG) */}
-      <div className="mt-6 bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-lg border border-amber-200">
-        <h3 className="text-lg font-bold mb-4 text-slate-900">💰 Umsatzpotenzial – Mehr Deckung / Upgrade / Beratung</h3>
-        <UpsellPipelineKanban contracts={filteredContracts} />
-      </div>
-
-      {/* 7. LETZTE AKTIVITÄTEN */}
+      {/* 5. LETZTE AKTIVITÄTEN */}
       <div className="mt-6">
         <h3 className="text-lg font-bold mb-4 text-slate-900">🔄 Letzte Aktivitäten</h3>
         <ActivityFeed 
@@ -295,6 +278,23 @@ export default function Dashboard() {
           contracts={filteredContracts}
           commissions={filteredCommissions}
         />
+      </div>
+
+      {/* 6. SALES FLOW PIPELINE */}
+      <div className="mt-6">
+        <h3 className="text-lg font-bold mb-4 text-slate-900">📊 Sales Flow Pipeline (Neugeschäft)</h3>
+        <FlowPipeline 
+          leads={leads}
+          applications={applications}
+          contracts={filteredContracts}
+          pricing={[]}
+        />
+      </div>
+
+      {/* 7. UPSATZPOTENZIAL (DECKUNG, UPGRADE, BERATUNG) */}
+      <div className="mt-6 bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-lg border border-amber-200">
+        <h3 className="text-lg font-bold mb-4 text-slate-900">💰 Umsatzpotenzial – Mehr Deckung / Upgrade / Beratung</h3>
+        <UpsellPipelineKanban contracts={filteredContracts} />
       </div>
 
       {/* MANAGEMENT ZONE */}
