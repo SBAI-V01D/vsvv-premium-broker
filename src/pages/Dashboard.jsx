@@ -260,13 +260,22 @@ export default function Dashboard() {
         <RenewalPipelineKanbanV2 contracts={filteredContracts} />
       </div>
 
-      {/* 4. OFFENE AUFGABEN */}
+      {/* 4. OFFENE AUFGABEN + LETZTE AKTIVITÄTEN */}
       <div className="mt-6">
         <h3 className="text-lg font-bold mb-4 text-slate-900">✓ Offene Aufgaben (Top 10)</h3>
         <SupportSection 
           tasks={openTasks.slice(0, 10)}
           customers={customers}
           activities={[]}
+        />
+      </div>
+
+      <div className="mt-6">
+        <h3 className="text-lg font-bold mb-4 text-slate-900">🔄 Letzte Aktivitäten</h3>
+        <ActivityFeed 
+          customers={customers}
+          contracts={filteredContracts}
+          commissions={filteredCommissions}
         />
       </div>
 
@@ -286,17 +295,7 @@ export default function Dashboard() {
           <UpsellPipelineKanban contracts={filteredContracts} />
         </div>
 
-        {/* C. LETZTE AKTIVITÄTEN */}
-        <div className="mb-8">
-          <h3 className="text-lg font-bold mb-4 text-slate-800">🔄 Letzte Aktivitäten</h3>
-          <ActivityFeed 
-            customers={customers}
-            contracts={filteredContracts}
-            commissions={filteredCommissions}
-          />
-        </div>
-
-        {/* D. BERATER & ORGANISATION + PERFORMANCE */}
+        {/* C. BERATER & ORGANISATION + PERFORMANCE */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div>
             <h3 className="text-lg font-bold mb-4 text-slate-800">📈 Umsatz-Trend</h3>
