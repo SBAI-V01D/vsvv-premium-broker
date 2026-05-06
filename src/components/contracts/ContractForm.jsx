@@ -57,10 +57,6 @@ export default function ContractForm({ contract, customers = [], onSave, onCance
     const customer = customers.find(c => c.id === form.customer_id)
     // organization_id: prefer from customer lookup, fallback to existing form value (important for edit!)
     const organization_id = customer?.organization_id || form.organization_id || ''
-    if (!organization_id) {
-      alert('Bitte zuerst einen Kunden auswählen (organization_id fehlt).')
-      return
-    }
     onSave({
       customer_id: form.customer_id,
       customer_name: customer ? `${customer.first_name} ${customer.last_name}` : (form.customer_name || ''),
