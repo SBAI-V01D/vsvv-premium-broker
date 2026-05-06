@@ -274,8 +274,11 @@ export default function Documents() {
                           <RefreshCw className="w-4 h-4 mr-2 text-amber-600" /> Neu verarbeiten
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem onClick={() => handleReclassify(doc, 'antrag')}>
-                        <Zap className="w-4 h-4 mr-2 text-green-600" /> Als ANTRAG markieren
+                      <DropdownMenuItem onClick={() => {
+                        handleReclassify(doc, 'antrag')
+                        setTimeout(() => setReviewDoc({ ...doc, doc_type: 'antrag' }), 300)
+                      }}>
+                        <Zap className="w-4 h-4 mr-2 text-green-600" /> Als ANTRAG markieren & verarbeiten
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleReclassify(doc, 'anlage')}>
                         <Paperclip className="w-4 h-4 mr-2 text-slate-500" /> Als ANLAGE markieren

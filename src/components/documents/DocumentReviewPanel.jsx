@@ -262,15 +262,14 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     setProdukte(normalized.produkte || [])
     setStep('extract', 'ok', `Konfidenz: ${data.confidence}% · ${data.status}`)
 
-    // STEP 2: Match — NUR wenn customer NICHT manuell gesperrt (via document.customer_locked)
+    // STEP 2: Match
     setStep('match', 'running')
     let candidates = []
     let topScore = 0
 
-    // ─── PERSISTENZ FIX: Backend-Wert hat absolute Priorität ───
     // Prüfe zuerst: Kunde schon im Document + customer_locked?
     if (document?.customer_id && document?.customer_locked) {
-      // Backend sagt: LOCK ist aktiv → keine AI-Überschreibung
+      // Backend-Lock ist aktiv → keine AI-Überschreibung
       const lockedCust = customers.find(c => c.id === document.customer_id)
       if (lockedCust) {
         overrideCustomerRef.current = lockedCust
@@ -279,27 +278,26 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
         setCustomerLocked(true)
         setMatchMode('manual')
         setStep('match', 'ok', `🔒 GESPERRT (Backend): ${lockedCust.first_name} ${lockedCust.last_name}`)
-      } else {
-        // Backend sagt: kein Lock → AI darf matchen
-        const result = matchCustomers(flat, customers)
-        candidates = result.candidates
-        topScore = result.topScore
-        setMatchCandidates(candidates)
-        setMatchScore(topScore)
+      }
+    } else {
+      // Kein Lock → KI darf matchen
+      const result = matchCustomers(flat, customers)
+      candidates = result.candidates
+      topScore = result.topScore
+      setMatchCandidates(candidates)
+      setMatchScore(topScore)
 
-        // KI-Matching (nur wenn kein Lock)
-        if (candidates.length > 0 && topScore >= 80) {
-          setMatchedCustomer(candidates[0].customer)
-          setMatchMode('auto')
-          setStep('match', 'ok', `✅ Match: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (${topScore}%)`)
-        } else if (candidates.length > 0 && topScore >= 60) {
-          setMatchedCustomer(candidates[0].customer)
-          setMatchMode('auto_low')
-          setStep('match', 'ok', `⚠ Unsicher: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (${topScore}%)`)
-        } else {
-          setMatchMode('new_auto')
-          setStep('match', 'ok', `${customers.length} geprüft · kein Match → neuer Kunde`)
-        }
+      if (candidates.length > 0 && topScore >= 80) {
+        setMatchedCustomer(candidates[0].customer)
+        setMatchMode('auto')
+        setStep('match', 'ok', `✅ Match: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (${topScore}%)`)
+      } else if (candidates.length > 0 && topScore >= 60) {
+        setMatchedCustomer(candidates[0].customer)
+        setMatchMode('auto_low')
+        setStep('match', 'ok', `⚠ Unsicher: ${candidates[0].customer.first_name} ${candidates[0].customer.last_name} (${topScore}%)`)
+      } else {
+        setMatchMode('new_auto')
+        setStep('match', 'ok', `${customers.length} geprüft · kein Match → neuer Kunde`)
       }
     }
 
