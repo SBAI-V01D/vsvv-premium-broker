@@ -4,11 +4,9 @@ import { base44 } from '@/api/base44Client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { Plus, Filter, TrendingUp, Users, CheckCircle2, X } from 'lucide-react'
-import { Label } from '@/components/ui/label'
+import { Plus, TrendingUp, Users, CheckCircle2 } from 'lucide-react'
+import LeadForm from '@/components/leads/LeadForm'
 
 const STATUS_LABELS = {
   'new': 'Neu',
@@ -41,16 +39,7 @@ export default function Leads() {
   const [editingLead, setEditingLead] = useState(null)
   const queryClient = useQueryClient()
 
-  // Form State
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    company: '',
-    source: 'website',
-    advisor_id: '',
-    notes: '',
-  })
+
 
   const { data: leads = [] } = useQuery({
     queryKey: ['leads'],
@@ -67,7 +56,7 @@ export default function Leads() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] })
       setShowForm(false)
-      resetForm()
+      setEditingLead(null)
     },
   })
 
@@ -77,30 +66,11 @@ export default function Leads() {
       queryClient.invalidateQueries({ queryKey: ['leads'] })
       setShowForm(false)
       setEditingLead(null)
-      resetForm()
     },
   })
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      company: '',
-      source: 'website',
-      advisor_id: '',
-      notes: '',
-    })
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    const advisor = advisors.find(a => a.id === formData.advisor_id)
-    const payload = {
-      ...formData,
-      advisor_name: advisor ? `${advisor.firstname} ${advisor.lastname}` : '',
-    }
-
+  const handleFormSubmit = (formData) => {
+    const payload = { ...formData, advisor_id: formData.advisor_id === 'none' ? '' : formData.advisor_id }
     if (editingLead) {
       updateMutation.mutate({ id: editingLead.id, data: payload })
     } else {
@@ -142,7 +112,7 @@ export default function Leads() {
             <h1 className="text-3xl font-bold">🚀 Lead Management</h1>
             <p className="text-muted-foreground mt-1">Verwalte deinen Sales-Funnel von Lead bis Kunde</p>
           </div>
-          <Button onClick={() => { setEditingLead(null); resetForm(); setShowForm(true); }} className="gap-2">
+          <Button onClick={() => { setEditingLead(null); setShowForm(true); }} className="gap-2">
             <Plus className="w-4 h-4" /> Neuer Lead
           </Button>
         </div>
@@ -287,23 +257,11 @@ export default function Leads() {
                         </td>
                         <td className="p-3 text-center">
                           <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingLead(lead)
-                              setFormData({
-                                name: lead.name,
-                                email: lead.email,
-                                phone: lead.phone || '',
-                                company: lead.company || '',
-                                source: lead.source,
-                                advisor_id: lead.advisor_id || '',
-                                notes: lead.notes || '',
-                              })
-                              setShowForm(true)
-                            }}
+                           size="sm"
+                           variant="outline"
+                           onClick={() => { setEditingLead(lead); setShowForm(true) }}
                           >
-                            Bearbeiten
+                           Bearbeiten
                           </Button>
                         </td>
                       </tr>
@@ -317,125 +275,14 @@ export default function Leads() {
 
       </div>
 
-      {/* FORM DIALOG */}
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingLead ? 'Lead bearbeiten' : 'Neuer Lead'}</DialogTitle>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label>Name</Label>
-              <Input
-                value={formData.name}
-                onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
-                required
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <Label>E-Mail</Label>
-              <Input
-                type="email"
-                value={formData.email}
-                onChange={e => setFormData(p => ({ ...p, email: e.target.value }))}
-                required
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <Label>Telefon</Label>
-              <Input
-                value={formData.phone}
-                onChange={e => setFormData(p => ({ ...p, phone: e.target.value }))}
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <Label>Unternehmen</Label>
-              <Input
-                value={formData.company}
-                onChange={e => setFormData(p => ({ ...p, company: e.target.value }))}
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <Label>Quelle</Label>
-              <Select value={formData.source} onValueChange={v => setFormData(p => ({ ...p, source: v }))}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(SOURCE_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Berater</Label>
-              <Select value={formData.advisor_id} onValueChange={v => setFormData(p => ({ ...p, advisor_id: v }))}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Berater wählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {advisors.map(a => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.firstname} {a.lastname}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Notizen</Label>
-              <Textarea
-                value={formData.notes}
-                onChange={e => setFormData(p => ({ ...p, notes: e.target.value }))}
-                className="mt-1 h-20"
-              />
-            </div>
-
-            {editingLead && (
-              <div>
-                <Label>Status</Label>
-                <Select
-                  value={editingLead.status}
-                  onValueChange={v => setEditingLead(p => ({ ...p, status: v }))}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            <div className="flex gap-2 pt-4">
-              <Button variant="outline" onClick={() => setShowForm(false)}>
-                Abbrechen
-              </Button>
-              <Button
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
-              >
-                {createMutation.isPending || updateMutation.isPending ? 'Wird gespeichert...' : 'Speichern'}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <LeadForm
+        open={showForm}
+        onClose={() => { setShowForm(false); setEditingLead(null) }}
+        onSubmit={handleFormSubmit}
+        lead={editingLead}
+        advisors={advisors}
+        isPending={createMutation.isPending || updateMutation.isPending}
+      />
     </div>
   )
 }
