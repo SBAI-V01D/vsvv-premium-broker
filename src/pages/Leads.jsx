@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, TrendingUp, Users, CheckCircle2 } from 'lucide-react'
 import LeadForm from '@/components/leads/LeadForm'
+import LeadImportExport from '@/components/leads/LeadImportExport'
 
 const STATUS_LABELS = {
   'new': 'Neu',
@@ -112,9 +113,17 @@ export default function Leads() {
             <h1 className="text-3xl font-bold">🚀 Lead Management</h1>
             <p className="text-muted-foreground mt-1">Verwalte deinen Sales-Funnel von Lead bis Kunde</p>
           </div>
-          <Button onClick={() => { setEditingLead(null); setShowForm(true); }} className="gap-2">
-            <Plus className="w-4 h-4" /> Neuer Lead
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <LeadImportExport leads={leads} onImport={async (records) => {
+              for (const r of records) {
+                await createMutation.mutateAsync(r).catch(() => {})
+              }
+              queryClient.invalidateQueries({ queryKey: ['leads'] })
+            }} />
+            <Button onClick={() => { setEditingLead(null); setShowForm(true); }} className="gap-2">
+              <Plus className="w-4 h-4" /> Neuer Lead
+            </Button>
+          </div>
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════ */}

@@ -23,6 +23,7 @@ import RenewalPipelineKanbanV2 from '@/components/dashboard/RenewalPipelineKanba
 import UpsellPipelineKanban from '@/components/dashboard/UpsellPipelineKanban'
 import FlowPipeline from '@/components/dashboard/FlowPipeline'
 import SupportSection from '@/components/dashboard/SupportSection'
+import LeadFunnelWidget from '@/components/dashboard/LeadFunnelWidget'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -260,7 +261,13 @@ export default function Dashboard() {
         <RenewalPipelineKanbanV2 contracts={filteredContracts} />
       </div>
 
-      {/* 4. OFFENE AUFGABEN + LETZTE AKTIVITÄTEN */}
+      {/* 4. LEAD FUNNEL */}
+      <div className="mt-4">
+        <h3 className="text-lg font-bold mb-4 text-slate-900 cursor-pointer hover:text-primary transition-colors inline-flex items-center gap-2" onClick={() => navigate('/leads')}>🚀 Lead Funnel →</h3>
+        <LeadFunnelWidget leads={leads} />
+      </div>
+
+      {/* 5. OFFENE AUFGABEN + LETZTE AKTIVITÄTEN */}
       <div className="mt-6">
         <h3 className="text-lg font-bold mb-4 text-slate-900 cursor-pointer hover:text-primary transition-colors" onClick={() => navigate('/aufgaben')}>✓ Offene Aufgaben (Top 10) →</h3>
         <SupportSection 
