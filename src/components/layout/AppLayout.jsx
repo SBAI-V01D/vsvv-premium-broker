@@ -1,6 +1,6 @@
 import React from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Users, FileText, CheckCircle2, ClipboardList, FileCheck, Mail, Send, LogOut, Settings2, Wallet, Building2, Terminal } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, CheckCircle2, ClipboardList, FileCheck, Mail, Send, LogOut, Settings2, Wallet, Building2, Terminal, TrendingUp } from 'lucide-react'
 import { base44 } from '@/api/base44Client'
 import { Button } from '@/components/ui/button'
 
@@ -9,6 +9,7 @@ export default function AppLayout() {
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/leads', label: 'Leads', icon: TrendingUp },
     { path: '/kunden', label: 'Kunden', icon: Users },
     { path: '/vertraege', label: 'Verträge', icon: FileText },
     { path: '/antraege', label: 'Anträge', icon: CheckCircle2 },
