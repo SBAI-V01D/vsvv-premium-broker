@@ -16,8 +16,13 @@ const grouped = ALL_SPARTEN.reduce((acc, s) => {
 export default function ContractForm({ contract, customers = [], onSave, onCancel, saving }) {
   const [form, setForm] = useState(() => {
     if (contract) {
+      // Normalize all null values to '' to prevent React controlled/uncontrolled input errors
+      const normalized = {}
+      for (const [k, v] of Object.entries(contract)) {
+        normalized[k] = v === null || v === undefined ? '' : v
+      }
       return {
-        ...contract,
+        ...normalized,
         sparte: contract.sparte || contract.insurance_type || '',
         sparte_data: contract.sparte_data || {},
       }
