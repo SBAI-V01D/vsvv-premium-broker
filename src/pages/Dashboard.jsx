@@ -270,12 +270,6 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* 5. UPSATZPOTENZIAL (DECKUNG, UPGRADE, BERATUNG) */}
-      <div className="mt-6 bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-lg border border-amber-200">
-        <h3 className="text-lg font-bold mb-4 text-slate-900">💰 Umsatzpotenzial – Mehr Deckung / Upgrade / Beratung</h3>
-        <UpsellPipelineKanban contracts={filteredContracts} />
-      </div>
-
       {/* MANAGEMENT ZONE */}
       <div className="border-t-4 border-slate-400 pt-8 mt-12">
         <h2 className="text-2xl font-bold mb-6 text-slate-800">⚫ MANAGEMENT ZONE – Steuerung & Kontrolle</h2>
@@ -286,7 +280,13 @@ export default function Dashboard() {
           <FinanceWidget />
         </div>
 
-        {/* B. LETZTE AKTIVITÄTEN / CONVERSATION BOOSTER */}
+        {/* B. UMSATZPOTENZIAL / CONVERSION BOOSTER */}
+        <div className="mb-8 bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-lg border border-amber-200">
+          <h3 className="text-lg font-bold mb-4 text-slate-800">💰 Umsatzpotenzial – Mehr Deckung / Upgrade / Beratung</h3>
+          <UpsellPipelineKanban contracts={filteredContracts} />
+        </div>
+
+        {/* C. LETZTE AKTIVITÄTEN */}
         <div className="mb-8">
           <h3 className="text-lg font-bold mb-4 text-slate-800">🔄 Letzte Aktivitäten</h3>
           <ActivityFeed 
@@ -296,7 +296,7 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* C. BERATER & ORGANISATION + PERFORMANCE */}
+        {/* D. BERATER & ORGANISATION + PERFORMANCE */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div>
             <h3 className="text-lg font-bold mb-4 text-slate-800">📈 Umsatz-Trend</h3>
