@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
       birthdate,
       ahv_number,
       nationality,
+      organization_id,
     } = payload;
 
     // Validate required fields
@@ -93,6 +94,7 @@ Deno.serve(async (req) => {
         birthdate: birthdate || '',
         ahv_number: ahv_number || '',
         nationality: nationality || 'CH',
+        organization_id: organization_id || '',
         status: 'prospect',
         customer_type: 'private',
         is_family_member: false,

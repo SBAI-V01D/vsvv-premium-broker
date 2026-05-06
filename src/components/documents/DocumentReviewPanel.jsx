@@ -326,6 +326,8 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     // Customer: Auto-Match oder neuer Kunde
     let cid = null
     let customerName = `${flat.first_name || ''} ${flat.last_name || ''}`.trim()
+    // Fallback organization_id: from matched customer or first available customer
+    const fallbackOrgId = candidates[0]?.customer?.organization_id || customers.find(c => c.organization_id)?.organization_id || ''
 
     if (topScore >= 80 && candidates.length > 0) {
       cid = candidates[0].customer.id
@@ -344,6 +346,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
           city:       flat.city || '',
           birthdate:  flat.birthdate || '',
           nationality: 'CH',
+          organization_id: fallbackOrgId,
         })
         if (syncResult.data?.customer_id) {
           cid = syncResult.data.customer_id
@@ -355,6 +358,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
           email:      flat.email || undefined,
           phone:      flat.phone || undefined,
           birthdate:  flat.birthdate || undefined,
+          organization_id: fallbackOrgId,
           status: 'prospect',
           customer_type: 'private',
         })
@@ -375,9 +379,13 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
 
     let newApp
     try {
+      const autoCustomer = customers.find(c => c.id === cid)
+      const autoOrgId = autoCustomer?.organization_id || fallbackOrgId
       newApp = await base44.entities.Application.create({
         customer_id: cid,
         customer_name: customerName,
+        organization_id: autoOrgId,
+        advisor_id: autoCustomer?.advisor_id || undefined,
         insurer: flat.insurer || 'Andere',
         sparte,
         insurance_type: sparte,
@@ -501,6 +509,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     const customerName = customer
       ? `${customer.first_name} ${customer.last_name}`
       : `${flat.first_name || ''} ${flat.last_name || ''}`.trim()
+    const reviewOrgId = customer?.organization_id || customers.find(c => c.organization_id)?.organization_id || ''
 
     // ─── VALIDIERUNG: Kunde muss gesetzt sein ───
     if (!cid) {
@@ -514,8 +523,10 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     let newApp
     try {
       newApp = await base44.entities.Application.create({
-        customer_id: cid,  // ← Backend-customer_id
+        customer_id: cid,
         customer_name: customerName,
+        organization_id: reviewOrgId,
+        advisor_id: customer?.advisor_id || undefined,
         insurer: flat.insurer || 'Andere',
         sparte,
         insurance_type: sparte,
