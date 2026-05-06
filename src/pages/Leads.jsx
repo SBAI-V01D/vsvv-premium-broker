@@ -242,7 +242,7 @@ export default function Leads() {
                   <tbody>
                     {filteredLeads.map(lead => (
                       <tr key={lead.id} className="border-b hover:bg-muted/30">
-                        <td className="p-3 font-medium">{lead.name}</td>
+                        <td className="p-3 font-medium">{lead.first_name ? `${lead.first_name} ${lead.last_name}` : lead.name}</td>
                         <td className="p-3 text-muted-foreground">{lead.email}</td>
                         <td className="p-3 text-xs">
                           <span className="px-2 py-1 rounded-full bg-muted">

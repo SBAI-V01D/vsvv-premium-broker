@@ -2,9 +2,17 @@
   "name": "Lead",
   "type": "object",
   "properties": {
+    "first_name": {
+      "type": "string",
+      "description": "Vorname"
+    },
+    "last_name": {
+      "type": "string",
+      "description": "Nachname"
+    },
     "name": {
       "type": "string",
-      "description": "Name des Leads"
+      "description": "Vollst\u00e4ndiger Name (Vor- und Nachname, Cache)"
     },
     "email": {
       "type": "string",
@@ -13,6 +21,11 @@
     "phone": {
       "type": "string",
       "description": "Telefonnummer"
+    },
+    "birthdate": {
+      "type": "string",
+      "format": "date",
+      "description": "Geburtsdatum"
     },
     "company": {
       "type": "string",
@@ -121,10 +134,37 @@
     "conversion_probability": {
       "type": "number",
       "description": "AI-Abschlusswahrscheinlichkeit (%)"
+    },
+    "documents": {
+      "type": "array",
+      "description": "Hochgeladene Dokumente mit Kategorie",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "police",
+              "ausweis",
+              "kundeninformation"
+            ]
+          },
+          "uploaded_at": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "required": [
-    "name",
+    "first_name",
+    "last_name",
     "email",
     "source"
   ]
