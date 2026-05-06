@@ -180,13 +180,6 @@ export default function ContractForm({ contract, customers = [], onSave, onCance
       )}
 
       <div>
-        <Label>Versicherungssparte *</Label>
-        <div className="mt-1 p-3 rounded-lg bg-muted/40 text-sm font-medium">
-          {form.sparte ? ALL_SPARTEN.find(s => s.value === form.sparte)?.label || form.sparte : '–'}
-        </div>
-      </div>
-
-      <div>
         <Label>Policen-Nummer</Label>
         <Input value={form.policy_number} onChange={e => set('policy_number', e.target.value)} className="mt-1" />
       </div>

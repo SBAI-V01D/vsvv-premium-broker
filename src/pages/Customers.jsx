@@ -283,7 +283,7 @@ export default function Customers() {
                             memberIdx < familyMembers.length - 1 ? 'border-b border-border' : ''
                           }`}
                         >
-                          <Link to={`/kunden/{member.id}`} className="flex-1 min-w-0 hover:text-primary group">
+                          <Link to={`/kunden/${member.id}`} className="flex-1 min-w-0 hover:text-primary group">
                             <p className="font-medium text-sm group-hover:text-primary">{member.first_name} {member.last_name}</p>
                             <p className="text-xs text-muted-foreground">
                               {label(FAMILY_ROLE_LABELS, member.family_role)} • <EmailLink email={member.email} />

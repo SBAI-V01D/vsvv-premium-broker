@@ -54,7 +54,7 @@ export default function Tasks() {
       return base44.entities.Task.update(selectedTask.id, updateData)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', currentUser?.email] })
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
       setSelectedTask(null)
       setFormData({ status: '', notes: '', file: null, due_date: '', completion_date: '', assigned_to: '' })
     },
@@ -63,7 +63,7 @@ export default function Tasks() {
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Task.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', currentUser?.email] })
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
       setSelectedTask(null)
     },
   })

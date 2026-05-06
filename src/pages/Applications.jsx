@@ -162,6 +162,8 @@ export default function Applications() {
         customer_name: app.customer_name,
         primary_customer_id: app.primary_customer_id,
         is_family_member: app.is_family_member || false,
+        organization_id: app.organization_id || customers.find(c => c.id === app.customer_id)?.organization_id || '',
+        advisor_id: app.advisor_id || customers.find(c => c.id === app.customer_id)?.advisor_id,
         insurer: app.insurer,
         insurance_type: app.insurance_type,
         product: productLabel,
