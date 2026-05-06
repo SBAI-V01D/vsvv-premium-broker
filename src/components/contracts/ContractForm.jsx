@@ -54,11 +54,14 @@ export default function ContractForm({ contract, customers = [], onSave, onCance
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    const customer = customers.find(c => c.id === form.customer_id) || selectedCustomer
     onSave({
       customer_id: form.customer_id,
-      customer_name: selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : '',
-      primary_customer_id: selectedCustomer?.is_family_member ? selectedCustomer.primary_customer_id : selectedCustomer?.id,
-      is_family_member: selectedCustomer?.is_family_member || false,
+      customer_name: customer ? `${customer.first_name} ${customer.last_name}` : (form.customer_name || ''),
+      primary_customer_id: customer?.is_family_member ? customer.primary_customer_id : customer?.id,
+      is_family_member: customer?.is_family_member || false,
+      organization_id: customer?.organization_id || form.organization_id,
+      advisor_id: customer?.advisor_id || form.advisor_id,
       insurer: form.insurer,
       policy_number: form.policy_number || '',
       insurance_type: form.sparte || '',
@@ -71,6 +74,7 @@ export default function ContractForm({ contract, customers = [], onSave, onCance
       end_date: form.end_date || '',
       cancellation_deadline: form.cancellation_deadline || '',
       status: form.status || 'active',
+      custom_status: form.custom_status,
       commission_rate: form.commission_rate ? Number(form.commission_rate) : undefined,
       notes: form.notes || '',
     })
