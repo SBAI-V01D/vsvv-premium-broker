@@ -270,17 +270,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* 5. LETZTE AKTIVITÄTEN */}
-      <div className="mt-6">
-        <h3 className="text-lg font-bold mb-4 text-slate-900">🔄 Letzte Aktivitäten</h3>
-        <ActivityFeed 
-          customers={customers}
-          contracts={filteredContracts}
-          commissions={filteredCommissions}
-        />
-      </div>
-
-      {/* 7. UPSATZPOTENZIAL (DECKUNG, UPGRADE, BERATUNG) */}
+      {/* 5. UPSATZPOTENZIAL (DECKUNG, UPGRADE, BERATUNG) */}
       <div className="mt-6 bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-lg border border-amber-200">
         <h3 className="text-lg font-bold mb-4 text-slate-900">💰 Umsatzpotenzial – Mehr Deckung / Upgrade / Beratung</h3>
         <UpsellPipelineKanban contracts={filteredContracts} />
@@ -296,7 +286,17 @@ export default function Dashboard() {
           <FinanceWidget />
         </div>
 
-        {/* B. BERATER & ORGANISATION + PERFORMANCE */}
+        {/* B. LETZTE AKTIVITÄTEN / CONVERSATION BOOSTER */}
+        <div className="mb-8">
+          <h3 className="text-lg font-bold mb-4 text-slate-800">🔄 Letzte Aktivitäten</h3>
+          <ActivityFeed 
+            customers={customers}
+            contracts={filteredContracts}
+            commissions={filteredCommissions}
+          />
+        </div>
+
+        {/* C. BERATER & ORGANISATION + PERFORMANCE */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <div>
             <h3 className="text-lg font-bold mb-4 text-slate-800">📈 Umsatz-Trend</h3>
