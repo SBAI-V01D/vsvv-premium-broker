@@ -280,17 +280,6 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* 6. SALES FLOW PIPELINE */}
-      <div className="mt-6">
-        <h3 className="text-lg font-bold mb-4 text-slate-900">📊 Sales Flow Pipeline (Neugeschäft)</h3>
-        <FlowPipeline 
-          leads={leads}
-          applications={applications}
-          contracts={filteredContracts}
-          pricing={[]}
-        />
-      </div>
-
       {/* 7. UPSATZPOTENZIAL (DECKUNG, UPGRADE, BERATUNG) */}
       <div className="mt-6 bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-lg border border-amber-200">
         <h3 className="text-lg font-bold mb-4 text-slate-900">💰 Umsatzpotenzial – Mehr Deckung / Upgrade / Beratung</h3>
