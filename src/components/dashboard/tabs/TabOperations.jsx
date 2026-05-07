@@ -1,26 +1,24 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, Clock, AlertTriangle, RefreshCw, FileWarning, ListTodo } from 'lucide-react'
 import DashboardKpiTile from '../DashboardKpiTile'
-import SupportSection from '../SupportSection'
 import RenewalPipelineKanbanV2 from '../RenewalPipelineKanbanV2'
 import TasksPanel from '../TasksPanel'
+import { cn } from '@/lib/utils'
 
 export default function TabOperations({ data, onTaskClick }) {
   const navigate = useNavigate()
+  const [taskTab, setTaskTab] = useState('general')
   const {
-    openTasks, tasks, documents, expiringContracts, filteredContracts,
-    customers, pendingApplications, contractsWithoutDoc,
+    openTasks, tasks, expiringContracts, filteredContracts,
+    pendingApplications, contractsWithoutDoc,
   } = data
 
   const todayStr = new Date().toISOString().slice(0, 10)
   const dueTodayCount = tasks.filter(t => t.due_date === todayStr && t.status !== 'completed').length
 
-  // Trennung: Vertragsablauf-Aufgaben vs. allgemeine Aufgaben
-  // task_type kann direkt auf t oder auf t.data liegen (SDK-Kompatibilität)
-  const getTaskType = (t) => t.task_type ?? t.data?.task_type ?? ''
-  const contractExpiryTasks = openTasks.filter(t => getTaskType(t) === 'renewal')
-  const generalTasks = openTasks.filter(t => getTaskType(t) !== 'renewal')
+  const contractExpiryTasks = openTasks.filter(t => t.task_type === 'renewal')
+  const generalTasks = openTasks.filter(t => t.task_type !== 'renewal')
 
   return (
     <div className="space-y-8">
@@ -42,12 +40,50 @@ export default function TabOperations({ data, onTaskClick }) {
         </div>
       </div>
 
-      {/* Zwei separate Aufgaben-Panels */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
-            <ListTodo className="w-3.5 h-3.5" /> Allgemeine Aufgaben
-          </h3>
+      {/* Aufgaben mit Tabs */}
+      <div>
+        <div className="flex items-center gap-1 mb-4 border-b border-border">
+          <button
+            onClick={() => setTaskTab('general')}
+            className={cn(
+              'flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+              taskTab === 'general'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <ListTodo className="w-3.5 h-3.5" />
+            Allgemeine Aufgaben
+            {generalTasks.length > 0 && (
+              <span className={cn('ml-1 px-1.5 py-0.5 text-[10px] rounded-full font-semibold',
+                taskTab === 'general' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+              )}>
+                {generalTasks.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setTaskTab('renewal')}
+            className={cn(
+              'flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+              taskTab === 'renewal'
+                ? 'border-orange-500 text-orange-600'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <FileWarning className="w-3.5 h-3.5" />
+            Vertragsabläufe
+            {contractExpiryTasks.length > 0 && (
+              <span className={cn('ml-1 px-1.5 py-0.5 text-[10px] rounded-full font-semibold',
+                taskTab === 'renewal' ? 'bg-orange-100 text-orange-700' : 'bg-muted text-muted-foreground'
+              )}>
+                {contractExpiryTasks.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {taskTab === 'general' && (
           <TasksPanel
             tasks={generalTasks}
             onTaskClick={onTaskClick}
@@ -56,17 +92,8 @@ export default function TabOperations({ data, onTaskClick }) {
             accentClass="border-l-blue-500"
             badgeClass="bg-blue-100 text-blue-700"
           />
-        </div>
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
-            <FileWarning className="w-3.5 h-3.5 text-orange-500" />
-            <span className="text-orange-600">Vertragsabläufe</span>
-            {contractExpiryTasks.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-orange-100 text-orange-700 font-semibold">
-                {contractExpiryTasks.length}
-              </span>
-            )}
-          </h3>
+        )}
+        {taskTab === 'renewal' && (
           <TasksPanel
             tasks={contractExpiryTasks}
             onTaskClick={onTaskClick}
@@ -76,7 +103,7 @@ export default function TabOperations({ data, onTaskClick }) {
             badgeClass="bg-orange-100 text-orange-700"
             badgeLabel="Abgelaufen"
           />
-        </div>
+        )}
       </div>
 
     </div>
