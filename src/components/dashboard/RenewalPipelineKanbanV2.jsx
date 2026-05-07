@@ -249,8 +249,8 @@ function KanbanColumn({ stage, contracts }) {
 export default function RenewalPipelineKanbanV2({ contracts = [] }) {
   const queryClient = useQueryClient()
 
-  // Filter to active contracts only
-  const activeContracts = contracts.filter(c => c.status === 'active')
+  // Filter to active contracts — including overdue ones (end_date in past, status still 'active')
+  const activeContracts = contracts.filter(c => c.status === 'active' && c.end_date)
 
   // Compute KPIs
   const kpis = useMemo(() => {
@@ -258,7 +258,7 @@ export default function RenewalPipelineKanbanV2({ contracts = [] }) {
     const critical = activeContracts.filter(c => {
       if (!c.end_date) return false
       const daysLeft = Math.floor((new Date(c.end_date) - today) / (1000 * 60 * 60 * 24))
-      return daysLeft > 0 && daysLeft < 60
+      return daysLeft < 60 // includes overdue (negative daysLeft)
     })
     const expectedRevenue = activeContracts.reduce((sum, c) => sum + (c.premium_yearly || 0), 0)
     
@@ -277,7 +277,7 @@ export default function RenewalPipelineKanbanV2({ contracts = [] }) {
     }
   }, [activeContracts])
 
-  // Hot deals: <30 days OR >70% conversion
+  // Hot deals: <30 days, overdue, OR >70% conversion
   const hotDeals = useMemo(() => {
     const today = new Date()
     return activeContracts
@@ -285,7 +285,7 @@ export default function RenewalPipelineKanbanV2({ contracts = [] }) {
         if (!c.end_date) return false
         const daysLeft = Math.floor((new Date(c.end_date) - today) / (1000 * 60 * 60 * 24))
         const chance = calculateConversionChance(c)
-        return (daysLeft > 0 && daysLeft < 30) || chance > 70
+        return daysLeft < 30 || chance > 70 // includes overdue (negative)
       })
       .sort((a, b) => {
         const aDays = a.end_date ? Math.floor((new Date(a.end_date) - new Date()) / (1000 * 60 * 60 * 24)) : 999
@@ -305,8 +305,8 @@ export default function RenewalPipelineKanbanV2({ contracts = [] }) {
         const aDaysLeft = a.end_date ? Math.floor((new Date(a.end_date) - today) / (1000 * 60 * 60 * 24)) : 999
         const bDaysLeft = b.end_date ? Math.floor((new Date(b.end_date) - today) / (1000 * 60 * 60 * 24)) : 999
 
-        const aCritical = aDaysLeft > 0 && aDaysLeft < 60
-        const bCritical = bDaysLeft > 0 && bDaysLeft < 60
+        const aCritical = aDaysLeft < 60 // includes overdue
+        const bCritical = bDaysLeft < 60
 
         if (aCritical && !bCritical) return -1
         if (!aCritical && bCritical) return 1

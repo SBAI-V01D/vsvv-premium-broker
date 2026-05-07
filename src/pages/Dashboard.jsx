@@ -122,7 +122,8 @@ export default function Dashboard() {
     activeContracts.filter(c => {
       if (!c.end_date) return false
       const end = new Date(c.end_date)
-      return end >= today && end <= in90
+      // Include overdue contracts (end_date in past) AND contracts expiring in next 90 days
+      return end <= in90
     }),
     [activeContracts]
   )
