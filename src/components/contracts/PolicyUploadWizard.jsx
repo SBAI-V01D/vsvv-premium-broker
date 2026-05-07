@@ -158,12 +158,15 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         ...p,
         insurer: d.provider || d.insurer || '',
         policy_number: d.policy_number || '',
-        sparte: mapInsuranceType(d.insurance_type) || '',
+        sparte: d.insurance_type || mapInsuranceType(d.insurance_type) || '',
+        product: d.product || '',
         premium_monthly: d.premium_monthly || '',
         premium_yearly: d.premium_yearly || '',
         start_date: d.start_date || '',
         end_date: d.end_date || '',
         cancellation_deadline: d.cancellation_deadline || '',
+        notes: d.notes || '',
+        sparte_data: d.sparte_data || {},
       }))
 
       // Try to extract customer name from file for matching
