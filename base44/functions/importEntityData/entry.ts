@@ -118,18 +118,29 @@ Deno.serve(async (req) => {
       return record;
     });
 
-    // Bulk create records
+    // Bulk create records with batching to avoid rate limits
     let successful = 0;
     let failed = 0;
     const errors = [];
+    const batchSize = 5; // Process in small batches
+    const delayMs = 500; // 500ms between batches
 
-    for (const record of records) {
-      try {
-        await base44.entities[entity_name].create(record);
-        successful++;
-      } catch (error) {
-        failed++;
-        errors.push(`Row: ${error.message}`);
+    for (let i = 0; i < records.length; i += batchSize) {
+      const batch = records.slice(i, i + batchSize);
+      
+      for (const record of batch) {
+        try {
+          await base44.entities[entity_name].create(record);
+          successful++;
+        } catch (error) {
+          failed++;
+          errors.push(`Row: ${error.message}`);
+        }
+      }
+      
+      // Add delay between batches
+      if (i + batchSize < records.length) {
+        await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
 
