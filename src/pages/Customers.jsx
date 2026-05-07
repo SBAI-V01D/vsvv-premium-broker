@@ -33,6 +33,11 @@ export default function Customers() {
     queryFn: () => base44.auth.me(),
   })
 
+  const { data: organizations = [] } = useQuery({
+    queryKey: ['organizations'],
+    queryFn: () => base44.entities.Organization.list(),
+  })
+
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
     queryFn: async () => {

@@ -57,13 +57,41 @@ Deno.serve(async (req) => {
       return fields;
     };
 
-    // Parse headers and data
+    // Parse headers
     const headerLine = parseCSVLine(lines[0]);
-    const headers = headerLine.map(h => h.replace(/^"|"$/g, '').trim());
+    let headers = headerLine.map(h => h.replace(/^"|"$/g, '').trim());
+    
+    // Detect if all data is in first column (malformed CSV)
+    const firstDataLine = parseCSVLine(lines[1]);
+    const isMalformed = headers.length === 1 && firstDataLine.length === 1 && firstDataLine[0].includes(',');
+    
+    if (isMalformed) {
+      // Re-parse all lines by splitting on comma first
+      headers = parseCSVLine(lines[0].split(',')[0] + ',' + ['Vorname', 'Name', 'Strasse', 'PLZ', 'Ort', 'E-Mail', 'Telefon', 'Mobile'].slice(1).join(','));
+      headers = headers.slice(0, 1).concat(['Vorname', 'Name', 'Strasse', 'PLZ', 'Ort', 'E-Mail', 'Telefon', 'Mobile'].slice(1));
+    }
     
     const dataLines = lines.slice(1);
     const records = dataLines.map((line) => {
-      const values = parseCSVLine(line);
+      let values;
+      
+      if (isMalformed) {
+        // Split malformed line: "Vorname,Nachname,...", then parse separately
+        const match = line.match(/^"([^"]+)","([^"]+)","([^"]*)",(\d+),"([^"]+)","([^"]*)","([^"]*)","([^"]*)"/) ||
+                      line.match(/^([^,]+),([^,]+),"([^"]*)","?(\d+)"?,"([^"]*)","([^"]*)","([^"]*)","([^"]*)"/) ||
+                      line.match(/^([^,]+),([^,]*),"?([^"]*?)"?,"?(\d+)"?,"([^"]*)","([^"]*)","([^"]*)","([^"]*)/);
+        
+        if (match) {
+          values = [match[1], match[2], match[3], match[4], match[5], match[6], match[7], match[8]];
+        } else {
+          // Fallback: split by comma but respect quoted fields
+          const parts = line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+          values = parts.map(p => p.replace(/^"|"$/g, '').trim());
+        }
+      } else {
+        values = parseCSVLine(line);
+      }
+      
       const record = {};
       
       headers.forEach((header, idx) => {
