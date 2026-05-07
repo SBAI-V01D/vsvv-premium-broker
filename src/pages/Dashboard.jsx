@@ -21,6 +21,7 @@ import TabAnalytics  from '@/components/dashboard/tabs/TabAnalytics'
 import TabCEO        from '@/components/dashboard/tabs/TabCEO'
 import MasterControlDashboard from '@/components/dashboard/MasterControlDashboard'
 import RawDataDiagnostic from '@/components/admin/RawDataDiagnostic'
+import VisibilityAnalyzer from '@/components/admin/VisibilityAnalyzer'
 import { Layers } from 'lucide-react'
 
 const TABS = [
@@ -278,7 +279,12 @@ export default function Dashboard() {
 
       {/* ── TAB CONTENT ──────────────────────────────────────────────────── */}
       <div className="pt-6">
-        {activeTab === 'diagnostic' && <RawDataDiagnostic />}
+        {activeTab === 'diagnostic' && (
+          <div className="space-y-6">
+            <RawDataDiagnostic />
+            <VisibilityAnalyzer />
+          </div>
+        )}
         {activeTab === 'master'     && <MasterControlDashboard data={sharedData} onTaskClick={handleTaskClick} />}
         {activeTab === 'ceo'        && <TabCEO />}
         {activeTab === 'executive'  && <TabExecutive  data={sharedData} />}
