@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { AlertCircle, CheckCircle2, AlertTriangle, Upload, X, Bug } from 'lucide-react'
 import ImportPreviewDialog from './ImportPreviewDialog'
+import FileUploadArea from './FileUploadArea'
+import CSVParserDebugger from './CSVParserDebugger'
 
 export default function ImportWizard({ open, onOpenChange, onSuccess }) {
   const [step, setStep] = useState('upload') // upload, preview, importing, summary
@@ -14,7 +16,18 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
   const [previewData, setPreviewData] = useState(null)
   const [showPreview, setShowPreview] = useState(false)
   const [error, setError] = useState(null)
-  const [debugLog, setDebugLog] = useState([])
+  const [debugLog, setDebugLog] = useState({
+    fileName: null,
+    fileSize: null,
+    encoding: 'UTF-8',
+    delimiter: ',',
+    headerCount: 0,
+    dataRowCount: 0,
+    parseErrors: [],
+    sampleRows: [],
+    headers: []
+  })
+  const [uploadProgress, setUploadProgress] = useState(0)
 
   const handleFileSelect = (e) => {
     const selectedFile = e.target.files?.[0]
@@ -24,81 +37,205 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
     }
   }
 
-  const parseCSV = async (fileContent) => {
-    // Auto-detect delimiter
-    const lines = fileContent.split('\n').filter(l => l.trim());
-    let delimiter = ',';
-    const firstLine = lines[0];
-    const semicolonCount = (firstLine.match(/;/g) || []).length;
-    const commaCount = (firstLine.match(/,/g) || []).length;
-    if (semicolonCount > commaCount) delimiter = ';';
+  const detectEncoding = (buffer) => {
+    // UTF-8 BOM detection
+    if (buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) {
+      return 'UTF-8 BOM'
+    }
+    // UTF-16 BOM detection
+    if ((buffer[0] === 0xFF && buffer[1] === 0xFE) || (buffer[0] === 0xFE && buffer[1] === 0xFF)) {
+      return 'UTF-16'
+    }
+    return 'UTF-8'
+  }
 
-    const parseCSVLine = (line) => {
-      const fields = [];
-      let current = '';
-      let inQuotes = false;
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        if (char === '"') {
-          if (inQuotes && line[i + 1] === '"') {
-            current += '"';
-            i++;
+  const parseCSV = async (file) => {
+    const parseErrors = []
+    
+    try {
+      // Read file with proper encoding handling
+      let fileContent = await file.text()
+      
+      // Detect and remove BOM
+      const encoding = detectEncoding(new TextEncoder().encode(fileContent))
+      if (fileContent.charCodeAt(0) === 0xFEFF) {
+        fileContent = fileContent.slice(1)
+      }
+
+      const lines = fileContent.split('\n').filter(l => l.trim())
+      
+      if (lines.length === 0) {
+        throw new Error('Datei ist leer')
+      }
+
+      // Auto-detect delimiter with tolerance
+      let delimiter = ','
+      const firstLine = lines[0]
+      const semicolonCount = (firstLine.match(/;/g) || []).length
+      const commaCount = (firstLine.match(/,/g) || []).length
+      const tabCount = (firstLine.match(/\t/g) || []).length
+
+      if (semicolonCount > commaCount) delimiter = ';'
+      if (tabCount > semicolonCount && tabCount > commaCount) delimiter = '\t'
+
+      console.log(`[CSV Parser] Detected delimiter: ${delimiter === ',' ? 'comma' : delimiter === ';' ? 'semicolon' : 'tab'}, Encoding: ${encoding}`)
+
+      // Robust CSV line parser
+      const parseCSVLine = (line) => {
+        const fields = []
+        let current = ''
+        let inQuotes = false
+
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i]
+          
+          if (char === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+              current += '"'
+              i++
+            } else {
+              inQuotes = !inQuotes
+            }
+          } else if (char === delimiter && !inQuotes) {
+            fields.push(current.replace(/^"|"$/g, '').trim())
+            current = ''
           } else {
-            inQuotes = !inQuotes;
+            current += char
           }
-        } else if (char === delimiter && !inQuotes) {
-          fields.push(current.replace(/^"|"$/g, '').trim());
-          current = '';
-        } else {
-          current += char;
+        }
+        fields.push(current.replace(/^"|"$/g, '').trim())
+        return fields
+      }
+
+      // Parse headers with normalization
+      const rawHeaders = parseCSVLine(lines[0])
+      const normalizeHeader = (h) => h.toLowerCase().replace(/[\s\-_.]/g, '')
+      const headers = rawHeaders.map(normalizeHeader)
+
+      console.log(`[CSV Parser] Headers detected: ${headers.length}`)
+
+      // Field mapping for flexibility
+      const fieldMap = {
+        'vorname': 'first_name',
+        'firstname': 'first_name',
+        'first_name': 'first_name',
+        'name': 'last_name',
+        'nachname': 'last_name',
+        'lastname': 'last_name',
+        'last_name': 'last_name',
+        'email': 'email',
+        'emailadresse': 'email',
+        'emai': 'email',
+        'telefon': 'phone',
+        'phone': 'phone',
+        'mobile': 'mobile',
+        'mobilnummer': 'mobile',
+        'strasse': 'street',
+        'street': 'street',
+        'plz': 'zip_code',
+        'zipcode': 'zip_code',
+        'zip_code': 'zip_code',
+        'ort': 'city',
+        'city': 'city',
+        'stadt': 'city',
+        'notes': 'notes',
+        'notizen': 'notes',
+      }
+
+      const mappedHeaders = headers.map(h => fieldMap[h] || h)
+
+      // Parse data rows
+      const valid_records = []
+      const invalid_records = []
+      const duplicates = []
+      const sampleRows = []
+
+      // Get existing customers once
+      console.log(`[CSV Parser] Checking for duplicates...`)
+      let existingCustomers = []
+      try {
+        existingCustomers = await base44.entities.Customer.list('', 1000) || []
+      } catch (err) {
+        console.warn('[CSV Parser] Could not fetch existing customers:', err.message)
+      }
+      const existingEmails = new Set(existingCustomers.map(c => c.email?.toLowerCase()).filter(Boolean))
+
+      // Process data rows with error handling
+      for (let i = 1; i < lines.length; i++) {
+        try {
+          const values = parseCSVLine(lines[i])
+          
+          // Skip empty rows
+          if (values.every(v => !v || v === '')) continue
+
+          const record = {}
+          mappedHeaders.forEach((mappedHeader, idx) => {
+            const value = values[idx]?.trim()
+            if (value) {
+              record[mappedHeader] = value
+            }
+          })
+
+          // Validation: require first_name and last_name (or email)
+          if (!record.first_name || !record.last_name) {
+            if (!record.email) {
+              invalid_records.push({
+                row: i + 1,
+                error: 'Vorname/Nachname oder E-Mail erforderlich'
+              })
+              continue
+            }
+          }
+
+          // Check duplicates
+          if (record.email && existingEmails.has(record.email.toLowerCase())) {
+            duplicates.push({
+              row: i + 1,
+              name: `${record.first_name || ''} ${record.last_name || ''}`.trim(),
+              email: record.email
+            })
+            continue
+          }
+
+          valid_records.push(record)
+          if (sampleRows.length < 5) sampleRows.push(record)
+        } catch (err) {
+          parseErrors.push(`Zeile ${i + 1}: ${err.message}`)
+          invalid_records.push({
+            row: i + 1,
+            error: err.message
+          })
         }
       }
-      fields.push(current.replace(/^"|"$/g, '').trim());
-      return fields;
-    };
 
-    const headers = parseCSVLine(lines[0]);
-    const valid_records = [];
-    const invalid_records = [];
-    const duplicates = [];
-    const existingCustomers = await base44.entities.Customer.list('', 1000) || [];
-    const existingEmails = new Set(existingCustomers.map(c => c.email?.toLowerCase()));
+      console.log(`[CSV Parser] Results: ${valid_records.length} valid, ${invalid_records.length} invalid, ${duplicates.length} duplicates`)
 
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i]);
-      if (values.every(v => !v)) continue;
+      // Update debug info
+      setDebugLog({
+        fileName: file.name,
+        fileSize: file.size,
+        encoding,
+        delimiter,
+        headerCount: headers.length,
+        dataRowCount: valid_records.length + invalid_records.length,
+        parseErrors,
+        sampleRows,
+        headers: rawHeaders
+      })
 
-      const record = {};
-      headers.forEach((h, idx) => {
-        const v = values[idx]?.trim();
-        if (v) record[h] = v;
-      });
-
-      if (!record.first_name && !record.Vorname) {
-        invalid_records.push({ row: i + 1, error: 'Kein Vorname' });
-        continue;
+      return {
+        valid_records,
+        invalid_records,
+        duplicates,
+        summary: { total: lines.length - 1 }
       }
-      if (!record.last_name && !record.Nachname) {
-        invalid_records.push({ row: i + 1, error: 'Kein Nachname' });
-        continue;
-      }
-
-      // Check duplicate
-      const email = record.email || record['E-Mail'];
-      if (email && existingEmails.has(email.toLowerCase())) {
-        duplicates.push({
-          row: i + 1,
-          name: `${record.first_name || record.Vorname || ''} ${record.last_name || record.Nachname || ''}`.trim(),
-          email
-        });
-        continue;
-      }
-
-      valid_records.push(record);
+    } catch (err) {
+      const errorMsg = `CSV Parse Error: ${err.message}`
+      console.error(`[CSV Parser] ${errorMsg}`)
+      parseErrors.push(errorMsg)
+      throw new Error(errorMsg)
     }
-
-    return { valid_records, invalid_records, duplicates, summary: { total: lines.length - 1 } };
-  };
+  }
 
   const handlePreview = async () => {
     if (!file) {
@@ -106,16 +243,19 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
       return;
     }
 
-    setProgress(50);
+    setUploadProgress(50);
     try {
-      const content = await file.text();
-      const parsed = await parseCSV(content);
+      console.log(`[ImportWizard] Starting preview for: ${file.name}`);
+      const parsed = await parseCSV(file);
       setPreviewData(parsed);
       setShowPreview(true);
+      setError(null);
     } catch (err) {
-      setError(`Parsing-Fehler: ${err.message}`);
+      const errorMsg = err.message || 'Parsing fehlgeschlagen';
+      console.error(`[ImportWizard] Preview error: ${errorMsg}`);
+      setError(errorMsg);
     }
-    setProgress(0);
+    setUploadProgress(0);
   };
 
   const handleImport = async () => {
@@ -163,6 +303,20 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
     setProgress(0)
     setResult(null)
     setError(null)
+    setUploadProgress(0)
+    setPreviewData(null)
+    setShowPreview(false)
+    setDebugLog({
+      fileName: null,
+      fileSize: null,
+      encoding: 'UTF-8',
+      delimiter: ',',
+      headerCount: 0,
+      dataRowCount: 0,
+      parseErrors: [],
+      sampleRows: [],
+      headers: []
+    })
     onOpenChange(false)
   }
 
@@ -175,65 +329,28 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
 
         {step === 'upload' && (
           <div className="space-y-4">
-            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:bg-muted/50 transition-colors">
-              <Upload className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-              <label className="cursor-pointer">
-                <p className="text-sm font-medium mb-1">CSV- oder Excel-Datei auswählen</p>
-                <p className="text-xs text-muted-foreground mb-3">oder hier ablegen</p>
-                <input
-                  type="file"
-                  accept=".csv,.xlsx,.xls"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                <Button variant="outline" size="sm">
-                  Datei auswählen
-                </Button>
-              </label>
-            </div>
+            <FileUploadArea
+              onFileSelect={setFile}
+              onError={setError}
+              disabled={uploadProgress > 0}
+              uploading={uploadProgress > 0}
+            />
 
             {file && (
-              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{file.name}</p>
-                  <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
-                </div>
-                <button
-                  onClick={() => setFile(null)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+              <CSVParserDebugger
+                fileName={debugLog.fileName}
+                fileSize={debugLog.fileSize}
+                encoding={debugLog.encoding}
+                delimiter={debugLog.delimiter}
+                headerCount={debugLog.headerCount}
+                dataRowCount={debugLog.dataRowCount}
+                parseErrors={debugLog.parseErrors}
+                sampleRows={debugLog.sampleRows}
+                headers={debugLog.headers}
+              />
             )}
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm font-semibold text-blue-900 mb-2">📋 Unterstützte Spalten:</p>
-              <div className="grid grid-cols-2 gap-2 text-xs text-blue-800">
-                <div>
-                  <span className="font-mono bg-blue-100 px-2 py-1 rounded">first_name / Vorname</span>
-                </div>
-                <div>
-                  <span className="font-mono bg-blue-100 px-2 py-1 rounded">last_name / Nachname</span>
-                </div>
-                <div>
-                  <span className="font-mono bg-blue-100 px-2 py-1 rounded">email / E-Mail</span>
-                </div>
-                <div>
-                  <span className="font-mono bg-blue-100 px-2 py-1 rounded">phone / Telefon</span>
-                </div>
-                <div>
-                  <span className="font-mono bg-blue-100 px-2 py-1 rounded">mobile / Mobilnummer</span>
-                </div>
-                <div>
-                  <span className="font-mono bg-blue-100 px-2 py-1 rounded">city / Ort</span>
-                </div>
-              </div>
-              <p className="text-xs text-blue-700 mt-2">• CSV-Format wird automatisch erkannt (Komma, Semikolon, Tab)</p>
-              <p className="text-xs text-blue-700">• UTF-8 und UTF-8 BOM werden unterstützt</p>
-              <p className="text-xs text-blue-700">• Duplikate werden automatisch erkannt</p>
-            </div>
+
 
             {error && (
               <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -243,13 +360,13 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
             )}
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={closeDialog}>
+              <Button variant="outline" onClick={closeDialog} disabled={uploadProgress > 0}>
                 Abbrechen
               </Button>
-              <Button variant="secondary" onClick={handlePreview} disabled={!file}>
+              <Button variant="secondary" onClick={handlePreview} disabled={!file || uploadProgress > 0}>
                 📋 Vorschau
               </Button>
-              <Button onClick={handleImport} disabled={!file}>
+              <Button onClick={handleImport} disabled={!file || uploadProgress > 0}>
                 Importieren
               </Button>
             </div>
