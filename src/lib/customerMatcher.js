@@ -1,12 +1,14 @@
 // Duplicate Prevention & Customer Matching
 // Safely finds or creates customer records without duplication
 
-import { detectCustomerType, parseCompanyData, parsePrivateCustomerData, extractCommonData } from './customerTypeDetection.js';
-
 export async function findOrCreateCustomer(extractedData, organizationId, base44) {
   if (!base44 || !extractedData) {
     throw new Error('Missing base44 SDK or extracted data');
   }
+
+  // Import detection functions
+  const { detectCustomerType, parseCompanyData, parsePrivateCustomerData, extractCommonData } = 
+    await import('./customerTypeDetection.js');
 
   const customerType = detectCustomerType(extractedData);
   const commonData = extractCommonData(extractedData);
@@ -61,7 +63,7 @@ export async function findOrCreateCustomer(extractedData, organizationId, base44
 
   // No existing customer found, create new one
   console.log(`[CUSTOMER_MATCHER] Creating new ${customerType} customer`);
-  const newCustomerData = buildCustomerData(extractedData, customerType, organizationId);
+  const newCustomerData = await buildCustomerData(extractedData, customerType, organizationId);
   
   try {
     const created = await base44.entities.Customer.create(newCustomerData);
@@ -73,17 +75,10 @@ export async function findOrCreateCustomer(extractedData, organizationId, base44
   }
 }
 
-export function matchCustomers(customers, searchTerm) {
-  if (!searchTerm || !customers) return customers;
-  const term = searchTerm.toLowerCase();
-  return customers.filter(c => {
-    const fullName = `${c.first_name || ''} ${c.last_name || ''} ${c.company_name || ''}`.toLowerCase();
-    const email = (c.email || '').toLowerCase();
-    return fullName.includes(term) || email.includes(term);
-  });
-}
-
 export async function enrichCustomer(customerId, extractedData, customerType, base44) {
+  const { extractCommonData, parsePrivateCustomerData, parseCompanyData } = 
+    await import('./customerTypeDetection.js');
+
   const commonData = extractCommonData(extractedData);
   const updateData = {};
 
@@ -122,7 +117,9 @@ export async function enrichCustomer(customerId, extractedData, customerType, ba
   }
 }
 
-function buildCustomerData(extractedData, customerType, organizationId) {
+async function buildCustomerData(extractedData, customerType, organizationId) {
+  const { parseCompanyData, parsePrivateCustomerData, extractCommonData } = 
+    await import('./customerTypeDetection.js');
 
   const commonData = extractCommonData(extractedData);
   const baseData = {
@@ -138,7 +135,7 @@ function buildCustomerData(extractedData, customerType, organizationId) {
     return {
       ...baseData,
       first_name: privData.first_name || 'Unknown',
-      last_name: privData.last_name || 'Customer',
+      last_name: privData.last_name || 'Unknown Customer',
       birthdate: privData.birthdate || '',
       profession: privData.profession || '',
     };
@@ -152,42 +149,8 @@ function buildCustomerData(extractedData, customerType, organizationId) {
       industry: compData.industry || '',
       contact_person_firstname: compData.contact_person_firstname || '',
       contact_person_lastname: compData.contact_person_lastname || '',
-      // For customer display, use contact person or company name
       first_name: compData.contact_person_firstname || 'Company',
       last_name: compData.contact_person_lastname || compData.company_name || 'Account',
     };
   }
-}
-
-function parsePrivateCustomerData(extractedData) {
-  return {
-    first_name: extractedData.first_name || extractedData.firstname || extractedData.vorname || '',
-    last_name: extractedData.last_name || extractedData.lastname || extractedData.nachname || '',
-    birthdate: extractedData.birthdate || extractedData.dob || '',
-    profession: extractedData.profession || extractedData.beruf || '',
-  };
-}
-
-function parseCompanyData(extractedData) {
-  return {
-    company_name: extractedData.company_name || extractedData.kundenname || '',
-    legal_form: extractedData.legal_form || '',
-    uid_number: extractedData.uid_number || extractedData.che_number || extractedData.business_number || '',
-    industry: extractedData.industry || '',
-    contact_person_firstname: extractedData.contact_person_firstname || extractedData.contact_firstname || '',
-    contact_person_lastname: extractedData.contact_person_lastname || extractedData.contact_lastname || '',
-  };
-}
-
-function extractCommonData(extractedData) {
-  return {
-    email: extractedData.email || extractedData.email_address || '',
-    phone: extractedData.phone || extractedData.telefon || extractedData.phone_number || '',
-    mobile: extractedData.mobile || extractedData.handy || extractedData.mobile_number || '',
-    street: extractedData.street || extractedData.strasse || extractedData.address || '',
-    zip_code: extractedData.zip_code || extractedData.plz || extractedData.postal_code || '',
-    city: extractedData.city || extractedData.ort || extractedData.stadt || '',
-    canton: extractedData.canton || extractedData.kanton || '',
-    nationality: extractedData.nationality || extractedData.nationalitat || 'CH',
-  };
 }
