@@ -8,6 +8,8 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError'
 
 import AppLayout from './components/layout/AppLayout'
 import RecoveryAppShell from './components/layout/RecoveryAppShell'
+import UltraMinimalSafe from './pages/UltraMinimalSafe'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import Dashboard from './pages/Dashboard.jsx'
 import Customers from './pages/Customers'
 import CustomerDetail from './pages/CustomerDetail'
@@ -153,11 +155,28 @@ const RecoveryRoutes = () => {
 
 function App() {
   return (
+    <ErrorBoundary>
+      <Router>
+        <Routes>
+          {/* ULTRA-MINIMAL - ZERO DEPENDENCIES */}
+          <Route path="/safe" element={<UltraMinimalSafe />} />
+          
+          {/* ABSOLUTE SAFE BOOT - NO PROVIDERS */}
+          <Route path="/safe-recovery" element={<SafeRecoveryBoot />} />
+          
+          {/* Normal app with providers */}
+          <Route element={<AppWithProviders />} />
+        </Routes>
+      </Router>
+    </ErrorBoundary>
+  )
+}
+
+function AppWithProviders() {
+  return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <AuthenticatedApp />
-        </Router>
+        <AuthenticatedApp />
         <Toaster />
       </QueryClientProvider>
     </AuthProvider>
