@@ -219,7 +219,7 @@ export default function Customer360() {
           <TabsTrigger value="contracts">📜 Verträge ({filteredContracts.length})</TabsTrigger>
           <TabsTrigger value="applications">📋 Anträge ({metrics.openApplications})</TabsTrigger>
           <TabsTrigger value="tasks">✓ Aufgaben ({metrics.openTasks})</TabsTrigger>
-          <TabsTrigger value="documents">📎 Dokumente</TabsTrigger>
+          <TabsTrigger value="documents">📎 Dokumente ({documents.length})</TabsTrigger>
         </TabsList>
 
         {/* CONTRACTS */}
@@ -244,69 +244,73 @@ export default function Customer360() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
-              {filteredContracts.map(contract => {
-                const daysLeft = contract.end_date
-                  ? Math.floor((new Date(contract.end_date) - new Date()) / (1000 * 60 * 60 * 24))
-                  : null
-                const isCritical = daysLeft && daysLeft < 30
+            <Card>
+              <CardContent className="p-0">
+                <div className="space-y-0">
+                  {filteredContracts.map((contract, idx) => {
+                    const daysLeft = contract.end_date
+                      ? Math.floor((new Date(contract.end_date) - new Date()) / (1000 * 60 * 60 * 24))
+                      : null
+                    const isCritical = daysLeft && daysLeft < 30
 
-                return (
-                  <Card key={contract.id} className={`border-l-4 ${isCritical ? 'border-l-red-500 bg-red-50/30' : 'border-l-blue-500'}`}>
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <p className="font-bold text-slate-900">{contract.policy_number}</p>
-                            <Badge variant="outline" className="text-xs">
-                              {contract.product || contract.insurance_type}
-                            </Badge>
-                          </div>
-                          <p className="text-xs text-muted-foreground">{contract.insurer}</p>
-                          <div className="grid grid-cols-2 gap-4 mt-3">
-                            <div>
-                              <p className="text-xs text-muted-foreground">Prämie</p>
-                              <p className="text-sm font-semibold">CHF {contract.premium_yearly?.toLocaleString('de-CH', { maximumFractionDigits: 0 })}</p>
+                    return (
+                      <div key={contract.id} className={idx > 0 ? 'border-t border-border' : ''}>
+                        <div className="px-4 py-3 hover:bg-muted/30 transition-colors">
+                          <div className="flex justify-between items-start gap-4 flex-col sm:flex-row">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <p className="font-bold text-sm">{contract.policy_number || '–'}</p>
+                                <Badge variant="outline" className="text-xs">
+                                  {contract.product || contract.insurance_type || '–'}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mb-2">{contract.insurer}</p>
+                              <div className="grid grid-cols-2 gap-3 text-xs">
+                                <div>
+                                  <p className="text-muted-foreground">Prämie</p>
+                                  <p className="font-semibold">CHF {(contract.premium_yearly || 0).toLocaleString('de-CH', { maximumFractionDigits: 0 })}/J.</p>
+                                </div>
+                                <div>
+                                  <p className="text-muted-foreground">Gültig bis</p>
+                                  <p className="font-semibold">{contract.end_date ? new Date(contract.end_date).toLocaleDateString('de-CH') : '–'}</p>
+                                </div>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">Gültig bis</p>
-                              <p className="text-sm font-semibold">{new Date(contract.end_date).toLocaleDateString('de-CH')}</p>
-                            </div>
-                          </div>
-                        </div>
 
-                        {/* RENEWAL / UPSELL STATUS */}
-                        <div className="flex flex-col gap-2 text-right">
-                          {contract.renewal_stage && contract.status === 'active' && (
-                            <Badge className={
-                              contract.renewal_stage === 'renewed' ? 'bg-green-100 text-green-700' :
-                              contract.renewal_stage === 'lost' ? 'bg-red-100 text-red-700' :
-                              'bg-blue-100 text-blue-700'
-                            }>
-                              {contract.renewal_stage === 'early' ? '📅 Early' :
-                               contract.renewal_stage === 'contact' ? '📞 Kontakt' :
-                               contract.renewal_stage === 'offer' ? '📄 Angebot' :
-                               contract.renewal_stage === 'negotiation' ? '🤝 Verhandlung' :
-                               contract.renewal_stage === 'renewed' ? '✅ Verlängert' : '❌ Verloren'}
-                            </Badge>
-                          )}
-                          {contract.upsell_potential_value > 0 && (
-                            <Badge className="bg-amber-100 text-amber-700">
-                              +CHF {contract.upsell_potential_value?.toLocaleString('de-CH', { maximumFractionDigits: 0 })}
-                            </Badge>
-                          )}
-                          {isCritical && (
-                            <Badge className="bg-red-100 text-red-700 flex items-center gap-1">
-                              <AlertCircle className="w-3 h-3" /> {daysLeft}d
-                            </Badge>
-                          )}
+                            {/* STATUS BADGES */}
+                            <div className="flex flex-col gap-1.5 text-right">
+                              {contract.renewal_stage && contract.status === 'active' && (
+                                <Badge className={
+                                  contract.renewal_stage === 'renewed' ? 'bg-green-100 text-green-700' :
+                                  contract.renewal_stage === 'lost' ? 'bg-red-100 text-red-700' :
+                                  'bg-blue-100 text-blue-700'
+                                } >
+                                  {contract.renewal_stage === 'early' ? '📅 Early' :
+                                   contract.renewal_stage === 'contact' ? '📞 Kontakt' :
+                                   contract.renewal_stage === 'offer' ? '📄 Angebot' :
+                                   contract.renewal_stage === 'negotiation' ? '🤝 Verhandlung' :
+                                   contract.renewal_stage === 'renewed' ? '✅ Verlängert' : '❌ Verloren'}
+                                </Badge>
+                              )}
+                              {contract.upsell_potential_value > 0 && (
+                                <Badge className="bg-amber-100 text-amber-700 text-xs">
+                                  +CHF {(contract.upsell_potential_value || 0).toLocaleString('de-CH', { maximumFractionDigits: 0 })}
+                                </Badge>
+                              )}
+                              {isCritical && (
+                                <Badge className="bg-red-100 text-red-700 text-xs">
+                                  <AlertCircle className="w-3 h-3 mr-1" /> {daysLeft}d
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
