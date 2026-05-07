@@ -162,7 +162,16 @@ function App() {
             <Route path="/safe" element={<UltraMinimalSafe />} />
             
             {/* Portal routes - public, no auth required */}
-            <PortalRoutes />
+            <Route path="/portal/setup" element={<PortalSetup />} />
+            <Route path="/portal/reset-password" element={<PortalResetPassword />} />
+            <Route path="/portal" element={<PortalRoot />}>
+              <Route index element={<PortalDashboard />} />
+              <Route path="vertraege" element={<PortalContracts />} />
+              <Route path="antraege" element={<PortalApplications />} />
+              <Route path="dokumente" element={<PortalDocuments />} />
+              <Route path="profil" element={<PortalProfile />} />
+              <Route path="dashboard" element={<PortalDashboard />} />
+            </Route>
             
             {/* Main authenticated app with sidebar */}
             <AuthenticatedApp />
