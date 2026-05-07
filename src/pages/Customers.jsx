@@ -167,8 +167,11 @@ export default function Customers() {
               if (!confirm('Letzte 960 Kunden wirklich löschen?')) return;
               try {
                 const res = await base44.functions.invoke('deleteRecentImport', {});
-                alert(`✓ ${res.data.deleted} Kunden gelöscht`);
-                queryClient.invalidateQueries({ queryKey: ['customers'] });
+                alert(`✓ ${res.data.message}`);
+                // Refresh after a delay to let deletion complete
+                setTimeout(() => {
+                  queryClient.invalidateQueries({ queryKey: ['customers'] });
+                }, 3000);
               } catch (e) {
                 alert(`Fehler: ${e.message}`);
               }

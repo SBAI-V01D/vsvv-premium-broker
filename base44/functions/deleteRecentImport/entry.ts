@@ -13,33 +13,40 @@ Deno.serve(async (req) => {
     const customers = await base44.entities.Customer.list('-created_date', 1000);
     
     if (!customers || customers.length === 0) {
-      return Response.json({ deleted: 0, message: 'No customers to delete' });
+      return Response.json({ 
+        status: 'success',
+        deleted: 0, 
+        message: 'No customers to delete' 
+      });
     }
 
-    // Delete the newest 960 customers (likely from the import) - SEQUENTIALLY
-    const toDelete = customers.slice(0, 960);
-    let deleted = 0;
-
-    for (let i = 0; i < toDelete.length; i++) {
-      try {
-        await base44.entities.Customer.delete(toDelete[i].id);
-        deleted++;
+    // Delete the newest 960 customers in background (fire and forget)
+    const toDelete = customers.slice(0, Math.min(960, customers.length));
+    
+    // Start deletion in background without blocking
+    (async () => {
+      let deleted = 0;
+      for (let i = 0; i < toDelete.length; i++) {
+        try {
+          await base44.entities.Customer.delete(toDelete[i].id);
+          deleted++;
+        } catch (e) {
+          console.error(`[DELETE] Failed to delete ${toDelete[i].id}: ${e.message}`);
+        }
         
         // Rate limit: delay every 5 deletes
         if ((i + 1) % 5 === 0) {
-          await new Promise(r => setTimeout(r, 1000));
+          await new Promise(r => setTimeout(r, 800));
         }
-      } catch (e) {
-        console.error(`[DELETE] Failed to delete ${toDelete[i].id}: ${e.message}`);
       }
-    }
+      console.log(`[DELETE] Completed: Deleted ${deleted} customers`);
+    })();
 
-    console.log(`[DELETE] Deleted ${deleted} customers`);
-
+    // Return immediately with count
     return Response.json({
       status: 'success',
-      deleted: deleted,
-      message: `${deleted} Kunden gelöscht`
+      deleted: toDelete.length,
+      message: `${toDelete.length} Kunden werden gelöscht... (läuft im Hintergrund)`
     });
     
   } catch (error) {
