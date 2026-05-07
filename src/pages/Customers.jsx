@@ -125,7 +125,6 @@ export default function Customers() {
     
     setImportProgress('Datei wird hochgeladen...')
     try {
-      // Upload file first
       const formData = new FormData()
       formData.append('file', importFile)
       const uploadRes = await fetch('https://api.base44.com/upload', {
@@ -134,10 +133,31 @@ export default function Customers() {
       })
       const { file_url } = await uploadRes.json()
 
-      // Call import function
+      // Map field names and set defaults
+      const fieldMapping = {
+        'Vorname': 'first_name',
+        'Name': 'last_name',
+        'E-Mail': 'email',
+        'Telefon': 'phone',
+        'Mobile': 'mobile',
+        'Strasse': 'street',
+        'PLZ': 'zip_code',
+        'Ort': 'city'
+      }
+
+      // Use first organization or set null for user to select
+      const defaultOrgId = organizations?.[0]?.id || null
+
       const result = await base44.functions.invoke('importEntityData', {
         entity_name: 'Customer',
-        file_url
+        file_url,
+        field_mapping: fieldMapping,
+        default_values: {
+          organization_id: defaultOrgId,
+          association_membership: 'vsvv',
+          customer_type: 'private',
+          status: 'active'
+        }
       })
 
       setImportProgress(`✓ ${result.data.successful} Kunden importiert`)

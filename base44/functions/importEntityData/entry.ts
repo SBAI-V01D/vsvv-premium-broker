@@ -9,17 +9,10 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { entity_name, file_url } = await req.json();
+    const { entity_name, file_url, field_mapping = {}, default_values = {} } = await req.json();
 
     if (!entity_name || !file_url) {
       return Response.json({ error: 'Missing entity_name or file_url' }, { status: 400 });
-    }
-
-    // Extract data from uploaded file
-    const schema = await base44.entities[entity_name]?.schema?.();
-    
-    if (!schema) {
-      return Response.json({ error: `Entity ${entity_name} not found` }, { status: 404 });
     }
 
     // Fetch file content
@@ -35,33 +28,65 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'File is empty or has no data rows' }, { status: 400 });
     }
 
-    // Parse CSV: first line is headers
-    const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
-    const rows = lines.slice(1).map(line => {
-      const values = [];
+    // Robust CSV parsing with quoted field support
+    const parseCSVLine = (line) => {
+      const fields = [];
       let current = '';
       let inQuotes = false;
+
       for (let i = 0; i < line.length; i++) {
         const char = line[i];
-        if (char === '"' && (i === 0 || line[i - 1] !== '\\')) {
-          inQuotes = !inQuotes;
+        
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            // Escaped quote
+            current += '"';
+            i++;
+          } else {
+            // Toggle quote mode
+            inQuotes = !inQuotes;
+          }
         } else if (char === ',' && !inQuotes) {
-          values.push(current.replace(/^"|"$/g, '').trim());
+          fields.push(current.trim());
           current = '';
         } else {
           current += char;
         }
       }
-      values.push(current.replace(/^"|"$/g, '').trim());
-      return values;
-    });
+      fields.push(current.trim());
+      return fields;
+    };
 
-    const records = rows.map(row => {
+    // Parse headers and data
+    const headerLine = parseCSVLine(lines[0]);
+    const headers = headerLine.map(h => h.replace(/^"|"$/g, '').trim());
+    
+    const dataLines = lines.slice(1);
+    const records = dataLines.map((line) => {
+      const values = parseCSVLine(line);
       const record = {};
+      
       headers.forEach((header, idx) => {
-        const value = row[idx] || '';
-        record[header] = value === '' ? null : value;
+        let value = values[idx] ? values[idx].replace(/^"|"$/g, '').trim() : '';
+        
+        // Apply field mapping if provided
+        const mappedField = field_mapping[header] || header;
+        
+        // Clean value
+        value = value === '' || value === 'NULL' ? null : value;
+        
+        if (value !== null) {
+          record[mappedField] = value;
+        }
       });
+
+      // Apply default values
+      Object.entries(default_values).forEach(([field, val]) => {
+        if (!record[field]) {
+          record[field] = val;
+        }
+      });
+
       return record;
     });
 
@@ -76,7 +101,7 @@ Deno.serve(async (req) => {
         successful++;
       } catch (error) {
         failed++;
-        errors.push(`Row ${successful + failed}: ${error.message}`);
+        errors.push(`Row: ${error.message}`);
       }
     }
 
@@ -85,7 +110,7 @@ Deno.serve(async (req) => {
       successful,
       failed,
       total: records.length,
-      errors: errors.slice(0, 10) // Return first 10 errors
+      errors: errors.slice(0, 10)
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
