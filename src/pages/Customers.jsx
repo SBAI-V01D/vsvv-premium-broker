@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import CustomerForm from '../components/customers/CustomerForm'
 import CompanyForm from '../components/customers/CompanyForm'
-import ImportWizard from '../components/customers/ImportWizard'
+import FastImportWizard from '../components/customers/FastImportWizard'
 import EmailLink from '../components/common/EmailLink'
 import { STATUS_LABELS, FAMILY_ROLE_LABELS, label } from '@/lib/labels'
 import { searchCustomers } from '@/lib/customerSearch'
@@ -399,21 +399,11 @@ export default function Customers() {
         </DialogContent>
       </Dialog>
 
-      <ImportWizard 
+      <FastImportWizard 
         open={showImport} 
-        onOpenChange={(isOpen) => {
-          setShowImport(isOpen)
-          // Force refresh on close (both success and cancel)
-          if (!isOpen) {
-            setTimeout(() => {
-              queryClient.invalidateQueries({ queryKey: ['customers'] })
-            }, 500)
-          }
-        }}
+        onOpenChange={setShowImport}
         onSuccess={() => {
-          // Immediate refresh + UI update
           queryClient.invalidateQueries({ queryKey: ['customers'] })
-          // Force clear filters to show all newly imported customers
           setSearch('')
           setFilterType('all')
         }}
