@@ -11,16 +11,8 @@ Deno.serve(async (req) => {
 
     const { entity_name, file_url } = await req.json();
 
-    if (!entity_name || !file_url) {
-      return Response.json({ error: 'Missing parameters' }, { status: 400 });
-    }
-
     // Fetch file
     const fileResponse = await fetch(file_url);
-    if (!fileResponse.ok) {
-      return Response.json({ error: 'File fetch failed' }, { status: 400 });
-    }
-
     let fileContent = await fileResponse.text();
     
     // Remove BOM
@@ -29,188 +21,134 @@ Deno.serve(async (req) => {
     }
 
     const lines = fileContent.split('\n').filter(l => l.trim());
-    
-    if (lines.length < 1) {
-      return Response.json({ error: 'Empty file' }, { status: 400 });
-    }
 
     // Detect delimiter
-    const countDelimiters = (line, delim) => {
-      let count = 0;
-      let inQuotes = false;
+    const countChar = (line, char) => {
+      let count = 0, inQuotes = false;
       for (let i = 0; i < line.length; i++) {
-        if (line[i] === '"' && (i === 0 || line[i - 1] !== '\\')) {
-          inQuotes = !inQuotes;
-        } else if (line[i] === delim && !inQuotes) {
-          count++;
-        }
+        if (line[i] === '"') inQuotes = !inQuotes;
+        else if (line[i] === char && !inQuotes) count++;
       }
       return count;
     };
 
     let delimiter = ',';
     const firstLine = lines[0];
-    const counts = {
-      ',': countDelimiters(firstLine, ','),
-      ';': countDelimiters(firstLine, ';'),
-      '\t': countDelimiters(firstLine, '\t')
-    };
+    if (countChar(firstLine, ';') > countChar(firstLine, ',')) delimiter = ';';
+    if (countChar(firstLine, '\t') > countChar(firstLine, ';')) delimiter = '\t';
 
-    if (counts[';'] > counts[',']) delimiter = ';';
-    if (counts['\t'] > counts[';'] && counts['\t'] > counts[',']) delimiter = '\t';
-
-    console.log(`[IMPORT] Delimiter: ${delimiter}, Total rows: ${lines.length}`);
-
-    // Parse CSV
-    const parseCSVLine = (line) => {
+    // CSV parser
+    const parseCSV = (line) => {
       const fields = [];
-      let current = '';
-      let inQuotes = false;
-
+      let field = '', inQuotes = false;
       for (let i = 0; i < line.length; i++) {
         const char = line[i];
-        
-        if (char === '"') {
-          if (inQuotes && line[i + 1] === '"') {
-            current += '"';
-            i++;
-          } else {
-            inQuotes = !inQuotes;
-          }
-        } else if (char === delimiter && !inQuotes) {
-          fields.push(current.trim().replace(/^"|"$/g, '').trim());
-          current = '';
+        if (char === '"') inQuotes = !inQuotes;
+        else if (char === delimiter && !inQuotes) {
+          fields.push(field.trim().replace(/^"|"$/g, ''));
+          field = '';
         } else {
-          current += char;
+          field += char;
         }
       }
-      
-      fields.push(current.trim().replace(/^"|"$/g, '').trim());
+      fields.push(field.trim().replace(/^"|"$/g, ''));
       return fields;
     };
 
-    // Normalize headers
-    const normalizeHeader = (h) => h.toLowerCase().replace(/[\s\-_.]/g, '');
-
+    // Map headers
+    const normalize = (s) => s.toLowerCase().replace(/[\s\-_.äöü]/g, '');
+    const headerLine = parseCSV(lines[0]);
+    const headers = headerLine.map(normalize);
+    
     const fieldMap = {
-      'vorname': 'first_name', 'firstname': 'first_name', 'first_name': 'first_name',
-      'name': 'last_name', 'nachname': 'last_name', 'lastname': 'last_name', 'last_name': 'last_name',
-      'email': 'email', 'emai': 'email',
+      'vorname': 'first_name', 'firstname': 'first_name',
+      'nachname': 'last_name', 'name': 'last_name', 'lastname': 'last_name',
+      'email': 'email', 'mail': 'email',
       'telefon': 'phone', 'phone': 'phone',
       'mobile': 'mobile', 'mobilnummer': 'mobile',
       'strasse': 'street', 'street': 'street',
-      'plz': 'zip_code', 'zipcode': 'zip_code', 'zip_code': 'zip_code',
+      'plz': 'zip_code', 'zipcode': 'zip_code',
       'ort': 'city', 'city': 'city', 'stadt': 'city',
       'kanton': 'canton', 'canton': 'canton',
     };
 
-    const headerLine = parseCSVLine(lines[0]);
-    const headers = headerLine.map(normalizeHeader);
     const mappedHeaders = headers.map(h => fieldMap[h] || h);
 
-    console.log(`[IMPORT] Headers found: ${mappedHeaders.length}, Sample: ${mappedHeaders.slice(0, 6).join(', ')}`);
-
-    // Get default organization
+    // Get default org
     let defaultOrgId = null;
     try {
       const orgs = await base44.entities.Organization.list('', 1);
-      defaultOrgId = orgs?.[0]?.id;
-      console.log(`[IMPORT] Default org: ${defaultOrgId}`);
-    } catch (e) {
-      console.log(`[IMPORT] Org lookup error: ${e.message}`);
-    }
+      if (orgs?.length > 0) defaultOrgId = orgs[0].id;
+    } catch (e) {}
 
-    // Parse data rows
+    // Parse records
     const records = [];
-    let validRowCount = 0;
+    const usedEmails = new Set();
 
     for (let i = 1; i < lines.length; i++) {
-      try {
-        const values = parseCSVLine(lines[i]);
-        
-        // Skip completely empty rows
-        if (values.every(v => !v || v === '')) {
-          continue;
-        }
+      const values = parseCSV(lines[i]);
+      if (values.every(v => !v)) continue;
 
-        const record = {};
-        mappedHeaders.forEach((header, idx) => {
-          const value = values[idx];
-          if (value && value.trim() && header && header.length > 0) {
-            record[header] = value.trim();
-          }
-        });
+      const record = {};
+      mappedHeaders.forEach((header, idx) => {
+        const val = values[idx]?.trim();
+        if (val && header) record[header] = val;
+      });
 
-        // ONLY require first_name and last_name
-        if (!record.first_name) continue;
-        if (!record.last_name) continue;
+      // Validate only first_name and last_name
+      if (!record.first_name || !record.last_name) continue;
 
-        // If email is empty or invalid, skip (don't create)
-        // This prevents creating records with invalid placeholder emails
-        if (!record.email || record.email.length === 0) {
-          continue;
-        }
-
+      // Handle email
+      if (record.email) {
         record.email = record.email.toLowerCase();
-
-        // Set required organization
-        if (defaultOrgId) {
-          record.organization_id = defaultOrgId;
+      } else {
+        // Generate unique email from name
+        const base = `${record.first_name.substring(0, 1).toLowerCase()}${record.last_name.toLowerCase().replace(/\s/g, '')}@import.local`;
+        let email = base;
+        let counter = 1;
+        while (usedEmails.has(email)) {
+          email = `${record.first_name.substring(0, 1).toLowerCase()}${record.last_name.toLowerCase().replace(/\s/g, '')}${counter}@import.local`;
+          counter++;
         }
-
-        // Set safe defaults
-        record.customer_type = 'private';
-        record.status = 'active';
-        record.mandate_status = 'pending';
-        record.is_family_member = false;
-
-        records.push({ rowNum: i + 1, data: record });
-        validRowCount++;
-
-      } catch (e) {
-        console.log(`[IMPORT] Row ${i + 1} parse error: ${e.message}`);
+        record.email = email;
       }
+
+      usedEmails.add(record.email);
+      record.organization_id = defaultOrgId;
+      record.customer_type = 'private';
+      record.status = 'active';
+      record.mandate_status = 'pending';
+      record.is_family_member = false;
+
+      records.push(record);
     }
 
-    console.log(`[IMPORT] Parsed ${validRowCount} valid records from ${lines.length - 1} data rows`);
+    console.log(`[IMPORT] Importing ${records.length} records`);
 
-    // Batch insert with proper error handling
+    // Insert
     let successful = 0;
     let failed = 0;
     const failedRows = [];
-    const batchSize = 20;
-    const delayMs = 300;
 
-    for (let i = 0; i < records.length; i += batchSize) {
-      const batch = records.slice(i, i + batchSize);
-      
-      for (const item of batch) {
-        try {
-          const created = await base44.entities[entity_name].create(item.data);
-          if (created && created.id) {
-            successful++;
-            if (successful % 50 === 0) {
-              console.log(`[IMPORT] Progress: ${successful}/${validRowCount}`);
-            }
-          } else {
-            failed++;
-            failedRows.push({ row: item.rowNum, email: item.data.email, error: 'Create returned no ID' });
-          }
-        } catch (error) {
+    for (let i = 0; i < records.length; i++) {
+      try {
+        const result = await base44.entities[entity_name].create(records[i]);
+        if (result?.id) {
+          successful++;
+        } else {
           failed++;
-          const errorMsg = error?.message || error?.toString() || 'Unknown error';
-          failedRows.push({ row: item.rowNum, email: item.data.email, error: errorMsg.substring(0, 60) });
-          console.log(`[IMPORT] Row ${item.rowNum} error: ${errorMsg}`);
+          failedRows.push({ email: records[i].email, error: 'No ID' });
         }
+      } catch (e) {
+        failed++;
+        failedRows.push({ email: records[i].email, error: e.message?.substring(0, 50) });
       }
-      
-      // Delay between batches
-      if (i + batchSize < records.length) {
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+
+      // Small delay every 10 records
+      if ((i + 1) % 10 === 0) {
+        await new Promise(r => setTimeout(r, 100));
       }
     }
-
-    console.log(`[IMPORT] Complete: ${successful} successful, ${failed} failed out of ${validRowCount} records`);
 
     return Response.json({
       status: 'success',
@@ -218,21 +156,12 @@ Deno.serve(async (req) => {
         total_rows_in_file: lines.length - 1,
         successfully_imported: successful,
         failed: failed,
-        duplicates_skipped: 0,
-        validation_errors: lines.length - 1 - validRowCount,
-        total_processed: successful + failed + (lines.length - 1 - validRowCount),
-        success_rate: validRowCount > 0 ? ((successful / validRowCount) * 100).toFixed(1) : 0
+        success_rate: records.length > 0 ? ((successful / records.length) * 100).toFixed(0) : 0
       },
-      details: {
-        failed_rows: failedRows.slice(0, 30)
-      }
+      details: { failed_rows: failedRows.slice(0, 10) }
     });
     
   } catch (error) {
-    console.error('[IMPORT] Fatal error:', error.message);
-    return Response.json({ 
-      status: 'error',
-      error: error.message
-    }, { status: 500 });
+    return Response.json({ status: 'error', error: error.message }, { status: 500 });
   }
 });
