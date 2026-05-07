@@ -28,6 +28,12 @@ WICHTIG: Lies das gesamte Dokument sorgfältig und extrahiere ALLE folgenden Fel
    - Für Leben/BVG: Planbezeichnung + Deckungssumme
    - Schreibe alles was du siehst: Produktname, Tarifbezeichnung, Plan, Modell
 
+4b. **Zusatzversicherungen** (additional_products): 
+   - Wenn das Dokument MEHRERE Versicherungsprodukte enthält (z.B. Grundversicherung KVG + Zusatzversicherungen VVG), liste ALLE zusätzlichen Produkte separat auf
+   - Häufig bei: Krankenkassen-Police mit Zusatzmodulen (Spital, Zahn, Ambulant, Ausland), Kombipolicen
+   - Für jedes Zusatzprodukt: product (Produktname), premium_monthly, premium_yearly, policy_number (falls abweichend), notes
+   - Beispiel: [{"product": "HOSPITAL FLEX", "premium_monthly": 45.20, "premium_yearly": 542.40}, {"product": "DENTA PLUS", "premium_monthly": 18.50}]
+
 5. **Deckungssumme / Versicherungssumme** (coverage_amount): Maximalbetrag in CHF als Zahl, falls vorhanden
 
 6. **Franchise** (franchise): Nur für KVG/Kranken: Franchisebetrag als Zahl (z.B. 300, 500, 1000, 2500)
@@ -74,7 +80,20 @@ Antworte AUSSCHLIESSLICH mit einem JSON-Objekt. Null wenn nicht vorhanden.`,
           last_name: { type: ['string', 'null'] },
           birthdate: { type: ['string', 'null'] },
           address: { type: ['string', 'null'] },
-          notes: { type: ['string', 'null'] }
+          notes: { type: ['string', 'null'] },
+          additional_products: {
+            type: ['array', 'null'],
+            items: {
+              type: 'object',
+              properties: {
+                product: { type: 'string' },
+                policy_number: { type: ['string', 'null'] },
+                premium_monthly: { type: ['number', 'null'] },
+                premium_yearly: { type: ['number', 'null'] },
+                notes: { type: ['string', 'null'] }
+              }
+            }
+          }
         }
       },
       model: 'gemini_3_flash'
@@ -130,6 +149,7 @@ Antworte AUSSCHLIESSLICH mit einem JSON-Objekt. Null wenn nicht vorhanden.`,
         address: data.address || null,
         notes: data.notes || null,
         sparte_data: Object.keys(sparte_data).length > 0 ? sparte_data : null,
+        additional_products: data.additional_products?.length > 0 ? data.additional_products : null,
       },
       message: 'Daten erfolgreich extrahiert. Bitte überprüfen und bestätigen.'
     });

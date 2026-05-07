@@ -116,12 +116,14 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
   const [fileUrl, setFileUrl] = useState(null)
   const [fileName, setFileName] = useState('')
 
-  // Extracted contract data
-  const [contract, setContract] = useState({
+  // Extracted contract data — supports multiple contracts (z.B. Grundversicherung + Zusatzversicherungen)
+  const [contracts, setContracts] = useState([{
     insurer: '', policy_number: '', sparte: '', product: '',
     premium_monthly: '', premium_yearly: '', start_date: '', end_date: '',
     cancellation_deadline: '', status: 'active', notes: '', sparte_data: {}
-  })
+  }])
+  const [activeContractIdx, setActiveContractIdx] = useState(0)
+  const contract = contracts[activeContractIdx] || contracts[0]
 
   // Customer state
   const [customerMode, setCustomerMode] = useState('search') // 'search' | 'new' | 'matched'
@@ -129,8 +131,16 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
   const [matchCandidates, setMatchCandidates] = useState([])
   const [newCustomerData, setNewCustomerData] = useState({})
 
-  const setC = (k, v) => setContract(p => ({ ...p, [k]: v }))
-  const setSparteData = (k, v) => setContract(p => ({ ...p, sparte_data: { ...p.sparte_data, [k]: v } }))
+  const setC = (k, v) => setContracts(prev => prev.map((c, i) => i === activeContractIdx ? { ...c, [k]: v } : c))
+  const setSparteData = (k, v) => setContracts(prev => prev.map((c, i) => i === activeContractIdx ? { ...c, sparte_data: { ...c.sparte_data, [k]: v } } : c))
+  const addContract = () => {
+    setContracts(prev => [...prev, { insurer: contract.insurer, policy_number: '', sparte: '', product: '', premium_monthly: '', premium_yearly: '', start_date: contract.start_date, end_date: contract.end_date, cancellation_deadline: contract.cancellation_deadline, status: 'active', notes: '', sparte_data: {} }])
+    setActiveContractIdx(contracts.length)
+  }
+  const removeContract = (idx) => {
+    setContracts(prev => prev.filter((_, i) => i !== idx))
+    setActiveContractIdx(Math.max(0, activeContractIdx - 1))
+  }
   const sparteFields = getFieldsForSparte(contract.sparte)
   const franchiseOptions = FRANCHISE_OPTIONS[contract.sparte_data?.age_group] || FRANCHISE_OPTIONS.default
 
@@ -154,8 +164,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
 
     if (res.data?.success && res.data?.extractedData) {
       const d = res.data.extractedData
-      setContract(p => ({
-        ...p,
+      const baseContract = {
         insurer: d.provider || d.insurer || '',
         policy_number: d.policy_number || '',
         sparte: d.insurance_type || mapInsuranceType(d.insurance_type) || '',
@@ -167,7 +176,21 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         cancellation_deadline: d.cancellation_deadline || '',
         notes: d.notes || '',
         sparte_data: d.sparte_data || {},
+        status: 'active',
+      }
+      // Wenn Zusatzversicherungen erkannt wurden, zusätzliche Einträge vorbereiten
+      const additionalContracts = (d.additional_products || []).map(ap => ({
+        ...baseContract,
+        sparte: 'vvg_zusatz',
+        product: ap.product || ap.name || '',
+        premium_monthly: ap.premium_monthly || '',
+        premium_yearly: ap.premium_yearly || '',
+        policy_number: ap.policy_number || baseContract.policy_number,
+        notes: ap.notes || '',
+        sparte_data: {},
       }))
+      setContracts([baseContract, ...additionalContracts])
+      setActiveContractIdx(0)
 
       // Try to extract customer name from file for matching
       const extracted = res.data.extractedData
@@ -236,31 +259,37 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       return
     }
 
-    // Create contract
-    const newContract = await base44.entities.Contract.create({
-      customer_id: customerId,
-      customer_name: customerName,
-      primary_customer_id: selectedCustomer?.is_family_member ? selectedCustomer.primary_customer_id : customerId,
-      organization_id: orgId,
-      advisor_id: selectedCustomer?.advisor_id || undefined,
-      insurer: contract.insurer,
-      policy_number: contract.policy_number || undefined,
-      insurance_type: contract.sparte || undefined,
-      sparte: contract.sparte || undefined,
-      sparte_data: Object.keys(contract.sparte_data).length > 0 ? contract.sparte_data : undefined,
-      product: contract.product || undefined,
-      premium_monthly: contract.premium_monthly ? Number(contract.premium_monthly) : undefined,
-      premium_yearly: contract.premium_yearly ? Number(contract.premium_yearly) : undefined,
-      start_date: contract.start_date || undefined,
-      end_date: contract.end_date || undefined,
-      cancellation_deadline: contract.cancellation_deadline || undefined,
-      status: 'active',
-      policy_document_url: fileUrl || undefined,
-      notes: contract.notes || undefined,
-    })
+    // Create all contracts (Grundversicherung + alle Zusatzversicherungen)
+    let firstContract = null
+    for (let i = 0; i < contracts.length; i++) {
+      const c = contracts[i]
+      if (!c.insurer) continue
+      const created = await base44.entities.Contract.create({
+        customer_id: customerId,
+        customer_name: customerName,
+        primary_customer_id: selectedCustomer?.is_family_member ? selectedCustomer.primary_customer_id : customerId,
+        organization_id: orgId,
+        advisor_id: selectedCustomer?.advisor_id || undefined,
+        insurer: c.insurer,
+        policy_number: c.policy_number || undefined,
+        insurance_type: c.sparte || undefined,
+        sparte: c.sparte || undefined,
+        sparte_data: c.sparte_data && Object.keys(c.sparte_data).length > 0 ? c.sparte_data : undefined,
+        product: c.product || undefined,
+        premium_monthly: c.premium_monthly ? Number(c.premium_monthly) : undefined,
+        premium_yearly: c.premium_yearly ? Number(c.premium_yearly) : undefined,
+        start_date: c.start_date || undefined,
+        end_date: c.end_date || undefined,
+        cancellation_deadline: c.cancellation_deadline || undefined,
+        status: 'active',
+        policy_document_url: i === 0 && fileUrl ? fileUrl : undefined,
+        notes: c.notes || undefined,
+      })
+      if (i === 0) firstContract = created
+    }
 
-    // Save document reference
-    if (fileUrl) {
+    // Save document reference linked to first contract
+    if (fileUrl && firstContract) {
       await base44.entities.Document.create({
         name: fileName,
         file_url: fileUrl,
@@ -269,18 +298,19 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         category: 'contract',
         doc_type: 'anlage',
         classification_status: 'klassifiziert',
-        linked_contract_id: newContract.id,
+        linked_contract_id: firstContract.id,
       })
     }
 
     setSaving(false)
     setStep(4)
-    onContractCreated?.(newContract)
+    onContractCreated?.(firstContract)
   }
 
   const handleClose = () => {
     setStep(1); setFileUrl(null); setFileName(''); setError(null)
-    setContract({ insurer: '', policy_number: '', sparte: '', product: '', premium_monthly: '', premium_yearly: '', start_date: '', end_date: '', cancellation_deadline: '', status: 'active', notes: '', sparte_data: {} })
+    setContracts([{ insurer: '', policy_number: '', sparte: '', product: '', premium_monthly: '', premium_yearly: '', start_date: '', end_date: '', cancellation_deadline: '', status: 'active', notes: '', sparte_data: {} }])
+    setActiveContractIdx(0)
     setSelectedCustomer(null); setCustomerMode('search'); setMatchCandidates([]); setNewCustomerData({})
     onClose()
   }
@@ -433,6 +463,26 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
               </div>
             )}
 
+            {/* Multi-contract tabs */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {contracts.map((c, i) => (
+                <button key={i} type="button"
+                  onClick={() => setActiveContractIdx(i)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${activeContractIdx === i ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-border hover:border-primary/40'}`}
+                >
+                  {i === 0 ? '📋 Grundversicherung' : `➕ Zusatz ${i}`}
+                  {c.product && <span className="opacity-70 truncate max-w-[80px]">– {c.product}</span>}
+                  {contracts.length > 1 && i > 0 && (
+                    <span onClick={e => { e.stopPropagation(); removeContract(i) }} className="ml-1 text-red-400 hover:text-red-600">✕</span>
+                  )}
+                </button>
+              ))}
+              <button type="button" onClick={addContract}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed border-primary/40 text-primary hover:bg-primary/5 transition-colors">
+                + Zusatzversicherung
+              </button>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <Label className="text-xs">Versicherungsgesellschaft *</Label>
@@ -440,7 +490,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
               </div>
               <div>
                 <Label className="text-xs">Versicherungssparte</Label>
-                <Select value={contract.sparte} onValueChange={v => setContract(p => ({ ...p, sparte: v, insurance_type: v, sparte_data: {} }))}>
+                <Select value={contract.sparte} onValueChange={v => setContracts(prev => prev.map((c, i) => i === activeContractIdx ? { ...c, sparte: v, insurance_type: v, sparte_data: {} } : c))}>
                   <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Wählen..." /></SelectTrigger>
                   <SelectContent>
                     {Object.entries(grouped).map(([group, items]) => (
@@ -455,6 +505,15 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
               <div>
                 <Label className="text-xs">Policen-Nummer</Label>
                 <Input value={contract.policy_number} onChange={e => setC('policy_number', e.target.value)} className="mt-1 h-8 text-sm" />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-xs font-semibold text-primary">Produkt / Tarif</Label>
+                <Input
+                  value={contract.product}
+                  onChange={e => setC('product', e.target.value)}
+                  placeholder="z.B. COMPACT, HMO 1500, Vollkasko SB500, NATURA, TELEMED..."
+                  className="mt-1 h-8 text-sm border-primary/30 focus:border-primary"
+                />
               </div>
               <div>
                 <Label className="text-xs">Monatsprämie (CHF)</Label>
@@ -506,14 +565,14 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
             )}
 
             <div>
-              <Label className="text-xs">Notizen</Label>
+              <Label className="text-xs">Notizen / KI-Hinweise</Label>
               <Textarea value={contract.notes} onChange={e => setC('notes', e.target.value)} className="mt-1 text-sm" rows={2} />
             </div>
 
             <div className="flex justify-between pt-2">
               <Button variant="outline" onClick={() => setStep(2)}>Zurück</Button>
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Speichern...</> : '✓ Vertrag erstellen'}
+                {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Speichern...</> : `✓ ${contracts.length > 1 ? `${contracts.length} Verträge` : 'Vertrag'} erstellen`}
               </Button>
             </div>
           </div>
