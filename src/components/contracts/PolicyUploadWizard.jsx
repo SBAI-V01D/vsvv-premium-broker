@@ -194,21 +194,27 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
 
       // Try to extract customer name from file for matching
       const extracted = res.data.extractedData
-      if (extracted.policy_holder_name || extracted.first_name) {
-        const nameParts = (extracted.policy_holder_name || '').split(' ')
-        const matchData = {
-          first_name: extracted.first_name || nameParts[0] || '',
-          last_name: extracted.last_name || nameParts.slice(1).join(' ') || '',
-          birthdate: extracted.birthdate || '',
-          email: extracted.email || '',
-        }
-        if (matchData.first_name || matchData.last_name) {
-          const { candidates } = matchCustomers(matchData, customers)
-          setMatchCandidates(candidates)
-          if (candidates.length > 0 && candidates[0].score >= 80) {
-            setSelectedCustomer(candidates[0].customer)
-            setCustomerMode('matched')
-          }
+      const nameParts = (extracted.policy_holder_name || '').trim().split(/\s+/)
+      const matchData = {
+        first_name: extracted.first_name || nameParts[0] || '',
+        last_name: extracted.last_name || nameParts.slice(1).join(' ') || '',
+        birthdate: extracted.birthdate || '',
+        email: extracted.email || '',
+        phone: extracted.phone || '',
+        street: extracted.street || '',
+        city: extracted.city || extracted.location || '',
+        zip_code: extracted.zip_code || '',
+      }
+      if (matchData.first_name || matchData.last_name) {
+        const { candidates } = matchCustomers(matchData, customers)
+        setMatchCandidates(candidates)
+        if (candidates.length > 0 && candidates[0].score >= 80) {
+          setSelectedCustomer(candidates[0].customer)
+          setCustomerMode('matched')
+        } else {
+          // Pre-fill new customer form with KI-extracted data so user just confirms
+          setNewCustomerData(matchData)
+          if (!candidates.length) setCustomerMode('new')
         }
       }
     }
@@ -224,7 +230,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     let customerName = selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : ''
     let orgId = selectedCustomer?.organization_id || organizations[0]?.id || ''
 
-    // Create new customer if needed
+    // Create new customer if needed — email is optional, generate placeholder if missing
     if (!customerId && customerMode === 'new') {
       const nc = newCustomerData
       if (!nc.first_name || !nc.last_name) {
@@ -232,13 +238,19 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         setSaving(false)
         return
       }
+      // Email is required by entity — generate unique placeholder if not available
+      const emailValue = nc.email && nc.email.trim()
+        ? nc.email.trim()
+        : `${nc.first_name.toLowerCase()}.${nc.last_name.toLowerCase()}.${Date.now()}@import.local`
       const created = await base44.entities.Customer.create({
         first_name: nc.first_name,
         last_name: nc.last_name,
-        email: nc.email || undefined,
+        email: emailValue,
         phone: nc.phone || undefined,
         birthdate: nc.birthdate || undefined,
+        street: nc.street || undefined,
         city: nc.city || undefined,
+        zip_code: nc.zip_code || undefined,
         organization_id: orgId,
         status: 'active',
         customer_type: 'private',
@@ -432,9 +444,15 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
               </button>
             )}
 
-            {/* New customer form */}
+            {/* New customer form — pre-filled from KI extraction */}
             {customerMode === 'new' && (
               <>
+                {(newCustomerData.first_name || newCustomerData.last_name) && (
+                  <div className="flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
+                    <User className="w-4 h-4 flex-shrink-0" />
+                    KI hat Kundendaten aus der Police extrahiert – bitte prüfen und bei Bedarf ergänzen
+                  </div>
+                )}
                 <NewCustomerForm data={newCustomerData} onChange={setNewCustomerData} />
                 <button type="button" onClick={() => setCustomerMode('search')}
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:underline">
