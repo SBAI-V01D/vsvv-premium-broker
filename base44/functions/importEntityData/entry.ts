@@ -11,9 +11,20 @@ Deno.serve(async (req) => {
 
     const { entity_name, file_url } = await req.json();
 
+    // Get default org ONCE at start
+    let defaultOrgId = null;
+    try {
+      const orgs = await base44.entities.Organization.list('', 1);
+      if (orgs?.length > 0) defaultOrgId = orgs[0].id;
+      console.log(`[IMPORT] Default org: ${defaultOrgId}`);
+    } catch (e) {
+      console.error(`[IMPORT] Org error: ${e.message}`);
+    }
+
     // Fetch file
     const fileResponse = await fetch(file_url);
     let fileContent = await fileResponse.text();
+    console.log(`[IMPORT] File size: ${fileContent.length} bytes`);
     
     // Remove BOM
     if (fileContent.charCodeAt(0) === 0xFEFF) {
@@ -21,6 +32,7 @@ Deno.serve(async (req) => {
     }
 
     const lines = fileContent.split('\n').filter(l => l.trim());
+    console.log(`[IMPORT] Total lines: ${lines.length}`);
 
     // Detect delimiter
     const countChar = (line, char) => {
@@ -36,6 +48,7 @@ Deno.serve(async (req) => {
     const firstLine = lines[0];
     if (countChar(firstLine, ';') > countChar(firstLine, ',')) delimiter = ';';
     if (countChar(firstLine, '\t') > countChar(firstLine, ';')) delimiter = '\t';
+    console.log(`[IMPORT] Delimiter: ${delimiter === ',' ? 'comma' : delimiter === ';' ? 'semicolon' : 'tab'}`);
 
     // CSV parser
     const parseCSV = (line) => {
@@ -55,31 +68,29 @@ Deno.serve(async (req) => {
       return fields;
     };
 
-    // Map headers
-    const normalize = (s) => s.toLowerCase().replace(/[\s\-_.äöü]/g, '');
+    // Parse header line
     const headerLine = parseCSV(lines[0]);
-    const headers = headerLine.map(normalize);
-    
-    const fieldMap = {
-      'vorname': 'first_name', 'firstname': 'first_name',
-      'nachname': 'last_name', 'name': 'last_name', 'lastname': 'last_name',
-      'email': 'email', 'mail': 'email',
-      'telefon': 'phone', 'phone': 'phone',
-      'mobile': 'mobile', 'mobilnummer': 'mobile',
-      'strasse': 'street', 'street': 'street',
-      'plz': 'zip_code', 'zipcode': 'zip_code',
-      'ort': 'city', 'city': 'city', 'stadt': 'city',
-      'kanton': 'canton', 'canton': 'canton',
+    console.log(`[IMPORT] Headers: ${headerLine.slice(0, 5).join(' | ')}`);
+
+    // Create flexible header mapping
+    const findColumnIndex = (headerLine, keywords) => {
+      return headerLine.findIndex(h => {
+        const lower = h.toLowerCase().trim();
+        return keywords.some(k => lower.includes(k));
+      });
     };
 
-    const mappedHeaders = headers.map(h => fieldMap[h] || h);
+    const firstNameIdx = findColumnIndex(headerLine, ['vorname', 'firstname', 'first name', 'prénom']);
+    const lastNameIdx = findColumnIndex(headerLine, ['nachname', 'lastname', 'last name', 'nom', 'surname']);
+    const emailIdx = findColumnIndex(headerLine, ['email', 'e-mail', 'mail']);
+    const phoneIdx = findColumnIndex(headerLine, ['telefon', 'phone', 'tel']);
+    const mobileIdx = findColumnIndex(headerLine, ['mobile', 'mobilnummer', 'cell', 'handy']);
+    const streetIdx = findColumnIndex(headerLine, ['strasse', 'street', 'address', 'adresse']);
+    const zipIdx = findColumnIndex(headerLine, ['plz', 'zip', 'postcode', 'postal']);
+    const cityIdx = findColumnIndex(headerLine, ['ort', 'city', 'stadt', 'commune']);
+    const cantonIdx = findColumnIndex(headerLine, ['kanton', 'canton']);
 
-    // Get default org
-    let defaultOrgId = null;
-    try {
-      const orgs = await base44.entities.Organization.list('', 1);
-      if (orgs?.length > 0) defaultOrgId = orgs[0].id;
-    } catch (e) {}
+    console.log(`[IMPORT] Columns: first=${firstNameIdx}, last=${lastNameIdx}, email=${emailIdx}`);
 
     // Parse records
     const records = [];
@@ -87,68 +98,103 @@ Deno.serve(async (req) => {
 
     for (let i = 1; i < lines.length; i++) {
       const values = parseCSV(lines[i]);
-      if (values.every(v => !v)) continue;
+      
+      // Skip completely empty rows
+      if (values.every(v => !v || v.trim() === '')) continue;
+
+      // Extract by column index
+      const firstName = firstNameIdx >= 0 ? values[firstNameIdx]?.trim() : '';
+      const lastName = lastNameIdx >= 0 ? values[lastNameIdx]?.trim() : '';
+      const email = emailIdx >= 0 ? values[emailIdx]?.trim() : '';
+      const phone = phoneIdx >= 0 ? values[phoneIdx]?.trim() : '';
+      const mobile = mobileIdx >= 0 ? values[mobileIdx]?.trim() : '';
+      const street = streetIdx >= 0 ? values[streetIdx]?.trim() : '';
+      const zipCode = zipIdx >= 0 ? values[zipIdx]?.trim() : '';
+      const city = cityIdx >= 0 ? values[cityIdx]?.trim() : '';
+      const canton = cantonIdx >= 0 ? values[cantonIdx]?.trim() : '';
+
+      // Skip if no first name AND last name
+      if (!firstName && !lastName) continue;
 
       const record = {};
-      mappedHeaders.forEach((header, idx) => {
-        const val = values[idx]?.trim();
-        if (val && header) record[header] = val;
-      });
+      
+      // Add what we have
+      if (firstName) record.first_name = firstName;
+      if (lastName) record.last_name = lastName;
+      if (email) record.email = email.toLowerCase();
+      if (phone) record.phone = phone;
+      if (mobile) record.mobile = mobile;
+      if (street) record.street = street;
+      if (zipCode) record.zip_code = zipCode;
+      if (city) record.city = city;
+      if (canton) record.canton = canton;
 
-      // Validate only first_name and last_name
-      if (!record.first_name || !record.last_name) continue;
-
-      // Handle email
-      if (record.email) {
-        record.email = record.email.toLowerCase();
-      } else {
-        // Generate unique email from name
-        const base = `${record.first_name.substring(0, 1).toLowerCase()}${record.last_name.toLowerCase().replace(/\s/g, '')}@import.local`;
+      // If email missing, generate from name
+      if (!record.email) {
+        const base = `${(firstName?.[0] || 'x').toLowerCase()}${(lastName || 'user').toLowerCase().replace(/\s/g, '')}@import.local`;
         let email = base;
         let counter = 1;
         while (usedEmails.has(email)) {
-          email = `${record.first_name.substring(0, 1).toLowerCase()}${record.last_name.toLowerCase().replace(/\s/g, '')}${counter}@import.local`;
+          email = `${(firstName?.[0] || 'x').toLowerCase()}${(lastName || 'user').toLowerCase().replace(/\s/g, '')}${counter}@import.local`;
           counter++;
         }
         record.email = email;
       }
 
       usedEmails.add(record.email);
-      record.organization_id = defaultOrgId;
+
+      // Set defaults
       record.customer_type = 'private';
       record.status = 'active';
       record.mandate_status = 'pending';
       record.is_family_member = false;
+      if (defaultOrgId) record.organization_id = defaultOrgId;
 
       records.push(record);
     }
 
-    console.log(`[IMPORT] Importing ${records.length} records`);
+    console.log(`[IMPORT] Parsed ${records.length} valid records`);
 
-    // Insert
+    // Insert in batches
     let successful = 0;
     let failed = 0;
     const failedRows = [];
+    const batchSize = 5;
 
-    for (let i = 0; i < records.length; i++) {
-      try {
-        const result = await base44.entities[entity_name].create(records[i]);
-        if (result?.id) {
-          successful++;
-        } else {
-          failed++;
-          failedRows.push({ email: records[i].email, error: 'No ID' });
-        }
-      } catch (e) {
-        failed++;
-        failedRows.push({ email: records[i].email, error: e.message?.substring(0, 50) });
-      }
+    for (let i = 0; i < records.length; i += batchSize) {
+      const batch = records.slice(i, i + batchSize);
+      console.log(`[IMPORT] Processing batch ${Math.floor(i / batchSize) + 1}...`);
 
-      // Small delay every 10 records
-      if ((i + 1) % 10 === 0) {
-        await new Promise(r => setTimeout(r, 100));
+      const promises = batch.map(record =>
+        base44.entities[entity_name].create(record)
+          .then(result => {
+            if (result?.id) {
+              successful++;
+              return true;
+            }
+            failed++;
+            failedRows.push({ name: `${record.first_name} ${record.last_name}`, error: 'No ID' });
+            return false;
+          })
+          .catch(e => {
+            failed++;
+            failedRows.push({ 
+              name: `${record.first_name} ${record.last_name}`, 
+              error: e.message?.substring(0, 60) || 'Error' 
+            });
+            return false;
+          })
+      );
+
+      await Promise.all(promises);
+      
+      // Delay between batches
+      if (i + batchSize < records.length) {
+        await new Promise(r => setTimeout(r, 500));
       }
     }
+
+    console.log(`[IMPORT] DONE: ${successful} OK, ${failed} failed`);
 
     return Response.json({
       status: 'success',
@@ -158,10 +204,11 @@ Deno.serve(async (req) => {
         failed: failed,
         success_rate: records.length > 0 ? ((successful / records.length) * 100).toFixed(0) : 0
       },
-      details: { failed_rows: failedRows.slice(0, 10) }
+      details: { failed_rows: failedRows.slice(0, 20) }
     });
     
   } catch (error) {
+    console.error('[IMPORT] Fatal error:', error.message);
     return Response.json({ status: 'error', error: error.message }, { status: 500 });
   }
 });
