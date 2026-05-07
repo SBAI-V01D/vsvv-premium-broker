@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
   ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink, AlertCircle,
-  Megaphone, TrendingUp, Mail, Zap, Target, ShieldCheck, BarChart3
+  Megaphone, TrendingUp, Mail, Zap, Target, ShieldCheck, BarChart3, User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
+import { resolveRole, ROLE_LABELS, ROLE_COLORS } from '@/lib/rbac';
 
 // Grouped navigation with section separators
 const navGroups = [
@@ -60,7 +61,16 @@ const navGroups = [
 
 export default function Sidebar({ onNavigate }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const location = useLocation();
+
+  useEffect(() => {
+    base44.auth.me().then(u => setCurrentUser(u)).catch(() => {});
+  }, []);
+
+  const role = resolveRole(currentUser);
+  const roleLabel = ROLE_LABELS[role] || '';
+  const roleColor = ROLE_COLORS[role] || '';
 
   return (
     <aside className={cn(
@@ -126,8 +136,24 @@ export default function Sidebar({ onNavigate }) {
         </a>
       </div>
 
-      {/* Bottom */}
+      {/* User Info + Bottom */}
       <div className="p-2 border-t border-sidebar-border space-y-1">
+        {/* User card */}
+        {!collapsed && currentUser && (
+          <div className="px-3 py-2.5 mb-1 rounded-lg bg-sidebar-accent/50">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-full bg-sidebar-primary/30 flex items-center justify-center flex-shrink-0">
+                <User className="w-3.5 h-3.5 text-sidebar-primary" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-sidebar-foreground truncate">{currentUser.full_name || currentUser.email}</p>
+                <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold border mt-0.5 ${roleColor}`}>
+                  {roleLabel}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
         <button
           onClick={() => base44.auth.logout()}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all w-full"

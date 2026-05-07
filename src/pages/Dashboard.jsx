@@ -12,7 +12,7 @@ import { LayoutDashboard, Target, Users, ShieldCheck, Settings, BarChart3, Crown
 import { cn } from '@/lib/utils'
 import { buildLifecycleMap, filterTruePipelineLeads, LIFECYCLE_STATES } from '@/lib/lifecycle'
 
-import TabExecutive  from '@/components/dashboard/tabs/TabExecutive'
+import TabExecutive  from '@/components/dashboard/tabs/TabExecutive.jsx'
 import TabSales      from '@/components/dashboard/tabs/TabSales'
 import TabCustomers  from '@/components/dashboard/tabs/TabCustomers'
 import TabCoverage   from '@/components/dashboard/tabs/TabCoverage'
@@ -154,7 +154,6 @@ export default function Dashboard() {
     conversionRate, customersWithCriticalGaps, expiringContracts,
     totalMonthlyPremium, totalYearlyPremium, mtdCommissions, yearlyCommissionForecast,
     openTasks, pendingApplications, contractsWithoutDoc, lifecycleMap,
-    // Enterprise additions — health score engine inputs
     documents, tasks,
   }
 
