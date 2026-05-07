@@ -154,23 +154,20 @@ const RecoveryRoutes = () => {
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* ULTRA-MINIMAL - ZERO DEPENDENCIES */}
-        <Route path="/safe" element={<UltraMinimalSafe />} />
-        
-        {/* Normal app with providers */}
-        <Route element={<AppWithProviders />} />
-      </Routes>
-    </Router>
-  )
-}
-
-function AppWithProviders() {
-  return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
-        <AuthenticatedApp />
+        <Router>
+          <Routes>
+            {/* ULTRA-MINIMAL - ZERO DEPENDENCIES */}
+            <Route path="/safe" element={<UltraMinimalSafe />} />
+            
+            {/* Portal routes - public, no auth required */}
+            <PortalRoutes />
+            
+            {/* Main authenticated app with sidebar */}
+            <AuthenticatedApp />
+          </Routes>
+        </Router>
         <Toaster />
       </QueryClientProvider>
     </AuthProvider>
