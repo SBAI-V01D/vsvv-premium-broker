@@ -19,7 +19,6 @@ import TabCoverage   from '@/components/dashboard/tabs/TabCoverage'
 import TabOperations from '@/components/dashboard/tabs/TabOperations'
 import TabAnalytics  from '@/components/dashboard/tabs/TabAnalytics'
 import TabCEO        from '@/components/dashboard/tabs/TabCEO'
-
 const TABS = [
   { id: 'ceo',        label: 'CEO',          icon: Crown },
   { id: 'executive',  label: 'BrokerOS',     icon: LayoutDashboard },
@@ -155,6 +154,8 @@ export default function Dashboard() {
     conversionRate, customersWithCriticalGaps, expiringContracts,
     totalMonthlyPremium, totalYearlyPremium, mtdCommissions, yearlyCommissionForecast,
     openTasks, pendingApplications, contractsWithoutDoc, lifecycleMap,
+    // Enterprise additions — health score engine inputs
+    documents, tasks,
   }
 
   // ── Task mutations ────────────────────────────────────────────────────────
