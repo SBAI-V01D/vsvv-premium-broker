@@ -1,3 +1,4 @@
+import React from 'react'
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -5,10 +6,9 @@ import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-route
 import PageNotFound from './lib/PageNotFound'
 import { AuthProvider, useAuth } from '@/lib/AuthContext'
 import UserNotRegisteredError from '@/components/UserNotRegisteredError'
+import ErrorBoundary from '@/components/ErrorBoundary'
 
 import AppLayout from './components/layout/AppLayout'
-import RecoveryAppShell from './components/layout/RecoveryAppShell'
-import UltraMinimalSafe from './pages/UltraMinimalSafe'
 import Dashboard from './pages/Dashboard.jsx'
 import Customers from './pages/Customers'
 import CustomerDetail from './pages/CustomerDetail'
@@ -41,21 +41,6 @@ import PortalDocuments from './pages/portal/PortalDocuments.jsx'
 import PortalProfile from './pages/portal/PortalProfile.jsx'
 import PortalSetup from './pages/portal/PortalSetup'
 import PortalResetPassword from './pages/portal/PortalResetPassword'
-
-const PortalRoutes = () => (
-  <Routes>
-    <Route path="/portal/setup" element={<PortalSetup />} />
-    <Route path="/portal/reset-password" element={<PortalResetPassword />} />
-    <Route path="/portal" element={<PortalRoot />}>
-      <Route index element={<PortalDashboard />} />
-      <Route path="vertraege" element={<PortalContracts />} />
-      <Route path="antraege" element={<PortalApplications />} />
-      <Route path="dokumente" element={<PortalDocuments />} />
-      <Route path="profil" element={<PortalProfile />} />
-      <Route path="dashboard" element={<PortalDashboard />} />
-    </Route>
-  </Routes>
-)
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth()
@@ -98,8 +83,7 @@ const AuthenticatedApp = () => {
       navigateToLogin()
       return null
     }
-    // For other auth errors, render recovery mode
-    return <RecoveryRoutes />
+    return <UserNotRegisteredError />
   }
 
   return (
@@ -133,54 +117,28 @@ const AuthenticatedApp = () => {
   )
 }
 
-const RecoveryRoutes = () => {
-  return (
-    <Routes>
-      <Route element={<RecoveryAppShell />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/kunden" element={<Customers />} />
-        <Route path="/kunden/:id" element={<CustomerDetail />} />
-        <Route path="/kunden/:customerId/360" element={<Customer360 />} />
-        <Route path="/vertraege" element={<Contracts />} />
-        <Route path="/antraege" element={<Applications />} />
-        <Route path="/aufgaben" element={<Tasks />} />
-        <Route path="/dokumente" element={<Documents />} />
-        <Route path="/email-templates" element={<EmailTemplates />} />
-        <Route path="/email-kampagnen" element={<EmailCampaigns />} />
-        <Route path="/status-verwaltung" element={<StatusVerwaltung />} />
-        <Route path="/provisionen-courtagen" element={<CommissionsAndCourtage />} />
-        <Route path="/berater-organisation" element={<BeratungOrganisation />} />
-        <Route path="/finanz-dashboard" element={<FinanceDashboard />} />
-        <Route path="/ceo-dashboard" element={<CEODashboard />} />
-        <Route path="/ceo-cockpit" element={<CEOCockpit />} />
-        <Route path="/advanced-dashboard" element={<AdvancedDashboard />} />
-        <Route path="/execution-mode" element={<ExecutionMode />} />
-        <Route path="/sales-autopilot" element={<SalesAutopilot />} />
-        <Route path="/leads" element={<Leads />} />
-        <Route path="/coverage-intelligence" element={<CoverageIntelligence />} />
-        <Route path="/system-logs" element={<SystemLogs />} />
-      </Route>
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
-  )
-}
-
 function App() {
+  React.useEffect(() => {
+    // Clear stale query cache on mount
+    queryClientInstance.clear()
+    // Clear localStorage recovery flags
+    localStorage.removeItem('recovery_mode_enabled')
+    localStorage.removeItem('bypass_visibility')
+  }, [])
+
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <Routes>
-            {/* ULTRA-MINIMAL - ZERO DEPENDENCIES */}
-            <Route path="/safe" element={<UltraMinimalSafe />} />
-            
-            {/* All other routes handled by AuthenticatedApp */}
-            <Route path="*" element={<AuthenticatedApp />} />
-          </Routes>
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <Router>
+            <Routes>
+              <Route path="*" element={<AuthenticatedApp />} />
+            </Routes>
+          </Router>
+          <Toaster />
+        </QueryClientProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   )
 }
 
