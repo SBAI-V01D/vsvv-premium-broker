@@ -166,32 +166,47 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
 
         {step === 'summary' && result && (
           <div className="space-y-4">
+            {/* SUCCESS BANNER */}
+            {result.summary.successful > 0 && (
+              <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-300 rounded-lg">
+                <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-green-900">Import erfolgreich!</p>
+                  <p className="text-sm text-green-800 mt-1">
+                    {result.summary.successful} Kunde{result.summary.successful !== 1 ? 'n' : ''} sind jetzt im System verfügbar.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* METRICS */}
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-xs text-green-700 font-medium">Erfolgreich importiert</p>
+                <p className="text-xs text-green-700 font-medium">✓ Importiert</p>
                 <p className="text-2xl font-bold text-green-600">{result.summary.successful}</p>
               </div>
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-xs text-blue-700 font-medium">Duplikate erkannt</p>
+                <p className="text-xs text-blue-700 font-medium">⚠ Duplikate</p>
                 <p className="text-2xl font-bold text-blue-600">{result.summary.duplicates}</p>
               </div>
               {result.summary.failed > 0 && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-xs text-red-700 font-medium">Fehlerhafte Zeilen</p>
+                  <p className="text-xs text-red-700 font-medium">✗ Fehler</p>
                   <p className="text-2xl font-bold text-red-600">{result.summary.failed}</p>
                 </div>
               )}
               {result.summary.skipped > 0 && (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <p className="text-xs text-amber-700 font-medium">Übersprungen</p>
+                  <p className="text-xs text-amber-700 font-medium">⊘ Übersprungen</p>
                   <p className="text-2xl font-bold text-amber-600">{result.summary.skipped}</p>
                 </div>
               )}
             </div>
 
+            {/* ERROR DETAILS */}
             {result.details.failed_records.length > 0 && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm font-medium text-red-900 mb-2">Fehlerhafte Zeilen:</p>
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg max-h-40 overflow-y-auto">
+                <p className="text-sm font-medium text-red-900 mb-2">✗ Fehlerhafte Zeilen:</p>
                 <div className="space-y-1 text-xs text-red-700">
                   {result.details.failed_records.map((rec, i) => (
                     <p key={i}>Zeile {rec.row}: {rec.error}</p>
@@ -200,20 +215,22 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
               </div>
             )}
 
+            {/* DUPLICATES */}
             {result.details.duplicates.length > 0 && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm font-medium text-blue-900 mb-2">Erkannte Duplikate:</p>
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg max-h-40 overflow-y-auto">
+                <p className="text-sm font-medium text-blue-900 mb-2">⚠ Erkannte Duplikate:</p>
                 <div className="space-y-1 text-xs text-blue-700">
                   {result.details.duplicates.map((dup, i) => (
-                    <p key={i}>Zeile {dup.row}: {dup.name} ({dup.email})</p>
+                    <p key={i}>Zeile {dup.row}: {dup.name} ({dup.email}) — bereits im System</p>
                   ))}
                 </div>
               </div>
             )}
 
-            <div className="flex justify-end gap-2">
-              <Button onClick={closeDialog}>
-                Fertig
+            {/* ACTION BUTTON */}
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button onClick={closeDialog} className="bg-green-600 hover:bg-green-700">
+                ✓ Importierte Kunden ansehen
               </Button>
             </div>
           </div>

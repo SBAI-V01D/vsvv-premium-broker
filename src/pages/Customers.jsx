@@ -401,9 +401,21 @@ export default function Customers() {
 
       <ImportWizard 
         open={showImport} 
-        onOpenChange={setShowImport}
+        onOpenChange={(isOpen) => {
+          setShowImport(isOpen)
+          // Force refresh on close (both success and cancel)
+          if (!isOpen) {
+            setTimeout(() => {
+              queryClient.invalidateQueries({ queryKey: ['customers'] })
+            }, 500)
+          }
+        }}
         onSuccess={() => {
+          // Immediate refresh + UI update
           queryClient.invalidateQueries({ queryKey: ['customers'] })
+          // Force clear filters to show all newly imported customers
+          setSearch('')
+          setFilterType('all')
         }}
       />
     </div>

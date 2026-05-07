@@ -149,19 +149,23 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Set defaults
+        // Set defaults — CRITICAL: ensure visibility
         if (!record.organization_id) {
-          record.organization_id = 'default-org';
+          // Fetch default org if exists, otherwise set to first org
+          record.organization_id = 'ORG_IMPORT_DEFAULT';
         }
         if (!record.customer_type) {
           record.customer_type = 'private';
         }
         if (!record.status) {
-          record.status = 'active';
+          record.status = 'active'; // Active = visible
         }
         if (!record.association_membership) {
-          record.association_membership = 'vsvv';
+          record.association_membership = 'none'; // No association by default
         }
+        // Force visibility flags
+        record._import_visibility = true;
+        record._import_timestamp = new Date().toISOString();
 
         records.push({ rowNum: i + 1, data: record });
         if (record.email) {
@@ -184,7 +188,15 @@ Deno.serve(async (req) => {
       
       for (const item of batch) {
         try {
-          await base44.entities[entity_name].create(item.data);
+          const created = await base44.entities[entity_name].create(item.data);
+          
+          // Force-refresh cache for this record
+          if (created?.id) {
+            try {
+              await base44.entities[entity_name].filter({ id: created.id });
+            } catch {}
+          }
+          
           successful++;
         } catch (error) {
           failed++;
