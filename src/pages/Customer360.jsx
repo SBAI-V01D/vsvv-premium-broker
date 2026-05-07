@@ -26,7 +26,11 @@ export default function Customer360() {
 
   const { data: contracts = [] } = useQuery({
     queryKey: ['contracts', customerId],
-    queryFn: () => base44.entities.Contract.filter({ customer_id: customerId }),
+    queryFn: () => base44.entities.Contract.list(),
+    select: (data) => data.filter(c =>
+      c.customer_id === customerId ||
+      c.primary_customer_id === customerId
+    ),
   })
 
   const { data: applications = [] } = useQuery({

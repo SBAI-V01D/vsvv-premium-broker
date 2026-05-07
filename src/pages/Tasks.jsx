@@ -8,14 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Upload, FileText, ExternalLink, AlertCircle } from 'lucide-react'
+import { FileText, AlertCircle, ListTodo, FileWarning } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+// Contract workflow task types
+const CONTRACT_TASK_TYPES = ['renewal', 'health_declaration']
 
 export default function Tasks() {
   const queryClient = useQueryClient()
   const [selectedTask, setSelectedTask] = useState(null)
   const [formData, setFormData] = useState({ status: '', notes: '', file: null, due_date: '', completion_date: '', assigned_to: '' })
-  const [uploading, setUploading] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
+  const [categoryTab, setCategoryTab] = useState('admin')
 
   // Fetch current user
   useEffect(() => {
@@ -78,9 +82,14 @@ export default function Tasks() {
     return `${day}.${month}.${year}`
   }
 
-  const openTasks = tasks.filter(t => t.status === 'open')
-  const inProgressTasks = tasks.filter(t => t.status === 'in_progress')
-  const completedTasks = tasks.filter(t => t.status === 'completed')
+  // Split by category
+  const adminTasks = tasks.filter(t => !CONTRACT_TASK_TYPES.includes(t.task_type))
+  const contractTasks = tasks.filter(t => CONTRACT_TASK_TYPES.includes(t.task_type))
+  const activeCategoryTasks = categoryTab === 'admin' ? adminTasks : contractTasks
+
+  const openTasks = activeCategoryTasks.filter(t => t.status === 'open')
+  const inProgressTasks = activeCategoryTasks.filter(t => t.status === 'in_progress')
+  const completedTasks = activeCategoryTasks.filter(t => t.status === 'completed')
 
   const handleTaskClick = (task) => {
     setSelectedTask(task)
@@ -90,10 +99,6 @@ export default function Tasks() {
   const handleSave = () => {
     updateMutation.mutate(formData)
   }
-
-  const openTasksCount = openTasks.length
-  const inProgressTasksCount = inProgressTasks.length
-  const completedTasksCount = completedTasks.length
 
   if (!currentUser) {
     return (
@@ -107,8 +112,46 @@ export default function Tasks() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Meine Aufgaben</h1>
-        <p className="text-muted-foreground mt-1">{tasks.length} Aufgaben für Sie</p>
+        <h1 className="text-3xl font-bold">Aufgaben</h1>
+        <p className="text-muted-foreground mt-1">{tasks.length} Aufgaben total</p>
+      </div>
+
+      {/* Category Tabs */}
+      <div className="flex items-center gap-1 mb-6 border-b border-border">
+        <button
+          onClick={() => setCategoryTab('admin')}
+          className={cn(
+            'flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
+            categoryTab === 'admin'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <ListTodo className="w-4 h-4" />
+          Administrative Aufgaben
+          <span className={cn('ml-1.5 px-1.5 py-0.5 text-[10px] rounded-full font-semibold',
+            categoryTab === 'admin' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+          )}>
+            {adminTasks.filter(t => t.status !== 'completed').length}
+          </span>
+        </button>
+        <button
+          onClick={() => setCategoryTab('contract')}
+          className={cn(
+            'flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
+            categoryTab === 'contract'
+              ? 'border-orange-500 text-orange-600'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <FileWarning className="w-4 h-4" />
+          Vertrags-Workflows
+          <span className={cn('ml-1.5 px-1.5 py-0.5 text-[10px] rounded-full font-semibold',
+            categoryTab === 'contract' ? 'bg-orange-100 text-orange-700' : 'bg-muted text-muted-foreground'
+          )}>
+            {contractTasks.filter(t => t.status !== 'completed').length}
+          </span>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
