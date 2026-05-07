@@ -20,9 +20,11 @@ import TabOperations from '@/components/dashboard/tabs/TabOperations'
 import TabAnalytics  from '@/components/dashboard/tabs/TabAnalytics'
 import TabCEO        from '@/components/dashboard/tabs/TabCEO'
 import MasterControlDashboard from '@/components/dashboard/MasterControlDashboard'
+import RawDataDiagnostic from '@/components/admin/RawDataDiagnostic'
 import { Layers } from 'lucide-react'
 
 const TABS = [
+  { id: 'diagnostic', label: '⚙️ Diagnostic', icon: Layers },
   { id: 'master',     label: 'Command Center', icon: Layers },
   { id: 'ceo',        label: 'CEO',          icon: Crown },
   { id: 'executive',  label: 'BrokerOS',     icon: LayoutDashboard },
@@ -276,6 +278,7 @@ export default function Dashboard() {
 
       {/* ── TAB CONTENT ──────────────────────────────────────────────────── */}
       <div className="pt-6">
+        {activeTab === 'diagnostic' && <RawDataDiagnostic />}
         {activeTab === 'master'     && <MasterControlDashboard data={sharedData} onTaskClick={handleTaskClick} />}
         {activeTab === 'ceo'        && <TabCEO />}
         {activeTab === 'executive'  && <TabExecutive  data={sharedData} />}
