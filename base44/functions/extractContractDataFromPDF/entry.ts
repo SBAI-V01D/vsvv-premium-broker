@@ -82,15 +82,15 @@ Antworte AUSSCHLIESSLICH mit einem JSON-Objekt. Null wenn nicht vorhanden.`,
           address: { type: ['string', 'null'] },
           notes: { type: ['string', 'null'] },
           additional_products: {
-            type: ['array', 'null'],
+            type: 'array',
             items: {
               type: 'object',
               properties: {
                 product: { type: 'string' },
-                policy_number: { type: ['string', 'null'] },
-                premium_monthly: { type: ['number', 'null'] },
-                premium_yearly: { type: ['number', 'null'] },
-                notes: { type: ['string', 'null'] }
+                policy_number: { type: 'string' },
+                premium_monthly: { type: 'number' },
+                premium_yearly: { type: 'number' },
+                notes: { type: 'string' }
               }
             }
           }
