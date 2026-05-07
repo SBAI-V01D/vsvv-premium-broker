@@ -161,6 +161,18 @@ export default function Customers() {
           <Button variant="outline" onClick={() => setShowImport(true)}>
             <Upload className="w-4 h-4 mr-2" /> Importieren
           </Button>
+          <Button variant="outline" onClick={async () => {
+            if (!confirm('Letzte 960 Kunden wirklich löschen?')) return;
+            try {
+              const res = await base44.functions.invoke('deleteRecentImport', {});
+              alert(`✓ ${res.data.deleted} Kunden gelöscht`);
+              queryClient.invalidateQueries({ queryKey: ['customers'] });
+            } catch (e) {
+              alert(`Fehler: ${e.message}`);
+            }
+          }} className="text-red-600 hover:text-red-700">
+            ↶ Undo
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button>
