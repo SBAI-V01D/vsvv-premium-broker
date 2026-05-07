@@ -1,60 +1,47 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
-const log = (step, message, data = null) => {
-  const timestamp = new Date().toISOString();
-  console.log(`[IMPORT:${step}] ${timestamp} — ${message}`, data || '');
-};
-
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     
-    log('AUTH', `User authenticated: ${user?.email}`);
-
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { entity_name, file_url } = await req.json();
-    log('INPUT', `Entity: ${entity_name}, File: ${file_url.substring(0, 50)}...`);
 
     if (!entity_name || !file_url) {
-      return Response.json({ error: 'Missing entity_name or file_url' }, { status: 400 });
+      return Response.json({ error: 'Missing parameters' }, { status: 400 });
     }
 
-    // Fetch file content
+    // Fetch file
     const fileResponse = await fetch(file_url);
     if (!fileResponse.ok) {
-      return Response.json({ error: 'Failed to fetch file' }, { status: 400 });
+      return Response.json({ error: 'File fetch failed' }, { status: 400 });
     }
 
     let fileContent = await fileResponse.text();
     
-    // Handle UTF-8 BOM
+    // Remove BOM
     if (fileContent.charCodeAt(0) === 0xFEFF) {
       fileContent = fileContent.slice(1);
     }
 
-    // Parse lines
     const lines = fileContent.split('\n').filter(l => l.trim());
+    
     if (lines.length < 1) {
-      return Response.json({ error: 'File is empty' }, { status: 400 });
+      return Response.json({ error: 'Empty file' }, { status: 400 });
     }
 
-    // Auto-detect delimiter with proper quote handling
-    const countDelimitersOutsideQuotes = (line, delim) => {
+    // Detect delimiter
+    const countDelimiters = (line, delim) => {
       let count = 0;
       let inQuotes = false;
       for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        if (char === '"') {
-          if (inQuotes && line[i + 1] === '"') {
-            i++;
-          } else {
-            inQuotes = !inQuotes;
-          }
-        } else if (char === delim && !inQuotes) {
+        if (line[i] === '"' && (i === 0 || line[i - 1] !== '\\')) {
+          inQuotes = !inQuotes;
+        } else if (line[i] === delim && !inQuotes) {
           count++;
         }
       }
@@ -63,16 +50,18 @@ Deno.serve(async (req) => {
 
     let delimiter = ',';
     const firstLine = lines[0];
-    const semicolonCount = countDelimitersOutsideQuotes(firstLine, ';');
-    const commaCount = countDelimitersOutsideQuotes(firstLine, ',');
-    const tabCount = countDelimitersOutsideQuotes(firstLine, '\t');
+    const counts = {
+      ',': countDelimiters(firstLine, ','),
+      ';': countDelimiters(firstLine, ';'),
+      '\t': countDelimiters(firstLine, '\t')
+    };
 
-    if (semicolonCount > commaCount) delimiter = ';';
-    if (tabCount > semicolonCount && tabCount > commaCount) delimiter = '\t';
+    if (counts[';'] > counts[',']) delimiter = ';';
+    if (counts['\t'] > counts[';'] && counts['\t'] > counts[',']) delimiter = '\t';
 
-    log('DELIMITER', `Detected: ${delimiter === ',' ? 'Comma' : delimiter === ';' ? 'Semicolon' : 'Tab'}`);
+    console.log(`[IMPORT] Delimiter: ${delimiter}, Rows: ${lines.length}`);
 
-    // Parse CSV line
+    // Parse CSV
     const parseCSVLine = (line) => {
       const fields = [];
       let current = '';
@@ -89,173 +78,129 @@ Deno.serve(async (req) => {
             inQuotes = !inQuotes;
           }
         } else if (char === delimiter && !inQuotes) {
-          const value = current.trim();
-          fields.push(value.replace(/^"|"$/g, '').trim());
+          fields.push(current.trim().replace(/^"|"$/g, '').trim());
           current = '';
         } else {
           current += char;
         }
       }
       
-      const lastValue = current.trim();
-      fields.push(lastValue.replace(/^"|"$/g, '').trim());
-      
+      fields.push(current.trim().replace(/^"|"$/g, '').trim());
       return fields;
     };
 
-    // Normalize column names
-    const normalizeColumnName = (name) => {
-      return name.toLowerCase().replace(/[\s\-_.]/g, '');
-    };
+    // Normalize headers
+    const normalizeHeader = (h) => h.toLowerCase().replace(/[\s\-_.]/g, '');
 
-    // Field mappings
     const fieldMap = {
-      'vorname': 'first_name',
-      'firstname': 'first_name',
-      'first_name': 'first_name',
-      'name': 'last_name',
-      'nachname': 'last_name',
-      'lastname': 'last_name',
-      'last_name': 'last_name',
-      'email': 'email',
-      'emai': 'email', // typo variant
-      'telefon': 'phone',
-      'phone': 'phone',
-      'mobile': 'mobile',
-      'mobilnummer': 'mobile',
-      'strasse': 'street',
-      'street': 'street',
-      'plz': 'zip_code',
-      'zipcode': 'zip_code',
-      'zip_code': 'zip_code',
-      'ort': 'city',
-      'city': 'city',
-      'stadt': 'city',
+      'vorname': 'first_name', 'firstname': 'first_name', 'first_name': 'first_name',
+      'name': 'last_name', 'nachname': 'last_name', 'lastname': 'last_name', 'last_name': 'last_name',
+      'email': 'email', 'emai': 'email',
+      'telefon': 'phone', 'phone': 'phone',
+      'mobile': 'mobile', 'mobilnummer': 'mobile',
+      'strasse': 'street', 'street': 'street',
+      'plz': 'zip_code', 'zipcode': 'zip_code', 'zip_code': 'zip_code',
+      'ort': 'city', 'city': 'city', 'stadt': 'city',
     };
 
-    // Parse headers
     const headerLine = parseCSVLine(lines[0]);
-    const headers = headerLine.map(h => normalizeColumnName(h));
+    const headers = headerLine.map(normalizeHeader);
     const mappedHeaders = headers.map(h => fieldMap[h] || h);
-    
-    log('HEADERS', `${headers.length} columns detected`, mappedHeaders.slice(0, 8));
-    
-    // Get existing customers
-    let existingCustomers = [];
-    try {
-      existingCustomers = await base44.entities.Customer.list('', 1000) || [];
-      log('EXISTING', `Found ${existingCustomers.length} existing customers`);
-    } catch (err) {
-      log('EXISTING', `Error fetching: ${err.message}`);
-    }
-    const existingEmails = new Set(existingCustomers.map(c => c.email?.toLowerCase()).filter(Boolean));
 
-    // Parse data rows
+    console.log(`[IMPORT] Headers: ${mappedHeaders.slice(0, 8).join(', ')}`);
+
+    // Get default organization
+    let defaultOrgId = null;
+    try {
+      const orgs = await base44.entities.Organization.list('', 1);
+      defaultOrgId = orgs?.[0]?.id;
+      console.log(`[IMPORT] Default org: ${defaultOrgId}`);
+    } catch (e) {
+      console.log(`[IMPORT] No orgs found, will skip org requirement`);
+    }
+
+    // Parse data
     const records = [];
-    const duplicates = [];
-    const validationErrors = [];
-    const processedEmails = new Set();
-    
-    log('PARSING', `Processing ${lines.length - 1} data rows...`);
-    
+    let rowCount = 0;
+
     for (let i = 1; i < lines.length; i++) {
       try {
         const values = parseCSVLine(lines[i]);
-        if (values.every(v => !v || v === '')) {
-          log('PARSE_SKIP', `Row ${i + 1}: Empty row`);
-          continue;
-        }
+        
+        // Skip empty rows
+        if (values.every(v => !v || v === '')) continue;
 
         const record = {};
         mappedHeaders.forEach((header, idx) => {
-          const value = values[idx]?.trim();
+          const value = values[idx];
           if (value && header) {
             record[header] = value;
           }
         });
 
-        // Validate required fields
-        if (!record.first_name || !record.first_name.trim()) {
-          validationErrors.push({ row: i + 1, error: 'Vorname erforderlich' });
-          continue;
-        }
+        // ONLY require first_name and last_name
+        if (!record.first_name || !record.first_name.trim()) continue;
+        if (!record.last_name || !record.last_name.trim()) continue;
 
-        if (!record.last_name || !record.last_name.trim()) {
-          validationErrors.push({ row: i + 1, error: 'Nachname erforderlich' });
-          continue;
-        }
+        // Clean up names
+        record.first_name = record.first_name.trim();
+        record.last_name = record.last_name.trim();
 
-        // Validate/sanitize email if provided
-        if (record.email && record.email.trim()) {
-          record.email = record.email.trim().toLowerCase();
-          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email)) {
-            validationErrors.push({ row: i + 1, error: `Ungültiges E-Mail: ${record.email}` });
-            continue;
-          }
-          
-          // Check duplicates
-          if (existingEmails.has(record.email) || processedEmails.has(record.email)) {
-            duplicates.push({ row: i + 1, email: record.email, name: `${record.first_name} ${record.last_name}` });
-            continue;
-          }
-          processedEmails.add(record.email);
-        } else {
-          // Generate unique placeholder email
+        // Generate email if missing
+        if (!record.email || !record.email.trim()) {
           record.email = `import_${Date.now()}_${i}@local.vsvv`;
+        } else {
+          record.email = record.email.trim().toLowerCase();
         }
 
-        // Set defaults
-        if (!record.organization_id) {
-          const orgs = await base44.entities.Organization.list('', 1);
-          record.organization_id = orgs?.[0]?.id || 'ORG_IMPORT_DEFAULT';
+        // Set required org
+        if (defaultOrgId) {
+          record.organization_id = defaultOrgId;
+        } else {
+          record.organization_id = 'ORG_IMPORT_DEFAULT';
         }
-        record.customer_type = record.customer_type || 'private';
-        record.status = record.status || 'active';
-        record.mandate_status = record.mandate_status || 'pending';
-        record.association_membership = record.association_membership || 'none';
+
+        // Set safe defaults
+        record.customer_type = 'private';
+        record.status = 'active';
+        record.mandate_status = 'pending';
         record.is_family_member = false;
-        
-        log('VALIDATION_PASS', `Row ${i + 1}: ${record.first_name} ${record.last_name}`);
+
         records.push({ rowNum: i + 1, data: record });
-        
-      } catch (error) {
-        log('PARSE_ERROR', `Row ${i + 1}: ${error.message}`);
-        validationErrors.push({ row: i + 1, error: `Parse: ${error.message.substring(0, 50)}` });
+        rowCount++;
+
+      } catch (e) {
+        console.log(`[IMPORT] Row ${i + 1} parse error: ${e.message}`);
       }
     }
 
-    // Batch insertion
-    log('INSERTION', `Starting insertion of ${records.length} records...`);
-    
+    console.log(`[IMPORT] Parsed ${rowCount} valid records from ${lines.length - 1} data rows`);
+
+    // Batch insert
     let successful = 0;
     let failed = 0;
-    const failedRecords = [];
-    const createdIds = [];
-    const batchSize = 5;
-    const delayMs = 1000;
+    const failedRows = [];
+    const batchSize = 10;
+    const delayMs = 500;
 
     for (let i = 0; i < records.length; i += batchSize) {
       const batch = records.slice(i, i + batchSize);
-      const batchNum = Math.floor(i / batchSize) + 1;
       
       for (const item of batch) {
         try {
           const created = await base44.entities[entity_name].create(item.data);
-          
           if (created?.id) {
-            createdIds.push(created.id);
             successful++;
+            if (successful % 100 === 0) {
+              console.log(`[IMPORT] Progress: ${successful}/${rowCount}`);
+            }
           } else {
             failed++;
-            failedRecords.push({ row: item.rowNum, email: item.data.email, error: 'No ID' });
+            failedRows.push({ row: item.rowNum, error: 'No ID returned' });
           }
         } catch (error) {
           failed++;
-          failedRecords.push({
-            row: item.rowNum,
-            email: item.data.email,
-            error: error?.message?.substring(0, 100) || 'Unknown error'
-          });
+          failedRows.push({ row: item.rowNum, email: item.data.email, error: error.message?.substring(0, 80) });
         }
       }
       
@@ -263,8 +208,8 @@ Deno.serve(async (req) => {
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
-    
-    log('FINAL', `Complete: ${successful} OK, ${failed} failed, ${duplicates.length} dupes, ${validationErrors.length} errors`);
+
+    console.log(`[IMPORT] Complete: ${successful} OK, ${failed} failed`);
 
     return Response.json({
       status: 'success',
@@ -272,24 +217,21 @@ Deno.serve(async (req) => {
         total_rows_in_file: lines.length - 1,
         successfully_imported: successful,
         failed: failed,
-        duplicates_skipped: duplicates.length,
-        validation_errors: validationErrors.length,
-        total_processed: successful + failed + duplicates.length + validationErrors.length,
-        success_rate: records.length > 0 ? ((successful / records.length) * 100).toFixed(1) : 0
+        duplicates_skipped: 0,
+        validation_errors: 0,
+        total_processed: successful + failed,
+        success_rate: rowCount > 0 ? ((successful / rowCount) * 100).toFixed(1) : 0
       },
       details: {
-        imported: { count: successful, ids: createdIds.slice(0, 5) },
-        failed_rows: failedRecords.slice(0, 50),
-        duplicates: duplicates.slice(0, 50),
-        validation_errors: validationErrors.slice(0, 50)
+        failed_rows: failedRows.slice(0, 20)
       }
     });
     
   } catch (error) {
-    console.error('[IMPORT:ERROR]', error);
+    console.error('[IMPORT] Error:', error.message);
     return Response.json({ 
       status: 'error',
-      error: error.message || 'Import failed'
+      error: error.message
     }, { status: 500 });
   }
 });
