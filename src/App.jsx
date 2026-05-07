@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext'
 import UserNotRegisteredError from '@/components/UserNotRegisteredError'
 
 import AppLayout from './components/layout/AppLayout'
+import RecoveryAppShell from './components/layout/RecoveryAppShell'
 import Dashboard from './pages/Dashboard.jsx'
 import Customers from './pages/Customers'
 import CustomerDetail from './pages/CustomerDetail'
@@ -83,11 +84,45 @@ const AuthenticatedApp = () => {
       navigateToLogin()
       return null
     }
+    // For other auth errors, render recovery mode
+    return <RecoveryRoutes />
   }
 
   return (
     <Routes>
       <Route element={<AppLayout />}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/kunden" element={<Customers />} />
+        <Route path="/kunden/:id" element={<CustomerDetail />} />
+        <Route path="/kunden/:customerId/360" element={<Customer360 />} />
+        <Route path="/vertraege" element={<Contracts />} />
+        <Route path="/antraege" element={<Applications />} />
+        <Route path="/aufgaben" element={<Tasks />} />
+        <Route path="/dokumente" element={<Documents />} />
+        <Route path="/email-templates" element={<EmailTemplates />} />
+        <Route path="/email-kampagnen" element={<EmailCampaigns />} />
+        <Route path="/status-verwaltung" element={<StatusVerwaltung />} />
+        <Route path="/provisionen-courtagen" element={<CommissionsAndCourtage />} />
+        <Route path="/berater-organisation" element={<BeratungOrganisation />} />
+        <Route path="/finanz-dashboard" element={<FinanceDashboard />} />
+        <Route path="/ceo-dashboard" element={<CEODashboard />} />
+        <Route path="/ceo-cockpit" element={<CEOCockpit />} />
+        <Route path="/advanced-dashboard" element={<AdvancedDashboard />} />
+        <Route path="/execution-mode" element={<ExecutionMode />} />
+        <Route path="/sales-autopilot" element={<SalesAutopilot />} />
+        <Route path="/leads" element={<Leads />} />
+        <Route path="/coverage-intelligence" element={<CoverageIntelligence />} />
+        <Route path="/system-logs" element={<SystemLogs />} />
+      </Route>
+      <Route path="*" element={<PageNotFound />} />
+    </Routes>
+  )
+}
+
+const RecoveryRoutes = () => {
+  return (
+    <Routes>
+      <Route element={<RecoveryAppShell />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/kunden" element={<Customers />} />
         <Route path="/kunden/:id" element={<CustomerDetail />} />
