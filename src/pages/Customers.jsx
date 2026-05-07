@@ -123,12 +123,37 @@ export default function Customers() {
   const handleImport = async () => {
     if (!importFile) return
     
-    setImportProgress('Funktion wird in Kürze aktiviert...')
-    setTimeout(() => {
-      setShowImport(false)
-      setImportFile(null)
-      setImportProgress(null)
-    }, 2000)
+    setImportProgress('Datei wird hochgeladen...')
+    try {
+      // Upload file first
+      const formData = new FormData()
+      formData.append('file', importFile)
+      const uploadRes = await fetch('https://api.base44.com/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      const { file_url } = await uploadRes.json()
+
+      // Call import function
+      const result = await base44.functions.invoke('importEntityData', {
+        entity_name: 'Customer',
+        file_url
+      })
+
+      setImportProgress(`✓ ${result.data.successful} Kunden importiert`)
+      if (result.data.failed > 0) {
+        setImportProgress(prev => `${prev} (${result.data.failed} Fehler)`)
+      }
+      
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['customers'] })
+        setShowImport(false)
+        setImportFile(null)
+        setImportProgress(null)
+      }, 2000)
+    } catch (error) {
+      setImportProgress(`✗ Fehler: ${error.message}`)
+    }
   }
 
   const handleExport = () => {
