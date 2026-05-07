@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Search, MoreHorizontal, Edit, Trash2, ChevronDown, ChevronUp, User, Building2, ArrowRight } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, Edit, Trash2, ChevronDown, ChevronUp, User, Building2, ArrowRight, Upload } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,9 @@ export default function Customers() {
   const [filterType, setFilterType] = useState('all')
   const [search, setSearch] = useState('')
   const [expandedFamily, setExpandedFamily] = useState(null)
+  const [showImport, setShowImport] = useState(false)
+  const [importFile, setImportFile] = useState(null)
+  const [importProgress, setImportProgress] = useState(null)
   const queryClient = useQueryClient()
 
   const { data: currentUser } = useQuery({
@@ -117,6 +120,17 @@ export default function Customers() {
     }
   }
 
+  const handleImport = async () => {
+    if (!importFile) return
+    
+    setImportProgress('Funktion wird in Kürze aktiviert...')
+    setTimeout(() => {
+      setShowImport(false)
+      setImportFile(null)
+      setImportProgress(null)
+    }, 2000)
+  }
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -124,21 +138,26 @@ export default function Customers() {
           <h1 className="text-3xl font-bold">Kunden</h1>
           <p className="text-muted-foreground mt-1">{primaryCustomers.length} Hauptkunden</p>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" /> Neuer Kunde
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}>
-              <User className="w-4 h-4 mr-2 text-blue-600" /> Privatkunde
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}>
-              <Building2 className="w-4 h-4 mr-2 text-purple-600" /> Firmenkunde
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowImport(true)}>
+            <Upload className="w-4 h-4 mr-2" /> Importieren
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" /> Neuer Kunde
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}>
+                <User className="w-4 h-4 mr-2 text-blue-600" /> Privatkunde
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}>
+                <Building2 className="w-4 h-4 mr-2 text-purple-600" /> Firmenkunde
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Kundentyp Filter */}
@@ -358,6 +377,41 @@ export default function Customers() {
               saving={createMutation.isPending || updateMutation.isPending}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showImport} onOpenChange={setShowImport}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Kunden importieren</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">CSV- oder Excel-Datei</label>
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={(e) => setImportFile(e.target.files?.[0])}
+                className="mt-2 w-full p-2 border rounded"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Unterstützte Formate: CSV, Excel | Spalten: first_name, last_name, email, phone (optional), city (optional)
+              </p>
+            </div>
+            {importProgress && (
+              <div className="p-3 bg-muted rounded text-sm text-center">
+                {importProgress}
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setShowImport(false); setImportFile(null); setImportProgress(null); }}>
+                Abbrechen
+              </Button>
+              <Button onClick={handleImport} disabled={!importFile || !!importProgress}>
+                Importieren
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Search, MoreHorizontal, Edit, Trash2, FileText, Calendar, Building2, Tag, Download } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, Edit, Trash2, FileText, Calendar, Building2, Tag, Download, Upload } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,10 +17,13 @@ import StatusChangeDialog from '@/components/status/StatusChangeDialog'
 export default function Contracts() {
   const [showForm, setShowForm] = useState(false)
   const [showUploadWizard, setShowUploadWizard] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
   const [statusChanging, setStatusChanging] = useState(null)
   const [expandedDocs, setExpandedDocs] = useState(null)
+  const [importFile, setImportFile] = useState(null)
+  const [importProgress, setImportProgress] = useState(null)
   const queryClient = useQueryClient()
 
   const { data: statusDefs = [] } = useQuery({
@@ -113,6 +116,17 @@ export default function Contracts() {
     return new Date(dateStr).toLocaleDateString('de-CH')
   }
 
+  const handleImport = async () => {
+    if (!importFile) return
+    
+    setImportProgress('Funktion wird in Kürze aktiviert...')
+    setTimeout(() => {
+      setShowImport(false)
+      setImportFile(null)
+      setImportProgress(null)
+    }, 2000)
+  }
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -121,6 +135,9 @@ export default function Contracts() {
           <p className="text-muted-foreground mt-1">{contracts.length} Verträge insgesamt</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowImport(true)}>
+            <Upload className="w-4 h-4 mr-2" /> Importieren
+          </Button>
           <Button variant="outline" onClick={() => setShowUploadWizard(true)} className="gap-2">
             <FileText className="w-4 h-4" /> Police hochladen
           </Button>
@@ -326,6 +343,41 @@ export default function Contracts() {
             onCancel={() => { setShowForm(false); setEditing(null); }}
             saving={createMutation.isPending || updateMutation.isPending}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showImport} onOpenChange={setShowImport}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Verträge importieren</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">CSV- oder Excel-Datei</label>
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={(e) => setImportFile(e.target.files?.[0])}
+                className="mt-2 w-full p-2 border rounded"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Unterstützte Formate: CSV, Excel | Spalten: customer_id, insurer, policy_number (optional), premium_yearly (optional), start_date (optional), end_date (optional)
+              </p>
+            </div>
+            {importProgress && (
+              <div className="p-3 bg-muted rounded text-sm text-center">
+                {importProgress}
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setShowImport(false); setImportFile(null); setImportProgress(null); }}>
+                Abbrechen
+              </Button>
+              <Button onClick={handleImport} disabled={!importFile || !!importProgress}>
+                Importieren
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
