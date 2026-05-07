@@ -1,9 +1,10 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, Clock, FileText, AlertTriangle, RefreshCw } from 'lucide-react'
+import { CheckCircle2, Clock, AlertTriangle, RefreshCw, FileWarning, ListTodo } from 'lucide-react'
 import DashboardKpiTile from '../DashboardKpiTile'
 import SupportSection from '../SupportSection'
 import RenewalPipelineKanbanV2 from '../RenewalPipelineKanbanV2'
+import TasksPanel from '../TasksPanel'
 
 export default function TabOperations({ data, onTaskClick }) {
   const navigate = useNavigate()
@@ -14,6 +15,10 @@ export default function TabOperations({ data, onTaskClick }) {
 
   const todayStr = new Date().toISOString().slice(0, 10)
   const dueTodayCount = tasks.filter(t => t.due_date === todayStr && t.status !== 'completed').length
+
+  // Trennung: Vertragsablauf-Aufgaben vs. allgemeine Aufgaben
+  const contractExpiryTasks = openTasks.filter(t => t.task_type === 'renewal')
+  const generalTasks = openTasks.filter(t => t.task_type !== 'renewal')
 
   return (
     <div className="space-y-8">
@@ -35,14 +40,41 @@ export default function TabOperations({ data, onTaskClick }) {
         </div>
       </div>
 
-      <div>
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Offene Aufgaben</h3>
-        <SupportSection
-          tasks={openTasks.slice(0, 8)}
-          customers={customers}
-          activities={[]}
-          onTaskClick={onTaskClick}
-        />
+      {/* Zwei separate Aufgaben-Panels */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+            <ListTodo className="w-3.5 h-3.5" /> Allgemeine Aufgaben
+          </h3>
+          <TasksPanel
+            tasks={generalTasks}
+            onTaskClick={onTaskClick}
+            onViewAll={() => navigate('/aufgaben')}
+            emptyText="Keine allgemeinen Aufgaben offen"
+            accentClass="border-l-blue-500"
+            badgeClass="bg-blue-100 text-blue-700"
+          />
+        </div>
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+            <FileWarning className="w-3.5 h-3.5 text-orange-500" />
+            <span className="text-orange-600">Vertragsabläufe</span>
+            {contractExpiryTasks.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-orange-100 text-orange-700 font-semibold">
+                {contractExpiryTasks.length}
+              </span>
+            )}
+          </h3>
+          <TasksPanel
+            tasks={contractExpiryTasks}
+            onTaskClick={onTaskClick}
+            onViewAll={() => navigate('/aufgaben')}
+            emptyText="Keine abgelaufenen Verträge mit offenen Aufgaben"
+            accentClass="border-l-orange-500"
+            badgeClass="bg-orange-100 text-orange-700"
+            badgeLabel="Abgelaufen"
+          />
+        </div>
       </div>
 
     </div>
