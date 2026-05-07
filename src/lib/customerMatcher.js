@@ -1,6 +1,16 @@
 // Duplicate Prevention & Customer Matching
 // Safely finds or creates customer records without duplication
 
+export function matchCustomers(customers, searchTerm) {
+  if (!searchTerm || !customers) return customers;
+  const term = searchTerm.toLowerCase();
+  return customers.filter(c => {
+    const fullName = `${c.first_name || ''} ${c.last_name || ''} ${c.company_name || ''}`.toLowerCase();
+    const email = (c.email || '').toLowerCase();
+    return fullName.includes(term) || email.includes(term);
+  });
+}
+
 export async function findOrCreateCustomer(extractedData, organizationId, base44) {
   if (!base44 || !extractedData) {
     throw new Error('Missing base44 SDK or extracted data');
