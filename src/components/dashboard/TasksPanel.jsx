@@ -29,7 +29,7 @@ export default function TasksPanel({
       <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
         <CardTitle className="text-sm flex items-center gap-2 text-slate-900">
           <CheckSquare className="w-4 h-4 text-slate-500" />
-          {displayed.length > 0 ? `${tasks.length} offen` : 'Keine offen'}
+          {tasks.length > 0 ? `${tasks.length} offen` : 'Keine offen'}
         </CardTitle>
         {tasks.length > 0 && (
           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onViewAll}>

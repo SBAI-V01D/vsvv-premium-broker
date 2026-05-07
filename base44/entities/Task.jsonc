@@ -64,10 +64,15 @@
         "renewal",
         "follow_up",
         "consultation",
-        "general"
+        "general",
+        "health_declaration"
       ],
       "default": "general",
-      "description": "Aufgabentyp"
+      "description": "Aufgabentyp: renewal = abgelaufener Vertrag, health_declaration = Gesundheitserkl\u00e4rung, sonst allgemein"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notizen"
     }
   },
   "required": [

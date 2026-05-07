@@ -17,8 +17,10 @@ export default function TabOperations({ data, onTaskClick }) {
   const dueTodayCount = tasks.filter(t => t.due_date === todayStr && t.status !== 'completed').length
 
   // Trennung: Vertragsablauf-Aufgaben vs. allgemeine Aufgaben
-  const contractExpiryTasks = openTasks.filter(t => t.task_type === 'renewal')
-  const generalTasks = openTasks.filter(t => t.task_type !== 'renewal')
+  // task_type kann direkt auf t oder auf t.data liegen (SDK-Kompatibilität)
+  const getTaskType = (t) => t.task_type ?? t.data?.task_type ?? ''
+  const contractExpiryTasks = openTasks.filter(t => getTaskType(t) === 'renewal')
+  const generalTasks = openTasks.filter(t => getTaskType(t) !== 'renewal')
 
   return (
     <div className="space-y-8">
