@@ -19,7 +19,11 @@ import TabCoverage   from '@/components/dashboard/tabs/TabCoverage'
 import TabOperations from '@/components/dashboard/tabs/TabOperations'
 import TabAnalytics  from '@/components/dashboard/tabs/TabAnalytics'
 import TabCEO        from '@/components/dashboard/tabs/TabCEO'
+import MasterControlDashboard from '@/components/dashboard/MasterControlDashboard'
+import { Layers } from 'lucide-react'
+
 const TABS = [
+  { id: 'master',     label: 'Command Center', icon: Layers },
   { id: 'ceo',        label: 'CEO',          icon: Crown },
   { id: 'executive',  label: 'BrokerOS',     icon: LayoutDashboard },
   { id: 'sales',      label: 'Sales',        icon: Target },
@@ -31,7 +35,7 @@ const TABS = [
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState('ceo')
+  const [activeTab, setActiveTab] = useState('master')
   const [selectedTask, setSelectedTask] = useState(null)
   const [formData, setFormData] = useState({ title: '', status: '', notes: '', due_date: '' })
   const [filterOrg, setFilterOrg] = useState('all')
@@ -245,6 +249,11 @@ export default function Dashboard() {
               <Icon className="w-4 h-4" />
               {tab.label}
               {/* Live badges */}
+              {tab.id === 'master' && (openTasks.length + expiringContracts.filter(c => { const d = Math.ceil((new Date(c.end_date) - new Date()) / 86400000); return d <= 14 }).length) > 0 && (
+                <span className={cn('text-xs px-1.5 py-0.5 rounded-full font-semibold', isActive ? 'bg-white/20 text-white' : 'bg-red-100 text-red-700')}>
+                  !
+                </span>
+              )}
               {tab.id === 'sales' && activeLeads.length > 0 && (
                 <span className={cn('text-xs px-1.5 py-0.5 rounded-full font-semibold', isActive ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-700')}>
                   {activeLeads.length}
@@ -267,6 +276,7 @@ export default function Dashboard() {
 
       {/* ── TAB CONTENT ──────────────────────────────────────────────────── */}
       <div className="pt-6">
+        {activeTab === 'master'     && <MasterControlDashboard data={sharedData} onTaskClick={handleTaskClick} />}
         {activeTab === 'ceo'        && <TabCEO />}
         {activeTab === 'executive'  && <TabExecutive  data={sharedData} />}
         {activeTab === 'sales'      && <TabSales      data={sharedData} />}
