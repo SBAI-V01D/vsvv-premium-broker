@@ -1,104 +1,193 @@
-/**
- * Multi-stage customer matching with scoring (0–100).
- *
- * Scoring spec:
- *   Name (Vorname + Nachname) exact match  → 40 pts  (required base)
- *   Geburtsdatum exact match               → +20 pts  (total 60)
- *   PLZ / Adresse match                    → +20 pts  (total 80)
- *   E-Mail OR Telefon match                → +20 pts  (total 100)
- *
- * Thresholds:
- *   ≥ 80  → auto-assign (high confidence)
- *   60–79 → auto-assign with review flag
- *   < 60  → no match → auto-create new customer
- */
+// Duplicate Prevention & Customer Matching
+// Safely finds or creates customer records without duplication
 
-function normalize(str) {
-  return (str || '').toLowerCase().trim()
-}
+import { detectCustomerType, parseCompanyData, parsePrivateCustomerData, extractCommonData } from './customerTypeDetection.js';
 
-function dateEqual(a, b) {
-  if (!a || !b) return false
-  // Accept YYYY-MM-DD and DD.MM.YYYY
-  const toISO = (s) => {
-    const d = normalize(s).slice(0, 10)
-    if (/^\d{2}\.\d{2}\.\d{4}$/.test(d)) {
-      const [day, month, year] = d.split('.')
-      return `${year}-${month}-${day}`
-    }
-    return d
+export async function findOrCreateCustomer(extractedData, organizationId, base44) {
+  if (!base44 || !extractedData) {
+    throw new Error('Missing base44 SDK or extracted data');
   }
-  return toISO(a) === toISO(b)
-}
 
-function scoreCustomer(c, f) {
-  let score = 0
-
-  // ── Firmenname-Matching (Priorität für business customers) ──────────────────
-  if (f.company_name && c.company_name) {
-    const companyMatch = normalize(c.company_name).includes(normalize(f.company_name)) ||
-      normalize(f.company_name).includes(normalize(c.company_name))
-    if (companyMatch) {
-      score = 50 // company name baseline
-      const plzMatch = f.zip_code && normalize(c.zip_code) === normalize(f.zip_code)
-      const emailMatch = f.email && normalize(c.email) === normalize(f.email)
-      const phoneMatch = f.phone && (
-        normalize(c.phone) === normalize(f.phone) ||
-        normalize(c.mobile) === normalize(f.phone)
-      )
-      if (plzMatch) score += 25
-      if (emailMatch || phoneMatch) score += 25
-      return score
+  const customerType = detectCustomerType(extractedData);
+  const commonData = extractCommonData(extractedData);
+  
+  // Build search criteria
+  const searchCriteria = [];
+  
+  // Search by email (strongest match)
+  if (commonData.email) {
+    searchCriteria.push({ email: commonData.email.toLowerCase() });
+  }
+  
+  // Search by name for private customers
+  if (customerType === 'private') {
+    const privData = parsePrivateCustomerData(extractedData);
+    if (privData.first_name && privData.last_name) {
+      searchCriteria.push({
+        first_name: privData.first_name,
+        last_name: privData.last_name
+      });
+    }
+  } else {
+    // Search by company name for business customers
+    const compData = parseCompanyData(extractedData);
+    if (compData.company_name) {
+      searchCriteria.push({ company_name: compData.company_name });
+    }
+  }
+  
+  // Search by UID/CHE for business customers
+  if (customerType === 'company') {
+    const compData = parseCompanyData(extractedData);
+    if (compData.uid_number) {
+      searchCriteria.push({ uid_number: compData.uid_number });
     }
   }
 
-  // ── Personen-Matching ───────────────────────────────────────────────────────
-  const nameMatch =
-    normalize(c.first_name) === normalize(f.first_name) &&
-    normalize(c.last_name) === normalize(f.last_name)
-
-  if (!nameMatch) return 0
-
-  score = 40 // name baseline
-
-  const birthdateMatch = dateEqual(c.birthdate, f.birthdate)
-  const plzMatch = f.zip_code && normalize(c.zip_code) === normalize(f.zip_code)
-  const emailMatch = f.email && normalize(c.email) === normalize(f.email)
-  const phoneMatch = f.phone && (
-    normalize(c.phone) === normalize(f.phone) ||
-    normalize(c.mobile) === normalize(f.phone)
-  )
-
-  if (birthdateMatch) score += 20
-  if (plzMatch) score += 20
-  if (emailMatch || phoneMatch) score += 20
-
-  return score
-}
-
-/**
- * Run matching across all customers.
- * @param {object} form      - flat extracted fields
- * @param {Array}  customers - full customer list (no pagination)
- * @returns {{ autoMatch, candidates, topScore }}
- */
-export function matchCustomers(form, customers) {
-  // Allow matching even with only company_name
-  if (!form.first_name && !form.last_name && !form.company_name) {
-    return { autoMatch: null, candidates: [], topScore: 0 }
+  // Try to find existing customer
+  for (const criteria of searchCriteria) {
+    try {
+      const existing = await base44.entities.Customer.filter(criteria, '-created_date', 1);
+      if (existing && existing.length > 0) {
+        console.log(`[CUSTOMER_MATCHER] Found existing customer by ${Object.keys(criteria)[0]}`);
+        // Enrich existing customer with missing data
+        await enrichCustomer(existing[0].id, extractedData, customerType, base44);
+        return existing[0];
+      }
+    } catch (e) {
+      console.warn(`[CUSTOMER_MATCHER] Search failed: ${e.message}`);
+    }
   }
 
-  const scored = customers
-    .map(c => ({ customer: c, score: scoreCustomer(c, form) }))
-    .filter(r => r.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3)
+  // No existing customer found, create new one
+  console.log(`[CUSTOMER_MATCHER] Creating new ${customerType} customer`);
+  const newCustomerData = buildCustomerData(extractedData, customerType, organizationId);
+  
+  try {
+    const created = await base44.entities.Customer.create(newCustomerData);
+    console.log(`[CUSTOMER_MATCHER] Created customer ${created.id}`);
+    return created;
+  } catch (e) {
+    console.error(`[CUSTOMER_MATCHER] Creation failed: ${e.message}`);
+    throw e;
+  }
+}
 
-  const topScore = scored[0]?.score ?? 0
+export function matchCustomers(customers, searchTerm) {
+  if (!searchTerm || !customers) return customers;
+  const term = searchTerm.toLowerCase();
+  return customers.filter(c => {
+    const fullName = `${c.first_name || ''} ${c.last_name || ''} ${c.company_name || ''}`.toLowerCase();
+    const email = (c.email || '').toLowerCase();
+    return fullName.includes(term) || email.includes(term);
+  });
+}
 
+export async function enrichCustomer(customerId, extractedData, customerType, base44) {
+  const commonData = extractCommonData(extractedData);
+  const updateData = {};
+
+  // Only add if not already set
+  if (commonData.email && !updateData.email) updateData.email = commonData.email;
+  if (commonData.phone && !updateData.phone) updateData.phone = commonData.phone;
+  if (commonData.mobile && !updateData.mobile) updateData.mobile = commonData.mobile;
+  if (commonData.street && !updateData.street) updateData.street = commonData.street;
+  if (commonData.zip_code && !updateData.zip_code) updateData.zip_code = commonData.zip_code;
+  if (commonData.city && !updateData.city) updateData.city = commonData.city;
+  if (commonData.canton && !updateData.canton) updateData.canton = commonData.canton;
+
+  if (customerType === 'private') {
+    const privData = parsePrivateCustomerData(extractedData);
+    if (privData.first_name && !updateData.first_name) updateData.first_name = privData.first_name;
+    if (privData.last_name && !updateData.last_name) updateData.last_name = privData.last_name;
+    if (privData.birthdate && !updateData.birthdate) updateData.birthdate = privData.birthdate;
+    if (privData.profession && !updateData.profession) updateData.profession = privData.profession;
+  } else {
+    const compData = parseCompanyData(extractedData);
+    if (compData.company_name && !updateData.company_name) updateData.company_name = compData.company_name;
+    if (compData.legal_form && !updateData.legal_form) updateData.legal_form = compData.legal_form;
+    if (compData.uid_number && !updateData.uid_number) updateData.uid_number = compData.uid_number;
+    if (compData.industry && !updateData.industry) updateData.industry = compData.industry;
+    if (compData.contact_person_firstname && !updateData.contact_person_firstname) updateData.contact_person_firstname = compData.contact_person_firstname;
+    if (compData.contact_person_lastname && !updateData.contact_person_lastname) updateData.contact_person_lastname = compData.contact_person_lastname;
+  }
+
+  if (Object.keys(updateData).length > 0) {
+    try {
+      await base44.entities.Customer.update(customerId, updateData);
+      console.log(`[CUSTOMER_MATCHER] Enriched customer ${customerId}`);
+    } catch (e) {
+      console.warn(`[CUSTOMER_MATCHER] Enrichment failed: ${e.message}`);
+    }
+  }
+}
+
+function buildCustomerData(extractedData, customerType, organizationId) {
+
+  const commonData = extractCommonData(extractedData);
+  const baseData = {
+    customer_type: customerType,
+    status: 'active',
+    mandate_status: 'pending',
+    organization_id: organizationId,
+    ...commonData,
+  };
+
+  if (customerType === 'private') {
+    const privData = parsePrivateCustomerData(extractedData);
+    return {
+      ...baseData,
+      first_name: privData.first_name || 'Unknown',
+      last_name: privData.last_name || 'Customer',
+      birthdate: privData.birthdate || '',
+      profession: privData.profession || '',
+    };
+  } else {
+    const compData = parseCompanyData(extractedData);
+    return {
+      ...baseData,
+      company_name: compData.company_name || 'Unknown Company',
+      legal_form: compData.legal_form || '',
+      uid_number: compData.uid_number || '',
+      industry: compData.industry || '',
+      contact_person_firstname: compData.contact_person_firstname || '',
+      contact_person_lastname: compData.contact_person_lastname || '',
+      // For customer display, use contact person or company name
+      first_name: compData.contact_person_firstname || 'Company',
+      last_name: compData.contact_person_lastname || compData.company_name || 'Account',
+    };
+  }
+}
+
+function parsePrivateCustomerData(extractedData) {
   return {
-    autoMatch: topScore >= 80 ? scored[0].customer : null,
-    candidates: scored,
-    topScore,
-  }
+    first_name: extractedData.first_name || extractedData.firstname || extractedData.vorname || '',
+    last_name: extractedData.last_name || extractedData.lastname || extractedData.nachname || '',
+    birthdate: extractedData.birthdate || extractedData.dob || '',
+    profession: extractedData.profession || extractedData.beruf || '',
+  };
+}
+
+function parseCompanyData(extractedData) {
+  return {
+    company_name: extractedData.company_name || extractedData.kundenname || '',
+    legal_form: extractedData.legal_form || '',
+    uid_number: extractedData.uid_number || extractedData.che_number || extractedData.business_number || '',
+    industry: extractedData.industry || '',
+    contact_person_firstname: extractedData.contact_person_firstname || extractedData.contact_firstname || '',
+    contact_person_lastname: extractedData.contact_person_lastname || extractedData.contact_lastname || '',
+  };
+}
+
+function extractCommonData(extractedData) {
+  return {
+    email: extractedData.email || extractedData.email_address || '',
+    phone: extractedData.phone || extractedData.telefon || extractedData.phone_number || '',
+    mobile: extractedData.mobile || extractedData.handy || extractedData.mobile_number || '',
+    street: extractedData.street || extractedData.strasse || extractedData.address || '',
+    zip_code: extractedData.zip_code || extractedData.plz || extractedData.postal_code || '',
+    city: extractedData.city || extractedData.ort || extractedData.stadt || '',
+    canton: extractedData.canton || extractedData.kanton || '',
+    nationality: extractedData.nationality || extractedData.nationalitat || 'CH',
+  };
 }

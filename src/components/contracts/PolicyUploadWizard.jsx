@@ -10,7 +10,21 @@ import {
   FileText, Search, X, ChevronRight, Edit2
 } from 'lucide-react'
 import { base44 } from '@/api/base44Client'
-import { matchCustomers } from '@/lib/customerMatcher'
+// matchCustomers helper (inline fuzzy matching)
+const matchCustomers = (matchData, customers) => {
+  const candidates = customers
+    .map(c => {
+      let score = 0;
+      const hay = [c.first_name, c.last_name, c.company_name, c.email].filter(Boolean).join(' ').toLowerCase();
+      if (matchData.first_name && hay.includes(matchData.first_name.toLowerCase())) score += 30;
+      if (matchData.last_name && hay.includes(matchData.last_name.toLowerCase())) score += 30;
+      if (matchData.email && c.email && c.email.toLowerCase() === matchData.email.toLowerCase()) score += 40;
+      return { customer: c, score };
+    })
+    .filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score);
+  return { candidates };
+};
 import { ALL_SPARTEN, getFieldsForSparte, FRANCHISE_OPTIONS } from '@/lib/insuranceSparten'
 
 const grouped = ALL_SPARTEN.reduce((acc, s) => {
