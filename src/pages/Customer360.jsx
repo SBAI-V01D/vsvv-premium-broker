@@ -34,7 +34,7 @@ export default function Customer360() {
   })
 
   const { data: allApplications = [] } = useQuery({
-    queryKey: ['applications-all', customerId],
+    queryKey: ['applications-all'],
     queryFn: () => base44.entities.Application.list(),
   })
 
@@ -52,14 +52,12 @@ export default function Customer360() {
   })
 
   const { data: allDocuments = [] } = useQuery({
-    queryKey: ['documents-all', customerId],
+    queryKey: ['documents-all'],
     queryFn: () => base44.entities.Document.list(),
   })
 
   const documents = useMemo(() => {
-    // Collect all application IDs for this customer
     const appIds = new Set(applications.map(a => a.id))
-    // Collect all contract IDs for this customer
     const contractIds = new Set(contracts.map(c => c.id))
 
     return allDocuments.filter(d =>
