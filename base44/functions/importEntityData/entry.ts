@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { entity_name, file_url, field_mapping = {}, default_values = {} } = await req.json();
+    const { entity_name, file_url } = await req.json();
 
     if (!entity_name || !file_url) {
       return Response.json({ error: 'Missing entity_name or file_url' }, { status: 400 });
@@ -21,14 +21,29 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Failed to fetch file' }, { status: 400 });
     }
 
-    const fileContent = await fileResponse.text();
-    const lines = fileContent.split('\n').filter(l => l.trim());
-
-    if (lines.length < 2) {
-      return Response.json({ error: 'File is empty or has no data rows' }, { status: 400 });
+    let fileContent = await fileResponse.text();
+    
+    // Handle UTF-8 BOM
+    if (fileContent.charCodeAt(0) === 0xFEFF) {
+      fileContent = fileContent.slice(1);
     }
 
-    // Robust CSV parsing with quoted field support
+    // Auto-detect delimiter (comma, semicolon, tab)
+    const lines = fileContent.split('\n').filter(l => l.trim());
+    if (lines.length < 1) {
+      return Response.json({ error: 'File is empty' }, { status: 400 });
+    }
+
+    let delimiter = ',';
+    const firstLine = lines[0];
+    const semicolonCount = (firstLine.match(/;/g) || []).length;
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    const tabCount = (firstLine.match(/\t/g) || []).length;
+
+    if (semicolonCount > commaCount) delimiter = ';';
+    if (tabCount > semicolonCount && tabCount > commaCount) delimiter = '\t';
+
+    // Parse CSV with robust quoted field handling
     const parseCSVLine = (line) => {
       const fields = [];
       let current = '';
@@ -39,116 +54,147 @@ Deno.serve(async (req) => {
         
         if (char === '"') {
           if (inQuotes && line[i + 1] === '"') {
-            // Escaped quote
             current += '"';
             i++;
           } else {
-            // Toggle quote mode
             inQuotes = !inQuotes;
           }
-        } else if (char === ',' && !inQuotes) {
-          fields.push(current.trim());
+        } else if (char === delimiter && !inQuotes) {
+          fields.push(current.replace(/^"|"$/g, '').trim());
           current = '';
         } else {
           current += char;
         }
       }
-      fields.push(current.trim());
+      fields.push(current.replace(/^"|"$/g, '').trim());
       return fields;
     };
 
-    // Parse headers
+    // Parse headers - normalize column names
     const headerLine = parseCSVLine(lines[0]);
-    let headers = headerLine.map(h => h.replace(/^"|"$/g, '').trim());
+    const headers = headerLine.map(h => normalizeColumnName(h));
     
-    // Detect if all data is in first column (malformed CSV)
-    const firstDataLine = parseCSVLine(lines[1]);
-    const isMalformed = headers.length === 1 && firstDataLine.length === 1 && firstDataLine[0].includes(',');
+    // Standard field mappings
+    const fieldMap = {
+      'vorname': 'first_name',
+      'firstname': 'first_name',
+      'first_name': 'first_name',
+      'name': 'last_name',
+      'nachname': 'last_name',
+      'lastname': 'last_name',
+      'last_name': 'last_name',
+      'email': 'email',
+      'e-mail': 'email',
+      'telefon': 'phone',
+      'phone': 'phone',
+      'mobile': 'mobile',
+      'mobilnummer': 'mobile',
+      'strasse': 'street',
+      'street': 'street',
+      'plz': 'zip_code',
+      'zipcode': 'zip_code',
+      'zip_code': 'zip_code',
+      'ort': 'city',
+      'city': 'city',
+      'stadt': 'city',
+      'geburtsdatum': 'birthdate',
+      'birthdate': 'birthdate',
+      'notizen': 'notes',
+      'notes': 'notes',
+      'firmennaam': 'company_name',
+      'company': 'company_name',
+    };
+
+    const mappedHeaders = headers.map(h => fieldMap[h] || h);
     
-    if (isMalformed) {
-      // Re-parse all lines by splitting on comma first
-      headers = parseCSVLine(lines[0].split(',')[0] + ',' + ['Vorname', 'Name', 'Strasse', 'PLZ', 'Ort', 'E-Mail', 'Telefon', 'Mobile'].slice(1).join(','));
-      headers = headers.slice(0, 1).concat(['Vorname', 'Name', 'Strasse', 'PLZ', 'Ort', 'E-Mail', 'Telefon', 'Mobile'].slice(1));
-    }
+    // Parse data rows
+    const records = [];
+    const duplicates = [];
+    const errors = [];
     
-    const dataLines = lines.slice(1);
-    const records = dataLines.map((line) => {
-      let values;
-      
-      if (isMalformed) {
-        // Split malformed line: "Vorname,Nachname,...", then parse separately
-        const match = line.match(/^"([^"]+)","([^"]+)","([^"]*)",(\d+),"([^"]+)","([^"]*)","([^"]*)","([^"]*)"/) ||
-                      line.match(/^([^,]+),([^,]+),"([^"]*)","?(\d+)"?,"([^"]*)","([^"]*)","([^"]*)","([^"]*)"/) ||
-                      line.match(/^([^,]+),([^,]*),"?([^"]*?)"?,"?(\d+)"?,"([^"]*)","([^"]*)","([^"]*)","([^"]*)/);
-        
-        if (match) {
-          values = [match[1], match[2], match[3], match[4], match[5], match[6], match[7], match[8]];
-        } else {
-          // Fallback: split by comma but respect quoted fields
-          const parts = line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
-          values = parts.map(p => p.replace(/^"|"$/g, '').trim());
+    // Get existing emails for duplicate check
+    const existingCustomers = await base44.entities.Customer.list('', 1000) || [];
+    const existingEmails = new Set(existingCustomers.map(c => c.email?.toLowerCase()));
+
+    for (let i = 1; i < lines.length; i++) {
+      try {
+        const values = parseCSVLine(lines[i]);
+        if (values.every(v => !v || v === '')) continue; // Skip empty rows
+
+        const record = {};
+        let hasRequiredFields = false;
+
+        mappedHeaders.forEach((header, idx) => {
+          const value = values[idx]?.trim();
+          if (value && header) {
+            record[header] = value;
+            if (header === 'first_name' || header === 'last_name' || header === 'email') {
+              hasRequiredFields = true;
+            }
+          }
+        });
+
+        if (!hasRequiredFields) {
+          errors.push(`Row ${i + 1}: Missing required fields (first_name, last_name, or email)`);
+          continue;
         }
-      } else {
-        values = parseCSVLine(line);
+
+        // Duplicate check
+        if (record.email && existingEmails.has(record.email.toLowerCase())) {
+          duplicates.push({
+            row: i + 1,
+            email: record.email,
+            name: `${record.first_name || ''} ${record.last_name || ''}`.trim()
+          });
+          continue;
+        }
+
+        // Set defaults
+        if (!record.organization_id) {
+          record.organization_id = 'default-org';
+        }
+        if (!record.customer_type) {
+          record.customer_type = 'private';
+        }
+        if (!record.status) {
+          record.status = 'active';
+        }
+        if (!record.association_membership) {
+          record.association_membership = 'vsvv';
+        }
+
+        records.push({ rowNum: i + 1, data: record });
+        if (record.email) {
+          existingEmails.add(record.email.toLowerCase());
+        }
+      } catch (error) {
+        errors.push(`Row ${i + 1}: ${error.message?.substring(0, 100)}`);
       }
-      
-      const record = {};
-      
-      headers.forEach((header, idx) => {
-        let value = values[idx] ? values[idx].replace(/^"|"$/g, '').trim() : '';
-        
-        // Apply field mapping if provided
-        const mappedField = field_mapping[header] || header;
-        
-        // Clean value
-        value = value === '' || value === 'NULL' ? null : value;
-        
-        if (value !== null) {
-          record[mappedField] = value;
-        }
-      });
+    }
 
-      // Apply default values
-      Object.entries(default_values).forEach(([field, val]) => {
-        if (!record[field]) {
-          record[field] = val;
-        }
-      });
-
-      return record;
-    });
-
-    // Bulk create records with aggressive batching for rate limits
+    // Batch create with aggressive rate limiting
     let successful = 0;
     let failed = 0;
-    const errors = [];
-    const batchSize = 3; // Very small batches
-    const delayMs = 1000; // 1 second between batches
+    const failedRecords = [];
+    const batchSize = 2;
+    const delayMs = 1500;
 
     for (let i = 0; i < records.length; i += batchSize) {
       const batch = records.slice(i, i + batchSize);
       
-      for (const record of batch) {
+      for (const item of batch) {
         try {
-          // Filter out empty fields
-          const cleanRecord = {};
-          for (const [k, v] of Object.entries(record)) {
-            if (v && v.toString().trim()) {
-              cleanRecord[k] = v;
-            }
-          }
-          
-          if (Object.keys(cleanRecord).length > 0) {
-            await base44.entities[entity_name].create(cleanRecord);
-            successful++;
-          }
+          await base44.entities[entity_name].create(item.data);
+          successful++;
         } catch (error) {
           failed++;
-          errors.push(`Error: ${error.message?.substring(0, 50)}`);
+          failedRecords.push({
+            row: item.rowNum,
+            error: error.message?.substring(0, 100) || 'Unknown error'
+          });
         }
       }
       
-      // Add longer delay between batches
       if (i + batchSize < records.length) {
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
@@ -156,12 +202,28 @@ Deno.serve(async (req) => {
 
     return Response.json({
       status: 'success',
-      successful,
-      failed,
-      total: records.length,
-      errors: errors.slice(0, 10)
+      summary: {
+        total_rows: lines.length - 1,
+        successful,
+        failed,
+        duplicates: duplicates.length,
+        skipped: errors.length
+      },
+      details: {
+        imported: successful,
+        failed_records: failedRecords.slice(0, 20),
+        duplicates: duplicates.slice(0, 20),
+        validation_errors: errors.slice(0, 20)
+      }
     });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ 
+      error: error.message,
+      status: 'error'
+    }, { status: 500 });
   }
 });
+
+function normalizeColumnName(name) {
+  return name.toLowerCase().replace(/[\s\-_.]/g, '');
+}

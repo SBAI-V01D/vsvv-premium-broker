@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import CustomerForm from '../components/customers/CustomerForm'
 import CompanyForm from '../components/customers/CompanyForm'
+import ImportWizard from '../components/customers/ImportWizard'
 import EmailLink from '../components/common/EmailLink'
 import { STATUS_LABELS, FAMILY_ROLE_LABELS, label } from '@/lib/labels'
 import { searchCustomers } from '@/lib/customerSearch'
@@ -24,8 +25,6 @@ export default function Customers() {
   const [search, setSearch] = useState('')
   const [expandedFamily, setExpandedFamily] = useState(null)
   const [showImport, setShowImport] = useState(false)
-  const [importFile, setImportFile] = useState(null)
-  const [importProgress, setImportProgress] = useState(null)
   const queryClient = useQueryClient()
 
   const { data: currentUser } = useQuery({
@@ -125,57 +124,7 @@ export default function Customers() {
     }
   }
 
-  const handleImport = async () => {
-    if (!importFile) return
-    
-    setImportProgress('Datei wird hochgeladen...')
-    try {
-      // Upload file using base44 integrations
-      const uploadRes = await base44.integrations.Core.UploadFile({ file: importFile })
-      const file_url = uploadRes.file_url
 
-      // Map field names and set defaults
-      const fieldMapping = {
-        'Vorname': 'first_name',
-        'Name': 'last_name',
-        'E-Mail': 'email',
-        'Telefon': 'phone',
-        'Mobile': 'mobile',
-        'Strasse': 'street',
-        'PLZ': 'zip_code',
-        'Ort': 'city'
-      }
-
-      // Use first organization or set null for user to select
-      const defaultOrgId = organizations?.[0]?.id || null
-
-      const result = await base44.functions.invoke('importEntityData', {
-        entity_name: 'Customer',
-        file_url,
-        field_mapping: fieldMapping,
-        default_values: {
-          organization_id: defaultOrgId,
-          association_membership: 'vsvv',
-          customer_type: 'private',
-          status: 'active'
-        }
-      })
-
-      setImportProgress(`✓ ${result.data.successful} Kunden importiert`)
-      if (result.data.failed > 0) {
-        setImportProgress(prev => `${prev} (${result.data.failed} Fehler)`)
-      }
-      
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['customers'] })
-        setShowImport(false)
-        setImportFile(null)
-        setImportProgress(null)
-      }, 2000)
-    } catch (error) {
-      setImportProgress(`✗ Fehler: ${error.message}`)
-    }
-  }
 
   const handleExport = () => {
     if (filtered.length === 0) return
@@ -450,60 +399,13 @@ export default function Customers() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showImport} onOpenChange={setShowImport}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Kunden importieren</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">CSV- oder Excel-Datei</label>
-              <input
-                type="file"
-                accept=".csv,.xlsx,.xls"
-                onChange={(e) => setImportFile(e.target.files?.[0])}
-                className="mt-2 w-full p-2 border rounded"
-              />
-            </div>
-            
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm font-semibold text-blue-900 mb-2">📋 Erforderliche Spalten:</p>
-              <div className="grid grid-cols-2 gap-2 text-xs text-blue-800">
-                <div>
-                  <span className="font-mono bg-blue-100 px-2 py-1 rounded">first_name</span>
-                  <p className="text-blue-700 mt-1">Vorname (erforderlich)</p>
-                </div>
-                <div>
-                  <span className="font-mono bg-blue-100 px-2 py-1 rounded">last_name</span>
-                  <p className="text-blue-700 mt-1">Nachname (erforderlich)</p>
-                </div>
-                <div>
-                  <span className="font-mono bg-blue-100 px-2 py-1 rounded">email</span>
-                  <p className="text-blue-700 mt-1">E-Mail (erforderlich)</p>
-                </div>
-                <div>
-                  <span className="font-mono bg-blue-100 px-2 py-1 rounded">organization_id</span>
-                  <p className="text-blue-700 mt-1">Org-ID (erforderlich)</p>
-                </div>
-              </div>
-              <p className="text-xs text-blue-700 mt-3 font-medium">Optional: phone, mobile, street, zip_code, city, canton, birthdate, profession</p>
-            </div>
-            {importProgress && (
-              <div className="p-3 bg-muted rounded text-sm text-center">
-                {importProgress}
-              </div>
-            )}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => { setShowImport(false); setImportFile(null); setImportProgress(null); }}>
-                Abbrechen
-              </Button>
-              <Button onClick={handleImport} disabled={!importFile || !!importProgress}>
-                Importieren
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ImportWizard 
+        open={showImport} 
+        onOpenChange={setShowImport}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['customers'] })
+        }}
+      />
     </div>
   )
 }
