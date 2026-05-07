@@ -64,7 +64,20 @@ const AuthenticatedApp = () => {
   // Portal routes are public — skip Base44 auth entirely
   const isPortalRoute = location.pathname.startsWith('/portal')
   if (isPortalRoute) {
-    return <PortalRoutes />
+    return (
+      <Routes>
+        <Route path="/portal/setup" element={<PortalSetup />} />
+        <Route path="/portal/reset-password" element={<PortalResetPassword />} />
+        <Route path="/portal" element={<PortalRoot />}>
+          <Route index element={<PortalDashboard />} />
+          <Route path="vertraege" element={<PortalContracts />} />
+          <Route path="antraege" element={<PortalApplications />} />
+          <Route path="dokumente" element={<PortalDocuments />} />
+          <Route path="profil" element={<PortalProfile />} />
+          <Route path="dashboard" element={<PortalDashboard />} />
+        </Route>
+      </Routes>
+    )
   }
 
   if (isLoadingPublicSettings || isLoadingAuth) {
@@ -161,20 +174,8 @@ function App() {
             {/* ULTRA-MINIMAL - ZERO DEPENDENCIES */}
             <Route path="/safe" element={<UltraMinimalSafe />} />
             
-            {/* Portal routes - public, no auth required */}
-            <Route path="/portal/setup" element={<PortalSetup />} />
-            <Route path="/portal/reset-password" element={<PortalResetPassword />} />
-            <Route path="/portal" element={<PortalRoot />}>
-              <Route index element={<PortalDashboard />} />
-              <Route path="vertraege" element={<PortalContracts />} />
-              <Route path="antraege" element={<PortalApplications />} />
-              <Route path="dokumente" element={<PortalDocuments />} />
-              <Route path="profil" element={<PortalProfile />} />
-              <Route path="dashboard" element={<PortalDashboard />} />
-            </Route>
-            
-            {/* Main authenticated app with sidebar */}
-            <AuthenticatedApp />
+            {/* All other routes handled by AuthenticatedApp */}
+            <Route path="*" element={<AuthenticatedApp />} />
           </Routes>
         </Router>
         <Toaster />
