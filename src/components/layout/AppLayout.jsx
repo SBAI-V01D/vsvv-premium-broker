@@ -28,7 +28,7 @@ export default function AppLayout() {
       </div>
 
       {/* Main content — offset by sidebar width */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-60">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-[232px]">
         {/* Mobile topbar */}
         <div className="lg:hidden flex items-center gap-3 px-4 h-14 border-b border-border bg-card sticky top-0 z-30">
           <button
