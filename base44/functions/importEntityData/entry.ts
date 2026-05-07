@@ -101,16 +101,36 @@ Deno.serve(async (req) => {
     }
 
     // Auto-detect delimiter (comma, semicolon, tab)
+    // Only count delimiters outside of quoted fields
     const lines = fileContent.split('\n').filter(l => l.trim());
     if (lines.length < 1) {
       return Response.json({ error: 'File is empty' }, { status: 400 });
     }
 
+    const countDelimitersOutsideQuotes = (line, delim) => {
+      let count = 0;
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          // Skip escaped quotes
+          if (inQuotes && line[i + 1] === '"') {
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === delim && !inQuotes) {
+          count++;
+        }
+      }
+      return count;
+    };
+
     let delimiter = ',';
     const firstLine = lines[0];
-    const semicolonCount = (firstLine.match(/;/g) || []).length;
-    const commaCount = (firstLine.match(/,/g) || []).length;
-    const tabCount = (firstLine.match(/\t/g) || []).length;
+    const semicolonCount = countDelimitersOutsideQuotes(firstLine, ';');
+    const commaCount = countDelimitersOutsideQuotes(firstLine, ',');
+    const tabCount = countDelimitersOutsideQuotes(firstLine, '\t');
 
     if (semicolonCount > commaCount) delimiter = ';';
     if (tabCount > semicolonCount && tabCount > commaCount) delimiter = '\t';
@@ -125,6 +145,7 @@ Deno.serve(async (req) => {
         const char = line[i];
         
         if (char === '"') {
+          // Handle escaped quotes (double quotes)
           if (inQuotes && line[i + 1] === '"') {
             current += '"';
             i++;
@@ -132,13 +153,19 @@ Deno.serve(async (req) => {
             inQuotes = !inQuotes;
           }
         } else if (char === delimiter && !inQuotes) {
-          fields.push(current.replace(/^"|"$/g, '').trim());
+          // Field end: trim leading/trailing quotes and whitespace
+          const value = current.trim();
+          fields.push(value.replace(/^"|"$/g, '').trim());
           current = '';
         } else {
           current += char;
         }
       }
-      fields.push(current.replace(/^"|"$/g, '').trim());
+      
+      // Last field
+      const lastValue = current.trim();
+      fields.push(lastValue.replace(/^"|"$/g, '').trim());
+      
       return fields;
     };
 
