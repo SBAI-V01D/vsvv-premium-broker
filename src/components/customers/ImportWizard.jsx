@@ -406,18 +406,15 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
         )}
 
         {step === 'summary' && result && (
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[70vh] overflow-y-auto">
             {/* SUCCESS BANNER */}
             {result.summary.successfully_imported > 0 && (
-              <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-300 rounded-lg">
-                <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
+              <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-300 rounded-lg">
+                <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-green-900">✓ Import erfolgreich!</p>
+                  <p className="font-semibold text-green-900">✓ Partial Import erfolgreich!</p>
                   <p className="text-sm text-green-800 mt-1">
-                    {result.summary.successfully_imported} Kunde{result.summary.successfully_imported !== 1 ? 'n' : ''} sind jetzt im System verfügbar.
-                  </p>
-                  <p className="text-xs text-green-700 mt-1">
-                    Erfolgsquote: {result.summary.success_rate}%
+                    {result.summary.successfully_imported} von {result.summary.total_rows_in_file} Kunden importiert ({result.summary.success_rate}%)
                   </p>
                 </div>
               </div>
@@ -431,7 +428,7 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
               </div>
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-xs text-blue-700 font-medium">⚠ Duplikate</p>
-                <p className="text-2xl font-bold text-blue-600">{result.summary.duplicates_detected}</p>
+                <p className="text-2xl font-bold text-blue-600">{result.summary.duplicates_skipped}</p>
               </div>
               {result.summary.failed > 0 && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -439,42 +436,75 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
                   <p className="text-2xl font-bold text-red-600">{result.summary.failed}</p>
                 </div>
               )}
-              {result.summary.skipped > 0 && (
+              {result.summary.validation_errors > 0 && (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                  <p className="text-xs text-amber-700 font-medium">⊘ Übersprungen</p>
-                  <p className="text-2xl font-bold text-amber-600">{result.summary.skipped}</p>
+                  <p className="text-xs text-amber-700 font-medium">⊘ Validierung</p>
+                  <p className="text-2xl font-bold text-amber-600">{result.summary.validation_errors}</p>
                 </div>
               )}
             </div>
 
+            {/* VALIDATION ERRORS */}
+            {result.details.validation_errors?.length > 0 && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg max-h-48 overflow-y-auto">
+                <p className="text-sm font-medium text-amber-900 mb-2">⊘ Validierungsfehler:</p>
+                <div className="space-y-1 text-xs text-amber-700">
+                  {result.details.validation_errors.slice(0, 20).map((rec, i) => (
+                    <div key={i} className="font-mono bg-white p-1 rounded">
+                      Zeile {rec.row}: {rec.error}
+                    </div>
+                  ))}
+                  {result.details.validation_errors.length > 20 && (
+                    <p className="text-amber-600 italic font-medium mt-2">
+                      ...und {result.details.validation_errors.length - 20} weitere
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* ERROR DETAILS */}
-            {result.details.failed_records.length > 0 && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg max-h-40 overflow-y-auto">
+            {result.details.failed_rows?.length > 0 && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg max-h-48 overflow-y-auto">
                 <p className="text-sm font-medium text-red-900 mb-2">✗ Fehlerhafte Zeilen:</p>
                 <div className="space-y-1 text-xs text-red-700">
-                  {result.details.failed_records.map((rec, i) => (
-                    <p key={i}>Zeile {rec.row}: {rec.error}</p>
+                  {result.details.failed_rows.slice(0, 20).map((rec, i) => (
+                    <div key={i} className="font-mono bg-white p-1 rounded">
+                      Zeile {rec.row} ({rec.email}): {rec.error}
+                    </div>
                   ))}
+                  {result.details.failed_rows.length > 20 && (
+                    <p className="text-red-600 italic font-medium mt-2">
+                      ...und {result.details.failed_rows.length - 20} weitere
+                    </p>
+                  )}
                 </div>
               </div>
             )}
 
             {/* DUPLICATES */}
-            {result.details.duplicates.length > 0 && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg max-h-40 overflow-y-auto">
-                <p className="text-sm font-medium text-blue-900 mb-2">⚠ Erkannte Duplikate:</p>
+            {result.details.duplicates?.length > 0 && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg max-h-48 overflow-y-auto">
+                <p className="text-sm font-medium text-blue-900 mb-2">⚠ Duplikate (übersprungen):</p>
                 <div className="space-y-1 text-xs text-blue-700">
-                  {result.details.duplicates.map((dup, i) => (
-                    <p key={i}>Zeile {dup.row}: {dup.name} ({dup.email}) — bereits im System</p>
+                  {result.details.duplicates.slice(0, 20).map((dup, i) => (
+                    <div key={i} className="font-mono bg-white p-1 rounded">
+                      Zeile {dup.row}: {dup.name} • {dup.email}
+                    </div>
                   ))}
+                  {result.details.duplicates.length > 20 && (
+                    <p className="text-blue-600 italic font-medium mt-2">
+                      ...und {result.details.duplicates.length - 20} weitere
+                    </p>
+                  )}
                 </div>
               </div>
             )}
 
             {/* ACTION BUTTON */}
-            <div className="flex justify-end gap-2 pt-2 border-t">
+            <div className="flex justify-end gap-2 pt-4 border-t sticky bottom-0 bg-white">
               <Button onClick={closeDialog} className="bg-green-600 hover:bg-green-700">
-                ✓ Importierte Kunden ansehen
+                ✓ Kunden ansehen
               </Button>
             </div>
           </div>

@@ -6,6 +6,69 @@ const log = (step, message, data = null) => {
   console.log(`[IMPORT:${step}] ${timestamp} — ${message}`, data || '');
 };
 
+// Validate customer record before insertion
+const validateCustomerRecord = (record, rowNum) => {
+  const errors = [];
+
+  // Required fields
+  if (!record.first_name || !record.first_name.trim()) {
+    errors.push('Vorname erforderlich');
+  }
+  if (!record.last_name || !record.last_name.trim()) {
+    errors.push('Nachname erforderlich');
+  }
+  if (!record.email || !record.email.trim()) {
+    errors.push('E-Mail erforderlich');
+  }
+
+  // Email format validation
+  if (record.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email.trim())) {
+    errors.push(`Ungültiges E-Mail-Format: ${record.email}`);
+  }
+
+  // Field length limits
+  if (record.first_name && record.first_name.length > 100) {
+    errors.push('Vorname zu lang (max. 100 Zeichen)');
+  }
+  if (record.last_name && record.last_name.length > 100) {
+    errors.push('Nachname zu lang (max. 100 Zeichen)');
+  }
+  if (record.notes && record.notes.length > 5000) {
+    errors.push('Notizen zu lang (max. 5000 Zeichen)');
+  }
+
+  // Phone validation (if provided)
+  if (record.phone && record.phone.length > 50) {
+    errors.push('Telefonnummer zu lang');
+  }
+  if (record.mobile && record.mobile.length > 50) {
+    errors.push('Mobilnummer zu lang');
+  }
+
+  // Zip code validation (if provided)
+  if (record.zip_code && !/^\d{4}$/.test(record.zip_code.replace(/\s/g, ''))) {
+    errors.push(`Ungültige PLZ-Format: ${record.zip_code}`);
+  }
+
+  // Date validation (if provided)
+  const dateFields = ['birthdate', 'drivers_license_date'];
+  for (const field of dateFields) {
+    if (record[field]) {
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(record[field])) {
+        errors.push(`Ungültiges Datumsformat in ${field}: ${record[field]}`);
+      } else {
+        const date = new Date(record[field]);
+        if (isNaN(date.getTime())) {
+          errors.push(`Ungültiges Datum in ${field}: ${record[field]}`);
+        }
+      }
+    }
+  }
+
+  return errors;
+};
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -121,8 +184,8 @@ Deno.serve(async (req) => {
     // Parse data rows
     const records = [];
     const duplicates = [];
-    const errors = [];
-    const validationDetails = [];
+    const validationErrors = [];
+    const processedEmails = new Set();
     
     // Get existing emails for duplicate check
     log('EXISTING', `Fetching existing customers...`);
@@ -146,117 +209,154 @@ Deno.serve(async (req) => {
         }
 
         const record = {};
-        let hasRequiredFields = false;
-
         mappedHeaders.forEach((header, idx) => {
           const value = values[idx]?.trim();
           if (value && header) {
             record[header] = value;
-            if (header === 'first_name' || header === 'last_name' || header === 'email') {
-              hasRequiredFields = true;
-            }
           }
         });
 
-        if (!hasRequiredFields) {
-          const msg = `Row ${i + 1}: Missing required fields`;
-          log('VALIDATION_ERROR', msg);
-          errors.push(msg);
-          validationDetails.push({ row: i + 1, issue: msg, data: record });
-          continue;
-        }
-
-        // Duplicate check
-        if (record.email && existingEmails.has(record.email.toLowerCase())) {
-          log('DUPLICATE', `Row ${i + 1}: ${record.email}`);
-          duplicates.push({
+        // Validate required fields
+        if (!record.first_name || !record.first_name.trim()) {
+          log('VALIDATION_ERROR', `Row ${i + 1}: Vorname fehlt`);
+          validationErrors.push({
             row: i + 1,
-            email: record.email,
-            name: `${record.first_name || ''} ${record.last_name || ''}`.trim()
+            error: 'Vorname erforderlich'
           });
           continue;
         }
 
-        // Set defaults — CRITICAL: ensure visibility + database persistence
+        if (!record.last_name || !record.last_name.trim()) {
+          log('VALIDATION_ERROR', `Row ${i + 1}: Nachname fehlt`);
+          validationErrors.push({
+            row: i + 1,
+            error: 'Nachname erforderlich'
+          });
+          continue;
+        }
+
+        if (!record.email || !record.email.trim()) {
+          log('VALIDATION_ERROR', `Row ${i + 1}: E-Mail fehlt`);
+          validationErrors.push({
+            row: i + 1,
+            error: 'E-Mail erforderlich'
+          });
+          continue;
+        }
+
+        // Sanitize and validate email
+        record.email = record.email.trim().toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email)) {
+          log('VALIDATION_ERROR', `Row ${i + 1}: Ungültiges E-Mail-Format`);
+          validationErrors.push({
+            row: i + 1,
+            error: `Ungültiges E-Mail-Format: ${record.email}`
+          });
+          continue;
+        }
+
+        // Duplicate check (existing OR in current batch)
+        if (existingEmails.has(record.email)) {
+          log('DUPLICATE', `Row ${i + 1}: ${record.email} (existing)`);
+          duplicates.push({
+            row: i + 1,
+            email: record.email,
+            name: `${record.first_name} ${record.last_name}`
+          });
+          continue;
+        }
+
+        if (processedEmails.has(record.email)) {
+          log('DUPLICATE', `Row ${i + 1}: ${record.email} (in batch)`);
+          duplicates.push({
+            row: i + 1,
+            email: record.email,
+            name: `${record.first_name} ${record.last_name}`
+          });
+          continue;
+        }
+
+        processedEmails.add(record.email);
+
+        // Run full validation
+        const fieldErrors = validateCustomerRecord(record, i + 1);
+        if (fieldErrors.length > 0) {
+          log('VALIDATION_ERROR', `Row ${i + 1}: ${fieldErrors.join(', ')}`);
+          validationErrors.push({
+            row: i + 1,
+            error: fieldErrors.join('; ')
+          });
+          continue;
+        }
+
+        // Set safe defaults
         if (!record.organization_id) {
-          // Get first org or use placeholder
           const orgs = await base44.entities.Organization.list('', 1);
           record.organization_id = orgs?.[0]?.id || 'ORG_IMPORT_DEFAULT';
-          log('ORG_ASSIGN', `Row ${i + 1}: Assigned org ${record.organization_id}`);
         }
-        if (!record.customer_type) {
-          record.customer_type = 'private';
-        }
-        if (!record.status) {
-          record.status = 'active'; // CRITICAL: Active = visible
-        }
-        if (!record.association_membership) {
-          record.association_membership = 'none';
-        }
+        if (!record.customer_type) record.customer_type = 'private';
+        if (!record.status) record.status = 'active';
+        if (!record.mandate_status) record.mandate_status = 'pending';
+        if (!record.association_membership) record.association_membership = 'none';
+        record.is_family_member = false;
         
-        // CRITICAL: Force visibility by never setting hidden flags
-        record.is_family_member = false; // Always primary customer
-        
-        log('VALIDATION_PASS', `Row ${i + 1}: ${record.first_name} ${record.last_name}`);
-
+        log('VALIDATION_PASS', `Row ${i + 1}: ${record.first_name} ${record.last_name} (${record.email})`);
         records.push({ rowNum: i + 1, data: record });
-        if (record.email) {
-          existingEmails.add(record.email.toLowerCase());
-        }
+        
       } catch (error) {
-        const msg = `Row ${i + 1}: ${error.message?.substring(0, 100)}`;
-        log('PARSE_ERROR', msg);
-        errors.push(msg);
-        validationDetails.push({ row: i + 1, error: error.message, data: record });
+        log('PARSE_ERROR', `Row ${i + 1}: ${error.message}`);
+        validationErrors.push({
+          row: i + 1,
+          error: `Parse error: ${error.message.substring(0, 100)}`
+        });
       }
     }
 
-    // Batch create with aggressive rate limiting
-    log('INSERTION', `Starting batch insertion of ${records.length} records...`);
+    // Batch creation with safe error recovery
+    log('INSERTION', `Starting batch insertion of ${records.length} validated records...`);
     
     let successful = 0;
     let failed = 0;
     const failedRecords = [];
     const createdIds = [];
-    const batchSize = 1;
-    const delayMs = 2500;
+    const batchSize = 5;
+    const delayMs = 1500;
 
     for (let i = 0; i < records.length; i += batchSize) {
       const batch = records.slice(i, i + batchSize);
       const batchNum = Math.floor(i / batchSize) + 1;
       const totalBatches = Math.ceil(records.length / batchSize);
-      log('BATCH', `Processing batch ${batchNum}/${totalBatches}`);
+      log('BATCH', `Processing batch ${batchNum}/${totalBatches} (${batch.length} records)`);
       
       for (const item of batch) {
+        let rowError = null;
         try {
-          log('CREATE', `Creating customer: ${item.data.first_name} ${item.data.last_name} (${item.data.email})`);
+          log('CREATE', `Creating: Row ${item.rowNum} - ${item.data.first_name} ${item.data.last_name}`);
           const created = await base44.entities[entity_name].create(item.data);
           
           if (created?.id) {
             createdIds.push(created.id);
-            log('SUCCESS', `Row ${item.rowNum}: Created ID ${created.id}`);
+            log('SUCCESS', `Row ${item.rowNum}: ID ${created.id}`);
             successful++;
           } else {
-            log('CREATE_NO_ID', `Row ${item.rowNum}: No ID returned`);
-            failed++;
-            failedRecords.push({
-              row: item.rowNum,
-              error: 'Keine ID zurückgegeben'
-            });
+            rowError = 'Keine ID zurückgegeben';
+            throw new Error(rowError);
           }
         } catch (error) {
-          const errMsg = error.message?.substring(0, 150) || 'Unbekannter Fehler';
+          const errMsg = error?.message || 'Unbekannter Fehler';
           log('CREATE_ERROR', `Row ${item.rowNum}: ${errMsg}`);
           failed++;
           failedRecords.push({
             row: item.rowNum,
-            error: errMsg
+            email: item.data.email,
+            name: `${item.data.first_name} ${item.data.last_name}`,
+            error: errMsg.substring(0, 200)
           });
         }
       }
       
       if (i + batchSize < records.length) {
-        log('DELAY', `Batch ${batchNum} complete. Waiting ${delayMs}ms before batch ${batchNum + 1}...`);
+        log('DELAY', `Batch ${batchNum}/${totalBatches} done. Delaying ${delayMs}ms...`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
@@ -264,34 +364,35 @@ Deno.serve(async (req) => {
     log('INSERTION_COMPLETE', `Successful: ${successful}, Failed: ${failed}`);
     log('CREATED_IDS', `Total created IDs: ${createdIds.length}`, createdIds.slice(0, 5));
 
-    log('RESPONSE', `Preparing response: ${successful} successful, ${failed} failed`);
+    log('FINAL', `Import complete: ${successful} successful, ${failed} failed, ${duplicates.length} duplicates, ${validationErrors.length} validation errors`);
     
     const response = {
       status: 'success',
       summary: {
-        total_rows: lines.length - 1,
+        total_rows_in_file: lines.length - 1,
         successfully_imported: successful,
         failed: failed,
-        duplicates_detected: duplicates.length,
-        skipped: errors.length,
-        success_rate: successful > 0 ? ((successful / records.length) * 100).toFixed(1) : 0
+        duplicates_skipped: duplicates.length,
+        validation_errors: validationErrors.length,
+        total_processed: successful + failed + duplicates.length + validationErrors.length,
+        success_rate: records.length > 0 ? ((successful / records.length) * 100).toFixed(1) : 0
       },
       details: {
-        imported_count: successful,
-        failed_records: failedRecords.slice(0, 20),
-        duplicates: duplicates.slice(0, 20),
-        validation_errors: errors.slice(0, 20),
-        created_ids: createdIds.slice(0, 10)
+        imported: {
+          count: successful,
+          ids: createdIds.slice(0, 5)
+        },
+        failed_rows: failedRecords.slice(0, 50),
+        duplicates: duplicates.slice(0, 50),
+        validation_errors: validationErrors.slice(0, 50)
       },
-      debug: {
-        total_records_parsed: records.length,
-        batch_size: batchSize,
-        delay_ms: delayMs,
-        timestamp_completed: new Date().toISOString()
+      enterprise: {
+        import_id: `IMPORT_${Date.now()}`,
+        processed_at: new Date().toISOString(),
+        batch_strategy: `${batchSize} records per batch`,
+        rate_limit_delay_ms: delayMs
       }
     };
-    
-    log('FINAL', `Response ready`, { successful, failed, duplicates: duplicates.length });
     
     return Response.json(response);
   } catch (error) {
