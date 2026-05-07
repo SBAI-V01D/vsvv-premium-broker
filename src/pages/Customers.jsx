@@ -430,7 +430,7 @@ export default function Customers() {
       </Dialog>
 
       <Dialog open={showImport} onOpenChange={setShowImport}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Kunden importieren</DialogTitle>
           </DialogHeader>
@@ -443,9 +443,29 @@ export default function Customers() {
                 onChange={(e) => setImportFile(e.target.files?.[0])}
                 className="mt-2 w-full p-2 border rounded"
               />
-              <p className="text-xs text-muted-foreground mt-2">
-                Unterstützte Formate: CSV, Excel | Spalten: first_name, last_name, email, phone (optional), city (optional)
-              </p>
+            </div>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm font-semibold text-blue-900 mb-2">📋 Erforderliche Spalten:</p>
+              <div className="grid grid-cols-2 gap-2 text-xs text-blue-800">
+                <div>
+                  <span className="font-mono bg-blue-100 px-2 py-1 rounded">first_name</span>
+                  <p className="text-blue-700 mt-1">Vorname (erforderlich)</p>
+                </div>
+                <div>
+                  <span className="font-mono bg-blue-100 px-2 py-1 rounded">last_name</span>
+                  <p className="text-blue-700 mt-1">Nachname (erforderlich)</p>
+                </div>
+                <div>
+                  <span className="font-mono bg-blue-100 px-2 py-1 rounded">email</span>
+                  <p className="text-blue-700 mt-1">E-Mail (erforderlich)</p>
+                </div>
+                <div>
+                  <span className="font-mono bg-blue-100 px-2 py-1 rounded">organization_id</span>
+                  <p className="text-blue-700 mt-1">Org-ID (erforderlich)</p>
+                </div>
+              </div>
+              <p className="text-xs text-blue-700 mt-3 font-medium">Optional: phone, mobile, street, zip_code, city, canton, birthdate, profession</p>
             </div>
             {importProgress && (
               <div className="p-3 bg-muted rounded text-sm text-center">

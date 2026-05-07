@@ -396,7 +396,7 @@ export default function Contracts() {
       </Dialog>
 
       <Dialog open={showImport} onOpenChange={setShowImport}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Verträge importieren</DialogTitle>
           </DialogHeader>
@@ -409,9 +409,29 @@ export default function Contracts() {
                 onChange={(e) => setImportFile(e.target.files?.[0])}
                 className="mt-2 w-full p-2 border rounded"
               />
-              <p className="text-xs text-muted-foreground mt-2">
-                Unterstützte Formate: CSV, Excel | Spalten: customer_id, insurer, policy_number (optional), premium_yearly (optional), start_date (optional), end_date (optional)
-              </p>
+            </div>
+            
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="text-sm font-semibold text-green-900 mb-2">📋 Erforderliche Spalten:</p>
+              <div className="grid grid-cols-2 gap-2 text-xs text-green-800">
+                <div>
+                  <span className="font-mono bg-green-100 px-2 py-1 rounded">customer_id</span>
+                  <p className="text-green-700 mt-1">Kunden-ID (erforderlich)</p>
+                </div>
+                <div>
+                  <span className="font-mono bg-green-100 px-2 py-1 rounded">insurer</span>
+                  <p className="text-green-700 mt-1">Versicherer (erforderlich)</p>
+                </div>
+                <div>
+                  <span className="font-mono bg-green-100 px-2 py-1 rounded">insurance_type</span>
+                  <p className="text-green-700 mt-1">Versicherungsart (erforderlich)</p>
+                </div>
+                <div>
+                  <span className="font-mono bg-green-100 px-2 py-1 rounded">organization_id</span>
+                  <p className="text-green-700 mt-1">Org-ID (erforderlich)</p>
+                </div>
+              </div>
+              <p className="text-xs text-green-700 mt-3 font-medium">Optional: policy_number, product, premium_yearly, premium_monthly, start_date, end_date, status</p>
             </div>
             {importProgress && (
               <div className="p-3 bg-muted rounded text-sm text-center">
