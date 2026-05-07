@@ -257,6 +257,37 @@
       "type": "number",
       "default": 0,
       "description": "KPI: Gesamte Jahrespr\u00e4mie aller aktiven Policies (CHF) - Cache"
+    },
+    "import_batch_id": {
+      "type": "string",
+      "description": "SECURITY: Batch-ID f\u00fcr Import-Tracking (verhindert unkontrolliertes L\u00f6schen)"
+    },
+    "imported_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "AUDIT: Zeitstempel des Imports"
+    },
+    "imported_by": {
+      "type": "string",
+      "description": "AUDIT: E-Mail des Importers"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false,
+      "description": "SOFT DELETE: Kunde ist archiviert (nicht wirklich gel\u00f6scht)"
+    },
+    "archived_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "SOFT DELETE: Zeitstempel der Archivierung"
+    },
+    "archived_batch_id": {
+      "type": "string",
+      "description": "SOFT DELETE: Batch-ID der Archivierung"
+    },
+    "archived_by": {
+      "type": "string",
+      "description": "SOFT DELETE: E-Mail des Archivierenden"
     }
   },
   "required": [
