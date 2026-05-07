@@ -3,15 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import {
   Users, Target, TrendingUp, Wallet, RefreshCw, CheckSquare,
-  FileWarning, ShieldAlert, ChevronDown, ChevronRight,
-  AlertTriangle, Clock, ArrowRight, Star, FileText,
-  ListTodo, Activity, Zap, Eye, X, Building2, Phone, Mail
+  FileWarning, ShieldAlert, ChevronDown, AlertTriangle, Clock,
+  ArrowRight, FileText, ListTodo, Activity, Zap, Eye, X,
+  CalendarClock, CircleDot, TriangleAlert
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 const fmtChf = (n) => n >= 1000
   ? `CHF ${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`
   : `CHF ${Math.round(n)}`
@@ -24,325 +23,292 @@ const fmtDate = (d) => {
 
 const daysUntil = (dateStr) => {
   if (!dateStr) return null
-  const diff = Math.ceil((new Date(dateStr) - new Date()) / 86400000)
-  return diff
+  return Math.ceil((new Date(dateStr) - new Date()) / 86400000)
 }
 
 const urgencyColor = (days) => {
   if (days === null) return 'text-muted-foreground'
-  if (days <= 0) return 'text-red-600'
-  if (days <= 14) return 'text-red-500'
-  if (days <= 30) return 'text-orange-500'
-  if (days <= 60) return 'text-amber-500'
+  if (days <= 0)  return 'text-red-600 font-bold'
+  if (days <= 7)  return 'text-red-500 font-semibold'
+  if (days <= 14) return 'text-orange-500 font-semibold'
+  if (days <= 30) return 'text-amber-500'
   return 'text-emerald-600'
 }
 
-// ── Section Wrapper ───────────────────────────────────────────────────────────
-function Section({ title, icon: Icon, count, accent = 'bg-slate-400', children, defaultOpen = true, badge, badgeClass }) {
+const urgencyBg = (days) => {
+  if (days === null) return ''
+  if (days <= 0)  return 'bg-red-50 border-red-200'
+  if (days <= 7)  return 'bg-red-50/60 border-red-100'
+  if (days <= 14) return 'bg-orange-50 border-orange-100'
+  if (days <= 30) return 'bg-amber-50/50 border-amber-100'
+  return 'bg-background border-border'
+}
+
+// ── Collapsible Section ───────────────────────────────────────────────────────
+function Section({ title, icon: Icon, accent, children, defaultOpen = true, countBadge, subtitleBadge }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm">
+    <div className={cn('rounded-xl overflow-hidden border shadow-sm', accent?.border || 'border-border bg-card')}>
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-muted/40 transition-colors"
+        className={cn('w-full flex items-center gap-2.5 px-4 py-3 transition-colors hover:bg-black/[0.02]', accent?.header)}
       >
-        <span className={`w-1 h-5 rounded-full flex-shrink-0 ${accent}`} />
-        {Icon && <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
-        <span className="text-sm font-semibold text-foreground">{title}</span>
-        {count !== undefined && (
-          <span className={cn('text-xs px-2 py-0.5 rounded-full font-semibold ml-1', badgeClass || 'bg-muted text-muted-foreground')}>
-            {count}
-          </span>
-        )}
-        {badge && <span className="ml-1">{badge}</span>}
-        <ChevronDown className={cn('w-4 h-4 text-muted-foreground ml-auto flex-shrink-0 transition-transform', open && 'rotate-180')} />
+        <span className={cn('w-[3px] h-4 rounded-full flex-shrink-0', accent?.bar || 'bg-slate-300')} />
+        {Icon && <Icon className={cn('w-3.5 h-3.5 flex-shrink-0', accent?.icon || 'text-muted-foreground')} />}
+        <span className="text-sm font-semibold flex-1 text-left">{title}</span>
+        {countBadge}
+        {subtitleBadge && <span className="text-[10px] text-muted-foreground">{subtitleBadge}</span>}
+        <ChevronDown className={cn('w-3.5 h-3.5 text-muted-foreground transition-transform flex-shrink-0', open && 'rotate-180')} />
       </button>
-      {open && <div className="px-5 pb-5">{children}</div>}
+      {open && <div className="px-4 pb-4">{children}</div>}
     </div>
   )
 }
 
-// ── KPI Strip ────────────────────────────────────────────────────────────────
-function KpiStrip({ data }) {
-  const navigate = useNavigate()
-  const {
-    activeCustomers, activeLeads, totalMonthlyPremium, yearlyCommissionForecast,
-    expiringContracts, openTasks, contractsWithoutDoc, customersWithCriticalGaps,
-  } = data
-
-  const kpis = [
-    { label: 'Aktive Kunden', value: activeCustomers.length, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', path: '/kunden' },
-    { label: 'Offene Leads', value: activeLeads.length, icon: Target, color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-100', path: '/leads' },
-    { label: 'Monatseinnahmen', value: fmtChf(totalMonthlyPremium), icon: Wallet, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', path: '/vertraege' },
-    { label: 'Jahres-Forecast', value: fmtChf(yearlyCommissionForecast), icon: TrendingUp, color: 'text-teal-600', bg: 'bg-teal-50', border: 'border-teal-100', path: '/provisionen-courtagen' },
-    { label: 'Offene Abläufe', value: expiringContracts.length, icon: RefreshCw, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-100', urgent: expiringContracts.length > 0, path: '/vertraege' },
-    { label: 'Offene Aufgaben', value: openTasks.length, icon: CheckSquare, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', urgent: openTasks.length > 5, path: '/aufgaben' },
-    { label: 'Fehl. Dokumente', value: contractsWithoutDoc, icon: FileWarning, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100', urgent: contractsWithoutDoc > 0, path: '/dokumente' },
-    { label: 'Coverage-Lücken', value: customersWithCriticalGaps.length, icon: ShieldAlert, color: 'text-pink-600', bg: 'bg-pink-50', border: 'border-pink-100', path: '/coverage-intelligence' },
-  ]
-
-  return (
-    <div className="grid grid-cols-4 lg:grid-cols-8 gap-2">
-      {kpis.map(k => {
-        const Icon = k.icon
-        return (
-          <button
-            key={k.label}
-            onClick={() => navigate(k.path)}
-            className={cn(
-              'flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all hover:shadow-md hover:-translate-y-0.5 text-center',
-              k.bg, k.border,
-              k.urgent ? 'ring-2 ring-red-300 ring-offset-1' : ''
-            )}
-          >
-            <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center', k.bg)}>
-              <Icon className={cn('w-4 h-4', k.color)} />
-            </div>
-            <span className={cn('text-lg font-bold leading-none', k.color)}>{k.value}</span>
-            <span className="text-[10px] text-muted-foreground leading-tight font-medium">{k.label}</span>
-          </button>
-        )
-      })}
-    </div>
-  )
+function CountBadge({ n, className }) {
+  if (!n) return null
+  return <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-bold', className)}>{n}</span>
 }
 
-// ── Priority Action Center ────────────────────────────────────────────────────
-function PriorityActionCenter({ data, onCustomerSelect }) {
+// ── 1. TODAY'S PRIORITY TASKS ─────────────────────────────────────────────────
+const CONTRACT_TASK_TYPES = new Set(['renewal', 'health_declaration'])
+
+function TodayPriorityTasks({ openTasks, onTaskClick }) {
   const navigate = useNavigate()
-  const { expiringContracts, openTasks, activeLeads, customers, customersWithCriticalGaps } = data
+  const today = new Date().toISOString().slice(0, 10)
 
-  const CONTRACT_TASK_TYPES = ['renewal', 'health_declaration']
-  const overdueTasks = openTasks.filter(t => t.due_date && daysUntil(t.due_date) !== null && daysUntil(t.due_date) <= 0)
-  const urgentRenewals = expiringContracts.filter(c => daysUntil(c.end_date) !== null && daysUntil(c.end_date) <= 30).slice(0, 5)
-  const hotLeads = activeLeads.filter(l => l.lead_score >= 70).sort((a, b) => (b.lead_score || 0) - (a.lead_score || 0)).slice(0, 4)
-  const attentionCustomers = customersWithCriticalGaps.slice(0, 4)
+  const overdue   = openTasks.filter(t => t.due_date && daysUntil(t.due_date) < 0)
+  const dueToday  = openTasks.filter(t => t.due_date === today)
+  const dueThisWeek = openTasks.filter(t => {
+    const d = daysUntil(t.due_date)
+    return d !== null && d > 0 && d <= 7
+  })
 
-  const priorityItems = [
-    ...overdueTasks.map(t => ({
-      type: 'task', icon: CheckSquare, color: 'text-red-600', bg: 'bg-red-50',
-      label: t.title, sub: `Überfällig · ${t.customer_name || ''}`,
-      days: daysUntil(t.due_date), action: () => navigate('/aufgaben'),
-      urgent: true,
-    })),
-    ...urgentRenewals.map(c => ({
-      type: 'renewal', icon: RefreshCw, color: 'text-orange-600', bg: 'bg-orange-50',
-      label: c.customer_name || c.insurer, sub: `Ablauf: ${fmtDate(c.end_date)} · ${c.insurer || ''}`,
-      days: daysUntil(c.end_date), action: () => navigate('/vertraege'),
-      urgent: (daysUntil(c.end_date) || 0) <= 14,
-    })),
-    ...hotLeads.map(l => ({
-      type: 'lead', icon: Target, color: 'text-violet-600', bg: 'bg-violet-50',
-      label: `${l.first_name} ${l.last_name}`, sub: `Score: ${l.lead_score}% · ${l.status}`,
-      days: null, action: () => navigate('/leads'),
-      urgent: false,
-    })),
-    ...attentionCustomers.slice(0, 2).map(c => ({
-      type: 'coverage', icon: ShieldAlert, color: 'text-pink-600', bg: 'bg-pink-50',
-      label: `${c.first_name} ${c.last_name}`, sub: 'Coverage-Lücke erkannt',
-      days: null, action: () => onCustomerSelect(c), urgent: false,
-    })),
-  ].sort((a, b) => (a.urgent ? -1 : 1))
+  const totalUrgent = overdue.length + dueToday.length
 
-  if (priorityItems.length === 0) {
-    return <p className="text-sm text-muted-foreground text-center py-6">Keine kritischen Prioritäten — alles im grünen Bereich ✓</p>
+  if (overdue.length === 0 && dueToday.length === 0 && dueThisWeek.length === 0) {
+    return (
+      <div className="flex items-center gap-2 py-4 text-emerald-600">
+        <CheckSquare className="w-4 h-4" />
+        <span className="text-sm font-medium">Keine dringenden Aufgaben — alles erledigt ✓</span>
+      </div>
+    )
+  }
+
+  const renderRow = (t, variant = 'default') => {
+    const days = daysUntil(t.due_date)
+    const isContract = CONTRACT_TASK_TYPES.has(t.task_type)
+    return (
+      <button
+        key={t.id}
+        onClick={() => onTaskClick(t)}
+        className={cn(
+          'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all hover:shadow-sm group',
+          urgencyBg(days)
+        )}
+      >
+        {/* Type indicator */}
+        <div className={cn('w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0',
+          isContract ? 'bg-orange-100' : 'bg-slate-100'
+        )}>
+          {isContract
+            ? <RefreshCw className="w-3.5 h-3.5 text-orange-600" />
+            : <ListTodo className="w-3.5 h-3.5 text-slate-500" />
+          }
+        </div>
+        {/* Priority bar */}
+        <span className={cn('w-1 h-7 rounded-full flex-shrink-0', {
+          'bg-red-500': t.priority === 'urgent' || days !== null && days <= 0,
+          'bg-orange-400': t.priority === 'high' || (days !== null && days > 0 && days <= 7),
+          'bg-blue-400': t.priority === 'medium' && (days === null || days > 7),
+          'bg-slate-200': t.priority === 'low' || !t.priority,
+        })} />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold truncate">{t.title}</p>
+          {t.customer_name && <p className="text-[10px] text-muted-foreground">{t.customer_name}</p>}
+        </div>
+        {isContract && (
+          <span className="text-[9px] px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded font-semibold flex-shrink-0">VERTRAG</span>
+        )}
+        <span className={cn('text-xs flex-shrink-0', urgencyColor(days))}>
+          {days === null ? '' : days <= 0 ? 'Überfällig' : days === 0 ? 'Heute' : `${days}T`}
+        </span>
+      </button>
+    )
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-      {priorityItems.slice(0, 8).map((item, i) => {
-        const Icon = item.icon
-        return (
-          <button
-            key={i}
-            onClick={item.action}
-            className={cn(
-              'flex items-center gap-3 p-3 rounded-lg border text-left transition-all hover:shadow-sm hover:border-primary/30',
-              item.urgent ? 'border-red-200 bg-red-50/50' : 'border-border bg-background hover:bg-muted/30'
-            )}
-          >
-            <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0', item.bg)}>
-              <Icon className={cn('w-4 h-4', item.color)} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{item.label}</p>
-              <p className="text-xs text-muted-foreground truncate">{item.sub}</p>
-            </div>
-            {item.days !== null && (
-              <span className={cn('text-xs font-semibold flex-shrink-0', urgencyColor(item.days))}>
-                {item.days <= 0 ? 'Überfällig' : `${item.days}T`}
-              </span>
-            )}
-            {item.urgent && <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 animate-pulse" />}
-          </button>
-        )
-      })}
+    <div className="space-y-4">
+      {overdue.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <TriangleAlert className="w-3.5 h-3.5 text-red-600" />
+            <span className="text-xs font-bold text-red-700 uppercase tracking-wide">Überfällig ({overdue.length})</span>
+          </div>
+          <div className="space-y-1.5">{overdue.map(t => renderRow(t, 'overdue'))}</div>
+        </div>
+      )}
+      {dueToday.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="w-3.5 h-3.5 text-orange-600" />
+            <span className="text-xs font-bold text-orange-700 uppercase tracking-wide">Heute fällig ({dueToday.length})</span>
+          </div>
+          <div className="space-y-1.5">{dueToday.map(t => renderRow(t, 'today'))}</div>
+        </div>
+      )}
+      {dueThisWeek.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <CalendarClock className="w-3.5 h-3.5 text-amber-600" />
+            <span className="text-xs font-bold text-amber-700 uppercase tracking-wide">Diese Woche ({dueThisWeek.length})</span>
+          </div>
+          <div className="space-y-1.5">{dueThisWeek.slice(0, 4).map(t => renderRow(t, 'week'))}</div>
+        </div>
+      )}
+      <button onClick={() => navigate('/aufgaben')} className="flex items-center gap-1.5 text-xs text-primary hover:underline pt-1">
+        <ArrowRight className="w-3 h-3" /> Alle Aufgaben öffnen
+      </button>
     </div>
   )
 }
 
-// ── Activity Timeline ─────────────────────────────────────────────────────────
-function ActivityTimeline({ data }) {
+// ── 2. URGENT CONTRACT WORKFLOWS ──────────────────────────────────────────────
+function UrgentContracts({ expiringContracts }) {
   const navigate = useNavigate()
-  const { contracts, customers, applications, documents } = data
+  const urgent = expiringContracts
+    .map(c => ({ ...c, _days: daysUntil(c.end_date) }))
+    .sort((a, b) => (a._days ?? 999) - (b._days ?? 999))
+    .slice(0, 8)
 
-  const items = useMemo(() => {
-    const events = []
-    contracts.slice(0, 6).forEach(c => {
-      if (c.updated_date) events.push({
-        date: c.updated_date, icon: FileText, color: 'text-blue-500', bg: 'bg-blue-50',
-        label: `Vertrag aktualisiert`, sub: `${c.customer_name || ''} · ${c.insurer || ''} · ${c.status}`,
-        action: () => navigate('/vertraege'),
-      })
-    })
-    customers.slice(0, 4).forEach(c => {
-      if (c.created_date) events.push({
-        date: c.created_date, icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-50',
-        label: 'Neuer Kunde', sub: `${c.first_name} ${c.last_name}`,
-        action: () => navigate(`/kunden/${c.id}`),
-      })
-    })
-    applications.slice(0, 4).forEach(a => {
-      if (a.updated_date) events.push({
-        date: a.updated_date, icon: Activity, color: 'text-violet-500', bg: 'bg-violet-50',
-        label: 'Antrag aktualisiert', sub: `${a.customer_name || ''} · ${a.status}`,
-        action: () => navigate('/antraege'),
-      })
-    })
-    documents.slice(0, 3).forEach(d => {
-      if (d.created_date) events.push({
-        date: d.created_date, icon: FileWarning, color: 'text-amber-500', bg: 'bg-amber-50',
-        label: 'Dokument hochgeladen', sub: d.name || 'Unbenannt',
-        action: () => navigate('/dokumente'),
-      })
-    })
-    return events.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8)
-  }, [contracts, customers, applications, documents])
-
-  if (items.length === 0) return <p className="text-sm text-muted-foreground py-4 text-center">Keine aktuellen Aktivitäten</p>
+  if (urgent.length === 0) {
+    return (
+      <div className="flex items-center gap-2 py-4 text-emerald-600">
+        <RefreshCw className="w-4 h-4" />
+        <span className="text-sm font-medium">Keine ablaufenden Verträge in den nächsten 90 Tagen ✓</span>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-1.5">
-      {items.map((item, i) => {
-        const Icon = item.icon
-        const dt = new Date(item.date)
-        const age = Math.floor((Date.now() - dt) / 86400000)
-        const ageStr = age === 0 ? 'Heute' : age === 1 ? 'Gestern' : `vor ${age}T`
+      {urgent.map(c => {
+        const days = c._days
+        const stageLabel = { early: 'Early', contact: 'Kontakt', offer: 'Angebot', negotiation: 'Verhandlung', renewed: 'Erneuert', lost: 'Verloren' }[c.renewal_stage] || 'Early'
         return (
-          <button key={i} onClick={item.action} className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/40 transition-colors text-left group">
-            <div className={cn('w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0', item.bg)}>
-              <Icon className={cn('w-3.5 h-3.5', item.color)} />
+          <button
+            key={c.id}
+            onClick={() => navigate('/vertraege')}
+            className={cn('w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all hover:shadow-sm', urgencyBg(days))}
+          >
+            <div className="w-7 h-7 rounded-md bg-orange-100 flex items-center justify-center flex-shrink-0">
+              <RefreshCw className="w-3.5 h-3.5 text-orange-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium">{item.label}</p>
-              <p className="text-xs text-muted-foreground truncate">{item.sub}</p>
+              <p className="text-xs font-semibold truncate">{c.customer_name || '–'}</p>
+              <p className="text-[10px] text-muted-foreground">{c.insurer} · {c.sparte || c.insurance_type || '–'}</p>
             </div>
-            <span className="text-[10px] text-muted-foreground flex-shrink-0">{ageStr}</span>
+            <span className={cn('text-[9px] px-1.5 py-0.5 rounded font-semibold flex-shrink-0', {
+              'bg-slate-100 text-slate-600': c.renewal_stage === 'early' || !c.renewal_stage,
+              'bg-blue-100 text-blue-700': c.renewal_stage === 'contact',
+              'bg-violet-100 text-violet-700': c.renewal_stage === 'offer',
+              'bg-orange-100 text-orange-700': c.renewal_stage === 'negotiation',
+            })}>{stageLabel}</span>
+            <span className={cn('text-xs flex-shrink-0 w-16 text-right', urgencyColor(days))}>
+              {days === null ? '–' : days <= 0 ? 'Abgelaufen' : `${days}T`}
+            </span>
           </button>
         )
       })}
+      {expiringContracts.length > 8 && (
+        <button onClick={() => navigate('/vertraege')} className="flex items-center gap-1.5 text-xs text-primary hover:underline pt-1">
+          <ArrowRight className="w-3 h-3" /> +{expiringContracts.length - 8} weitere anzeigen
+        </button>
+      )}
     </div>
   )
 }
 
-// ── Sales & Coverage Intelligence ─────────────────────────────────────────────
-function SalesCoveragePanel({ data }) {
+// ── 3. CUSTOMER ACTIONS ───────────────────────────────────────────────────────
+function CustomerActionItems({ data, onCustomerSelect }) {
   const navigate = useNavigate()
-  const { activeLeads, expiringContracts, customersWithCriticalGaps, conversionRate, activeContracts } = data
+  const { customersWithCriticalGaps, activeLeads, contractsWithoutDoc } = data
 
-  const renewalStages = useMemo(() => {
-    const d = { early: 0, contact: 0, offer: 0, negotiation: 0, renewed: 0 }
-    expiringContracts.forEach(c => { const s = c.renewal_stage || 'early'; if (d[s] !== undefined) d[s]++ })
-    return d
-  }, [expiringContracts])
+  const hotLeads = activeLeads
+    .filter(l => (l.lead_score || 0) >= 60)
+    .sort((a, b) => (b.lead_score || 0) - (a.lead_score || 0))
+    .slice(0, 4)
 
-  const leadStages = useMemo(() => {
-    const d = { new: 0, contacted: 0, qualified: 0 }
-    activeLeads.forEach(l => { if (d[l.status] !== undefined) d[l.status]++ })
-    return d
-  }, [activeLeads])
+  const total = customersWithCriticalGaps.length + hotLeads.length + (contractsWithoutDoc > 0 ? 1 : 0)
+
+  if (total === 0) {
+    return (
+      <div className="flex items-center gap-2 py-4 text-emerald-600">
+        <Users className="w-4 h-4" />
+        <span className="text-sm font-medium">Keine Kundenmassnahmen ausstehend ✓</span>
+      </div>
+    )
+  }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {/* Pipeline */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Lead Pipeline</p>
-        <div className="space-y-2">
-          {[
-            { label: 'Neu', count: leadStages.new, color: 'bg-slate-400' },
-            { label: 'Kontaktiert', count: leadStages.contacted, color: 'bg-blue-400' },
-            { label: 'Qualifiziert', count: leadStages.qualified, color: 'bg-violet-500' },
-          ].map(s => (
-            <div key={s.label} className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground w-20">{s.label}</span>
-              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                <div className={cn('h-full rounded-full', s.color)} style={{ width: `${activeLeads.length > 0 ? (s.count / activeLeads.length) * 100 : 0}%` }} />
-              </div>
-              <span className="text-xs font-semibold w-5 text-right">{s.count}</span>
-            </div>
-          ))}
-          <button onClick={() => navigate('/leads')} className="flex items-center gap-1 text-xs text-primary mt-2 hover:underline">
-            <ArrowRight className="w-3 h-3" /> Leads öffnen
-          </button>
-        </div>
-      </div>
-
-      {/* Renewals */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Renewal Stages</p>
-        <div className="space-y-2">
-          {[
-            { label: 'Early', count: renewalStages.early, color: 'bg-slate-300' },
-            { label: 'Kontakt', count: renewalStages.contact, color: 'bg-amber-400' },
-            { label: 'Angebot', count: renewalStages.offer, color: 'bg-orange-500' },
-            { label: 'Verhandlung', count: renewalStages.negotiation, color: 'bg-red-500' },
-          ].map(s => (
-            <div key={s.label} className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground w-20">{s.label}</span>
-              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                <div className={cn('h-full rounded-full', s.color)} style={{ width: `${expiringContracts.length > 0 ? (s.count / expiringContracts.length) * 100 : 0}%` }} />
-              </div>
-              <span className="text-xs font-semibold w-5 text-right">{s.count}</span>
-            </div>
-          ))}
-          <button onClick={() => navigate('/vertraege')} className="flex items-center gap-1 text-xs text-primary mt-2 hover:underline">
-            <ArrowRight className="w-3 h-3" /> Verträge öffnen
-          </button>
-        </div>
-      </div>
-
-      {/* Coverage */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Coverage Intelligence</p>
-        <div className="space-y-2">
-          <div className="flex justify-between items-center p-2.5 rounded-lg bg-pink-50 border border-pink-100">
-            <span className="text-xs text-pink-700 font-medium">Kritische Lücken</span>
-            <span className="text-sm font-bold text-pink-700">{customersWithCriticalGaps.length}</span>
+    <div className="space-y-1.5">
+      {contractsWithoutDoc > 0 && (
+        <button
+          onClick={() => navigate('/dokumente')}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-red-100 bg-red-50/50 text-left hover:shadow-sm transition-all"
+        >
+          <div className="w-7 h-7 rounded-md bg-red-100 flex items-center justify-center flex-shrink-0">
+            <FileWarning className="w-3.5 h-3.5 text-red-600" />
           </div>
-          <div className="flex justify-between items-center p-2.5 rounded-lg bg-emerald-50 border border-emerald-100">
-            <span className="text-xs text-emerald-700 font-medium">Conversion Rate</span>
-            <span className="text-sm font-bold text-emerald-700">{conversionRate}%</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold">{contractsWithoutDoc} Policen ohne Dokument</p>
+            <p className="text-[10px] text-muted-foreground">Dokumente hochladen oder verknüpfen</p>
           </div>
-          <div className="flex justify-between items-center p-2.5 rounded-lg bg-blue-50 border border-blue-100">
-            <span className="text-xs text-blue-700 font-medium">Aktive Policen</span>
-            <span className="text-sm font-bold text-blue-700">{activeContracts.length}</span>
+          <span className="text-[9px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-bold">DRINGEND</span>
+        </button>
+      )}
+      {customersWithCriticalGaps.slice(0, 3).map(c => (
+        <button
+          key={c.id}
+          onClick={() => onCustomerSelect(c)}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-pink-100 bg-pink-50/40 text-left hover:shadow-sm transition-all"
+        >
+          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-xs flex-shrink-0">
+            {c.first_name?.[0]}{c.last_name?.[0]}
           </div>
-          <button onClick={() => navigate('/coverage-intelligence')} className="flex items-center gap-1 text-xs text-primary mt-1 hover:underline">
-            <ArrowRight className="w-3 h-3" /> Coverage öffnen
-          </button>
-        </div>
-      </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold truncate">{c.first_name} {c.last_name}</p>
+            <p className="text-[10px] text-muted-foreground">Coverage-Lücke erkannt</p>
+          </div>
+          <span className="text-[9px] px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded font-semibold flex-shrink-0">LÜCKE</span>
+          <Eye className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+        </button>
+      ))}
+      {hotLeads.map(l => (
+        <button
+          key={l.id}
+          onClick={() => navigate('/leads')}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-violet-100 bg-violet-50/30 text-left hover:shadow-sm transition-all"
+        >
+          <div className="w-7 h-7 rounded-md bg-violet-100 flex items-center justify-center flex-shrink-0">
+            <Target className="w-3.5 h-3.5 text-violet-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold truncate">{l.first_name} {l.last_name}</p>
+            <p className="text-[10px] text-muted-foreground">Score: {l.lead_score}% · {l.status}</p>
+          </div>
+          <span className="text-[9px] px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded font-semibold flex-shrink-0">LEAD</span>
+        </button>
+      ))}
     </div>
   )
 }
 
-// ── Task Split Panel ──────────────────────────────────────────────────────────
-const CONTRACT_TASK_TYPES_SET = new Set(['renewal', 'health_declaration'])
-
-function TaskSplitPanel({ tasks, onTaskClick }) {
+// ── 4. ALL TASKS SPLIT PANEL ──────────────────────────────────────────────────
+function AllTasksSplit({ openTasks, onTaskClick }) {
   const navigate = useNavigate()
-  const adminTasks = tasks.filter(t => !CONTRACT_TASK_TYPES_SET.has(t.task_type) && t.status !== 'completed')
-  const contractTasks = tasks.filter(t => CONTRACT_TASK_TYPES_SET.has(t.task_type) && t.status !== 'completed')
+  const adminTasks    = openTasks.filter(t => !CONTRACT_TASK_TYPES.has(t.task_type))
+  const contractTasks = openTasks.filter(t => CONTRACT_TASK_TYPES.has(t.task_type))
 
   const renderTask = (t) => {
     const days = daysUntil(t.due_date)
@@ -351,22 +317,22 @@ function TaskSplitPanel({ tasks, onTaskClick }) {
         key={t.id}
         onClick={() => onTaskClick(t)}
         className={cn(
-          'w-full flex items-center gap-2.5 p-2.5 rounded-lg border text-left transition-all hover:shadow-sm',
-          days !== null && days <= 0 ? 'bg-red-50 border-red-200' : 'bg-background border-border hover:bg-muted/30'
+          'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-all hover:shadow-sm',
+          urgencyBg(days)
         )}
       >
-        <div className={cn('w-1.5 h-6 rounded-full flex-shrink-0', {
-          'bg-red-500': t.priority === 'urgent',
-          'bg-orange-400': t.priority === 'high',
-          'bg-blue-400': t.priority === 'medium',
-          'bg-slate-300': t.priority === 'low' || !t.priority,
+        <span className={cn('w-1 h-6 rounded-full flex-shrink-0', {
+          'bg-red-500':    t.priority === 'urgent' || (days !== null && days <= 0),
+          'bg-orange-400': t.priority === 'high'   || (days !== null && days > 0 && days <= 7),
+          'bg-blue-400':   t.priority === 'medium' && (days === null || days > 7),
+          'bg-slate-200':  !t.priority || t.priority === 'low',
         })} />
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium truncate">{t.title}</p>
           {t.customer_name && <p className="text-[10px] text-muted-foreground truncate">{t.customer_name}</p>}
         </div>
         {t.due_date && (
-          <span className={cn('text-[10px] font-semibold flex-shrink-0', urgencyColor(days))}>
+          <span className={cn('text-[10px] flex-shrink-0', urgencyColor(days))}>
             {days !== null && days <= 0 ? 'Überfällig' : fmtDate(t.due_date)}
           </span>
         )}
@@ -375,36 +341,39 @@ function TaskSplitPanel({ tasks, onTaskClick }) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+      {/* Administrative */}
       <div>
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-blue-100">
           <ListTodo className="w-4 h-4 text-blue-500" />
-          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Administrative Aufgaben</span>
-          <span className="text-xs px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold">{adminTasks.length}</span>
+          <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">Administrative Aufgaben</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold ml-auto">{adminTasks.length}</span>
         </div>
         {adminTasks.length === 0
           ? <p className="text-xs text-muted-foreground py-3 text-center">Alle erledigt ✓</p>
-          : <div className="space-y-1.5">{adminTasks.slice(0, 5).map(renderTask)}</div>
+          : <div className="space-y-1.5">{adminTasks.slice(0, 6).map(renderTask)}</div>
         }
-        {adminTasks.length > 5 && (
+        {adminTasks.length > 6 && (
           <button onClick={() => navigate('/aufgaben')} className="flex items-center gap-1 text-xs text-primary mt-2 hover:underline">
-            <ArrowRight className="w-3 h-3" /> +{adminTasks.length - 5} weitere
+            <ArrowRight className="w-3 h-3" /> +{adminTasks.length - 6} weitere
           </button>
         )}
       </div>
+
+      {/* Contract Workflows */}
       <div>
-        <div className="flex items-center gap-2 mb-3">
-          <FileWarning className="w-4 h-4 text-orange-500" />
-          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Vertrags-Workflows</span>
-          <span className="text-xs px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-semibold">{contractTasks.length}</span>
+        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-orange-100">
+          <RefreshCw className="w-4 h-4 text-orange-500" />
+          <span className="text-xs font-bold text-orange-700 uppercase tracking-wide">Vertrags-Workflows</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold ml-auto">{contractTasks.length}</span>
         </div>
         {contractTasks.length === 0
           ? <p className="text-xs text-muted-foreground py-3 text-center">Keine offenen Vertragsaufgaben ✓</p>
-          : <div className="space-y-1.5">{contractTasks.slice(0, 5).map(renderTask)}</div>
+          : <div className="space-y-1.5">{contractTasks.slice(0, 6).map(renderTask)}</div>
         }
-        {contractTasks.length > 5 && (
+        {contractTasks.length > 6 && (
           <button onClick={() => navigate('/aufgaben')} className="flex items-center gap-1 text-xs text-primary mt-2 hover:underline">
-            <ArrowRight className="w-3 h-3" /> +{contractTasks.length - 5} weitere
+            <ArrowRight className="w-3 h-3" /> +{contractTasks.length - 6} weitere
           </button>
         )}
       </div>
@@ -412,23 +381,139 @@ function TaskSplitPanel({ tasks, onTaskClick }) {
   )
 }
 
-// ── Customer Quick View ───────────────────────────────────────────────────────
+// ── 5. KPI STRIP (compact, secondary) ────────────────────────────────────────
+function CompactKpiStrip({ data }) {
+  const navigate = useNavigate()
+  const {
+    activeCustomers, activeLeads, totalMonthlyPremium, yearlyCommissionForecast,
+    expiringContracts, openTasks, contractsWithoutDoc, customersWithCriticalGaps,
+  } = data
+
+  const kpis = [
+    { label: 'Kunden',       value: activeCustomers.length,            color: 'text-blue-600',   path: '/kunden' },
+    { label: 'Leads',        value: activeLeads.length,                color: 'text-violet-600', path: '/leads' },
+    { label: 'Monatspr.',    value: fmtChf(totalMonthlyPremium),       color: 'text-emerald-600',path: '/vertraege' },
+    { label: 'Forecast/J.',  value: fmtChf(yearlyCommissionForecast),  color: 'text-teal-600',   path: '/provisionen-courtagen' },
+    { label: 'Abläufe',      value: expiringContracts.length,          color: expiringContracts.length > 0 ? 'text-orange-600' : 'text-muted-foreground', path: '/vertraege' },
+    { label: 'Aufgaben',     value: openTasks.length,                  color: openTasks.length > 5 ? 'text-amber-600' : 'text-muted-foreground', path: '/aufgaben' },
+    { label: 'Fehl. Dok.',   value: contractsWithoutDoc,               color: contractsWithoutDoc > 0 ? 'text-red-600' : 'text-muted-foreground', path: '/dokumente' },
+    { label: 'Coverage',     value: customersWithCriticalGaps.length,  color: customersWithCriticalGaps.length > 0 ? 'text-pink-600' : 'text-muted-foreground', path: '/coverage-intelligence' },
+  ]
+
+  return (
+    <div className="grid grid-cols-4 lg:grid-cols-8 gap-2">
+      {kpis.map(k => (
+        <button
+          key={k.label}
+          onClick={() => navigate(k.path)}
+          className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors border border-transparent hover:border-border text-center"
+        >
+          <span className={cn('text-base font-bold leading-none', k.color)}>{k.value}</span>
+          <span className="text-[9px] text-muted-foreground font-medium leading-tight">{k.label}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ── 6. SALES & PIPELINE SUMMARY ───────────────────────────────────────────────
+function SalesPipelineSummary({ data }) {
+  const navigate = useNavigate()
+  const { activeLeads, expiringContracts, customersWithCriticalGaps, conversionRate, activeContracts } = data
+
+  const renewalStages = useMemo(() => {
+    const d = { early: 0, contact: 0, offer: 0, negotiation: 0 }
+    expiringContracts.forEach(c => { const s = c.renewal_stage || 'early'; if (s in d) d[s]++ })
+    return d
+  }, [expiringContracts])
+
+  const leadStages = useMemo(() => {
+    const d = { new: 0, contacted: 0, qualified: 0 }
+    activeLeads.forEach(l => { if (l.status in d) d[l.status]++ })
+    return d
+  }, [activeLeads])
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2.5">Lead Pipeline</p>
+        <div className="space-y-1.5">
+          {[
+            { label: 'Neu',         count: leadStages.new,       color: 'bg-slate-400' },
+            { label: 'Kontaktiert', count: leadStages.contacted, color: 'bg-blue-400' },
+            { label: 'Qualifiziert',count: leadStages.qualified, color: 'bg-violet-500' },
+          ].map(s => (
+            <div key={s.label} className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground w-18">{s.label}</span>
+              <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+                <div className={cn('h-full rounded-full', s.color)} style={{ width: `${activeLeads.length > 0 ? (s.count / activeLeads.length) * 100 : 0}%` }} />
+              </div>
+              <span className="text-xs font-bold w-4 text-right">{s.count}</span>
+            </div>
+          ))}
+        </div>
+        <button onClick={() => navigate('/leads')} className="flex items-center gap-1 text-xs text-primary mt-3 hover:underline">
+          <ArrowRight className="w-3 h-3" /> Leads öffnen
+        </button>
+      </div>
+
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2.5">Renewal Pipeline</p>
+        <div className="space-y-1.5">
+          {[
+            { label: 'Early',       count: renewalStages.early,       color: 'bg-slate-300' },
+            { label: 'Kontakt',     count: renewalStages.contact,     color: 'bg-amber-400' },
+            { label: 'Angebot',     count: renewalStages.offer,       color: 'bg-orange-500' },
+            { label: 'Verhandlung', count: renewalStages.negotiation, color: 'bg-red-500' },
+          ].map(s => (
+            <div key={s.label} className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground w-18">{s.label}</span>
+              <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+                <div className={cn('h-full rounded-full', s.color)} style={{ width: `${expiringContracts.length > 0 ? (s.count / expiringContracts.length) * 100 : 0}%` }} />
+              </div>
+              <span className="text-xs font-bold w-4 text-right">{s.count}</span>
+            </div>
+          ))}
+        </div>
+        <button onClick={() => navigate('/vertraege')} className="flex items-center gap-1 text-xs text-primary mt-3 hover:underline">
+          <ArrowRight className="w-3 h-3" /> Verträge öffnen
+        </button>
+      </div>
+
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2.5">Intelligence</p>
+        <div className="space-y-1.5">
+          {[
+            { label: 'Coverage-Lücken', value: customersWithCriticalGaps.length, color: 'text-pink-600', path: '/coverage-intelligence' },
+            { label: 'Conversion Rate', value: `${conversionRate}%`,            color: 'text-emerald-600', path: '/leads' },
+            { label: 'Aktive Policen',  value: activeContracts.length,           color: 'text-blue-600', path: '/vertraege' },
+          ].map(item => (
+            <button key={item.label} onClick={() => navigate(item.path)}
+              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded bg-muted/40 hover:bg-muted/70 transition-colors">
+              <span className="text-[10px] text-muted-foreground">{item.label}</span>
+              <span className={cn('text-xs font-bold', item.color)}>{item.value}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Customer Quick View Overlay ───────────────────────────────────────────────
 function CustomerQuickView({ customer, contracts, tasks, documents, onClose }) {
   const navigate = useNavigate()
   if (!customer) return null
 
   const custContracts = contracts.filter(c => c.customer_id === customer.id || c.primary_customer_id === customer.id)
-  const custTasks = tasks.filter(t => t.customer_id === customer.id && t.status !== 'completed')
-  const custDocs = documents.filter(d => d.customer_id === customer.id || d.primary_customer_id === customer.id)
-  const totalPremium = custContracts.filter(c => c.status === 'active').reduce((s, c) => s + (c.premium_yearly || (c.premium_monthly || 0) * 12), 0)
+  const custTasks     = tasks.filter(t => t.customer_id === customer.id && t.status !== 'completed')
+  const custDocs      = documents.filter(d => d.customer_id === customer.id || d.primary_customer_id === customer.id)
+  const totalPremium  = custContracts.filter(c => c.status === 'active').reduce((s, c) => s + (c.premium_yearly || (c.premium_monthly || 0) * 12), 0)
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-end md:items-center justify-center p-4" onClick={onClose}>
-      <div
-        className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
+      <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}>
         <div className="flex items-start gap-3 p-5 border-b border-border">
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary flex-shrink-0">
             {customer.first_name?.[0]}{customer.last_name?.[0]}
@@ -441,20 +526,16 @@ function CustomerQuickView({ customer, contracts, tasks, documents, onClose }) {
             <Button size="sm" variant="outline" onClick={() => navigate(`/kunden/${customer.id}/360`)}>
               <Eye className="w-3.5 h-3.5 mr-1" /> 360°
             </Button>
-            <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-              <X className="w-4 h-4" />
-            </button>
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
           </div>
         </div>
-
         <div className="p-5 space-y-4">
-          {/* KPI row */}
           <div className="grid grid-cols-4 gap-2">
             {[
-              { label: 'Policen', value: custContracts.length, color: 'text-blue-600' },
-              { label: 'Prämie/J.', value: fmtChf(totalPremium), color: 'text-emerald-600' },
-              { label: 'Aufgaben', value: custTasks.length, color: 'text-amber-600' },
-              { label: 'Dokumente', value: custDocs.length, color: 'text-slate-600' },
+              { label: 'Policen',   value: custContracts.length,  color: 'text-blue-600' },
+              { label: 'Prämie/J.',  value: fmtChf(totalPremium), color: 'text-emerald-600' },
+              { label: 'Aufgaben',  value: custTasks.length,       color: 'text-amber-600' },
+              { label: 'Dokumente', value: custDocs.length,        color: 'text-slate-600' },
             ].map(k => (
               <div key={k.label} className="text-center p-2 rounded-lg bg-muted/40">
                 <p className={cn('text-base font-bold', k.color)}>{k.value}</p>
@@ -462,21 +543,19 @@ function CustomerQuickView({ customer, contracts, tasks, documents, onClose }) {
               </div>
             ))}
           </div>
-
-          {/* Contracts */}
           {custContracts.length > 0 && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Verträge</p>
               <div className="space-y-1.5">
-                {custContracts.slice(0, 4).map(c => {
+                {custContracts.slice(0, 5).map(c => {
                   const days = daysUntil(c.end_date)
                   return (
                     <div key={c.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 text-xs">
                       <span className={cn('w-1.5 h-5 rounded-full flex-shrink-0', {
                         'bg-emerald-400': c.status === 'active',
-                        'bg-orange-400': c.status === 'renewal_due',
-                        'bg-red-400': c.status === 'expired' || c.status === 'cancelled',
-                        'bg-slate-300': !['active', 'renewal_due', 'expired', 'cancelled'].includes(c.status),
+                        'bg-orange-400':  c.status === 'renewal_due',
+                        'bg-red-400':     ['expired','cancelled'].includes(c.status),
+                        'bg-slate-300':   true,
                       })} />
                       <span className="font-medium flex-1 truncate">{c.insurer} · {c.sparte || c.insurance_type}</span>
                       {c.end_date && <span className={cn('flex-shrink-0', urgencyColor(days))}>{fmtDate(c.end_date)}</span>}
@@ -486,8 +565,6 @@ function CustomerQuickView({ customer, contracts, tasks, documents, onClose }) {
               </div>
             </div>
           )}
-
-          {/* Open Tasks */}
           {custTasks.length > 0 && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Offene Aufgaben</p>
@@ -508,75 +585,112 @@ function CustomerQuickView({ customer, contracts, tasks, documents, onClose }) {
   )
 }
 
-// ── Master Control Dashboard ──────────────────────────────────────────────────
+// ── MASTER CONTROL DASHBOARD ──────────────────────────────────────────────────
 export default function MasterControlDashboard({ data, onTaskClick }) {
-  const navigate = useNavigate()
   const [selectedCustomer, setSelectedCustomer] = useState(null)
 
   const { tasks = [], contracts = [], documents = [] } = data
   const openTasks = data.openTasks || []
 
+  const overdueCount = openTasks.filter(t => t.due_date && daysUntil(t.due_date) <= 0).length
+  const todayCount   = openTasks.filter(t => t.due_date === new Date().toISOString().slice(0, 10)).length
+  const urgentContractCount = data.expiringContracts.filter(c => {
+    const d = daysUntil(c.end_date)
+    return d !== null && d <= 14
+  }).length
+
+  const adminOpen    = openTasks.filter(t => !CONTRACT_TASK_TYPES.has(t.task_type)).length
+  const contractOpen = openTasks.filter(t =>  CONTRACT_TASK_TYPES.has(t.task_type)).length
+
   return (
     <div className="space-y-3">
 
-      {/* 1. KPI Strip */}
+      {/* ① TODAY'S PRIORITY TASKS — highest visual weight */}
+      <Section
+        title="Heutige Prioritäten"
+        icon={Zap}
+        accent={{ bar: 'bg-red-500', header: 'bg-red-50/30', border: 'border-red-100 bg-card', icon: 'text-red-500' }}
+        defaultOpen={true}
+        countBadge={
+          (overdueCount + todayCount) > 0
+            ? <CountBadge n={overdueCount + todayCount} className="bg-red-100 text-red-700 animate-pulse" />
+            : null
+        }
+      >
+        <TodayPriorityTasks openTasks={openTasks} onTaskClick={onTaskClick} />
+      </Section>
+
+      {/* ② URGENT CONTRACT WORKFLOWS */}
+      <Section
+        title="Kritische Vertragsabläufe"
+        icon={RefreshCw}
+        accent={{ bar: 'bg-orange-500', header: 'bg-orange-50/20', border: 'border-orange-100 bg-card', icon: 'text-orange-500' }}
+        defaultOpen={true}
+        countBadge={
+          urgentContractCount > 0
+            ? <CountBadge n={urgentContractCount} className="bg-orange-100 text-orange-700" />
+            : <CountBadge n={data.expiringContracts.length} className="bg-muted text-muted-foreground" />
+        }
+        subtitleBadge={`${data.expiringContracts.length} Abläufe / 90 Tage`}
+      >
+        <UrgentContracts expiringContracts={data.expiringContracts} />
+      </Section>
+
+      {/* ③ CUSTOMER ACTIONS */}
+      <Section
+        title="Kundenmassnahmen"
+        icon={Users}
+        accent={{ bar: 'bg-violet-500', header: 'bg-violet-50/10', border: 'border-border bg-card', icon: 'text-violet-500' }}
+        defaultOpen={true}
+        countBadge={
+          (data.customersWithCriticalGaps.length + data.contractsWithoutDoc) > 0
+            ? <CountBadge n={data.customersWithCriticalGaps.length + data.contractsWithoutDoc} className="bg-violet-100 text-violet-700" />
+            : null
+        }
+      >
+        <CustomerActionItems data={data} onCustomerSelect={setSelectedCustomer} />
+      </Section>
+
+      {/* ④ ALL TASKS SPLIT */}
+      <Section
+        title="Alle offenen Aufgaben"
+        icon={CheckSquare}
+        accent={{ bar: 'bg-blue-400', border: 'border-border bg-card', icon: 'text-blue-500' }}
+        defaultOpen={false}
+        countBadge={
+          openTasks.length > 0
+            ? <span className="flex gap-1.5 items-center">
+                <CountBadge n={adminOpen} className="bg-blue-100 text-blue-700" />
+                <CountBadge n={contractOpen} className="bg-orange-100 text-orange-700" />
+              </span>
+            : null
+        }
+      >
+        <AllTasksSplit openTasks={openTasks} onTaskClick={onTaskClick} />
+      </Section>
+
+      {/* ⑤ SALES & PIPELINE */}
+      <Section
+        title="Sales & Pipeline"
+        icon={TrendingUp}
+        accent={{ bar: 'bg-emerald-500', border: 'border-border bg-card', icon: 'text-emerald-500' }}
+        defaultOpen={false}
+      >
+        <SalesPipelineSummary data={data} />
+      </Section>
+
+      {/* ⑥ KPI STRIP — compact, lowest visual weight */}
       <Section
         title="Executive KPIs"
         icon={Activity}
-        accent="bg-blue-500"
-        defaultOpen={true}
+        accent={{ bar: 'bg-slate-400', border: 'border-border bg-card', icon: 'text-muted-foreground' }}
+        defaultOpen={false}
+        subtitleBadge="Überblick"
       >
-        <KpiStrip data={data} />
+        <CompactKpiStrip data={data} />
       </Section>
 
-      {/* 2. Priority Action Center */}
-      <Section
-        title="Prioritäten & Sofortmassnahmen"
-        icon={Zap}
-        accent="bg-red-500"
-        count={
-          data.openTasks.filter(t => t.due_date && daysUntil(t.due_date) !== null && daysUntil(t.due_date) <= 0).length +
-          data.expiringContracts.filter(c => daysUntil(c.end_date) !== null && daysUntil(c.end_date) <= 14).length
-        }
-        badgeClass="bg-red-100 text-red-700"
-        defaultOpen={true}
-      >
-        <PriorityActionCenter data={data} onCustomerSelect={setSelectedCustomer} />
-      </Section>
-
-      {/* 3. Activity Timeline */}
-      <Section
-        title="Kundenaktivitäten & Vertragsübersicht"
-        icon={Activity}
-        accent="bg-emerald-500"
-        defaultOpen={true}
-      >
-        <ActivityTimeline data={data} />
-      </Section>
-
-      {/* 4. Sales & Coverage Intelligence */}
-      <Section
-        title="Sales & Coverage Intelligence"
-        icon={TrendingUp}
-        accent="bg-violet-500"
-        defaultOpen={true}
-      >
-        <SalesCoveragePanel data={data} />
-      </Section>
-
-      {/* 5. Task Split */}
-      <Section
-        title="Operative Aufgaben"
-        icon={CheckSquare}
-        accent="bg-amber-500"
-        count={openTasks.length}
-        badgeClass={openTasks.length > 0 ? 'bg-amber-100 text-amber-700' : 'bg-muted text-muted-foreground'}
-        defaultOpen={true}
-      >
-        <TaskSplitPanel tasks={openTasks} onTaskClick={onTaskClick} />
-      </Section>
-
-      {/* Customer Quick View Overlay */}
+      {/* Customer Quick View */}
       {selectedCustomer && (
         <CustomerQuickView
           customer={selectedCustomer}
