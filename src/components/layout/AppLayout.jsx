@@ -9,7 +9,7 @@ export default function AppLayout() {
   const location = useLocation()
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-[#f0f2f5] flex">
       {/* Mobile overlay */}
       {mobileSidebarOpen && (
         <div
