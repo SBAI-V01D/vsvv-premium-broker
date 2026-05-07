@@ -219,11 +219,13 @@ Deno.serve(async (req) => {
     const failedRecords = [];
     const createdIds = [];
     const batchSize = 1;
-    const delayMs = 3000;
+    const delayMs = 2500;
 
     for (let i = 0; i < records.length; i += batchSize) {
       const batch = records.slice(i, i + batchSize);
-      log('BATCH', `Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(records.length / batchSize)}`);
+      const batchNum = Math.floor(i / batchSize) + 1;
+      const totalBatches = Math.ceil(records.length / batchSize);
+      log('BATCH', `Processing batch ${batchNum}/${totalBatches}`);
       
       for (const item of batch) {
         try {
@@ -233,35 +235,17 @@ Deno.serve(async (req) => {
           if (created?.id) {
             createdIds.push(created.id);
             log('SUCCESS', `Row ${item.rowNum}: Created ID ${created.id}`);
-            
-            // Verify record was actually inserted
-            try {
-              const verified = await base44.entities[entity_name].filter({ id: created.id });
-              if (verified && verified.length > 0) {
-                log('VERIFY', `Row ${item.rowNum}: Record verified in database`);
-                successful++;
-              } else {
-                log('VERIFY_FAIL', `Row ${item.rowNum}: Record not found after creation!`);
-                failed++;
-                failedRecords.push({
-                  row: item.rowNum,
-                  error: 'Record created but not found in database'
-                });
-              }
-            } catch (verifyErr) {
-              log('VERIFY_ERROR', `Row ${item.rowNum}: Verification error: ${verifyErr.message}`);
-              successful++; // Still count as success if created
-            }
+            successful++;
           } else {
             log('CREATE_NO_ID', `Row ${item.rowNum}: No ID returned`);
             failed++;
             failedRecords.push({
               row: item.rowNum,
-              error: 'No ID returned from creation'
+              error: 'Keine ID zurückgegeben'
             });
           }
         } catch (error) {
-          const errMsg = error.message?.substring(0, 150) || 'Unknown error';
+          const errMsg = error.message?.substring(0, 150) || 'Unbekannter Fehler';
           log('CREATE_ERROR', `Row ${item.rowNum}: ${errMsg}`);
           failed++;
           failedRecords.push({
@@ -272,7 +256,7 @@ Deno.serve(async (req) => {
       }
       
       if (i + batchSize < records.length) {
-        log('DELAY', `Waiting ${delayMs}ms before next batch...`);
+        log('DELAY', `Batch ${batchNum} complete. Waiting ${delayMs}ms before batch ${batchNum + 1}...`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }

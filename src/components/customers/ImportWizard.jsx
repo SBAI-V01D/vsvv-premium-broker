@@ -270,18 +270,29 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
 
     try {
       setProgress(30);
+      console.log('[ImportWizard] Starting file upload...');
 
       // Upload file
       const uploadRes = await base44.integrations.Core.UploadFile({ file });
       const file_url = uploadRes.file_url;
+      console.log('[ImportWizard] Upload complete, file_url:', file_url);
 
       setProgress(60);
 
-      // Import data
-      const importRes = await base44.functions.invoke('importEntityData', {
+      // Import data with timeout protection
+      console.log('[ImportWizard] Starting import function...');
+      const importPromise = base44.functions.invoke('importEntityData', {
         entity_name: 'Customer',
         file_url
       });
+
+      // Set a timeout to catch hanging promises
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Import timeout - server nicht erreichbar')), 120000)
+      );
+
+      const importRes = await Promise.race([importPromise, timeoutPromise]);
+      console.log('[ImportWizard] Import complete:', importRes);
 
       setProgress(100);
       setResult(importRes.data);
@@ -292,6 +303,8 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
         onSuccess?.();
       }, 2000);
     } catch (err) {
+      console.error('[ImportWizard] Error during import:', err);
+      setProgress(0);
       setError(err.message || 'Import fehlgeschlagen');
       setStep('upload');
     }
