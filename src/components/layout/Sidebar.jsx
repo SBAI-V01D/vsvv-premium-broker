@@ -20,13 +20,13 @@ const navGroups = [
     label: 'Akquisition',
     items: [
       { label: 'Lead Pipeline', icon: Target, path: '/leads' },
+      { label: 'Coverage & Upselling', icon: ShieldCheck, path: '/coverage-intelligence' },
     ],
   },
   {
     label: 'Kundenverwaltung',
     items: [
       { label: 'Kunden', icon: Users, path: '/kunden' },
-      { label: 'Coverage & Upselling', icon: ShieldCheck, path: '/coverage-intelligence' },
       { label: 'Verträge', icon: FileText, path: '/vertraege' },
       { label: 'Anträge', icon: FileText, path: '/antraege' },
     ],
