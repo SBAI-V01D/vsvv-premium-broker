@@ -16,16 +16,21 @@ Deno.serve(async (req) => {
       return Response.json({ deleted: 0, message: 'No customers to delete' });
     }
 
-    // Delete the newest 960 customers (likely from the import)
+    // Delete the newest 960 customers (likely from the import) - SEQUENTIALLY
     const toDelete = customers.slice(0, 960);
     let deleted = 0;
 
-    for (const customer of toDelete) {
+    for (let i = 0; i < toDelete.length; i++) {
       try {
-        await base44.entities.Customer.delete(customer.id);
+        await base44.entities.Customer.delete(toDelete[i].id);
         deleted++;
+        
+        // Rate limit: delay every 5 deletes
+        if ((i + 1) % 5 === 0) {
+          await new Promise(r => setTimeout(r, 1000));
+        }
       } catch (e) {
-        console.error(`[DELETE] Failed to delete ${customer.id}: ${e.message}`);
+        console.error(`[DELETE] Failed to delete ${toDelete[i].id}: ${e.message}`);
       }
     }
 
