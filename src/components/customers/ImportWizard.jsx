@@ -3,14 +3,18 @@ import { base44 } from '@/api/base44Client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { AlertCircle, CheckCircle2, AlertTriangle, Upload, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, AlertTriangle, Upload, X, Bug } from 'lucide-react'
+import ImportPreviewDialog from './ImportPreviewDialog'
 
 export default function ImportWizard({ open, onOpenChange, onSuccess }) {
   const [step, setStep] = useState('upload') // upload, preview, importing, summary
   const [file, setFile] = useState(null)
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState(null)
+  const [previewData, setPreviewData] = useState(null)
+  const [showPreview, setShowPreview] = useState(false)
   const [error, setError] = useState(null)
+  const [debugLog, setDebugLog] = useState([])
 
   const handleFileSelect = (e) => {
     const selectedFile = e.target.files?.[0]
@@ -20,43 +24,138 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
     }
   }
 
-  const handleImport = async () => {
-    if (!file) {
-      setError('Bitte wählen Sie eine Datei')
-      return
+  const parseCSV = async (fileContent) => {
+    // Auto-detect delimiter
+    const lines = fileContent.split('\n').filter(l => l.trim());
+    let delimiter = ',';
+    const firstLine = lines[0];
+    const semicolonCount = (firstLine.match(/;/g) || []).length;
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    if (semicolonCount > commaCount) delimiter = ';';
+
+    const parseCSVLine = (line) => {
+      const fields = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === delimiter && !inQuotes) {
+          fields.push(current.replace(/^"|"$/g, '').trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      fields.push(current.replace(/^"|"$/g, '').trim());
+      return fields;
+    };
+
+    const headers = parseCSVLine(lines[0]);
+    const valid_records = [];
+    const invalid_records = [];
+    const duplicates = [];
+    const existingCustomers = await base44.entities.Customer.list('', 1000) || [];
+    const existingEmails = new Set(existingCustomers.map(c => c.email?.toLowerCase()));
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = parseCSVLine(lines[i]);
+      if (values.every(v => !v)) continue;
+
+      const record = {};
+      headers.forEach((h, idx) => {
+        const v = values[idx]?.trim();
+        if (v) record[h] = v;
+      });
+
+      if (!record.first_name && !record.Vorname) {
+        invalid_records.push({ row: i + 1, error: 'Kein Vorname' });
+        continue;
+      }
+      if (!record.last_name && !record.Nachname) {
+        invalid_records.push({ row: i + 1, error: 'Kein Nachname' });
+        continue;
+      }
+
+      // Check duplicate
+      const email = record.email || record['E-Mail'];
+      if (email && existingEmails.has(email.toLowerCase())) {
+        duplicates.push({
+          row: i + 1,
+          name: `${record.first_name || record.Vorname || ''} ${record.last_name || record.Nachname || ''}`.trim(),
+          email
+        });
+        continue;
+      }
+
+      valid_records.push(record);
     }
 
-    setStep('importing')
-    setProgress(0)
+    return { valid_records, invalid_records, duplicates, summary: { total: lines.length - 1 } };
+  };
+
+  const handlePreview = async () => {
+    if (!file) {
+      setError('Bitte wählen Sie eine Datei');
+      return;
+    }
+
+    setProgress(50);
+    try {
+      const content = await file.text();
+      const parsed = await parseCSV(content);
+      setPreviewData(parsed);
+      setShowPreview(true);
+    } catch (err) {
+      setError(`Parsing-Fehler: ${err.message}`);
+    }
+    setProgress(0);
+  };
+
+  const handleImport = async () => {
+    if (!file) {
+      setError('Bitte wählen Sie eine Datei');
+      return;
+    }
+
+    setShowPreview(false);
+    setStep('importing');
+    setProgress(0);
 
     try {
-      setProgress(30)
+      setProgress(30);
 
       // Upload file
-      const uploadRes = await base44.integrations.Core.UploadFile({ file })
-      const file_url = uploadRes.file_url
+      const uploadRes = await base44.integrations.Core.UploadFile({ file });
+      const file_url = uploadRes.file_url;
 
-      setProgress(60)
+      setProgress(60);
 
       // Import data
       const importRes = await base44.functions.invoke('importEntityData', {
         entity_name: 'Customer',
         file_url
-      })
+      });
 
-      setProgress(100)
-      setResult(importRes.data)
-      setStep('summary')
+      setProgress(100);
+      setResult(importRes.data);
+      setStep('summary');
       
       // Refresh data after successful import
       setTimeout(() => {
-        onSuccess?.()
-      }, 2000)
+        onSuccess?.();
+      }, 2000);
     } catch (err) {
-      setError(err.message || 'Import fehlgeschlagen')
-      setStep('upload')
+      setError(err.message || 'Import fehlgeschlagen');
+      setStep('upload');
     }
-  }
+  };
 
   const closeDialog = () => {
     setStep('upload')
@@ -147,12 +246,24 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
               <Button variant="outline" onClick={closeDialog}>
                 Abbrechen
               </Button>
+              <Button variant="secondary" onClick={handlePreview} disabled={!file}>
+                📋 Vorschau
+              </Button>
               <Button onClick={handleImport} disabled={!file}>
                 Importieren
               </Button>
             </div>
           </div>
         )}
+
+        {/* PREVIEW DIALOG */}
+        <ImportPreviewDialog
+          open={showPreview}
+          onOpenChange={setShowPreview}
+          parsedData={previewData}
+          onConfirm={handleImport}
+          loading={step === 'importing'}
+        />
 
         {step === 'importing' && (
           <div className="space-y-4 py-8">
@@ -167,13 +278,16 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
         {step === 'summary' && result && (
           <div className="space-y-4">
             {/* SUCCESS BANNER */}
-            {result.summary.successful > 0 && (
+            {result.summary.successfully_imported > 0 && (
               <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-300 rounded-lg">
                 <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
                 <div>
-                  <p className="font-semibold text-green-900">Import erfolgreich!</p>
+                  <p className="font-semibold text-green-900">✓ Import erfolgreich!</p>
                   <p className="text-sm text-green-800 mt-1">
-                    {result.summary.successful} Kunde{result.summary.successful !== 1 ? 'n' : ''} sind jetzt im System verfügbar.
+                    {result.summary.successfully_imported} Kunde{result.summary.successfully_imported !== 1 ? 'n' : ''} sind jetzt im System verfügbar.
+                  </p>
+                  <p className="text-xs text-green-700 mt-1">
+                    Erfolgsquote: {result.summary.success_rate}%
                   </p>
                 </div>
               </div>
@@ -183,11 +297,11 @@ export default function ImportWizard({ open, onOpenChange, onSuccess }) {
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                 <p className="text-xs text-green-700 font-medium">✓ Importiert</p>
-                <p className="text-2xl font-bold text-green-600">{result.summary.successful}</p>
+                <p className="text-2xl font-bold text-green-600">{result.summary.successfully_imported}</p>
               </div>
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-xs text-blue-700 font-medium">⚠ Duplikate</p>
-                <p className="text-2xl font-bold text-blue-600">{result.summary.duplicates}</p>
+                <p className="text-2xl font-bold text-blue-600">{result.summary.duplicates_detected}</p>
               </div>
               {result.summary.failed > 0 && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
