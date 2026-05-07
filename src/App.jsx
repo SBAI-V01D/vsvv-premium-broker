@@ -28,6 +28,7 @@ import AdvancedDashboard from './pages/AdvancedDashboard'
 import ExecutionMode from './pages/ExecutionMode'
 import SalesAutopilot from './pages/SalesAutopilot'
 import Leads from './pages/Leads'
+import CoverageIntelligence from './pages/CoverageIntelligence'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -107,6 +108,7 @@ const AuthenticatedApp = () => {
         <Route path="/execution-mode" element={<ExecutionMode />} />
         <Route path="/sales-autopilot" element={<SalesAutopilot />} />
         <Route path="/leads" element={<Leads />} />
+        <Route path="/coverage-intelligence" element={<CoverageIntelligence />} />
         <Route path="/system-logs" element={<SystemLogs />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />

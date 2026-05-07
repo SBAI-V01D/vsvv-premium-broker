@@ -2,30 +2,61 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
-  MessageSquare, ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink, AlertCircle, Bell, Megaphone, Kanban, TrendingUp, CalendarClock, Mail, Zap
+  ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink, AlertCircle,
+  Megaphone, TrendingUp, Mail, Zap, Target, ShieldCheck, BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
 
-const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
-  { label: 'Leads', icon: TrendingUp, path: '/leads' },
-  { label: 'Kunden', icon: Users, path: '/kunden' },
-  { label: 'Verträge', icon: FileText, path: '/vertraege' },
-  { label: 'Anträge', icon: FileText, path: '/antraege' },
-  { label: 'Aufgaben', icon: CheckSquare, path: '/aufgaben' },
-  { label: 'Dokumente', icon: FileText, path: '/dokumente' },
-  { label: 'Provisionen & Courtagen', icon: Wallet, path: '/provisionen-courtagen' },
-  { label: 'E-Mail-Vorlagen', icon: Mail, path: '/email-templates' },
-  { label: 'E-Mail-Kampagnen', icon: Megaphone, path: '/email-kampagnen' },
-  { label: 'Status-Verwaltung', icon: CheckSquare, path: '/status-verwaltung' },
-  { label: 'Berater & Organisation', icon: Users, path: '/berater-organisation' },
-  { label: 'Finanz-Dashboard', icon: Wallet, path: '/finanz-dashboard' },
-  { label: '👑 CEO Cockpit', icon: TrendingUp, path: '/ceo-cockpit' },
-  { label: '💼 Advanced Cockpit', icon: LayoutDashboard, path: '/advanced-dashboard' },
-  { label: '🚀 Execution Mode', icon: Zap, path: '/execution-mode' },
-  { label: '🤖 Sales Autopilot', icon: Shield, path: '/sales-autopilot' },
-  { label: 'System-Logs', icon: AlertCircle, path: '/system-logs' },
+// Grouped navigation with section separators
+const navGroups = [
+  {
+    label: 'Übersicht',
+    items: [
+      { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
+    ],
+  },
+  {
+    label: 'Akquisition',
+    items: [
+      { label: 'Lead Pipeline', icon: Target, path: '/leads' },
+    ],
+  },
+  {
+    label: 'Kundenverwaltung',
+    items: [
+      { label: 'Kunden', icon: Users, path: '/kunden' },
+      { label: 'Coverage & Upselling', icon: ShieldCheck, path: '/coverage-intelligence' },
+      { label: 'Verträge', icon: FileText, path: '/vertraege' },
+      { label: 'Anträge', icon: FileText, path: '/antraege' },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { label: 'Aufgaben', icon: CheckSquare, path: '/aufgaben' },
+      { label: 'Dokumente', icon: FileText, path: '/dokumente' },
+      { label: 'Nachrichten', icon: Mail, path: '/nachrichten' },
+    ],
+  },
+  {
+    label: 'Finanzen',
+    items: [
+      { label: 'Provisionen & Courtagen', icon: Wallet, path: '/provisionen-courtagen' },
+      { label: 'Finanz-Dashboard', icon: BarChart3, path: '/finanz-dashboard' },
+    ],
+  },
+  {
+    label: 'Management',
+    items: [
+      { label: 'Berater & Organisation', icon: Users, path: '/berater-organisation' },
+      { label: 'CEO Cockpit', icon: TrendingUp, path: '/ceo-cockpit' },
+      { label: 'Sales Autopilot', icon: Zap, path: '/sales-autopilot' },
+      { label: 'E-Mail-Kampagnen', icon: Megaphone, path: '/email-kampagnen' },
+      { label: 'Status-Verwaltung', icon: CheckSquare, path: '/status-verwaltung' },
+      { label: 'System-Logs', icon: AlertCircle, path: '/system-logs' },
+    ],
+  },
 ];
 
 export default function Sidebar({ onNavigate }) {
@@ -50,27 +81,37 @@ export default function Sidebar({ onNavigate }) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path ||
-            (item.path !== '/' && location.pathname.startsWith(item.path));
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              )}
-            >
-              <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 py-3 px-2 overflow-y-auto space-y-1">
+        {navGroups.map((group) => (
+          <div key={group.label}>
+            {!collapsed && (
+              <p className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 select-none">
+                {group.label}
+              </p>
+            )}
+            {collapsed && <div className="my-1 mx-2 border-t border-sidebar-border opacity-30" />}
+            {group.items.map((item) => {
+              const isActive = location.pathname === item.path ||
+                (item.path !== '/' && location.pathname.startsWith(item.path));
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200",
+                    isActive
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                >
+                  <item.icon className="w-4 h-4 flex-shrink-0" />
+                  {!collapsed && <span className="truncate">{item.label}</span>}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* Portal Link */}

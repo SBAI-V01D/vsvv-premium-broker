@@ -2,28 +2,64 @@ import React, { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { base44 } from '@/api/base44Client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Users, FileText, ClipboardList, CheckCircle2, Building2, UserCheck, Wallet, TrendingUp } from 'lucide-react'
-import KpiCard from '@/components/dashboard/KpiCard'
+import {
+  Users, FileText, TrendingUp, Wallet, UserCheck, Building2,
+  Target, Clock, CheckCircle2, AlertTriangle, RefreshCw, ArrowRight,
+  ChevronRight
+} from 'lucide-react'
 import RevenueChart from '@/components/dashboard/RevenueChart'
 import TopAdvisors from '@/components/dashboard/TopAdvisors'
 import ActivityFeed from '@/components/dashboard/ActivityFeed'
-import QuickActions from '@/components/dashboard/QuickActions'
 import FinanceWidget from '@/components/dashboard/FinanceWidget'
-import ControllingSection from '@/components/dashboard/ControllingSection'
-import RenewalWidget from '@/components/dashboard/RenewalWidget'
-import RenewalsSection from '@/components/dashboard/RenewalsSection'
 import RenewalPipelineKanbanV2 from '@/components/dashboard/RenewalPipelineKanbanV2'
-import UpsellPipelineKanban from '@/components/dashboard/UpsellPipelineKanban'
-import FlowPipeline from '@/components/dashboard/FlowPipeline'
 import SupportSection from '@/components/dashboard/SupportSection'
-import LeadFunnelWidget from '@/components/dashboard/LeadFunnelWidget'
+
+// ── Small KPI tile ─────────────────────────────────────────────────────────
+function KpiTile({ label, value, sub, icon: Icon, accent, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group text-left w-full p-4 rounded-xl border bg-card shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 border-l-4 ${accent}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-muted-foreground truncate">{label}</p>
+          <p className="text-2xl font-bold mt-1 leading-none">{value}</p>
+          {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
+        </div>
+        {Icon && <Icon className="w-5 h-5 text-muted-foreground/60 flex-shrink-0 mt-0.5 group-hover:text-primary transition-colors" />}
+      </div>
+    </button>
+  )
+}
+
+// ── Section header ─────────────────────────────────────────────────────────
+function SectionHeader({ title, subtitle, onNavigate, badge }) {
+  return (
+    <div className="flex items-center justify-between mb-4">
+      <div>
+        <h2 className="text-base font-bold text-foreground">{title}</h2>
+        {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+      </div>
+      <div className="flex items-center gap-2">
+        {badge && <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">{badge}</span>}
+        {onNavigate && (
+          <button type="button" onClick={onNavigate} className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
+            Alle <ChevronRight className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -31,10 +67,9 @@ export default function Dashboard() {
   const [formData, setFormData] = useState({ status: '', notes: '', due_date: '' })
   const [filterOrg, setFilterOrg] = useState('all')
   const [filterAdvisor, setFilterAdvisor] = useState('all')
-  const [kpiDetail, setKpiDetail] = useState(null)
   const queryClient = useQueryClient()
 
-  // Data fetching – all parallel
+  // ── Data fetching ──
   const { data: customers = [] } = useQuery({ queryKey: ['customers'], queryFn: () => base44.entities.Customer.list() })
   const { data: leads = [] } = useQuery({ queryKey: ['leads'], queryFn: () => base44.entities.Lead.list() })
   const { data: contracts = [] } = useQuery({ queryKey: ['contracts'], queryFn: () => base44.entities.Contract.list() })
@@ -45,15 +80,12 @@ export default function Dashboard() {
   const { data: commissionEntries = [] } = useQuery({ queryKey: ['commissionEntries'], queryFn: () => base44.entities.CommissionEntry.list() })
   const { data: documents = [] } = useQuery({ queryKey: ['documents'], queryFn: () => base44.entities.Document.list() })
 
-  // Global filter: filter advisors by org
-  const filteredAdvisors = useMemo(() => {
-    if (filterOrg === 'all') return advisors
-    return advisors.filter(a => a.organization_id === filterOrg)
-  }, [advisors, filterOrg])
-
+  // ── Filters ──
+  const filteredAdvisors = useMemo(() =>
+    filterOrg === 'all' ? advisors : advisors.filter(a => a.organization_id === filterOrg),
+    [advisors, filterOrg]
+  )
   const filteredAdvisorEmails = useMemo(() => new Set(filteredAdvisors.map(a => a.email)), [filteredAdvisors])
-
-  // Apply advisor filter to data
   const activeAdvisorEmail = filterAdvisor === 'all' ? null : filterAdvisor
 
   const filteredContracts = useMemo(() => {
@@ -70,274 +102,246 @@ export default function Dashboard() {
     return c
   }, [commissionEntries, filterOrg, filteredAdvisorEmails, activeAdvisorEmail])
 
-  // KPI calculations
+  // ── KPI Calculations ──
   const activeContracts = filteredContracts.filter(c => c.status === 'active')
   const totalMonthlyPremium = activeContracts.reduce((sum, c) => sum + (c.premium_monthly || 0), 0)
+  const totalYearlyPremium = activeContracts.reduce((sum, c) => sum + (c.premium_yearly || (c.premium_monthly || 0) * 12), 0)
+  const openTasks = tasks.filter(t => t.status === 'open' || t.status === 'in_progress')
+  const pendingApplications = applications.filter(a => ['draft', 'submitted', 'under_review'].includes(a.status))
 
-  // MTD commissions (current month)
+  // True leads (not yet converted to active customers)
+  const activeContractCustomerIds = useMemo(() =>
+    new Set(activeContracts.map(c => c.customer_id).filter(Boolean)),
+    [activeContracts]
+  )
+  const trueLeads = useMemo(() =>
+    leads.filter(l => !l.customer_id || !activeContractCustomerIds.has(l.customer_id)),
+    [leads, activeContractCustomerIds]
+  )
+  const activeLeads = trueLeads.filter(l => ['new', 'contacted', 'qualified'].includes(l.status))
+  const convertedLeads = leads.filter(l => l.status === 'converted')
+  const conversionRate = leads.length > 0 ? ((convertedLeads.length / leads.length) * 100).toFixed(1) : '0.0'
+
+  // Active customers (with at least one active contract)
+  const activeCustomers = customers.filter(c => !c.is_family_member && activeContractCustomerIds.has(c.id))
+
+  // Expiring contracts (next 90 days)
+  const today = new Date()
+  const in90 = new Date(today); in90.setDate(today.getDate() + 90)
+  const expiringContracts = activeContracts.filter(c => {
+    if (!c.end_date) return false
+    const end = new Date(c.end_date)
+    return end >= today && end <= in90
+  })
+
+  // Coverage gaps
+  const REQUIRED_SPARTEN = ['kvg', 'haftpflicht_privat']
+  const customersWithCriticalGaps = useMemo(() => {
+    return activeCustomers.filter(customer => {
+      const covered = new Set(
+        contracts.filter(c => c.status === 'active' && (c.customer_id === customer.id || c.primary_customer_id === customer.id))
+          .map(c => c.sparte || c.insurance_type).filter(Boolean)
+      )
+      return REQUIRED_SPARTEN.some(s => !covered.has(s))
+    })
+  }, [activeCustomers, contracts])
+
+  // Missing documents
+  const contractsWithoutDoc = activeContracts.filter(c => !c.policy_document_url).length
+
+  // MTD commissions
   const nowStr = new Date().toISOString().slice(0, 7)
   const mtdCommissions = filteredCommissions
-    .filter(ce => ce.settlement_date && ce.settlement_date.slice(0, 7) === nowStr)
-    .reduce((sum, ce) => sum + (ce.gross_commission || 0), 0)
+    .filter(ce => ce.entry_date?.slice(0, 7) === nowStr || ce.settlement_date?.slice(0, 7) === nowStr)
+    .reduce((sum, ce) => sum + (ce.commission_amount || ce.gross_commission || 0), 0)
 
-  const openTasks = tasks.filter(t => t.status === 'open' || t.status === 'in_progress')
-
-  // Geburtstage
-  const today = new Date()
-  const upcomingBirthdays = customers
-    .filter(c => c.birthdate)
-    .map(c => {
-      const birthDate = new Date(c.birthdate)
-      const thisYear = new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate())
-      const nextYear = new Date(today.getFullYear() + 1, birthDate.getMonth(), birthDate.getDate())
-      const nextBirthday = thisYear >= today ? thisYear : nextYear
-      const daysUntil = Math.floor((nextBirthday - today) / (1000 * 60 * 60 * 24))
-      return { customer: c, daysUntil, date: nextBirthday }
-    })
-    .filter(b => b.daysUntil <= 30)
-    .sort((a, b) => a.daysUntil - b.daysUntil)
-    .slice(0, 5)
+  // Yearly commission forecast
+  const yearlyCommissionForecast = filteredContracts
+    .filter(c => c.status === 'active')
+    .reduce((sum, c) => sum + ((c.premium_yearly || (c.premium_monthly || 0) * 12) * (c.commission_rate || 0) / 100), 0)
 
   // Task mutations
   const updateMutation = useMutation({
-    mutationFn: async (data) => {
-      const updateData = {
-        status: data.status !== undefined ? data.status : selectedTask.status,
-        notes: data.notes !== undefined ? data.notes : selectedTask.notes,
-        due_date: data.due_date !== undefined ? data.due_date : selectedTask.due_date,
-        completion_date: data.completion_date !== undefined ? data.completion_date : selectedTask.completion_date,
-      }
-      return base44.entities.Task.update(selectedTask.id, updateData)
-    },
+    mutationFn: async (data) => base44.entities.Task.update(selectedTask.id, {
+      status: data.status ?? selectedTask.status,
+      notes: data.notes ?? selectedTask.notes,
+      due_date: data.due_date ?? selectedTask.due_date,
+    }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tasks'] }); setSelectedTask(null) },
   })
-
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Task.delete(id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tasks'] }); setSelectedTask(null) },
   })
-
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Task.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tasks'] }); setSelectedTask(null) },
   })
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '–'
-    const date = new Date(dateStr + 'T00:00:00Z')
-    return `${String(date.getUTCDate()).padStart(2, '0')}.${String(date.getUTCMonth() + 1).padStart(2, '0')}.${date.getUTCFullYear()}`
-  }
-
   const handleTaskClick = (task) => {
     setSelectedTask(task)
-    setFormData({ status: task.status, notes: task.notes || '', due_date: task.due_date || '', completion_date: task.completion_date || '' })
-  }
-
-  const handleNewTask = () => {
-    setSelectedTask({ id: null, title: '', status: 'open' })
-    setFormData({ title: '', status: 'open', notes: '', due_date: '', completion_date: '' })
+    setFormData({ status: task.status, notes: task.notes || '', due_date: task.due_date || '' })
   }
 
   const handleSave = () => {
-    if (selectedTask?.id) {
-      updateMutation.mutate(formData)
-    } else {
-      createMutation.mutate({
-        title: formData.title || 'Neue Aufgabe',
-        status: formData.status || 'open',
-        notes: formData.notes,
-        due_date: formData.due_date,
-        completion_date: formData.completion_date,
-      })
-    }
+    if (selectedTask?.id) updateMutation.mutate(formData)
+    else createMutation.mutate({ title: formData.title || 'Neue Aufgabe', status: formData.status || 'open', notes: formData.notes, due_date: formData.due_date })
   }
-
-  // KPI detail data builders
-  const kpiDetailData = {
-    customers: { items: customers, label: 'Kunde', columns: ['first_name', 'last_name', 'email', 'city'] },
-    activeContracts: { items: activeContracts.sort((a, b) => new Date(a.end_date || 0) - new Date(b.end_date || 0)), label: 'Policy', columns: ['policy_number', 'customer_name', 'insurer', 'end_date'] },
-    advisors: { items: filteredAdvisors, label: 'Berater', columns: ['firstname', 'lastname', 'email'] },
-    organizations: { items: organizations.filter(o => o.status === 'active'), label: 'Organisation', columns: ['name', 'type'] },
-  }
-
-  const kpis = [
-    {
-      label: 'Kunden Total',
-      value: customers.length,
-      icon: Users,
-      color: { border: 'border-l-blue-500', bg: 'bg-blue-50', icon: 'text-blue-600' },
-      onDetail: () => setKpiDetail({ type: 'customers', data: kpiDetailData.customers }),
-    },
-    {
-      label: 'Aktive Policen',
-      value: activeContracts.length,
-      sub: `von ${filteredContracts.length} gesamt`,
-      icon: FileText,
-      color: { border: 'border-l-green-500', bg: 'bg-green-50', icon: 'text-green-600' },
-      onDetail: () => setKpiDetail({ type: 'activeContracts', data: kpiDetailData.activeContracts }),
-    },
-    {
-      label: 'Monatsprämien',
-      value: `CHF ${totalMonthlyPremium.toLocaleString('de-CH', { maximumFractionDigits: 0 })}`,
-      sub: 'Aktive Verträge',
-      icon: TrendingUp,
-      color: { border: 'border-l-primary', bg: 'bg-primary/10', icon: 'text-primary' },
-      onDetail: () => setKpiDetail({ type: 'activeContracts', data: kpiDetailData.activeContracts }),
-    },
-    {
-      label: 'Provisionen MTD',
-      value: `CHF ${mtdCommissions.toLocaleString('de-CH', { maximumFractionDigits: 0 })}`,
-      sub: new Date().toLocaleString('de-CH', { month: 'long', year: 'numeric' }),
-      icon: Wallet,
-      color: { border: 'border-l-amber-500', bg: 'bg-amber-50', icon: 'text-amber-600' },
-      onDetail: () => navigate('/provisionen-courtagen'),
-    },
-    {
-      label: 'Berater',
-      value: filteredAdvisors.length,
-      sub: filterOrg !== 'all' ? organizations.find(o => o.id === filterOrg)?.name : 'Alle Organisationen',
-      icon: UserCheck,
-      color: { border: 'border-l-purple-500', bg: 'bg-purple-50', icon: 'text-purple-600' },
-      onDetail: () => setKpiDetail({ type: 'advisors', data: kpiDetailData.advisors }),
-    },
-    {
-      label: 'Organisationen',
-      value: organizations.filter(o => o.status === 'active').length,
-      sub: `${organizations.length} Total`,
-      icon: Building2,
-      color: { border: 'border-l-slate-500', bg: 'bg-slate-100', icon: 'text-slate-600' },
-      onDetail: () => setKpiDetail({ type: 'organizations', data: kpiDetailData.organizations }),
-    },
-  ]
 
   return (
-    <div className="space-y-6">
-      {/* HEADER + FILTER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-8">
+
+      {/* ── TOP BAR ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard 4.0</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Operative Zone (Umsatz) + Management Zone (Steuerung)</p>
+          <h1 className="text-2xl font-bold tracking-tight">Executive Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">{new Date().toLocaleDateString('de-CH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2">
           <Select value={filterOrg} onValueChange={v => { setFilterOrg(v); setFilterAdvisor('all') }}>
-            <SelectTrigger className="w-44 bg-background text-xs">
-              <SelectValue placeholder="Org" />
-            </SelectTrigger>
+            <SelectTrigger className="w-40 h-8 text-xs bg-background"><SelectValue placeholder="Organisation" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Alle Org.</SelectItem>
               {organizations.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filterAdvisor} onValueChange={setFilterAdvisor}>
-            <SelectTrigger className="w-40 bg-background text-xs">
-              <SelectValue placeholder="Advisor" />
-            </SelectTrigger>
+            <SelectTrigger className="w-36 h-8 text-xs bg-background"><SelectValue placeholder="Berater" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle Advisors</SelectItem>
+              <SelectItem value="all">Alle Berater</SelectItem>
               {filteredAdvisors.map(a => <SelectItem key={a.id} value={a.email}>{a.firstname}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      {/* 1. KPI CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-        {kpis.map(k => (
-          <div key={k.label} onClick={k.onDetail} className="cursor-pointer">
-            <KpiCard {...k} />
-          </div>
-        ))}
+      {/* ══════════════════════════════════════════════════════
+          A. SALES KPIs
+      ══════════════════════════════════════════════════════ */}
+      <div>
+        <SectionHeader title="Sales & Akquisition" onNavigate={() => navigate('/leads')} badge={`${activeLeads.length} aktiv`} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KpiTile label="Aktive Leads" value={activeLeads.length} sub="in Pipeline" icon={Target} accent="border-l-blue-500" onClick={() => navigate('/leads')} />
+          <KpiTile label="Conversion Rate" value={`${conversionRate}%`} sub={`${convertedLeads.length} konvertiert`} icon={TrendingUp} accent="border-l-green-500" onClick={() => navigate('/leads')} />
+          <KpiTile label="Offene Anträge" value={pendingApplications.length} sub="in Bearbeitung" icon={FileText} accent="border-l-amber-500" onClick={() => navigate('/antraege')} />
+          <KpiTile label="Neue Kunden (30T)" value={customers.filter(c => !c.is_family_member && new Date(c.created_date) > new Date(Date.now() - 30 * 86400000)).length} sub="letzten 30 Tage" icon={Users} accent="border-l-violet-500" onClick={() => navigate('/kunden')} />
+        </div>
       </div>
 
-      {/* 2. OPERATIVE ZONE HEADER */}
-      <div className="border-b-2 border-slate-300 pb-4">
-        <h2 className="text-2xl font-bold text-slate-900">🔴 OPERATIVE ZONE – Dein Geld</h2>
-        <p className="text-sm text-muted-foreground mt-1">Was du heute tun musst, um Umsatz zu machen</p>
+      {/* ══════════════════════════════════════════════════════
+          B. CUSTOMER KPIs
+      ══════════════════════════════════════════════════════ */}
+      <div>
+        <SectionHeader title="Aktive Kunden" onNavigate={() => navigate('/kunden')} badge={`${activeCustomers.length} aktiv`} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KpiTile label="Aktive Kunden" value={activeCustomers.length} sub="mit aktivem Vertrag" icon={Users} accent="border-l-blue-500" onClick={() => navigate('/kunden')} />
+          <KpiTile label="Gesamtkunden" value={customers.filter(c => !c.is_family_member).length} sub="inkl. Prospects" icon={Users} accent="border-l-slate-400" onClick={() => navigate('/kunden')} />
+          <KpiTile label="Deckungslücken" value={customersWithCriticalGaps.length} sub="Pflicht-Coverage fehlt" icon={AlertTriangle} accent="border-l-red-500" onClick={() => navigate('/coverage-intelligence')} />
+          <KpiTile label="Berater" value={filteredAdvisors.length} sub={filterOrg !== 'all' ? organizations.find(o => o.id === filterOrg)?.name : 'Alle Org.'} icon={UserCheck} accent="border-l-purple-500" onClick={() => navigate('/berater-organisation')} />
+        </div>
       </div>
 
-      {/* 3. VERTRAGSABLÄUFE */}
-      <div className="mt-4 bg-gradient-to-br from-slate-50 to-blue-50 p-6 rounded-lg border border-slate-200">
-        <h3 className="text-lg font-bold mb-4 text-slate-900 cursor-pointer hover:text-primary transition-colors inline-flex items-center gap-2" onClick={() => navigate('/vertraege')}>🔥 Vertragsabläufe →</h3>
-        <RenewalPipelineKanbanV2 contracts={filteredContracts} />
+      {/* ══════════════════════════════════════════════════════
+          C. REVENUE KPIs
+      ══════════════════════════════════════════════════════ */}
+      <div>
+        <SectionHeader title="Umsatz & Provision" onNavigate={() => navigate('/provisionen-courtagen')} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KpiTile label="Monatsprämien" value={`CHF ${totalMonthlyPremium.toLocaleString('de-CH', { maximumFractionDigits: 0 })}`} sub="aktive Verträge" icon={Wallet} accent="border-l-emerald-500" onClick={() => navigate('/vertraege')} />
+          <KpiTile label="Jahresprämien" value={`CHF ${totalYearlyPremium.toLocaleString('de-CH', { maximumFractionDigits: 0 })}`} sub="aktive Verträge" icon={TrendingUp} accent="border-l-primary" onClick={() => navigate('/vertraege')} />
+          <KpiTile label="Provision MTD" value={`CHF ${mtdCommissions.toLocaleString('de-CH', { maximumFractionDigits: 0 })}`} sub="laufender Monat" icon={Wallet} accent="border-l-amber-500" onClick={() => navigate('/provisionen-courtagen')} />
+          <KpiTile label="Provisions-Forecast" value={`CHF ${yearlyCommissionForecast.toLocaleString('de-CH', { maximumFractionDigits: 0 })}`} sub="Jahreshochrechnung" icon={TrendingUp} accent="border-l-orange-500" onClick={() => navigate('/provisionen-courtagen')} />
+        </div>
       </div>
 
-      {/* 4. LEAD FUNNEL */}
-      <div className="mt-4">
-        <h3 className="text-lg font-bold mb-4 text-slate-900 cursor-pointer hover:text-primary transition-colors inline-flex items-center gap-2" onClick={() => navigate('/leads')}>🚀 Lead Funnel →</h3>
-        <LeadFunnelWidget leads={leads} />
+      {/* ══════════════════════════════════════════════════════
+          D. RISK & COVERAGE KPIs
+      ══════════════════════════════════════════════════════ */}
+      <div>
+        <SectionHeader title="Risiko & Coverage" onNavigate={() => navigate('/coverage-intelligence')} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KpiTile label="Ablaufende Verträge" value={expiringContracts.length} sub="nächste 90 Tage" icon={RefreshCw} accent="border-l-orange-500" onClick={() => navigate('/vertraege')} />
+          <KpiTile label="Krit. Deckungslücken" value={customersWithCriticalGaps.length} sub="Aktion erforderlich" icon={AlertTriangle} accent="border-l-red-500" onClick={() => navigate('/coverage-intelligence')} />
+          <KpiTile label="Aktive Policen" value={activeContracts.length} sub={`von ${filteredContracts.length} gesamt`} icon={FileText} accent="border-l-green-500" onClick={() => navigate('/vertraege')} />
+          <KpiTile label="Fehlende Dokumente" value={contractsWithoutDoc} sub="Policen ohne Datei" icon={AlertTriangle} accent="border-l-amber-400" onClick={() => navigate('/dokumente')} />
+        </div>
       </div>
 
-      {/* 5. OFFENE AUFGABEN + LETZTE AKTIVITÄTEN */}
-      <div className="mt-6">
-        <h3 className="text-lg font-bold mb-4 text-slate-900 cursor-pointer hover:text-primary transition-colors" onClick={() => navigate('/aufgaben')}>✓ Offene Aufgaben (Top 10) →</h3>
-        <SupportSection 
-          tasks={openTasks.slice(0, 10)}
+      {/* ══════════════════════════════════════════════════════
+          E. TASK & OPERATIONS KPIs
+      ══════════════════════════════════════════════════════ */}
+      <div>
+        <SectionHeader title="Aufgaben & Betrieb" onNavigate={() => navigate('/aufgaben')} badge={openTasks.length > 0 ? `${openTasks.length} offen` : undefined} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KpiTile label="Offene Aufgaben" value={openTasks.length} sub="pendent / in Bearb." icon={CheckCircle2} accent="border-l-blue-500" onClick={() => navigate('/aufgaben')} />
+          <KpiTile label="Fällig heute" value={tasks.filter(t => t.due_date === new Date().toISOString().slice(0, 10) && t.status !== 'completed').length} sub="sofort bearbeiten" icon={Clock} accent="border-l-red-500" onClick={() => navigate('/aufgaben')} />
+          <KpiTile label="Organisationen" value={organizations.filter(o => o.status === 'active').length} sub="aktiv" icon={Building2} accent="border-l-slate-400" onClick={() => navigate('/berater-organisation')} />
+          <KpiTile label="Dokumente" value={documents.length} sub="total gespeichert" icon={FileText} accent="border-l-slate-300" onClick={() => navigate('/dokumente')} />
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════
+          F. RENEWAL PIPELINE
+      ══════════════════════════════════════════════════════ */}
+      <div>
+        <SectionHeader title="Vertragsabläufe & Renewal Pipeline" onNavigate={() => navigate('/vertraege')} badge={`${expiringContracts.length} bald ablaufend`} />
+        <div className="bg-gradient-to-br from-slate-50 to-blue-50 p-5 rounded-xl border border-slate-200">
+          <RenewalPipelineKanbanV2 contracts={filteredContracts} />
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════
+          G. OFFENE AUFGABEN
+      ══════════════════════════════════════════════════════ */}
+      <div>
+        <SectionHeader title="Offene Aufgaben" onNavigate={() => navigate('/aufgaben')} />
+        <SupportSection
+          tasks={openTasks.slice(0, 8)}
           customers={customers}
           activities={[]}
           onTaskClick={handleTaskClick}
         />
       </div>
 
-      <div className="mt-6">
-        <h3 className="text-lg font-bold mb-4 text-slate-900">🔄 Letzte Aktivitäten</h3>
-        <ActivityFeed 
-          customers={customers}
-          contracts={filteredContracts}
-          commissions={filteredCommissions}
-        />
+      {/* ══════════════════════════════════════════════════════
+          H. REVENUE TREND + TOP ADVISORS
+      ══════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div>
+          <SectionHeader title="Umsatz-Trend" onNavigate={() => navigate('/provisionen-courtagen')} />
+          <RevenueChart contracts={filteredContracts} commissionEntries={filteredCommissions} />
+        </div>
+        <div>
+          <SectionHeader title="Berater Performance" onNavigate={() => navigate('/berater-organisation')} />
+          <TopAdvisors advisors={filteredAdvisors} organizations={organizations} commissionEntries={filteredCommissions} contracts={filteredContracts} />
+        </div>
       </div>
 
-      {/* MANAGEMENT ZONE */}
-      <div className="border-t-4 border-slate-400 pt-8 mt-12">
-        <h2 className="text-2xl font-bold mb-6 text-slate-800">⚫ MANAGEMENT ZONE – Steuerung & Kontrolle</h2>
-
-        {/* A. UMSATZ & PROVISION */}
-        <div className="mb-8">
-          <h3 className="text-lg font-bold mb-4 text-slate-800 cursor-pointer hover:text-primary transition-colors inline-flex items-center gap-2" onClick={() => navigate('/provisionen-courtagen')}>💰 Umsatz & Provision →</h3>
-          <FinanceWidget />
-        </div>
-
-        {/* B. UMSATZPOTENZIAL / CONVERSION BOOSTER */}
-        <div className="mb-8 bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-lg border border-amber-200">
-          <h3 className="text-lg font-bold mb-4 text-slate-800 cursor-pointer hover:text-primary transition-colors inline-flex items-center gap-2" onClick={() => navigate('/vertraege')}>💰 Umsatzpotenzial – Mehr Deckung / Upgrade / Beratung →</h3>
-          <UpsellPipelineKanban contracts={filteredContracts} />
-        </div>
-
-        {/* C. BERATER & ORGANISATION + PERFORMANCE */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-lg font-bold mb-4 text-slate-800">📈 Umsatz-Trend</h3>
-            <RevenueChart contracts={filteredContracts} commissionEntries={filteredCommissions} />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold mb-4 text-slate-800 cursor-pointer hover:text-primary transition-colors inline-flex items-center gap-2" onClick={() => navigate('/berater-organisation')}>👥 Berater Performance & Organisation →</h3>
-            <TopAdvisors
-              advisors={filteredAdvisors}
-              organizations={organizations}
-              commissionEntries={filteredCommissions}
-              contracts={filteredContracts}
-            />
-          </div>
-        </div>
+      {/* ══════════════════════════════════════════════════════
+          I. AKTIVITÄTEN
+      ══════════════════════════════════════════════════════ */}
+      <div>
+        <SectionHeader title="Letzte Aktivitäten" />
+        <ActivityFeed customers={customers} contracts={filteredContracts} commissions={filteredCommissions} />
       </div>
 
       {/* TASK DIALOG */}
       <Dialog open={!!selectedTask} onOpenChange={(open) => { if (!open) setSelectedTask(null) }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{selectedTask?.id ? selectedTask?.title : 'Neue Aufgabe erstellen'}</DialogTitle>
+            <DialogTitle>{selectedTask?.id ? selectedTask?.title : 'Neue Aufgabe'}</DialogTitle>
           </DialogHeader>
           {selectedTask && (
             <div className="space-y-4">
               {!selectedTask.id && (
                 <div>
-                  <Label>Aufgabentitel *</Label>
-                  <Input value={formData.title || ''} onChange={(e) => setFormData(p => ({ ...p, title: e.target.value }))} placeholder="Aufgabentitel" className="mt-1" />
+                  <Label>Titel *</Label>
+                  <Input value={formData.title || ''} onChange={e => setFormData(p => ({ ...p, title: e.target.value }))} className="mt-1" />
                 </div>
               )}
               <div>
                 <Label>Status</Label>
-                <Select value={formData.status} onValueChange={(v) => setFormData(p => ({ ...p, status: v }))}>
+                <Select value={formData.status} onValueChange={v => setFormData(p => ({ ...p, status: v }))}>
                   <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="open">Pendent</SelectItem>
@@ -348,57 +352,22 @@ export default function Dashboard() {
               </div>
               <div>
                 <Label>Fälligkeitsdatum</Label>
-                <Input type="date" value={formData.due_date || ''} onChange={(e) => setFormData(p => ({ ...p, due_date: e.target.value }))} className="mt-1" />
+                <Input type="date" value={formData.due_date || ''} onChange={e => setFormData(p => ({ ...p, due_date: e.target.value }))} className="mt-1" />
               </div>
               <div>
                 <Label>Notizen</Label>
-                <Textarea value={formData.notes} onChange={(e) => setFormData(p => ({ ...p, notes: e.target.value }))} placeholder="Prozessnotizen..." className="mt-1" rows={3} />
+                <Textarea value={formData.notes} onChange={e => setFormData(p => ({ ...p, notes: e.target.value }))} className="mt-1" rows={3} />
               </div>
             </div>
           )}
           <DialogFooter className="flex justify-between">
             {selectedTask?.id && (
-              <Button variant="destructive" onClick={() => { if (confirm('Aufgabe wirklich löschen?')) deleteMutation.mutate(selectedTask.id) }} disabled={deleteMutation.isPending}>
-                Löschen
-              </Button>
+              <Button variant="destructive" size="sm" onClick={() => { if (confirm('Aufgabe löschen?')) deleteMutation.mutate(selectedTask.id) }}>Löschen</Button>
             )}
             <div className="flex gap-2 ml-auto">
-              <Button variant="outline" onClick={() => setSelectedTask(null)}>Schliessen</Button>
-              <Button onClick={handleSave} disabled={updateMutation.isPending || createMutation.isPending}>
-                {updateMutation.isPending || createMutation.isPending ? 'Speichern...' : 'Speichern'}
-              </Button>
+              <Button variant="outline" onClick={() => setSelectedTask(null)}>Abbrechen</Button>
+              <Button onClick={handleSave} disabled={updateMutation.isPending || createMutation.isPending}>Speichern</Button>
             </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* KPI DETAIL DIALOG */}
-      <Dialog open={!!kpiDetail} onOpenChange={(open) => { if (!open) setKpiDetail(null) }}>
-        <DialogContent className="max-w-2xl max-h-96 overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{kpiDetail?.data?.items?.length || 0} {kpiDetail?.data?.label}(n)</DialogTitle>
-          </DialogHeader>
-          {kpiDetail?.data?.items?.length === 0 ? (
-            <p className="text-muted-foreground">Keine Einträge vorhanden</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <tbody className="divide-y">
-                  {kpiDetail?.data?.items?.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-muted/50">
-                      {kpiDetail?.data?.columns?.map((col, cIdx) => (
-                        <td key={cIdx} className="px-4 py-2 text-muted-foreground">
-                          {col === 'end_date' ? formatDate(item[col]) : String(item[col] || '–').substring(0, 40)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setKpiDetail(null)}>Schliessen</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
