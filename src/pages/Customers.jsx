@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Search, MoreHorizontal, Edit, Trash2, ChevronDown, ChevronUp, User, Building2, ArrowRight, Upload } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, Edit, Trash2, ChevronDown, ChevronUp, User, Building2, ArrowRight, Upload, Download } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -131,6 +131,27 @@ export default function Customers() {
     }, 2000)
   }
 
+  const handleExport = () => {
+    if (filtered.length === 0) return
+    const headers = ['ID', 'Vorname', 'Nachname', 'Email', 'Telefon', 'Stadt', 'Kanton', 'Status']
+    const rows = filtered.map(c => [
+      c.id,
+      c.first_name,
+      c.last_name,
+      c.email,
+      c.phone || '',
+      c.city || '',
+      c.canton || '',
+      c.status
+    ])
+    const csv = [headers, ...rows].map(r => r.map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `kunden_export_${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+  }
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -139,6 +160,9 @@ export default function Customers() {
           <p className="text-muted-foreground mt-1">{primaryCustomers.length} Hauptkunden</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" /> Exportieren
+          </Button>
           <Button variant="outline" onClick={() => setShowImport(true)}>
             <Upload className="w-4 h-4 mr-2" /> Importieren
           </Button>

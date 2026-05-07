@@ -127,6 +127,27 @@ export default function Contracts() {
     }, 2000)
   }
 
+  const handleExport = () => {
+    if (filtered.length === 0) return
+    const headers = ['ID', 'Kunde', 'Versicherer', 'Police', 'Produkt', 'Jahresprämie', 'Gültig bis', 'Status']
+    const rows = filtered.map(c => [
+      c.id,
+      c.customer_name,
+      c.insurer,
+      c.policy_number || '',
+      c.product || '',
+      c.premium_yearly || '',
+      c.end_date ? new Date(c.end_date).toLocaleDateString('de-CH') : '',
+      c.status
+    ])
+    const csv = [headers, ...rows].map(r => r.map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `vertraege_export_${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+  }
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -135,6 +156,9 @@ export default function Contracts() {
           <p className="text-muted-foreground mt-1">{contracts.length} Verträge insgesamt</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExport}>
+            <Download className="w-4 h-4 mr-2" /> Exportieren
+          </Button>
           <Button variant="outline" onClick={() => setShowImport(true)}>
             <Upload className="w-4 h-4 mr-2" /> Importieren
           </Button>
