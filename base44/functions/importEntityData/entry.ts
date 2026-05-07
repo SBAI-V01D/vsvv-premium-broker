@@ -17,12 +17,9 @@ const validateCustomerRecord = (record, rowNum) => {
   if (!record.last_name || !record.last_name.trim()) {
     errors.push('Nachname erforderlich');
   }
-  if (!record.email || !record.email.trim()) {
-    errors.push('E-Mail erforderlich');
-  }
 
-  // Email format validation
-  if (record.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email.trim())) {
+  // Email format validation (if provided)
+  if (record.email && record.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email.trim())) {
     errors.push(`Ungültiges E-Mail-Format: ${record.email}`);
   }
 
@@ -271,39 +268,46 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Sanitize and validate email
-        record.email = record.email.trim().toLowerCase();
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email)) {
-          log('VALIDATION_ERROR', `Row ${i + 1}: Ungültiges E-Mail-Format`);
-          validationErrors.push({
-            row: i + 1,
-            error: `Ungültiges E-Mail-Format: ${record.email}`
-          });
-          continue;
-        }
+        // Sanitize email if provided
+        if (record.email && record.email.trim()) {
+          record.email = record.email.trim().toLowerCase();
+          
+          // Validate format
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email)) {
+            log('VALIDATION_ERROR', `Row ${i + 1}: Ungültiges E-Mail-Format`);
+            validationErrors.push({
+              row: i + 1,
+              error: `Ungültiges E-Mail-Format: ${record.email}`
+            });
+            continue;
+          }
 
-        // Duplicate check (existing OR in current batch)
-        if (existingEmails.has(record.email)) {
-          log('DUPLICATE', `Row ${i + 1}: ${record.email} (existing)`);
-          duplicates.push({
-            row: i + 1,
-            email: record.email,
-            name: `${record.first_name} ${record.last_name}`
-          });
-          continue;
-        }
+          // Duplicate check (existing OR in current batch)
+          if (existingEmails.has(record.email)) {
+            log('DUPLICATE', `Row ${i + 1}: ${record.email} (existing)`);
+            duplicates.push({
+              row: i + 1,
+              email: record.email,
+              name: `${record.first_name} ${record.last_name}`
+            });
+            continue;
+          }
 
-        if (processedEmails.has(record.email)) {
-          log('DUPLICATE', `Row ${i + 1}: ${record.email} (in batch)`);
-          duplicates.push({
-            row: i + 1,
-            email: record.email,
-            name: `${record.first_name} ${record.last_name}`
-          });
-          continue;
-        }
+          if (processedEmails.has(record.email)) {
+            log('DUPLICATE', `Row ${i + 1}: ${record.email} (in batch)`);
+            duplicates.push({
+              row: i + 1,
+              email: record.email,
+              name: `${record.first_name} ${record.last_name}`
+            });
+            continue;
+          }
 
-        processedEmails.add(record.email);
+          processedEmails.add(record.email);
+        } else {
+          // Generate placeholder email if missing
+          record.email = `kontakt_${i}@vsvv-import.local`;
+        }
 
         // Run full validation
         const fieldErrors = validateCustomerRecord(record, i + 1);
