@@ -161,24 +161,7 @@ export default function Customers() {
           <Button variant="outline" onClick={() => setShowImport(true)}>
             <Upload className="w-4 h-4 mr-2" /> Importieren
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={async () => {
-              if (!confirm('System komplett zurücksetzen? (960 Kunden + alle Verträge/Anträge/Aufgaben/Dokumente)')) return;
-              try {
-                const res = await base44.functions.invoke('cleanupAllImports', {});
-                alert(`✓ ${res.data.message}`);
-                setTimeout(() => {
-                  queryClient.invalidateQueries({ queryKey: ['customers'] });
-                }, 5000);
-              } catch (e) {
-                alert(`Fehler: ${e.message}`);
-              }
-            }}
-            className="text-red-600 hover:text-red-700"
-          >
-            ↶ System Reset
-          </Button>
+          {/* DISABLED: Unsafe cleanup removed */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button>
