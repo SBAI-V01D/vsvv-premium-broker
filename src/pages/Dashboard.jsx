@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { LayoutDashboard, Target, Users, ShieldCheck, Settings, BarChart3 } from 'lucide-react'
+import { LayoutDashboard, Target, Users, ShieldCheck, Settings, BarChart3, Crown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { buildLifecycleMap, filterTruePipelineLeads, LIFECYCLE_STATES } from '@/lib/lifecycle'
 
@@ -18,9 +18,11 @@ import TabCustomers  from '@/components/dashboard/tabs/TabCustomers'
 import TabCoverage   from '@/components/dashboard/tabs/TabCoverage'
 import TabOperations from '@/components/dashboard/tabs/TabOperations'
 import TabAnalytics  from '@/components/dashboard/tabs/TabAnalytics'
+import TabCEO        from '@/components/dashboard/tabs/TabCEO'
 
 const TABS = [
-  { id: 'executive',  label: 'Executive',   icon: LayoutDashboard },
+  { id: 'ceo',        label: 'CEO',          icon: Crown },
+  { id: 'executive',  label: 'BrokerOS',     icon: LayoutDashboard },
   { id: 'sales',      label: 'Sales',        icon: Target },
   { id: 'customers',  label: 'Kunden',       icon: Users },
   { id: 'coverage',   label: 'Coverage',     icon: ShieldCheck },
@@ -30,7 +32,7 @@ const TABS = [
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState('executive')
+  const [activeTab, setActiveTab] = useState('ceo')
   const [selectedTask, setSelectedTask] = useState(null)
   const [formData, setFormData] = useState({ title: '', status: '', notes: '', due_date: '' })
   const [filterOrg, setFilterOrg] = useState('all')
@@ -264,6 +266,7 @@ export default function Dashboard() {
 
       {/* ── TAB CONTENT ──────────────────────────────────────────────────── */}
       <div className="pt-6">
+        {activeTab === 'ceo'        && <TabCEO />}
         {activeTab === 'executive'  && <TabExecutive  data={sharedData} />}
         {activeTab === 'sales'      && <TabSales      data={sharedData} />}
         {activeTab === 'customers'  && <TabCustomers  data={sharedData} />}

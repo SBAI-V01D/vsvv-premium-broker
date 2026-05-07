@@ -50,7 +50,6 @@ const navGroups = [
     label: 'Management',
     items: [
       { label: 'Berater & Organisation', icon: Users, path: '/berater-organisation' },
-      { label: 'CEO Cockpit', icon: TrendingUp, path: '/ceo-cockpit' },
       { label: 'Sales Autopilot', icon: Zap, path: '/sales-autopilot' },
       { label: 'E-Mail-Kampagnen', icon: Megaphone, path: '/email-kampagnen' },
       { label: 'Status-Verwaltung', icon: CheckSquare, path: '/status-verwaltung' },
