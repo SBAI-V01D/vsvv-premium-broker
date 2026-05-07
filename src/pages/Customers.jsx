@@ -130,13 +130,9 @@ export default function Customers() {
     
     setImportProgress('Datei wird hochgeladen...')
     try {
-      const formData = new FormData()
-      formData.append('file', importFile)
-      const uploadRes = await fetch('https://api.base44.com/upload', {
-        method: 'POST',
-        body: formData,
-      })
-      const { file_url } = await uploadRes.json()
+      // Upload file using base44 integrations
+      const uploadRes = await base44.integrations.Core.UploadFile({ file: importFile })
+      const file_url = uploadRes.file_url
 
       // Map field names and set defaults
       const fieldMapping = {
