@@ -33,10 +33,17 @@ export default function Customer360() {
     ),
   })
 
-  const { data: applications = [] } = useQuery({
-    queryKey: ['applications', customerId],
-    queryFn: () => base44.entities.Application.filter({ customer_id: customerId }),
+  const { data: allApplications = [] } = useQuery({
+    queryKey: ['applications-all', customerId],
+    queryFn: () => base44.entities.Application.list(),
   })
+
+  const applications = useMemo(() => {
+    return allApplications.filter(a =>
+      a.customer_id === customerId ||
+      a.primary_customer_id === customerId
+    )
+  }, [allApplications, customerId])
 
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks', customerId],
@@ -44,10 +51,24 @@ export default function Customer360() {
     select: (data) => data.filter(t => t.customer_id === customerId),
   })
 
-  const { data: documents = [] } = useQuery({
-    queryKey: ['documents', customerId],
-    queryFn: () => base44.entities.Document.filter({ customer_id: customerId }),
+  const { data: allDocuments = [] } = useQuery({
+    queryKey: ['documents-all', customerId],
+    queryFn: () => base44.entities.Document.list(),
   })
+
+  const documents = useMemo(() => {
+    // Collect all application IDs for this customer
+    const appIds = new Set(applications.map(a => a.id))
+    // Collect all contract IDs for this customer
+    const contractIds = new Set(contracts.map(c => c.id))
+
+    return allDocuments.filter(d =>
+      d.customer_id === customerId ||
+      d.primary_customer_id === customerId ||
+      (d.linked_application_id && appIds.has(d.linked_application_id)) ||
+      (d.linked_contract_id && contractIds.has(d.linked_contract_id))
+    )
+  }, [allDocuments, customerId, applications, contracts])
 
   // Computed metrics
   const metrics = useMemo(() => {
@@ -376,9 +397,11 @@ export default function Customer360() {
                       </div>
                     </div>
                     {doc.file_url && (
-                      <Button size="sm" variant="ghost">
-                        <Download className="w-4 h-4" />
-                      </Button>
+                      <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                        <Button size="sm" variant="ghost">
+                          <Download className="w-4 h-4" />
+                        </Button>
+                      </a>
                     )}
                   </div>
                 </CardContent>
