@@ -9,12 +9,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import ContractForm from '../components/contracts/ContractForm'
 import ContractDocumentsPanel from '../components/contracts/ContractDocumentsPanel'
+import PolicyUploadWizard from '../components/contracts/PolicyUploadWizard'
 import { getSparteLabel } from '@/lib/insuranceSparten'
 import StatusBadge from '@/components/status/StatusBadge'
 import StatusChangeDialog from '@/components/status/StatusChangeDialog'
 
 export default function Contracts() {
   const [showForm, setShowForm] = useState(false)
+  const [showUploadWizard, setShowUploadWizard] = useState(false)
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
   const [statusChanging, setStatusChanging] = useState(null)
@@ -39,6 +41,11 @@ export default function Contracts() {
   const { data: documents = [] } = useQuery({
     queryKey: ['documents'],
     queryFn: () => base44.entities.Document.list(null, 1000),
+  })
+
+  const { data: organizations = [] } = useQuery({
+    queryKey: ['organizations'],
+    queryFn: () => base44.entities.Organization.list(),
   })
 
   const createMutation = useMutation({
@@ -113,9 +120,14 @@ export default function Contracts() {
           <h1 className="text-3xl font-bold">Verträge ({filtered.length})</h1>
           <p className="text-muted-foreground mt-1">{contracts.length} Verträge insgesamt</p>
         </div>
-        <Button onClick={() => { setEditing(null); setShowForm(true); }}>
-          <Plus className="w-4 h-4 mr-2" /> Neuer Vertrag
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowUploadWizard(true)} className="gap-2">
+            <FileText className="w-4 h-4" /> Police hochladen
+          </Button>
+          <Button onClick={() => { setEditing(null); setShowForm(true); }}>
+            <Plus className="w-4 h-4 mr-2" /> Neuer Vertrag
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3 mb-6">
@@ -288,6 +300,18 @@ export default function Contracts() {
         currentStatus={statusChanging?.custom_status || statusChanging?.status}
         onSave={handleStatusChange}
         title="Vertragsstatus ändern"
+      />
+
+      <PolicyUploadWizard
+        open={showUploadWizard}
+        onClose={() => setShowUploadWizard(false)}
+        customers={customers}
+        organizations={organizations}
+        onContractCreated={() => {
+          queryClient.invalidateQueries({ queryKey: ['contracts'] })
+          queryClient.invalidateQueries({ queryKey: ['customers'] })
+          queryClient.invalidateQueries({ queryKey: ['documents'] })
+        }}
       />
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
