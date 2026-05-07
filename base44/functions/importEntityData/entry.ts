@@ -218,8 +218,8 @@ Deno.serve(async (req) => {
     let failed = 0;
     const failedRecords = [];
     const createdIds = [];
-    const batchSize = 2;
-    const delayMs = 1500;
+    const batchSize = 1;
+    const delayMs = 3000;
 
     for (let i = 0; i < records.length; i += batchSize) {
       const batch = records.slice(i, i + batchSize);
