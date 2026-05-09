@@ -207,14 +207,14 @@ export default function Dashboard() {
                 return h < 12 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend'
               })()} 👋
             </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-1">
               {new Date().toLocaleDateString('de-CH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               {' · '}
-              <span className="text-emerald-600 font-medium">{activeCustomers.length} aktive Kunden</span>
+              <button onClick={() => navigate('/kunden')} className="text-emerald-600 font-medium hover:underline cursor-pointer">{activeCustomers.length} aktive Kunden</button>
               {' · '}
-              <span className="text-blue-600 font-medium">{activeLeads.length} Leads</span>
+              <button onClick={() => navigate('/leads')} className="text-blue-600 font-medium hover:underline cursor-pointer">{activeLeads.length} Leads</button>
               {expiringContracts.length > 0 && (
-                <><span className="mx-1">·</span><span className="text-red-500 font-medium">{expiringContracts.length} Abläufe</span></>
+                <><span className="mx-1">·</span><button onClick={() => navigate('/vertraege')} className="text-red-500 font-medium hover:underline cursor-pointer">{expiringContracts.length} Abläufe</button></>
               )}
             </p>
           </div>
