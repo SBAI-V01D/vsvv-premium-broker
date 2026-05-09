@@ -18,6 +18,7 @@ const CATEGORY_LABELS = {
   vorsorgepartner: '📊 Vorsorgepartner',
   rechtsschutz: '⚖️ Rechtsschutz',
   krankenkasse: '🏥 Krankenkasse',
+  makler: '🤝 Makler',
   sonstige: '📋 Sonstige'
 }
 
@@ -60,6 +61,7 @@ const PartnerForm = ({ partner, onSave, onCancel, saving }) => {
             <SelectItem value="vorsorgepartner">Vorsorgepartner</SelectItem>
             <SelectItem value="rechtsschutz">Rechtsschutz</SelectItem>
             <SelectItem value="krankenkasse">Krankenkasse</SelectItem>
+            <SelectItem value="makler">Makler</SelectItem>
             <SelectItem value="sonstige">Sonstige</SelectItem>
           </SelectContent>
         </Select>
