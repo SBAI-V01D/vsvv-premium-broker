@@ -40,18 +40,24 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch all customers for matching
-    const allCustomers = await base44.entities.Customer.list(null, 1000);
+    // Targeted customer matching — no full list load
+    let matchedCustomer = null;
 
-    // Search for potential match
-    const matchedCustomer = findCustomerMatch(allCustomers, {
-      first_name,
-      last_name,
-      email,
-      birthdate,
-      street,
-      zip_code,
-    });
+    // 1. Email match (fastest)
+    if (email) {
+      const byEmail = await base44.entities.Customer.filter({ email });
+      if (byEmail.length > 0) matchedCustomer = byEmail[0];
+    }
+
+    // 2. Name match (only if no email match)
+    if (!matchedCustomer && first_name && last_name) {
+      const byName = await base44.entities.Customer.filter({ first_name, last_name });
+      if (byName.length > 0) {
+        matchedCustomer = byName.find(c =>
+          !birthdate || !c.birthdate || c.birthdate === birthdate
+        ) || byName[0];
+      }
+    }
 
     let result;
 

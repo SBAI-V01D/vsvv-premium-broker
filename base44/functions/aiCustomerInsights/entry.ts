@@ -25,30 +25,18 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'customer_id erforderlich' }, { status: 400 });
     }
 
-    // Fetch all relevant data in parallel
-    const [customer, allContracts, allTasks, allApplications, allDocuments] = await Promise.all([
+    // Fetch only customer-specific data in parallel using filter
+    const [customer, contracts, tasks, applications, documents] = await Promise.all([
       base44.entities.Customer.get(customer_id),
-      base44.entities.Contract.list(),
-      base44.entities.Task.list(),
-      base44.entities.Application.list(),
-      base44.entities.Document.list(),
+      base44.entities.Contract.filter({ customer_id }),
+      base44.entities.Task.filter({ customer_id }),
+      base44.entities.Application.filter({ customer_id }),
+      base44.entities.Document.filter({ customer_id }),
     ]);
 
     if (!customer) {
       return Response.json({ error: 'Kunde nicht gefunden' }, { status: 404 });
     }
-
-    // Filter to this customer
-    const contracts = allContracts.filter(c =>
-      c.customer_id === customer_id || c.primary_customer_id === customer_id
-    );
-    const tasks = allTasks.filter(t => t.customer_id === customer_id);
-    const applications = allApplications.filter(a =>
-      a.customer_id === customer_id || a.primary_customer_id === customer_id
-    );
-    const documents = allDocuments.filter(d =>
-      d.customer_id === customer_id || d.primary_customer_id === customer_id
-    );
 
     const activeContracts = contracts.filter(c => c.status === 'active');
     const openTasks = tasks.filter(t => t.status !== 'completed');

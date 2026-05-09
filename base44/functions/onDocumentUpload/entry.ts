@@ -117,41 +117,38 @@ Dateiname: "${docData.name || ''}"`,
 
     console.log(`[onDocumentUpload] Classified as: ${category} (confidence=${confidence})`);
 
-    // ── STEP 3: Duplicate Detection ──────────────────────────────────────
+    // ── STEP 3: Duplicate Detection (targeted queries, no full list load) ───
     let matchedCustomer = null;
 
-    if (customerData.email || customerData.phone || insuranceData.policy_number) {
-      const allCustomers = await base44.asServiceRole.entities.Customer.list();
+    // Match by email first (fastest)
+    if (customerData.email) {
+      const emailMatches = await base44.asServiceRole.entities.Customer.filter({
+        email: customerData.email
+      });
+      if (emailMatches.length > 0) matchedCustomer = emailMatches[0];
+    }
 
-      // Match by email
-      if (customerData.email) {
-        matchedCustomer = allCustomers.find(c =>
-          c.email?.toLowerCase() === customerData.email?.toLowerCase()
-        );
+    // Match by policy number
+    if (!matchedCustomer && insuranceData.policy_number) {
+      const [matchingContracts] = await Promise.all([
+        base44.asServiceRole.entities.Contract.filter({ policy_number: insuranceData.policy_number })
+      ]);
+      if (matchingContracts.length > 0) {
+        const byId = await base44.asServiceRole.entities.Customer.filter({ id: matchingContracts[0].customer_id });
+        if (byId.length > 0) matchedCustomer = byId[0];
       }
+    }
 
-      // Match by policy number
-      if (!matchedCustomer && insuranceData.policy_number) {
-        const matchingContracts = await base44.asServiceRole.entities.Contract.filter({
-          policy_number: insuranceData.policy_number
-        });
-        if (matchingContracts.length > 0) {
-          matchedCustomer = allCustomers.find(c => c.id === matchingContracts[0].customer_id);
-        }
-      }
-
-      // Match by name + birthdate
-      if (!matchedCustomer && customerData.first_name && customerData.last_name) {
-        const nameLower = `${customerData.first_name} ${customerData.last_name}`.toLowerCase();
-        matchedCustomer = allCustomers.find(c => {
-          const cName = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
-          const nameMatch = cName === nameLower;
-          if (!nameMatch) return false;
-          if (customerData.birthdate && c.birthdate) {
-            return c.birthdate === customerData.birthdate;
-          }
-          return nameMatch;
-        });
+    // Match by name only if needed (limit to 200)
+    if (!matchedCustomer && customerData.first_name && customerData.last_name) {
+      const nameMatches = await base44.asServiceRole.entities.Customer.filter({
+        first_name: customerData.first_name,
+        last_name: customerData.last_name,
+      });
+      if (nameMatches.length > 0) {
+        matchedCustomer = nameMatches.find(c =>
+          !customerData.birthdate || !c.birthdate || c.birthdate === customerData.birthdate
+        ) || nameMatches[0];
       }
     }
 
