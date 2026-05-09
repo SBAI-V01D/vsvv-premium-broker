@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { lookupPostalCode, isValidPostalCode } from '@/lib/swissPostalCodes';
+import { lookupPostalCode, isValidPostalCode, fixOcrPostalCode } from '@/lib/swissPostalCodes';
 
 /**
  * Hook for postal code lookup and automatic city/canton assignment
@@ -8,14 +8,17 @@ export function usePostalCodeLookup() {
   const [plzError, setPlzError] = useState('');
   const [plzSuggestions, setPlzSuggestions] = useState(null);
 
-  const handlePostalCodeChange = useCallback((plz, onUpdate) => {
+  const handlePostalCodeChange = useCallback((rawPlz, onUpdate) => {
     setPlzError('');
     setPlzSuggestions(null);
 
-    if (!plz) {
+    if (!rawPlz) {
       onUpdate({ city: '', canton: '' });
       return;
     }
+
+    // Auto-fix OCR mistakes (O→0, l→1) silently
+    const plz = fixOcrPostalCode(rawPlz);
 
     // Only process when 4 digits entered
     if (plz.length !== 4) {
@@ -23,7 +26,7 @@ export function usePostalCodeLookup() {
     }
 
     if (!isValidPostalCode(plz)) {
-      setPlzError('Ungültige PLZ (4 Ziffern erforderlich)');
+      setPlzError('Ungültige PLZ (nur 4 Ziffern erlaubt)');
       onUpdate({ city: '', canton: '' });
       return;
     }
@@ -31,7 +34,7 @@ export function usePostalCodeLookup() {
     const result = lookupPostalCode(plz);
 
     if (!result) {
-      // PLZ not in DB — allow manual input, don't clear fields, no error shown
+      // PLZ not in DB — allow manual input, no error shown
       setPlzError('');
       return;
     }
