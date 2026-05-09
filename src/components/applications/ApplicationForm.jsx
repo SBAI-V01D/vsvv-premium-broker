@@ -157,6 +157,9 @@ export default function ApplicationForm({ application, customers: externalCustom
   const handleSubmit = (e) => {
     e.preventDefault()
     const sparteKey = form.sparte || ''
+    // Derive organization_id and advisor_id from selected customer or existing form data
+    const orgId = selectedCustomer?.organization_id || form.organization_id || ''
+    const advisorId = selectedCustomer?.advisor_id || form.advisor_id || ''
     onSave({
       customer_id: form.customer_id,
       customer_name: selectedCustomer
@@ -164,6 +167,8 @@ export default function ApplicationForm({ application, customers: externalCustom
         : form.customer_name,
       primary_customer_id: selectedCustomer?.is_family_member ? selectedCustomer.primary_customer_id : (selectedCustomer?.id || form.primary_customer_id),
       is_family_member: selectedCustomer?.is_family_member || false,
+      organization_id: orgId,
+      advisor_id: advisorId,
       kundentyp: form.kundentyp || 'privat',
       sparte: sparteKey,
       insurance_type: sparteKey,
