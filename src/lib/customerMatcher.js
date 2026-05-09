@@ -2,7 +2,8 @@
 // Safely finds or creates customer records without duplication
 
 export function matchCustomers(customers, searchTerm) {
-  if (!searchTerm || !customers) return customers;
+  if (!Array.isArray(customers)) return [];
+  if (!searchTerm) return customers;
   const term = String(searchTerm).toLowerCase();
   return customers.filter(c => {
     const fullName = `${c.first_name || ''} ${c.last_name || ''} ${c.company_name || ''}`.toLowerCase();
