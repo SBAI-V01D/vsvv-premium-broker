@@ -41,6 +41,7 @@ const TABS = [
 export default function Dashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('master')
+  const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [selectedTask, setSelectedTask] = useState(null)
   const [formData, setFormData] = useState({ title: '', status: '', notes: '', due_date: '' })
   const [filterOrg, setFilterOrg] = useState('all')
@@ -220,7 +221,7 @@ export default function Dashboard() {
 
       {/* ── ENTERPRISE HEADER ─────────────────────────────────────────────── */}
       <div className="space-y-4 pb-5 border-b border-border">
-        {/* Top row: greeting + filters */}
+        {/* Top row: greeting + primary upload action + filters */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
@@ -241,8 +242,14 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex gap-2">
+            <button 
+              onClick={() => navigate('/dokumente')}
+              className="px-4 py-2 rounded-lg bg-orange-600 text-white font-semibold text-sm hover:bg-orange-700 transition-colors"
+            >
+              📤 Upload
+            </button>
             <Select value={filterOrg} onValueChange={v => { setFilterOrg(v); setFilterAdvisor('all') }}>
-              <SelectTrigger className="w-40 h-8 text-xs bg-background">
+              <SelectTrigger className="w-40 h-9 text-xs bg-background">
                 <SelectValue placeholder="Organisation" />
               </SelectTrigger>
               <SelectContent>
@@ -251,7 +258,7 @@ export default function Dashboard() {
               </SelectContent>
             </Select>
             <Select value={filterAdvisor} onValueChange={setFilterAdvisor}>
-              <SelectTrigger className="w-36 h-8 text-xs bg-background">
+              <SelectTrigger className="w-36 h-9 text-xs bg-background">
                 <SelectValue placeholder="Berater" />
               </SelectTrigger>
               <SelectContent>
@@ -262,32 +269,36 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Quick-action shortcuts */}
-        <div className="flex gap-2 flex-wrap">
+        {/* Secondary actions: now less prominent */}
+        <div className="flex gap-2 flex-wrap text-xs">
           {[
-            { label: '+ Neuer Kunde', path: '/kunden', color: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' },
-            { label: '+ Neuer Lead', path: '/leads', color: 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100' },
-            { label: '+ Neuer Vertrag', path: '/vertraege', color: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' },
-            { label: '📄 Dokument hochladen', path: '/dokumente', color: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100' },
-            { label: '📋 Aufgaben', path: '/aufgaben', color: openTasks.length > 0 ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' : 'bg-muted text-muted-foreground border-border hover:bg-muted/70' },
+            { label: '+ Neuer Kunde', path: '/kunden', icon: '👤' },
+            { label: '+ Neuer Lead', path: '/leads', icon: '🎯' },
+            { label: '+ Neuer Vertrag', path: '/vertraege', icon: '📋' },
           ].map(a => (
             <button
               key={a.label}
               onClick={() => navigate(a.path)}
-              className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${a.color}`}
+              className="px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
             >
-              {a.label}
-              {a.label.includes('Aufgaben') && openTasks.length > 0 && (
-                <span className="ml-1.5 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">{openTasks.length}</span>
-              )}
+              {a.icon} {a.label}
             </button>
           ))}
+          {openTasks.length > 0 && (
+            <button
+              onClick={() => navigate('/aufgaben')}
+              className="ml-auto px-2.5 py-1 rounded-md bg-red-50 border border-red-200 text-red-700 font-medium hover:bg-red-100 transition-colors flex items-center gap-1"
+            >
+              📋 {openTasks.length} Aufgaben
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ── TAB NAVIGATION ───────────────────────────────────────────────── */}
+      {/* ── TAB NAVIGATION — Reordered for Revenue/Workflow Priority ───────────────── */}
       <div className="flex gap-1 pt-4 pb-6 overflow-x-auto border-b border-border">
-        {TABS.map(tab => {
+        {/* Master (Command Center) always first for daily workflow */}
+        {TABS.filter(t => t.id === 'master').map(tab => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
           return (
@@ -303,17 +314,32 @@ export default function Dashboard() {
             >
               <Icon className="w-4 h-4" />
               {tab.label}
-              {/* Live badges */}
-              {tab.id === 'master' && (openTasks.length + expiringContracts.filter(c => { const d = Math.ceil((new Date(c.end_date) - new Date()) / 86400000); return d <= 14 }).length) > 0 && (
+              {(openTasks.length + expiringContracts.filter(c => { const d = Math.ceil((new Date(c.end_date) - new Date()) / 86400000); return d <= 14 }).length) > 0 && (
                 <span className={cn('text-xs px-1.5 py-0.5 rounded-full font-semibold', isActive ? 'bg-white/20 text-white' : 'bg-red-100 text-red-700')}>
                   !
                 </span>
               )}
-              {tab.id === 'sales' && activeLeads.length > 0 && (
-                <span className={cn('text-xs px-1.5 py-0.5 rounded-full font-semibold', isActive ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-700')}>
-                  {activeLeads.length}
-                </span>
+            </button>
+          )
+        })}
+
+        {/* Revenue/Finance tabs */}
+        {TABS.filter(t => ['executive', 'operations', 'coverage'].includes(t.id)).map(tab => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
+                isActive
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               )}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.label}
               {tab.id === 'coverage' && customersWithCriticalGaps.length > 0 && (
                 <span className={cn('text-xs px-1.5 py-0.5 rounded-full font-semibold', isActive ? 'bg-white/20 text-white' : 'bg-red-100 text-red-700')}>
                   {customersWithCriticalGaps.length}
@@ -324,6 +350,53 @@ export default function Dashboard() {
                   {openTasks.length}
                 </span>
               )}
+            </button>
+          )
+        })}
+
+        {/* Sales & Analytics in secondary area */}
+        {TABS.filter(t => ['sales', 'analytics'].includes(t.id)).map(tab => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
+                isActive
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.label}
+              {tab.id === 'sales' && activeLeads.length > 0 && (
+                <span className={cn('text-xs px-1.5 py-0.5 rounded-full font-semibold', isActive ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-700')}>
+                  {activeLeads.length}
+                </span>
+              )}
+            </button>
+          )
+        })}
+
+        {/* Admin/Diagnostic tabs at the end */}
+        {TABS.filter(t => ['diagnostic', 'ceo', 'customers'].includes(t.id)).map(tab => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
+                isActive
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.label}
             </button>
           )
         })}
