@@ -125,7 +125,10 @@ function TodayPriorityTasks({ openTasks, onTaskClick }) {
         })} />
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold truncate">{t.title}</p>
-          <p className="text-[10px] text-muted-foreground">{t.customer_name || '–'}</p>
+          {t.customer_name
+            ? <p className="text-[10px] text-muted-foreground font-medium text-blue-700">{t.customer_name}</p>
+            : <p className="text-[10px] text-amber-600 italic">Kein Kunde verknüpft</p>
+          }
         </div>
         {isContract && (
           <span className="text-[9px] px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded font-semibold flex-shrink-0">VERTRAG</span>
