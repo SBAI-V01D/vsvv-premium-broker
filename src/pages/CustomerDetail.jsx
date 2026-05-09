@@ -208,7 +208,7 @@ export default function CustomerDetail() {
           ) : (
             <Card>
               <CardContent className="p-0">
-                <div className="hidden md:grid grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                <div className="hidden md:grid grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                   <div>Kunde</div>
                   <div>Versicherer / Sparte</div>
                   <div>Policen-Nr</div>
@@ -216,6 +216,7 @@ export default function CustomerDetail() {
                   <div>Vertragsdaten</div>
                   <div>Jahresprämie</div>
                   <div>Status</div>
+                  <div className="w-20"></div>
                 </div>
                 {relatedContracts.map((c, idx) => {
                   const relatedCustomer = (Array.isArray(allCustomers) ? allCustomers : []).find(x => x.id === c.customer_id)
@@ -225,7 +226,7 @@ export default function CustomerDetail() {
                   }
                   return (
                     <div key={c.id} className={idx > 0 ? 'border-t border-border' : ''}>
-                      <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors">
+                      <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors">
                         {/* Kunde */}
                         <div className="min-w-0">
                           <p className="font-semibold text-xs truncate">{relatedCustomer ? (relatedCustomer.company_name || `${relatedCustomer.first_name} ${relatedCustomer.last_name}`) : c.customer_name}</p>
