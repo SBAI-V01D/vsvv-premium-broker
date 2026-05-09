@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Plus, Search, MoreHorizontal, Edit, Trash2, FileText, TrendingUp, Clock, CheckCircle, Calendar, Building2, Tag, Archive, Inbox } from 'lucide-react'
@@ -16,6 +17,7 @@ import SparteFilterButtons from '../components/applications/SparteFilterButtons'
 import { getSparteLabel, ALL_SPARTEN } from '@/lib/insuranceSparten'
 
 export default function Applications() {
+  const navigate = useNavigate()
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
@@ -424,10 +426,10 @@ export default function Applications() {
               return (
                 <div key={app.id} className={idx > 0 ? 'border-t border-border' : ''}>
                   {/* Main row */}
-                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors">
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors cursor-pointer group" onClick={() => app.customer_id && navigate(`/kunden/${app.customer_id}`)}>
                     {/* Kunde */}
                     <div className="min-w-0">
-                      <p className="font-semibold text-sm truncate">{app.customer_name || '–'}</p>
+                      <p className="font-semibold text-sm truncate text-blue-600 group-hover:underline">{app.customer_name || '–'}</p>
                       {(() => {
                         const cust = getCustomer(app.customer_id)
                         const ahv = cust?.ahv_number || app.sparte_data?.ahv_number
@@ -583,6 +585,27 @@ export default function Applications() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          {app.customer_id && (
+                            <DropdownMenuItem onClick={() => navigate(`/kunden/${app.customer_id}`)}>
+                              👤 Kunde öffnen
+                            </DropdownMenuItem>
+                          )}
+                          {(() => {
+                            const cust = getCustomer(app.customer_id)
+                            return cust?.email ? (
+                              <DropdownMenuItem onClick={() => window.location.href = `mailto:${cust.email}`}>
+                                ✉️ E-Mail
+                              </DropdownMenuItem>
+                            ) : null
+                          })()}
+                          {(() => {
+                            const cust = getCustomer(app.customer_id)
+                            return cust?.phone ? (
+                              <DropdownMenuItem onClick={() => window.location.href = `tel:${cust.phone}`}>
+                                ☎️ Anrufen
+                              </DropdownMenuItem>
+                            ) : null
+                          })()}
                           <DropdownMenuItem onClick={() => setStatusChanging(app)}>Status ändern</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => { setEditing(app); setShowForm(true) }}>
                             <Edit className="w-4 h-4 mr-2" /> Bearbeiten

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Card, CardContent } from '@/components/ui/card'
@@ -31,6 +32,7 @@ const SOURCE_LABELS = {
 }
 
 export default function Leads() {
+  const navigate = useNavigate()
   const [filterStatus, setFilterStatus] = useState('active') // 'active' = only pipeline leads
   const [filterAdvisor, setFilterAdvisor] = useState('all')
   const [search, setSearch] = useState('')
@@ -227,8 +229,8 @@ export default function Leads() {
                   {filteredLeads.length === 0 ? (
                     <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">Keine Leads in dieser Ansicht</td></tr>
                   ) : filteredLeads.map(lead => (
-                    <tr key={lead.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                      <td className="px-4 py-3 font-medium">{lead.first_name ? `${lead.first_name} ${lead.last_name}` : lead.name}</td>
+                    <tr key={lead.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors cursor-pointer group" onClick={() => { setEditingLead(lead); setShowForm(true) }}>
+                      <td className="px-4 py-3 font-medium text-blue-600 group-hover:underline">{lead.first_name ? `${lead.first_name} ${lead.last_name}` : lead.name}</td>
                       <td className="px-4 py-3 text-muted-foreground">{lead.email}</td>
                       <td className="px-4 py-3">
                         <span className="px-2 py-0.5 rounded-full bg-muted text-xs">{SOURCE_LABELS[lead.source] || lead.source}</span>
@@ -240,7 +242,7 @@ export default function Leads() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Button size="sm" variant="ghost" onClick={() => { setEditingLead(lead); setShowForm(true) }}>
+                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setEditingLead(lead); setShowForm(true) }}>
                           Bearbeiten
                         </Button>
                       </td>

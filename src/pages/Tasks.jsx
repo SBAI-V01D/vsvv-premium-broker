@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,6 +16,7 @@ import { cn } from '@/lib/utils'
 const CONTRACT_TASK_TYPES = ['renewal', 'health_declaration']
 
 export default function Tasks() {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [selectedTask, setSelectedTask] = useState(null)
   const [formData, setFormData] = useState({ status: '', notes: '', file: null, due_date: '', completion_date: '', assigned_to: '' })
@@ -96,6 +98,10 @@ export default function Tasks() {
     setFormData({ status: task.status, notes: task.notes || '', file: null, due_date: task.due_date || '', completion_date: task.completion_date || '', assigned_to: task.assigned_to || '' })
   }
 
+  const handleRowClick = (task) => {
+    if (task.customer_id) navigate(`/kunden/${task.customer_id}`)
+  }
+
   const handleSave = () => {
     updateMutation.mutate(formData)
   }
@@ -167,18 +173,28 @@ export default function Tasks() {
                 <button
                   key={t.id}
                   onClick={() => handleTaskClick(t)}
-                  className={`p-3 rounded border text-left transition-colors w-full ${
+                  className={`p-3 rounded border text-left transition-colors w-full group ${
                     t.due_date && isOverdue(t.due_date)
                       ? 'bg-red-50 border-red-300 hover:bg-red-100 hover:border-red-400'
                       : 'bg-slate-50 border-border hover:border-primary hover:bg-slate-100'
                   }`}
                 >
-                  <p className="text-sm font-medium">{t.title}</p>
-                  {t.due_date && (
-                    <p className={`text-xs mt-1 ${isOverdue(t.due_date) ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
-                      Fällig: {formatDate(t.due_date)}
-                    </p>
-                  )}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{t.title}</p>
+                      {t.customer_name && <p className="text-xs text-blue-600 font-medium mt-0.5">{t.customer_name}</p>}
+                      {t.due_date && (
+                        <p className={`text-xs mt-1 ${isOverdue(t.due_date) ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
+                          Fällig: {formatDate(t.due_date)}
+                        </p>
+                      )}
+                    </div>
+                    {t.customer_id && (
+                      <button onClick={(e) => { e.stopPropagation(); handleRowClick(t) }} className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        Kunde
+                      </button>
+                    )}
+                  </div>
                 </button>
               ))
             )}
@@ -197,18 +213,28 @@ export default function Tasks() {
                 <button
                   key={t.id}
                   onClick={() => handleTaskClick(t)}
-                  className={`p-3 rounded border text-left transition-colors w-full ${
+                  className={`p-3 rounded border text-left transition-colors w-full group ${
                     t.due_date && isOverdue(t.due_date)
                       ? 'bg-red-50 border-red-300 hover:bg-red-100 hover:border-red-400'
                       : 'bg-blue-50 border-blue-200 hover:border-blue-400 hover:bg-blue-100'
                   }`}
                 >
-                  <p className="text-sm font-medium">{t.title}</p>
-                  {t.due_date && (
-                    <p className={`text-xs mt-1 ${isOverdue(t.due_date) ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
-                      Fällig: {formatDate(t.due_date)}
-                    </p>
-                  )}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{t.title}</p>
+                      {t.customer_name && <p className="text-xs text-blue-600 font-medium mt-0.5">{t.customer_name}</p>}
+                      {t.due_date && (
+                        <p className={`text-xs mt-1 ${isOverdue(t.due_date) ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
+                          Fällig: {formatDate(t.due_date)}
+                        </p>
+                      )}
+                    </div>
+                    {t.customer_id && (
+                      <button onClick={(e) => { e.stopPropagation(); handleRowClick(t) }} className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        Kunde
+                      </button>
+                    )}
+                  </div>
                 </button>
               ))
             )}
@@ -227,9 +253,17 @@ export default function Tasks() {
                 <button
                   key={t.id}
                   onClick={() => handleTaskClick(t)}
-                  className="p-3 bg-green-50 rounded border border-green-200 hover:border-green-400 hover:bg-green-100 text-left transition-colors w-full line-through opacity-75"
+                  className="p-3 bg-green-50 rounded border border-green-200 hover:border-green-400 hover:bg-green-100 text-left transition-colors w-full line-through opacity-75 group flex items-start justify-between gap-2"
                 >
-                  <p className="text-sm font-medium">{t.title}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{t.title}</p>
+                    {t.customer_name && <p className="text-xs text-blue-600 font-medium mt-0.5">{t.customer_name}</p>}
+                  </div>
+                  {t.customer_id && (
+                    <button onClick={(e) => { e.stopPropagation(); handleRowClick(t) }} className="text-xs px-2 py-1 rounded bg-green-200 text-green-700 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      Kunde
+                    </button>
+                  )}
                 </button>
               ))
             )}

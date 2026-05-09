@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Plus, Search, MoreHorizontal, Edit, Trash2, FileText, Calendar, Building2, Tag, Download, Upload } from 'lucide-react'
@@ -15,6 +16,7 @@ import StatusBadge from '@/components/status/StatusBadge'
 import StatusChangeDialog from '@/components/status/StatusChangeDialog'
 
 export default function Contracts() {
+  const navigate = useNavigate()
   const [showForm, setShowForm] = useState(false)
   const [showUploadWizard, setShowUploadWizard] = useState(false)
   const [showImport, setShowImport] = useState(false)
@@ -230,10 +232,10 @@ export default function Contracts() {
               const customer = getCustomer(contract.customer_id)
               return (
                 <div key={contract.id} className={idx > 0 ? 'border-t border-border' : ''}>
-                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors">
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors cursor-pointer group" onClick={() => contract.customer_id && navigate(`/kunden/${contract.customer_id}`)}>
                     {/* Kunde */}
                     <div className="min-w-0">
-                      <p className="font-semibold text-xs truncate">{contract.customer_name || '–'}</p>
+                      <p className="font-semibold text-xs truncate text-blue-600 group-hover:underline">{contract.customer_name || '–'}</p>
                       {customer?.ahv_number && (
                         <p className="text-xs font-mono text-muted-foreground mt-0.5">{customer.ahv_number}</p>
                       )}
@@ -333,6 +335,21 @@ export default function Contracts() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          {contract.customer_id && (
+                            <DropdownMenuItem onClick={() => navigate(`/kunden/${contract.customer_id}`)}>
+                              👤 Kunde öffnen
+                            </DropdownMenuItem>
+                          )}
+                          {customer?.email && (
+                            <DropdownMenuItem onClick={() => window.location.href = `mailto:${customer.email}`}>
+                              ✉️ E-Mail
+                            </DropdownMenuItem>
+                          )}
+                          {customer?.phone && (
+                            <DropdownMenuItem onClick={() => window.location.href = `tel:${customer.phone}`}>
+                              ☎️ Anrufen
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => setStatusChanging(contract)}>Status ändern</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => { setEditing(contract); setShowForm(true) }}>
                             <Edit className="w-4 h-4 mr-2" /> Bearbeiten
