@@ -92,6 +92,7 @@ export default function Contracts() {
   }
 
   const handleStatusChange = async ({ status, statusDef, note, metadata }) => {
+    if (!statusChanging) return
     const contract = statusChanging
     await base44.entities.StatusHistory.create({
       entity_type: 'contract',
@@ -232,10 +233,10 @@ export default function Contracts() {
               const customer = getCustomer(contract.customer_id)
               return (
                 <div key={contract.id} className={idx > 0 ? 'border-t border-border' : ''}>
-                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors cursor-pointer group" onClick={() => contract.customer_id && navigate(`/kunden/${contract.customer_id}`)}>
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors group">
                     {/* Kunde */}
                     <div className="min-w-0">
-                      <p className="font-semibold text-xs truncate text-blue-600 group-hover:underline">{contract.customer_name || '–'}</p>
+                      <p className="font-semibold text-xs truncate">{contract.customer_name || '–'}</p>
                       {customer?.ahv_number && (
                         <p className="text-xs font-mono text-muted-foreground mt-0.5">{customer.ahv_number}</p>
                       )}
@@ -380,7 +381,7 @@ export default function Contracts() {
         open={!!statusChanging}
         onOpenChange={(open) => { if (!open) setStatusChanging(null) }}
         statusDefinitions={statusDefs}
-        currentStatus={statusChanging?.custom_status || statusChanging?.status}
+        currentStatus={statusChanging ? (statusChanging.custom_status || statusChanging.status || '').toLowerCase().trim() : ''}
         onSave={handleStatusChange}
         title="Vertragsstatus ändern"
       />
