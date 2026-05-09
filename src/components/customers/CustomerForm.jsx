@@ -89,28 +89,38 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
             advisor_id: '',
          }
       }
-      // Normalize all string fields: replace null/undefined with ''
-      const normalize = (v) => v == null ? '' : v
+      // Normalize all fields: replace null/undefined with '' or defaults
+      const n = (v) => v == null ? '' : v
       return {
          ...customer,
-         first_name: normalize(customer.first_name),
-         last_name: normalize(customer.last_name),
-         email: normalize(customer.email),
-         phone: normalize(customer.phone),
-         mobile: normalize(customer.mobile),
-         street: normalize(customer.street),
-         zip_code: normalize(customer.zip_code),
-         city: normalize(customer.city),
-         canton: normalize(customer.canton),
-         birthdate: normalize(customer.birthdate),
-         ahv_number: normalize(customer.ahv_number),
-         profession: normalize(customer.profession),
-         drivers_license_date: normalize(customer.drivers_license_date),
-         notes: normalize(customer.notes),
-         assigned_broker: normalize(customer.assigned_broker),
-         organization_id: normalize(customer.organization_id),
-         advisor_id: normalize(customer.advisor_id),
-         primary_customer_id: normalize(customer.primary_customer_id),
+         first_name: n(customer.first_name),
+         last_name: n(customer.last_name),
+         email: n(customer.email),
+         phone: n(customer.phone),
+         mobile: n(customer.mobile),
+         street: n(customer.street),
+         zip_code: n(customer.zip_code),
+         city: n(customer.city),
+         canton: n(customer.canton),
+         birthdate: n(customer.birthdate),
+         ahv_number: n(customer.ahv_number),
+         profession: n(customer.profession),
+         drivers_license_date: n(customer.drivers_license_date),
+         notes: n(customer.notes),
+         assigned_broker: n(customer.assigned_broker),
+         organization_id: n(customer.organization_id),
+         advisor_id: n(customer.advisor_id),
+         primary_customer_id: n(customer.primary_customer_id),
+         // Select fields with fallback defaults
+         civil_status: customer.civil_status || 'single',
+         nationality: customer.nationality || 'CH',
+         risk_profile: customer.risk_profile || 'medium',
+         status: customer.status || 'active',
+         mandate_status: customer.mandate_status || 'pending',
+         association_membership: customer.association_membership || 'none',
+         permit_type: customer.permit_type || 'none',
+         family_role: customer.family_role || 'primary',
+         is_family_member: customer.is_family_member || false,
       }
    })
 
