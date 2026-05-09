@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Search, MoreHorizontal, Edit, Trash2, FileText, TrendingUp, Clock, CheckCircle, Calendar, Building2, Tag } from 'lucide-react'
+import { Plus, Search, MoreHorizontal, Edit, Trash2, FileText, TrendingUp, Clock, CheckCircle, Calendar, Building2, Tag, Archive, Inbox } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,6 +26,7 @@ export default function Applications() {
   const [statusChanging, setStatusChanging] = useState(null)
   const [expandedDocs, setExpandedDocs] = useState(null)
   const [showAuswertung, setShowAuswertung] = useState(false)
+  const [activeTab, setActiveTab] = useState('pending') // 'pending' | 'archived'
 
   const queryClient = useQueryClient()
 
@@ -76,11 +77,16 @@ export default function Applications() {
   const STORNIERT_ABGELEHNT = ['abgelehnt', 'rejected', 'storniert', 'cancelled']
   const ACCEPTED_KEYS = ['angenommen', 'policiert', 'approved']
   const OPEN_KEYS = ['neu', 'draft', 'submitted', 'in_bearbeitung', 'under_review', 'eingereicht', 'in_pruefung', 'rueckfrage', 'vorbehalt']
+  const ARCHIVED_KEYS = [...ACCEPTED_KEYS, ...STORNIERT_ABGELEHNT]
   const getStatus = (a) => a.custom_status || a.status
 
   const activeApps = applications.filter(a => !STORNIERT_ABGELEHNT.includes(getStatus(a)))
   const openApps = applications.filter(a => OPEN_KEYS.includes(getStatus(a)))
   const approvedApps = applications.filter(a => ACCEPTED_KEYS.includes(getStatus(a)))
+
+  // Tab split
+  const pendingApps = applications.filter(a => !ARCHIVED_KEYS.includes(getStatus(a)))
+  const archivedApps = applications.filter(a => ARCHIVED_KEYS.includes(getStatus(a)))
   const closureRate = activeApps.length > 0
     ? ((approvedApps.length / activeApps.length) * 100).toFixed(1)
     : '0.0'
@@ -95,7 +101,9 @@ export default function Applications() {
   const PRIVAT_VALUES = ['kvg','vvg_zusatz','kvg_vvg_kombi','leben_3a','leben_3b','unfall_privat','haftpflicht_privat','hausrat','gebaude_privat','motorfahrzeug','rechtsschutz_privat','reise','cyber_privat']
   const FIRMA_VALUES = ['bvg','uvg','ktg','inventar','gebaude_firma','technisch','transport','betriebshaftpflicht','berufshaftpflicht','do','rechtsschutz_firma','cyber_firma','kredit','flotte','keyman','gruppen_leben']
 
-  const filtered = applications.filter(a => {
+  const tabSource = activeTab === 'pending' ? pendingApps : archivedApps
+
+  const filtered = tabSource.filter(a => {
     const searchStr = `${a.customer_name} ${a.insurer} ${a.product} ${getSparteLabel(a.sparte || a.insurance_type)}`.toLowerCase()
     const matchSearch = !search.trim() || searchStr.includes(search.toLowerCase())
     const matchSparte = filterSparte === 'all' || a.sparte === filterSparte || a.insurance_type === filterSparte
@@ -227,8 +235,8 @@ export default function Applications() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Versicherungsanträge ({applications.length})</h1>
-          <p className="text-muted-foreground mt-1">{activeApps.length} aktive Anträge</p>
+          <h1 className="text-3xl font-bold">Versicherungsanträge</h1>
+          <p className="text-muted-foreground mt-1">{pendingApps.length} pendente · {archivedApps.length} archivierte Anträge</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => { setEditing(null); setShowForm(true) }}>
@@ -320,10 +328,42 @@ export default function Applications() {
       </div>
 
       {/* Auswertungs-Button */}
-      <div className="mb-6">
+      <div className="mb-4">
         <Button variant="outline" onClick={() => setShowAuswertung(true)}>
           📊 Auswertung nach Sparte
         </Button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-4 bg-muted/40 rounded-lg p-1 w-fit">
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'pending'
+              ? 'bg-card shadow text-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Inbox className="w-4 h-4" />
+          Pendente Anträge
+          <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'pending' ? 'bg-orange-100 text-orange-700' : 'bg-muted text-muted-foreground'}`}>
+            {pendingApps.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('archived')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'archived'
+              ? 'bg-card shadow text-foreground'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Archive className="w-4 h-4" />
+          Archivierte Anträge
+          <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'archived' ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}>
+            {archivedApps.length}
+          </span>
+        </button>
       </div>
 
       {/* Filters */}
@@ -547,6 +587,20 @@ export default function Applications() {
                           <DropdownMenuItem onClick={() => { setEditing(app); setShowForm(true) }}>
                             <Edit className="w-4 h-4 mr-2" /> Bearbeiten
                           </DropdownMenuItem>
+                          {activeTab === 'pending' && (
+                            <DropdownMenuItem onClick={() => {
+                              updateMutation.mutate({ id: app.id, data: { custom_status: 'angenommen', status_changed_at: new Date().toISOString() } })
+                            }}>
+                              <Archive className="w-4 h-4 mr-2" /> Archivieren (angenommen)
+                            </DropdownMenuItem>
+                          )}
+                          {activeTab === 'archived' && (
+                            <DropdownMenuItem onClick={() => {
+                              updateMutation.mutate({ id: app.id, data: { custom_status: 'in_pruefung', status_changed_at: new Date().toISOString() } })
+                            }}>
+                              <Inbox className="w-4 h-4 mr-2" /> Zurück zu Pendent
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => { if (confirm('Antrag wirklich löschen?')) deleteMutation.mutate(app.id) }}
