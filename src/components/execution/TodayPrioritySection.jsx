@@ -56,8 +56,8 @@ export default function TodayPrioritySection({ leads, tasks, applications, contr
           type: 'renewal',
           priority: 2,
           icon: '⏰',
-          title: `Renewal: ${c.policy_number}`,
-          sub: `${c.daysLeft} days left`,
+          title: `Renewal: ${c.customer_name || c.policy_number}`,
+          sub: `${c.customer_name ? `Police ${c.policy_number} · ` : ''}${c.daysLeft} Tage verbleibend`,
           action: 'Prepare offer',
           color: 'border-l-orange-500 bg-orange-50',
         })
