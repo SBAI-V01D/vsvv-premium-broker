@@ -441,10 +441,10 @@ export default function Applications() {
               return (
                 <div key={app.id} className={idx > 0 ? 'border-t border-border' : ''}>
                   {/* Main row */}
-                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors cursor-pointer group" onClick={() => app.customer_id && navigate(`/kunden/${app.customer_id}`)}>
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors group">
                     {/* Kunde */}
                     <div className="min-w-0">
-                      <p className="font-semibold text-sm truncate text-blue-600 group-hover:underline">{app.customer_name || '–'}</p>
+                      <p className="font-semibold text-sm truncate">{app.customer_name || '–'}</p>
                       {(() => {
                         const cust = getCustomer(app.customer_id)
                         const ahv = cust?.ahv_number || app.sparte_data?.ahv_number
