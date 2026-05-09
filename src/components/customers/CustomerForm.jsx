@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Input } from '@/components/ui/input'
@@ -123,6 +123,42 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
          is_family_member: customer.is_family_member || false,
       }
    })
+
+   // Re-initialize form when customer prop changes (e.g. dialog reopened with different customer)
+   useEffect(() => {
+      if (!customer) return
+      const n = (v) => v == null ? '' : v
+      setForm({
+         ...customer,
+         first_name: n(customer.first_name),
+         last_name: n(customer.last_name),
+         email: n(customer.email),
+         phone: n(customer.phone),
+         mobile: n(customer.mobile),
+         street: n(customer.street),
+         zip_code: n(customer.zip_code),
+         city: n(customer.city),
+         canton: n(customer.canton),
+         birthdate: n(customer.birthdate),
+         ahv_number: n(customer.ahv_number),
+         profession: n(customer.profession),
+         drivers_license_date: n(customer.drivers_license_date),
+         notes: n(customer.notes),
+         assigned_broker: n(customer.assigned_broker),
+         organization_id: n(customer.organization_id),
+         advisor_id: n(customer.advisor_id),
+         primary_customer_id: n(customer.primary_customer_id),
+         civil_status: customer.civil_status || 'single',
+         nationality: customer.nationality || 'CH',
+         risk_profile: customer.risk_profile || 'medium',
+         status: customer.status || 'active',
+         mandate_status: customer.mandate_status || 'pending',
+         association_membership: customer.association_membership || 'none',
+         permit_type: customer.permit_type || 'none',
+         family_role: customer.family_role || 'primary',
+         is_family_member: customer.is_family_member || false,
+      })
+   }, [customer?.id])
 
    const [autoFilled, setAutoFilled] = useState(false)
    const { plzError, plzSuggestions, handlePostalCodeChange, selectSuggestion } = usePostalCodeLookup()
