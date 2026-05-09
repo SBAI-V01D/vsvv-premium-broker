@@ -185,6 +185,7 @@ function TodayPriorityTasks({ openTasks, onTaskClick, customers = [] }) {
 
 // ── 2. URGENT CONTRACT WORKFLOWS ──────────────────────────────────────────────
 function UrgentContracts({ expiringContracts, onContractSelect }) {
+  const navigate = useNavigate()
   const urgent = expiringContracts
     .map(c => ({ ...c, _days: daysUntil(c.end_date) }))
     .sort((a, b) => (a._days ?? 999) - (b._days ?? 999))

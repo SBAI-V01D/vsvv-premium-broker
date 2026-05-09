@@ -38,20 +38,7 @@ const grouped = ALL_SPARTEN.reduce((acc, s) => {
   return acc
 }, {})
 
-export default function ApplicationForm({ application, customers: externalCustomers = [], onSave, onCancel, saving, classificationDebug }) {
-  // Fetch ALL customers internally (no limit) so search is complete
-  const { data: allCustomers = [] } = useQuery({
-    queryKey: ['customers'],
-    queryFn: () => base44.entities.Customer.list(null, 5000),
-    staleTime: 60_000,
-  })
-  // Prefer internally fetched full list, fall back to externally passed customers
-  const customers = allCustomers.length > 0 ? allCustomers : externalCustomers
-
-  const { data: brokers = [] } = useQuery({
-    queryKey: ['brokers'],
-    queryFn: () => base44.entities.Broker.filter({ is_active: true }),
-  })
+export default function ApplicationForm({ application, customers = [], brokers = [], onSave, onCancel, saving, classificationDebug }) {
 
   const [form, setForm] = useState(() => {
     if (application) {
