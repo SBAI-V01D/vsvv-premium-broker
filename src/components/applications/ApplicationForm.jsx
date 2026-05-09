@@ -98,25 +98,36 @@ export default function ApplicationForm({ application, customers = [], brokers =
   const setSparteData = (k, v) => setForm(prev => ({ ...prev, sparte_data: { ...prev.sparte_data, [k]: v } }))
 
   // Customer search state
-  const [customerQuery, setCustomerQuery] = useState(() => {
-    if (application?.customer_id) {
-      const c = customers.find(c => c.id === application.customer_id)
-      if (c) return c.company_name || `${c.first_name} ${c.last_name}`
-    }
-    return ''
-  })
+   const [customerQuery, setCustomerQuery] = useState(() => {
+     if (application?.customer_id && customers.length > 0) {
+       const c = customers.find(c => c.id === application.customer_id)
+       if (c) return c.company_name || `${c.first_name} ${c.last_name}`
+     }
+     return ''
+   })
   const [showDropdown, setShowDropdown] = useState(false)
   const dropdownRef = useRef(null)
 
   useEffect(() => {
-    const handler = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowDropdown(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
+     // Wenn Antrag und Customers geladen sind, aber CustomerQuery leer ist, initialisiere es
+     if (application?.customer_id && customers.length > 0 && !customerQuery) {
+       const c = customers.find(c => c.id === application.customer_id)
+       if (c) {
+         setCustomerQuery(c.company_name || `${c.first_name} ${c.last_name}`)
+         set('customer_id', c.id)
+       }
+     }
+   }, [application?.customer_id, customers.length])
+
+   useEffect(() => {
+     const handler = (e) => {
+       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+         setShowDropdown(false)
+       }
+     }
+     document.addEventListener('mousedown', handler)
+     return () => document.removeEventListener('mousedown', handler)
+   }, [])
 
   const customerResults = customerQuery.trim().length < 1 ? [] : customers
     .filter(c => {
