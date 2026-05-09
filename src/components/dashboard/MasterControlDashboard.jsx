@@ -287,12 +287,9 @@ function CustomerActionItems({ data, onCustomerSelect }) {
             {c.first_name?.[0]}{c.last_name?.[0]}
           </div>
           <div className="flex-1 min-w-0">
-            <button 
-              onClick={(e) => { e.stopPropagation(); onCustomerSelect(c) }}
-              className="text-xs font-semibold truncate hover:underline"
-            >
+            <span className="text-xs font-semibold truncate block">
               {c.first_name} {c.last_name}
-            </button>
+            </span>
             <p className="text-[10px] text-muted-foreground">Coverage-Lücke erkannt</p>
           </div>
           <span className="text-[9px] px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded font-semibold flex-shrink-0">LÜCKE</span>

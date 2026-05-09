@@ -698,9 +698,12 @@ export default function Applications() {
 
       {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="application-form-description">
           <DialogHeader>
             <DialogTitle>{editing ? 'Antrag bearbeiten' : 'Neuer Antrag'}</DialogTitle>
+            <div id="application-form-description" className="sr-only">
+              {editing ? 'Dialog zum Bearbeiten eines Versicherungsantrags' : 'Dialog zum Erstellen eines neuen Versicherungsantrags'}
+            </div>
           </DialogHeader>
           <ApplicationForm
           application={editing}
