@@ -58,6 +58,7 @@ const navGroups = [
     items: [
       { label: 'Lead Pipeline',       icon: Target,    path: '/leads' },
       { label: 'Coverage & Upselling',icon: ShieldCheck,path: '/coverage-intelligence' },
+      { label: 'Aufgaben',            icon: CheckSquare, path: '/aufgaben' },
     ],
   },
   {
@@ -71,7 +72,6 @@ const navGroups = [
   {
     label: 'Operations',
     items: [
-      { label: 'Aufgaben',    icon: CheckSquare, path: '/aufgaben' },
       { label: 'Dokumente',   icon: FileText,    path: '/dokumente' },
       { label: 'Nachrichten', icon: Mail,        path: '/nachrichten' },
     ],
