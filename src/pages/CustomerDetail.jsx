@@ -72,6 +72,11 @@ export default function CustomerDetail() {
     queryFn: () => base44.entities.Organization.list(),
   })
 
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => base44.entities.Task.list(null, 1000),
+  })
+
   // If customer is a family member, show primary customer's ID too
   const primaryCustomerId = customer?.primary_customer_id || customer?.id
   const familyMembers = (Array.isArray(allCustomers) ? allCustomers : []).filter(c => 
