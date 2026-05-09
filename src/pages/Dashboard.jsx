@@ -84,8 +84,22 @@ export default function Dashboard() {
   // ── Lifecycle Engine ──────────────────────────────────────────────────────
   const lifecycleMap = useMemo(() => buildLifecycleMap(customers, contracts, leads), [customers, contracts, leads])
 
+  // ── KPI Validation & Deduplication ─────────────────────────────────────
+  const validateAndDeduplicate = (items, idField = 'id') => {
+    const seen = new Set()
+    return items.filter(item => {
+      if (!item[idField]) return false
+      if (seen.has(item[idField])) return false
+      seen.add(item[idField])
+      return true
+    })
+  }
+
   // ── Derived Data (lifecycle-driven) ──────────────────────────────────────
-  const activeContracts  = useMemo(() => filteredContracts.filter(c => c.status === 'active'), [filteredContracts])
+  const activeContracts  = useMemo(() => 
+    validateAndDeduplicate(filteredContracts.filter(c => c.status === 'active')), 
+    [filteredContracts]
+  )
 
   const activeContractCustomerIds = useMemo(() =>
     new Set(activeContracts.map(c => c.customer_id).filter(Boolean)),
@@ -143,10 +157,10 @@ export default function Dashboard() {
   const totalYearlyPremium  = activeContracts.reduce((s, c) => s + (c.premium_yearly || (c.premium_monthly || 0) * 12), 0)
 
   // ── Commission Synchronization & Metrics ─────────────────────────────────
-  const commissionMetrics = useMemo(() => 
-    recalculateDashboardCommissions(filteredCommissions, activeContracts),
-    [filteredCommissions, activeContracts]
-  )
+  const commissionMetrics = useMemo(() => {
+    const deduplicated = validateAndDeduplicate(filteredCommissions)
+    return recalculateDashboardCommissions(deduplicated, activeContracts)
+  }, [filteredCommissions, activeContracts])
   
   const mtdCommissions = commissionMetrics.mtd
   const yearlyCommissionForecast = commissionMetrics.forecast
@@ -164,8 +178,11 @@ export default function Dashboard() {
     }
   }, [commissionEntries])
 
-  // Tasks — visible statuses: open, in_progress, waiting
-  const openTasks = tasks.filter(t => ['open', 'in_progress', 'waiting'].includes(t.status))
+  // Tasks — visible statuses: open, in_progress, waiting (deduplicated)
+  const openTasks = useMemo(() => 
+    validateAndDeduplicate(tasks.filter(t => ['open', 'in_progress', 'waiting'].includes(t.status))),
+    [tasks]
+  )
   const pendingApplications = applications.filter(a => ['draft', 'submitted', 'under_review'].includes(a.status))
   const contractsWithoutDoc = activeContracts.filter(c => !c.policy_document_url).length
 
@@ -219,10 +236,10 @@ export default function Dashboard() {
   return (
     <div className="space-y-0">
 
-      {/* ── ENTERPRISE HEADER ─────────────────────────────────────────────── */}
-      <div className="space-y-4 pb-5 border-b border-border">
+      {/* ── ENTERPRISE HEADER (Mobile Optimized) ─────────────────────────── */}
+      <div className="space-y-3 pb-4 border-b border-border">
         {/* Top row: greeting + primary upload action + filters */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
               {(() => {
@@ -241,32 +258,40 @@ export default function Dashboard() {
               )}
             </p>
           </div>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => navigate('/dokumente')}
-              className="px-4 py-2 rounded-lg bg-orange-600 text-white font-semibold text-sm hover:bg-orange-700 transition-colors"
-            >
-              📤 Upload
-            </button>
-            <Select value={filterOrg} onValueChange={v => { setFilterOrg(v); setFilterAdvisor('all') }}>
-              <SelectTrigger className="w-40 h-9 text-xs bg-background">
-                <SelectValue placeholder="Organisation" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Org.</SelectItem>
-                {organizations.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={filterAdvisor} onValueChange={setFilterAdvisor}>
-              <SelectTrigger className="w-36 h-9 text-xs bg-background">
-                <SelectValue placeholder="Berater" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Berater</SelectItem>
-                {filteredAdvisors.map(a => <SelectItem key={a.id} value={a.email}>{a.firstname}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Primary Action */}
+          <button 
+            onClick={() => navigate('/dokumente')}
+            className="w-full sm:w-auto px-4 py-2 rounded-lg bg-orange-600 text-white font-semibold text-sm hover:bg-orange-700 transition-colors"
+          >
+            📤 Upload
+          </button>
+        </div>
+
+        {/* Filters row — mobile responsive */}
+        <div className="flex gap-2 flex-wrap">
+          <Select value={filterOrg} onValueChange={v => { setFilterOrg(v); setFilterAdvisor('all') }}>
+            <SelectTrigger className="flex-1 min-w-fit h-8 text-xs bg-background">
+              <SelectValue placeholder="Org." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Org.</SelectItem>
+              {organizations.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterAdvisor} onValueChange={setFilterAdvisor}>
+            <SelectTrigger className="flex-1 min-w-fit h-8 text-xs bg-background">
+              <SelectValue placeholder="Berater" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Berater</SelectItem>
+              {filteredAdvisors.map(a => <SelectItem key={a.id} value={a.email}>{a.firstname}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Greeting section moved here */}
+        <div className="flex-1">
+        
         </div>
 
         {/* Secondary actions: now less prominent */}

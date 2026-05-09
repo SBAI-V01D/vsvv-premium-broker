@@ -4,6 +4,8 @@ import { base44 } from '@/api/base44Client'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Edit, Mail, Phone, MapPin, LayoutDashboard, ExternalLink, MoreHorizontal } from 'lucide-react'
 import AiInsightsPanel from '../components/customers/AiInsightsPanel'
+import ActivityTimeline from '../components/customers/ActivityTimeline'
+import AutoAISummary from '../components/customers/AutoAISummary'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -82,6 +84,7 @@ export default function CustomerDetail() {
   const relatedApplications = applications.filter(a => customerIds.includes(a.customer_id))
   const relatedMessages = (Array.isArray(allCustomers) ? allCustomers : []).filter(c => customerIds.includes(c.id)).flatMap(c => c.messages || [])
   const relatedDocuments = allDocuments.filter(d => customerIds.includes(d.customer_id))
+  const custTasks = tasks.filter(t => t.customer_id === customer?.id && ['open', 'in_progress', 'waiting'].includes(t.status))
 
   const updateCustomerMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Customer.update(id, data),
@@ -192,15 +195,40 @@ export default function CustomerDetail() {
         </Card>
       </div>
 
-      <Tabs defaultValue="vertraege">
+      <Tabs defaultValue="dashboard">
         <TabsList className="mb-4">
+          <TabsTrigger value="dashboard">📊 Dashboard</TabsTrigger>
           <TabsTrigger value="vertraege">Verträge ({relatedContracts.length})</TabsTrigger>
           <TabsTrigger value="antraege">Anträge ({relatedApplications.length})</TabsTrigger>
           <TabsTrigger value="familie">Familie ({familyMembers.length > 1 ? familyMembers.length - 1 : 0})</TabsTrigger>
           <TabsTrigger value="dokumente">Dokumente ({relatedDocuments.length})</TabsTrigger>
           <TabsTrigger value="kommunikation">Kommunikation</TabsTrigger>
+          <TabsTrigger value="timeline">📜 Timeline</TabsTrigger>
           <TabsTrigger value="ki-analyse">🤖 KI-Analyse</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="dashboard">
+          <div className="space-y-4">
+            <AutoAISummary 
+              customer={customer}
+              contracts={relatedContracts}
+              applications={relatedApplications}
+              documents={relatedDocuments}
+              tasks={custTasks}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="timeline">
+          <ActivityTimeline
+            customer={customer}
+            contracts={relatedContracts}
+            applications={relatedApplications}
+            documents={relatedDocuments}
+            tasks={custTasks}
+            messages={relatedMessages}
+          />
+        </TabsContent>
 
         <TabsContent value="vertraege">
           {relatedContracts.length === 0 ? (
