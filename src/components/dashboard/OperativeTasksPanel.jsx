@@ -29,9 +29,10 @@ export default function OperativeTasksPanel({ tasks = [], limit = 10 }) {
   const navigate = useNavigate()
 
   // Filter & sort open tasks (LIMIT 10, sorted by due_date + priority)
+  // Show all tasks except completed ones
   const openList = useMemo(() => {
     return tasks
-      .filter(t => ['open', 'in_progress', 'waiting'].includes(t.status))
+      .filter(t => t.status !== 'completed')
       .sort((a, b) => {
         // Overdue first
         const aDays = daysUntil(a.due_date)
