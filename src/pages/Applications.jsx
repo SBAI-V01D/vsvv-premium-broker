@@ -612,8 +612,10 @@ export default function Applications() {
                           {(() => {
                             const cust = getCustomer(app.customer_id)
                             return cust?.email ? (
-                              <DropdownMenuItem onClick={() => window.location.href = `mailto:${cust.email}`}>
-                                ✉️ E-Mail
+                              <DropdownMenuItem asChild>
+                                <a href={`mailto:${cust.email}`}>
+                                  ✉️ E-Mail
+                                </a>
                               </DropdownMenuItem>
                             ) : null
                           })()}

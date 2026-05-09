@@ -342,8 +342,10 @@ export default function Contracts() {
                             </DropdownMenuItem>
                           )}
                           {customer?.email && (
-                            <DropdownMenuItem onClick={() => window.location.href = `mailto:${customer.email}`}>
-                              ✉️ E-Mail
+                            <DropdownMenuItem asChild>
+                              <a href={`mailto:${customer.email}`}>
+                                ✉️ E-Mail
+                              </a>
                             </DropdownMenuItem>
                           )}
                           {customer?.phone && (
