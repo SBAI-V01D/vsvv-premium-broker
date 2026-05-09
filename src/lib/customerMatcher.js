@@ -3,7 +3,7 @@
 
 export function matchCustomers(customers, searchTerm) {
   if (!searchTerm || !customers) return customers;
-  const term = searchTerm.toLowerCase();
+  const term = String(searchTerm).toLowerCase();
   return customers.filter(c => {
     const fullName = `${c.first_name || ''} ${c.last_name || ''} ${c.company_name || ''}`.toLowerCase();
     const email = (c.email || '').toLowerCase();
