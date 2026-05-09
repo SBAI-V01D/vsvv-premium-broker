@@ -31,8 +31,8 @@ export function usePostalCodeLookup() {
     const result = lookupPostalCode(plz);
 
     if (!result) {
-      setPlzError('Ort konnte nicht automatisch ermittelt werden');
-      onUpdate({ city: '', canton: '' });
+      // PLZ not in DB — allow manual input, don't clear fields, no error shown
+      setPlzError('');
       return;
     }
 
