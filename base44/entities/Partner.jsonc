@@ -1,0 +1,68 @@
+{
+  "name": "Partner",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Partnername"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "versicherung",
+        "bank",
+        "finanzierungspartner",
+        "vorsorgepartner",
+        "rechtsschutz",
+        "krankenkasse",
+        "sonstige"
+      ],
+      "description": "Partner-Kategorie"
+    },
+    "contact_person": {
+      "type": "string",
+      "description": "Ansprechpartner"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefon"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email-Adresse"
+    },
+    "street": {
+      "type": "string",
+      "description": "Strasse"
+    },
+    "zip_code": {
+      "type": "string",
+      "description": "Postleitzahl"
+    },
+    "city": {
+      "type": "string",
+      "description": "Stadt"
+    },
+    "website": {
+      "type": "string",
+      "description": "Website-URL"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Bemerkungen"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "aktiv",
+        "inaktiv"
+      ],
+      "default": "aktiv",
+      "description": "Partner-Status"
+    }
+  },
+  "required": [
+    "name",
+    "category"
+  ]
+}

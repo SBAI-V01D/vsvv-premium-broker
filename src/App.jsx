@@ -32,6 +32,8 @@ import SalesAutopilot from './pages/SalesAutopilot'
 import Leads from './pages/Leads'
 import CoverageIntelligence from './pages/CoverageIntelligence'
 import AdminLogs from './pages/AdminLogs'
+import Partners from './pages/Partners'
+import PartnerDetail from './pages/PartnerDetail'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -113,6 +115,8 @@ const AuthenticatedApp = () => {
         <Route path="/coverage-intelligence" element={<CoverageIntelligence />} />
         <Route path="/system-logs" element={<SystemLogs />} />
         <Route path="/admin-logs" element={<AdminLogs />} />
+        <Route path="/partner" element={<Partners />} />
+        <Route path="/partner/:id" element={<PartnerDetail />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

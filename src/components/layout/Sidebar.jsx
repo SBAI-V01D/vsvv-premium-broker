@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
   ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink, AlertCircle,
-  Megaphone, Mail, Zap, Target, ShieldCheck, BarChart3, User
+  Megaphone, Mail, Zap, Target, ShieldCheck, BarChart3, User, Briefcase
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -86,6 +86,7 @@ const navGroups = [
   {
     label: 'Management',
     items: [
+      { label: 'Partner',                icon: Briefcase,    path: '/partner' },
       { label: 'Berater & Organisation', icon: Users,        path: '/berater-organisation' },
       { label: 'Sales Autopilot',        icon: Zap,          path: '/sales-autopilot' },
       { label: 'E-Mail-Kampagnen',       icon: Megaphone,    path: '/email-kampagnen' },
