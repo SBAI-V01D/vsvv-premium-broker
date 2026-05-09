@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, Clock, AlertTriangle, RefreshCw, FileWarning, ListTodo } from 'lucide-react'
 import DashboardKpiTile from '../DashboardKpiTile'
@@ -15,7 +16,7 @@ export default function TabOperations({ data, onTaskClick }) {
   } = data
 
   const todayStr = new Date().toISOString().slice(0, 10)
-  const dueTodayCount = tasks.filter(t => t.due_date === todayStr && t.status !== 'completed').length
+  const dueTodayCount = tasks.filter(t => t.due_date === todayStr && ['open', 'in_progress', 'waiting'].includes(t.status)).length
 
   const contractExpiryTasks = openTasks.filter(t => t.task_type === 'renewal')
   const generalTasks = openTasks.filter(t => t.task_type !== 'renewal')

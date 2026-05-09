@@ -163,8 +163,8 @@ export default function Dashboard() {
     }
   }, [commissionEntries])
 
-  // Tasks
-  const openTasks = tasks.filter(t => t.status === 'open' || t.status === 'in_progress')
+  // Tasks — visible statuses: open, in_progress, waiting
+  const openTasks = tasks.filter(t => ['open', 'in_progress', 'waiting'].includes(t.status))
   const pendingApplications = applications.filter(a => ['draft', 'submitted', 'under_review'].includes(a.status))
   const contractsWithoutDoc = activeContracts.filter(c => !c.policy_document_url).length
 

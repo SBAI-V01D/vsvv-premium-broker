@@ -96,6 +96,15 @@ function TodayPriorityTasks({ openTasks, onTaskClick, customers = [] }) {
     )
   }
 
+  const statusLabels = {
+    open: 'Offen',
+    in_progress: 'In Bearbeitung',
+    waiting: 'Wartend',
+    completed: 'Erledigt',
+    done: 'Erledigt',
+    archived: 'Archiviert'
+  }
+
   const renderRow = (t, variant = 'default') => {
     const days = daysUntil(t.due_date)
     const isContract = CONTRACT_TASK_TYPES.has(t.task_type)
@@ -140,6 +149,9 @@ function TodayPriorityTasks({ openTasks, onTaskClick, customers = [] }) {
         {isContract && (
           <span className="text-[9px] px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded font-semibold flex-shrink-0">VERTRAG</span>
         )}
+        <span className="text-[9px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 bg-slate-100 text-slate-700">
+          {statusLabels[t.status] || t.status}
+        </span>
         <span className={cn('text-xs flex-shrink-0', urgencyColor(days))}>
           {days === null ? '' : days <= 0 ? 'Überfällig' : days === 0 ? 'Heute' : `${days}T`}
         </span>
@@ -322,6 +334,12 @@ function AllTasksSplit({ openTasks, onTaskClick, customers = [] }) {
   const adminTasks    = openTasks.filter(t => !CONTRACT_TASK_TYPES.has(t.task_type))
   const contractTasks = openTasks.filter(t => CONTRACT_TASK_TYPES.has(t.task_type))
 
+  const statusLabels = {
+    open: 'Offen',
+    in_progress: 'In Bearbeitung',
+    waiting: 'Wartend',
+  }
+
   const renderTask = (t) => {
     const days = daysUntil(t.due_date)
     return (
@@ -350,6 +368,9 @@ function AllTasksSplit({ openTasks, onTaskClick, customers = [] }) {
             </button>
           )}
         </div>
+        <span className="text-[9px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 bg-slate-100 text-slate-700">
+          {statusLabels[t.status] || t.status}
+        </span>
         {t.due_date && (
           <span className={cn('text-[10px] flex-shrink-0', urgencyColor(days))}>
             {days !== null && days <= 0 ? 'Überfällig' : fmtDate(t.due_date)}
@@ -525,7 +546,7 @@ function CustomerQuickView({ customer, contracts, tasks, documents, onClose }) {
   if (!customer) return null
 
   const custContracts = contracts.filter(c => c.customer_id === customer.id || c.primary_customer_id === customer.id)
-  const custTasks     = tasks.filter(t => t.customer_id === customer.id && t.status !== 'completed')
+  const custTasks     = tasks.filter(t => t.customer_id === customer.id && ['open', 'in_progress', 'waiting'].includes(t.status))
   const custDocs      = documents.filter(d => d.customer_id === customer.id || d.primary_customer_id === customer.id)
   const totalPremium  = custContracts.filter(c => c.status === 'active').reduce((s, c) => s + (c.premium_yearly || (c.premium_monthly || 0) * 12), 0)
 

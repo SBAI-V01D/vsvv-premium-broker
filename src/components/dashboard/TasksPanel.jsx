@@ -14,7 +14,8 @@ export default function TasksPanel({
   badgeClass = 'bg-blue-100 text-blue-700',
   badgeLabel,
 }) {
-  const displayed = tasks.slice(0, 8)
+  const visibleTasks = tasks.filter(t => ['open', 'in_progress', 'waiting'].includes(t.status))
+  const displayed = visibleTasks.slice(0, 8)
 
   const priorityColors = {
     urgent: 'bg-red-100 text-red-700 border-red-200',
@@ -23,15 +24,16 @@ export default function TasksPanel({
     low:    'bg-slate-100 text-slate-600 border-slate-200',
   }
   const priorityLabels = { urgent: 'Dringend', high: 'Hoch', medium: 'Mittel', low: 'Niedrig' }
+  const statusLabels = { open: 'Offen', in_progress: 'In Bearbeitung', waiting: 'Wartend' }
 
   return (
     <Card className={cn('shadow-sm border-l-4', accentClass)}>
       <CardHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
         <CardTitle className="text-sm flex items-center gap-2 text-slate-900">
           <CheckSquare className="w-4 h-4 text-slate-500" />
-          {tasks.length > 0 ? `${tasks.length} offen` : 'Keine offen'}
+          {visibleTasks.length > 0 ? `${visibleTasks.length} offen` : 'Keine offen'}
         </CardTitle>
-        {tasks.length > 0 && (
+        {visibleTasks.length > 0 && (
           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onViewAll}>
             Alle <ChevronRight className="w-3 h-3 ml-1" />
           </Button>
@@ -59,24 +61,22 @@ export default function TasksPanel({
                 )}
               </div>
               <Badge
-                className={cn(
-                  'flex-shrink-0 text-[10px] px-1.5 py-0.5 border',
-                  task.priority === 'urgent' || task.priority === 'high'
-                    ? priorityColors[task.priority]
-                    : badgeClass
-                )}
+               className={cn(
+                 'flex-shrink-0 text-[10px] px-1.5 py-0.5 border',
+                 'bg-slate-100 border-slate-200 text-slate-700'
+               )}
               >
-                {badgeLabel || priorityLabels[task.priority] || 'offen'}
+               {statusLabels[task.status] || task.status}
               </Badge>
             </div>
           ))
         )}
-        {tasks.length > 8 && (
+        {visibleTasks.length > 8 && (
           <button
             className="w-full text-xs text-muted-foreground hover:text-primary py-1 transition-colors"
             onClick={onViewAll}
           >
-            + {tasks.length - 8} weitere anzeigen
+            + {visibleTasks.length - 8} weitere anzeigen
           </button>
         )}
       </CardContent>
