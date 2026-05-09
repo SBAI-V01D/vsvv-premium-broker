@@ -236,8 +236,12 @@ export default function Applications() {
       linked_contract_id: linkedContractId,
       status_changed_at: now,
     })
+    // Invalidate all related caches immediately
     queryClient.invalidateQueries({ queryKey: ['applications'] })
     queryClient.invalidateQueries({ queryKey: ['contracts'] })
+    queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
+    queryClient.invalidateQueries({ queryKey: ['customers'] })
+    queryClient.invalidateQueries({ queryKey: ['tasks'] })
     setStatusChanging(null)
   }
 

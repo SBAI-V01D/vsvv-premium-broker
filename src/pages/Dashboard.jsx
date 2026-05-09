@@ -208,6 +208,11 @@ export default function Dashboard() {
   const handleSave = () => {
     if (selectedTask?.id) updateMutation.mutate(formData)
     else createMutation.mutate({ title: formData.title || 'Neue Aufgabe', status: formData.status || 'open', notes: formData.notes, due_date: formData.due_date })
+    // Auto-refresh KPIs after any task change
+    setTimeout(() => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['applications'] })
+    }, 300)
   }
 
   return (
