@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Edit, Mail, Phone, MapPin, LayoutDashboard, ExternalLink } from 'lucide-react'
+import AiInsightsPanel from '../components/customers/AiInsightsPanel'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -155,6 +156,7 @@ export default function CustomerDetail() {
           <TabsTrigger value="familie">Familie ({familyMembers.length > 1 ? familyMembers.length - 1 : 0})</TabsTrigger>
           <TabsTrigger value="dokumente">Dokumente ({relatedDocuments.length})</TabsTrigger>
           <TabsTrigger value="kommunikation">Kommunikation</TabsTrigger>
+          <TabsTrigger value="ki-analyse">🤖 KI-Analyse</TabsTrigger>
         </TabsList>
 
         <TabsContent value="vertraege">
@@ -383,6 +385,12 @@ export default function CustomerDetail() {
             customerName={`${customer.first_name} ${customer.last_name}`}
             contracts={relatedContracts}
           />
+        </TabsContent>
+
+        <TabsContent value="ki-analyse">
+          <div className="max-w-lg">
+            <AiInsightsPanel customerId={id} />
+          </div>
         </TabsContent>
 
         <TabsContent value="kommunikation">

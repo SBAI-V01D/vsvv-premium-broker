@@ -13,21 +13,16 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user?.role || user.role !== 'admin') {
-      return Response.json({ error: 'Admin access required' }, { status: 403 });
-    }
-
+    // Scheduled automation — use service role directly (no user context)
     console.log(`[calculatePricingBenchmark] START`);
 
     // ─── FETCH ALL ACTIVE POLICIES ───
-    const policies = await base44.entities.Contract.filter({ status: 'active' });
+    const policies = await base44.asServiceRole.entities.Contract.filter({ status: 'active' });
 
     // ─── GROUP BY PRODUCT + INSURANCE_TYPE ───
     const grouped = {};
     for (const policy of policies) {
-      if (!policy.premium_yearly) continue;
+      if (!policy.premium_yearly || !policy.organization_id) continue;
 
       const key = `${policy.insurance_type}|${policy.sparte || policy.product || 'default'}`;
       if (!grouped[key]) {
@@ -42,10 +37,16 @@ Deno.serve(async (req) => {
       const avg = policyList.reduce((sum, p) => sum + (p.premium_yearly || 0), 0) / policyList.length;
 
       for (const policy of policyList) {
-        if (policy.premium_benchmark !== avg) {
-          await base44.entities.Contract.update(policy.id, {
-            premium_benchmark: Math.round(avg * 100) / 100,
-            premium_current: policy.premium_yearly, // Cache aktuellen Wert
+        const rounded = Math.round(avg * 100) / 100;
+        if (policy.premium_benchmark !== rounded) {
+          // Pass full required fields to avoid validation errors
+          await base44.asServiceRole.entities.Contract.update(policy.id, {
+            customer_id: policy.customer_id,
+            insurer: policy.insurer,
+            insurance_type: policy.insurance_type,
+            organization_id: policy.organization_id,
+            premium_benchmark: rounded,
+            premium_current: policy.premium_yearly,
           });
           updated += 1;
         }
