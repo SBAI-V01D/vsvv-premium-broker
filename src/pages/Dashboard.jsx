@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { LayoutDashboard, Target, Users, ShieldCheck, Settings, BarChart3, Crown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { buildLifecycleMap, filterTruePipelineLeads, LIFECYCLE_STATES } from '@/lib/lifecycle'
+import { recalculateDashboardCommissions, syncApplicationCommission, validateCommissionEntry } from '@/lib/commissionSync'
 
 import TabExecutive  from '@/components/dashboard/tabs/TabExecutive.jsx'
 import TabSales      from '@/components/dashboard/tabs/TabSales'
@@ -22,6 +23,7 @@ import TabCEO        from '@/components/dashboard/tabs/TabCEO'
 import MasterControlDashboard from '@/components/dashboard/MasterControlDashboard'
 import RawDataDiagnostic from '@/components/admin/RawDataDiagnostic'
 import VisibilityAnalyzer from '@/components/admin/VisibilityAnalyzer'
+import CommissionDataValidator from '@/components/dashboard/CommissionDataValidator'
 import { Layers } from 'lucide-react'
 
 const TABS = [
@@ -139,14 +141,27 @@ export default function Dashboard() {
   const totalMonthlyPremium = activeContracts.reduce((s, c) => s + (c.premium_monthly || 0), 0)
   const totalYearlyPremium  = activeContracts.reduce((s, c) => s + (c.premium_yearly || (c.premium_monthly || 0) * 12), 0)
 
-  // MTD commissions
-  const nowStr = new Date().toISOString().slice(0, 7)
-  const mtdCommissions = filteredCommissions
-    .filter(ce => (ce.entry_date || ce.settlement_date || '').slice(0, 7) === nowStr)
-    .reduce((s, ce) => s + (ce.commission_amount || ce.gross_commission || 0), 0)
-
-  const yearlyCommissionForecast = activeContracts
-    .reduce((s, c) => s + ((c.premium_yearly || (c.premium_monthly || 0) * 12) * (c.commission_rate || 0) / 100), 0)
+  // ── Commission Synchronization & Metrics ─────────────────────────────────
+  const commissionMetrics = useMemo(() => 
+    recalculateDashboardCommissions(filteredCommissions, activeContracts),
+    [filteredCommissions, activeContracts]
+  )
+  
+  const mtdCommissions = commissionMetrics.mtd
+  const yearlyCommissionForecast = commissionMetrics.forecast
+  const totalCommissionEarned = commissionMetrics.total
+  const pendingCommissions = commissionMetrics.pending
+  
+  // Validate commission data integrity
+  const commissionValidation = useMemo(() => {
+    const invalid = commissionEntries.filter(ce => !validateCommissionEntry(ce).isValid)
+    return {
+      totalRecords: commissionEntries.length,
+      invalidRecords: invalid.length,
+      hasIssues: invalid.length > 0,
+      sampleIssues: invalid.slice(0, 3),
+    }
+  }, [commissionEntries])
 
   // Tasks
   const openTasks = tasks.filter(t => t.status === 'open' || t.status === 'in_progress')
@@ -163,6 +178,8 @@ export default function Dashboard() {
     totalMonthlyPremium, totalYearlyPremium, mtdCommissions, yearlyCommissionForecast,
     openTasks, pendingApplications, contractsWithoutDoc, lifecycleMap,
     documents, tasks,
+    // Commission sync metrics
+    commissionMetrics, totalCommissionEarned, pendingCommissions, commissionValidation,
   }
 
   // ── Task mutations ────────────────────────────────────────────────────────
@@ -313,6 +330,11 @@ export default function Dashboard() {
           <div className="space-y-6">
             <RawDataDiagnostic />
             <VisibilityAnalyzer />
+            <CommissionDataValidator 
+              applications={applications}
+              commissionEntries={commissionEntries}
+              contracts={contracts}
+            />
           </div>
         )}
         {activeTab === 'master'     && <MasterControlDashboard data={sharedData} onTaskClick={handleTaskClick} />}

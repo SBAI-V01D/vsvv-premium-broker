@@ -143,12 +143,27 @@ export default function Applications() {
       metadata: JSON.stringify(metadata),
     })
 
+    // Trigger commission sync if status changes to accepted
+    if (!ACCEPTED_STATUSES.includes(prevStatus) && ACCEPTED_STATUSES.includes(status)) {
+      try {
+        await base44.functions.invoke('syncCommissionOnApplicationUpdate', {
+          application_id: app.id,
+          old_application: app,
+          new_application: { ...app, custom_status: status, status_changed_at: new Date().toISOString() },
+        })
+      } catch (err) {
+        console.warn('Commission sync skipped:', err.message)
+      }
+    }
+
     // Update status_changed_at
     const now = new Date().toISOString()
 
     // Auto-create contract if newly accepted and no contract linked yet
     let linkedContractId = app.linked_contract_id
-    if (ACCEPTED_STATUSES.includes(status) && !ACCEPTED_STATUSES.includes(prevStatus) && !app.linked_contract_id) {
+    const willCreateContract = ACCEPTED_STATUSES.includes(status) && !ACCEPTED_STATUSES.includes(prevStatus) && !app.linked_contract_id
+    
+    if (willCreateContract) {
       // Derive yearly premium if missing
       const premiumMonthly = app.estimated_premium_monthly || null
       const premiumYearly = app.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null)
