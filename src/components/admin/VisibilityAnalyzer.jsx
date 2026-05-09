@@ -29,45 +29,45 @@ export default function VisibilityAnalyzer() {
   // Analyze visibility constraints
   const issues = {
     missingOrgId: {
-      label: 'Missing organization_id',
+      label: 'Fehlende organization_id',
       count: allCustomers.filter(c => !c.organization_id).length,
       severity: 'critical',
-      description: 'Customers without organization assignment are hidden by enterprise filters',
+      description: 'Kunden ohne Organisationszuweisung werden von Enterprise-Filtern ausgeblendet',
       sample: allCustomers.filter(c => !c.organization_id).slice(0, 3),
     },
     archived: {
-      label: 'Archived customers',
+      label: 'Archivierte Kunden',
       count: allCustomers.filter(c => c.archived).length,
       severity: 'high',
-      description: 'Archived customers are hidden from normal views',
+      description: 'Archivierte Kunden sind in normalen Ansichten ausgeblendet',
       sample: allCustomers.filter(c => c.archived).slice(0, 3),
     },
     inactiveStatus: {
-      label: 'Inactive status',
+      label: 'Inaktiver Status',
       count: allCustomers.filter(c => c.status !== 'active').length,
       severity: 'medium',
-      description: 'Non-active customers may be filtered from dashboards',
+      description: 'Nicht-aktive Kunden können in Dashboards herausgefiltert sein',
       sample: allCustomers.filter(c => c.status !== 'active').slice(0, 3),
     },
     missingMandateStatus: {
-      label: 'Missing/invalid mandate_status',
+      label: 'Fehlender/ungültiger Mandat-Status',
       count: allCustomers.filter(c => !c.mandate_status).length,
       severity: 'medium',
-      description: 'Portal access restrictions may hide these customers',
+      description: 'Portal-Zugangsbeschränkungen können diese Kunden ausblenden',
       sample: allCustomers.filter(c => !c.mandate_status).slice(0, 3),
     },
     noAdvisor: {
-      label: 'No advisor assigned',
+      label: 'Kein Berater zugewiesen',
       count: allCustomers.filter(c => !c.advisor_id).length,
       severity: 'low',
-      description: 'Broker role users cannot see customers without advisor assignment',
+      description: 'Broker-Benutzer können Kunden ohne Beraterzuweisung nicht sehen',
       sample: allCustomers.filter(c => !c.advisor_id).slice(0, 3),
     },
     reconstructedEmail: {
-      label: 'Reconstructed email (@reconstructed.local)',
+      label: 'Rekonstruierte E-Mail (@reconstructed.local)',
       count: allCustomers.filter(c => c.email?.includes('reconstructed')).length,
       severity: 'medium',
-      description: 'Indicator of data recovery — may cause visibility issues',
+      description: 'Hinweis auf Datenwiederherstellung — kann Sichtbarkeitsprobleme verursachen',
       sample: allCustomers.filter(c => c.email?.includes('reconstructed')).slice(0, 3),
     },
   }
@@ -86,26 +86,26 @@ export default function VisibilityAnalyzer() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-red-900">
             <AlertCircle className="w-5 h-5" />
-            Visibility Constraint Analysis
+            Sichtbarkeits-Analyse
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="p-3 bg-white rounded border border-red-200">
-            <p className="text-sm font-medium text-red-900">Total Customers in Database:</p>
+            <p className="text-sm font-medium text-red-900">Kunden gesamt in Datenbank:</p>
             <p className="text-3xl font-bold text-red-600 mt-1">{allCustomers.length}</p>
             <p className="text-xs text-red-700 mt-2">
-              These exist physically. If 0, data loss confirmed. If &gt;0, visibility issue only.
+              Physisch vorhandene Datensätze. Wenn 0, Datenverlust bestätigt. Wenn &gt;0, nur Sichtbarkeitsproblem.
             </p>
           </div>
 
           {allCustomers.length === 0 ? (
             <div className="p-3 bg-red-100 border border-red-400 rounded">
-              <p className="text-sm font-semibold text-red-900">⚠️ DATA LOSS DETECTED</p>
-              <p className="text-xs text-red-800 mt-1">Zero customers found. Restoration required.</p>
+              <p className="text-sm font-semibold text-red-900">⚠️ DATENVERLUST ERKANNT</p>
+              <p className="text-xs text-red-800 mt-1">Keine Kunden gefunden. Wiederherstellung erforderlich.</p>
             </div>
           ) : (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-red-900">Visibility Issues Found:</p>
+              <p className="text-xs font-semibold text-red-900">Gefundene Sichtbarkeitsprobleme:</p>
               {sortedIssues.map(([key, issue]) => (
                 <div
                   key={key}
@@ -142,7 +142,7 @@ export default function VisibilityAnalyzer() {
 
                   {expandedIssue === key && issue.sample.length > 0 && (
                     <div className="mt-2 pt-2 border-t border-gray-200 text-xs space-y-1">
-                      <p className="font-semibold text-gray-700">Sample:</p>
+                      <p className="font-semibold text-gray-700">Beispiele:</p>
                       {issue.sample.map((c, i) => (
                         <div key={i} className="bg-gray-50 p-1 rounded text-gray-600">
                           {c.first_name} {c.last_name} ({c.email})

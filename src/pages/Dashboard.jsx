@@ -25,7 +25,7 @@ import VisibilityAnalyzer from '@/components/admin/VisibilityAnalyzer'
 import { Layers } from 'lucide-react'
 
 const TABS = [
-  { id: 'diagnostic', label: '⚙️ Diagnostic', icon: Layers },
+  { id: 'diagnostic', label: '⚙️ Diagnose', icon: Layers },
   { id: 'master',     label: 'Command Center', icon: Layers },
   { id: 'ceo',        label: 'CEO',          icon: Crown },
   { id: 'executive',  label: 'BrokerOS',     icon: LayoutDashboard },

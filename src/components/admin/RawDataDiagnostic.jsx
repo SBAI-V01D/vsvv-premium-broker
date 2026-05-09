@@ -71,19 +71,19 @@ export default function RawDataDiagnostic({ showOnly = false }) {
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div className="p-2 bg-slate-50 rounded border border-slate-200">
-            <p className="text-xs text-muted-foreground">Customers</p>
+            <p className="text-xs text-muted-foreground">Kunden</p>
             <p className="text-lg font-bold">{customerCount}</p>
           </div>
           <div className="p-2 bg-slate-50 rounded border border-slate-200">
-            <p className="text-xs text-muted-foreground">Contracts</p>
+            <p className="text-xs text-muted-foreground">Verträge</p>
             <p className="text-lg font-bold">{contractCount}</p>
           </div>
           <div className="p-2 bg-slate-50 rounded border border-slate-200">
-            <p className="text-xs text-muted-foreground">Applications</p>
+            <p className="text-xs text-muted-foreground">Anträge</p>
             <p className="text-lg font-bold">{applicationCount}</p>
           </div>
           <div className="p-2 bg-slate-50 rounded border border-slate-200">
-            <p className="text-xs text-muted-foreground">Documents</p>
+            <p className="text-xs text-muted-foreground">Dokumente</p>
             <p className="text-lg font-bold">{documentCount}</p>
           </div>
         </div>
@@ -96,39 +96,39 @@ export default function RawDataDiagnostic({ showOnly = false }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-amber-900">
           <AlertCircle className="w-5 h-5" />
-          Raw Data Diagnostic (Admin Only)
+          Rohdaten-Diagnose (Nur Admin)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div className="p-3 bg-white rounded border border-amber-200">
-            <p className="text-xs text-muted-foreground">Total Customers</p>
+            <p className="text-xs text-muted-foreground">Kunden gesamt</p>
             <p className="text-2xl font-bold text-amber-900">{customerCount}</p>
           </div>
           <div className="p-3 bg-white rounded border border-amber-200">
-            <p className="text-xs text-muted-foreground">Total Contracts</p>
+            <p className="text-xs text-muted-foreground">Verträge gesamt</p>
             <p className="text-2xl font-bold text-amber-900">{contractCount}</p>
           </div>
           <div className="p-3 bg-white rounded border border-amber-200">
-            <p className="text-xs text-muted-foreground">Total Applications</p>
+            <p className="text-xs text-muted-foreground">Anträge gesamt</p>
             <p className="text-2xl font-bold text-amber-900">{applicationCount}</p>
           </div>
           <div className="p-3 bg-white rounded border border-amber-200">
-            <p className="text-xs text-muted-foreground">Total Documents</p>
+            <p className="text-xs text-muted-foreground">Dokumente gesamt</p>
             <p className="text-2xl font-bold text-amber-900">{documentCount}</p>
           </div>
         </div>
 
         <div className="p-3 bg-red-50 border border-red-300 rounded">
-          <p className="text-xs font-semibold text-red-900">⚠️ Data Quality Issues</p>
+          <p className="text-xs font-semibold text-red-900">⚠️ Datenqualitätsprobleme</p>
           <ul className="text-xs text-red-700 mt-2 space-y-1">
-            <li>• {customersWithoutOrg} customers missing organization_id</li>
-            <li>• {archivedCount} customers archived</li>
+            <li>• {customersWithoutOrg} Kunden ohne organization_id</li>
+            <li>• {archivedCount} archivierte Kunden</li>
           </ul>
         </div>
 
         <Button variant="outline" size="sm" onClick={handleRefresh} className="w-full">
-          <RefreshCw className="w-3 h-3 mr-2" /> Refresh Count
+          <RefreshCw className="w-3 h-3 mr-2" /> Aktualisieren
         </Button>
       </CardContent>
     </Card>
