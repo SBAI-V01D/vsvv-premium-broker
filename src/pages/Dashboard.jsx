@@ -197,39 +197,69 @@ export default function Dashboard() {
     <div className="space-y-0">
 
       {/* ── ENTERPRISE HEADER ─────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 border-b border-border">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">BrokerOS Dashboard</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {new Date().toLocaleDateString('de-CH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-            {' · '}
-            <span className="text-emerald-600 font-medium">{activeCustomers.length} aktive Kunden</span>
-            {' · '}
-            <span className="text-blue-600 font-medium">{activeLeads.length} Leads</span>
-            {expiringContracts.length > 0 && (
-              <><span className="mx-1">·</span><span className="text-red-500 font-medium">{expiringContracts.length} Abläufe</span></>
-            )}
-          </p>
+      <div className="space-y-4 pb-5 border-b border-border">
+        {/* Top row: greeting + filters */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {(() => {
+                const h = new Date().getHours()
+                return h < 12 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend'
+              })()} 👋
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {new Date().toLocaleDateString('de-CH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              {' · '}
+              <span className="text-emerald-600 font-medium">{activeCustomers.length} aktive Kunden</span>
+              {' · '}
+              <span className="text-blue-600 font-medium">{activeLeads.length} Leads</span>
+              {expiringContracts.length > 0 && (
+                <><span className="mx-1">·</span><span className="text-red-500 font-medium">{expiringContracts.length} Abläufe</span></>
+              )}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Select value={filterOrg} onValueChange={v => { setFilterOrg(v); setFilterAdvisor('all') }}>
+              <SelectTrigger className="w-40 h-8 text-xs bg-background">
+                <SelectValue placeholder="Organisation" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle Org.</SelectItem>
+                {organizations.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterAdvisor} onValueChange={setFilterAdvisor}>
+              <SelectTrigger className="w-36 h-8 text-xs bg-background">
+                <SelectValue placeholder="Berater" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle Berater</SelectItem>
+                {filteredAdvisors.map(a => <SelectItem key={a.id} value={a.email}>{a.firstname}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Select value={filterOrg} onValueChange={v => { setFilterOrg(v); setFilterAdvisor('all') }}>
-            <SelectTrigger className="w-40 h-8 text-xs bg-background">
-              <SelectValue placeholder="Organisation" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alle Org.</SelectItem>
-              {organizations.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={filterAdvisor} onValueChange={setFilterAdvisor}>
-            <SelectTrigger className="w-36 h-8 text-xs bg-background">
-              <SelectValue placeholder="Berater" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alle Berater</SelectItem>
-              {filteredAdvisors.map(a => <SelectItem key={a.id} value={a.email}>{a.firstname}</SelectItem>)}
-            </SelectContent>
-          </Select>
+
+        {/* Quick-action shortcuts */}
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { label: '+ Neuer Kunde', path: '/kunden', color: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' },
+            { label: '+ Neuer Lead', path: '/leads', color: 'bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100' },
+            { label: '+ Neuer Vertrag', path: '/vertraege', color: 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' },
+            { label: '📄 Dokument hochladen', path: '/dokumente', color: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100' },
+            { label: '📋 Aufgaben', path: '/aufgaben', color: openTasks.length > 0 ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' : 'bg-muted text-muted-foreground border-border hover:bg-muted/70' },
+          ].map(a => (
+            <button
+              key={a.label}
+              onClick={() => navigate(a.path)}
+              className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${a.color}`}
+            >
+              {a.label}
+              {a.label.includes('Aufgaben') && openTasks.length > 0 && (
+                <span className="ml-1.5 bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">{openTasks.length}</span>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 

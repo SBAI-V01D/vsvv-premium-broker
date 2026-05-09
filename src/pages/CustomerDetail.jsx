@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Plus, Edit, Mail, Phone, MapPin } from 'lucide-react'
+import { Link, useParams, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Plus, Edit, Mail, Phone, MapPin, LayoutDashboard, ExternalLink } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -17,6 +17,7 @@ import PortalActivationPanel from '@/components/customers/PortalActivationPanel'
 
 export default function CustomerDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [showEdit, setShowEdit] = useState(false)
   const queryClient = useQueryClient()
 
@@ -96,6 +97,9 @@ export default function CustomerDetail() {
           </div>
         </div>
         <div className="flex gap-2 flex-shrink-0">
+          <Button variant="outline" onClick={() => navigate(`/kunden/${id}/360`)}>
+            <LayoutDashboard className="w-4 h-4 mr-2" /> 360° Ansicht
+          </Button>
           <Button variant="outline" onClick={() => setShowEdit(true)}>
             <Edit className="w-4 h-4 mr-2" /> Bearbeiten
           </Button>

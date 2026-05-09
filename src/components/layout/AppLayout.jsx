@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
+import QuickSearchBar from './QuickSearchBar'
 import { Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -29,6 +30,16 @@ export default function AppLayout() {
 
       {/* Main content — offset by sidebar width */}
       <div className="flex-1 flex flex-col min-w-0 lg:ml-[232px]">
+        {/* Desktop topbar with search */}
+        <div className="hidden lg:flex items-center gap-4 px-6 h-12 border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-30">
+          <QuickSearchBar />
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground font-medium bg-muted px-2 py-1 rounded-md">
+              {new Date().toLocaleDateString('de-CH', { weekday: 'short', day: '2-digit', month: 'short' })}
+            </span>
+          </div>
+        </div>
+
         {/* Mobile topbar */}
         <div className="lg:hidden flex items-center gap-3 px-4 h-14 border-b border-border bg-card sticky top-0 z-30">
           <button
@@ -38,11 +49,14 @@ export default function AppLayout() {
             <Menu className="w-5 h-5" />
           </button>
           <span className="font-semibold text-sm">BrokerOS</span>
+          <div className="flex-1">
+            <QuickSearchBar />
+          </div>
         </div>
 
         {/* Page content */}
         <main className="flex-1 overflow-auto">
-          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-12">
             <Outlet />
           </div>
         </main>

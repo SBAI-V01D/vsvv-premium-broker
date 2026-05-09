@@ -9,6 +9,43 @@ import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
 import { resolveRole, ROLE_LABELS } from '@/lib/rbac';
 
+// Live badge counts fetched from entities
+function useSidebarBadges() {
+  const [badges, setBadges] = useState({});
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [tasks, contracts, docs] = await Promise.all([
+          base44.entities.Task.list(),
+          base44.entities.Contract.list(),
+          base44.entities.Document.list(),
+        ]);
+        const today = new Date();
+        const in90 = new Date(today); in90.setDate(today.getDate() + 90);
+
+        const openTasks = tasks.filter(t => t.status === 'open' || t.status === 'in_progress');
+        const overdueTasks = openTasks.filter(t => t.due_date && new Date(t.due_date) < today);
+        const expiringContracts = contracts.filter(c => {
+          if (c.status !== 'active' || !c.end_date) return false;
+          const d = new Date(c.end_date);
+          return d <= in90;
+        });
+        const pendingDocs = docs.filter(d => d.classification_status === 'ausstehend');
+
+        setBadges({
+          '/aufgaben': overdueTasks.length || null,
+          '/vertraege': expiringContracts.length || null,
+          '/dokumente': pendingDocs.length || null,
+        });
+      } catch {}
+    };
+    load();
+    const timer = setInterval(load, 60000);
+    return () => clearInterval(timer);
+  }, []);
+  return badges;
+}
+
 const navGroups = [
   {
     label: 'Übersicht',
@@ -62,6 +99,7 @@ export default function Sidebar({ onNavigate }) {
   const [collapsed, setCollapsed] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const location = useLocation();
+  const badges = useSidebarBadges();
 
   useEffect(() => {
     base44.auth.me().then(u => setCurrentUser(u)).catch(() => {});
@@ -125,7 +163,7 @@ export default function Sidebar({ onNavigate }) {
                     onClick={onNavigate}
                     title={collapsed ? item.label : undefined}
                     className={cn(
-                      'flex items-center rounded-[8px] transition-all duration-150 group',
+                      'relative flex items-center rounded-[8px] transition-all duration-150 group',
                       collapsed ? 'justify-center h-9 w-9 mx-auto' : 'gap-2.5 px-3 py-2',
                       isActive
                         ? 'bg-blue-500/[0.15] text-blue-400'
@@ -145,10 +183,20 @@ export default function Sidebar({ onNavigate }) {
                     />
                     {!collapsed && (
                       <span className={cn(
-                        'text-[13px] font-medium truncate tracking-[-0.01em]',
+                        'text-[13px] font-medium truncate tracking-[-0.01em] flex-1',
                         isActive ? 'text-blue-300' : 'text-white/55 group-hover:text-white/90'
                       )}>
                         {item.label}
+                      </span>
+                    )}
+                    {/* Live badge */}
+                    {badges[item.path] && (
+                      <span className={cn(
+                        'text-[9px] font-bold rounded-full flex items-center justify-center flex-shrink-0 leading-none',
+                        collapsed ? 'absolute top-0.5 right-0.5 min-w-[14px] h-[14px] px-[3px]' : 'min-w-[16px] h-[16px] px-[4px]',
+                        'bg-red-500 text-white'
+                      )}>
+                        {badges[item.path]}
                       </span>
                     )}
                   </Link>
