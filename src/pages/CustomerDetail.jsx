@@ -20,6 +20,7 @@ import { STATUS_LABELS, INSURANCE_TYPE_LABELS, FAMILY_ROLE_LABELS, label } from 
 import { getSparteLabel } from '@/lib/insuranceSparten'
 import StatusBadge from '@/components/status/StatusBadge'
 import PortalActivationPanel from '@/components/customers/PortalActivationPanel'
+import AddFamilyMemberDialog from '@/components/customers/AddFamilyMemberDialog'
 
 export default function CustomerDetail() {
    const { id } = useParams()
@@ -27,6 +28,7 @@ export default function CustomerDetail() {
    const [showEdit, setShowEdit] = useState(false)
    const [editingContract, setEditingContract] = useState(null)
    const [statusChangingContract, setStatusChangingContract] = useState(null)
+   const [showAddFamilyMember, setShowAddFamilyMember] = useState(false)
    const queryClient = useQueryClient()
 
   const { data: allCustomers = [] } = useQuery({
@@ -152,6 +154,11 @@ export default function CustomerDetail() {
           <Button variant="outline" onClick={() => navigate(`/kunden/${id}/360`)}>
             <LayoutDashboard className="w-4 h-4 mr-2" /> 360° Ansicht
           </Button>
+          {!customer?.is_family_member && (
+            <Button variant="outline" onClick={() => setShowAddFamilyMember(true)}>
+              <Plus className="w-4 h-4 mr-2" /> Familienmitglied
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setShowEdit(true)}>
             <Edit className="w-4 h-4 mr-2" /> Bearbeiten
           </Button>
@@ -553,13 +560,19 @@ export default function CustomerDetail() {
        </Dialog>
 
        <StatusChangeDialog
-         open={!!statusChangingContract}
-         onOpenChange={(open) => { if (!open) setStatusChangingContract(null) }}
-         statusDefinitions={statusDefs}
-         currentStatus={statusChangingContract ? (statusChangingContract.custom_status || statusChangingContract.status || '').toLowerCase().trim() : ''}
-         onSave={handleContractStatusChange}
-         title="Vertragsstatus ändern"
-       />
-      </div>
-      )
-      }
+          open={!!statusChangingContract}
+          onOpenChange={(open) => { if (!open) setStatusChangingContract(null) }}
+          statusDefinitions={statusDefs}
+          currentStatus={statusChangingContract ? (statusChangingContract.custom_status || statusChangingContract.status || '').toLowerCase().trim() : ''}
+          onSave={handleContractStatusChange}
+          title="Vertragsstatus ändern"
+        />
+
+        <AddFamilyMemberDialog
+          customer={customer}
+          open={showAddFamilyMember}
+          onOpenChange={setShowAddFamilyMember}
+        />
+       </div>
+       )
+       }
