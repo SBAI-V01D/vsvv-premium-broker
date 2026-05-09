@@ -1,0 +1,81 @@
+{
+  "name": "DuplicateAlert",
+  "type": "object",
+  "properties": {
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "customer",
+        "application",
+        "contract"
+      ],
+      "description": "Entity type with potential duplicate"
+    },
+    "primary_entity_id": {
+      "type": "string",
+      "description": "ID of the primary (existing) entity"
+    },
+    "duplicate_entity_id": {
+      "type": "string",
+      "description": "ID of the potential duplicate entity"
+    },
+    "match_criteria": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "email",
+          "phone",
+          "mobile",
+          "policy_number",
+          "name_birthdate",
+          "ahv_number"
+        ]
+      },
+      "description": "Fields that matched"
+    },
+    "confidence_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Confidence that this is a duplicate (0-100)"
+    },
+    "detected_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the duplicate was detected"
+    },
+    "detected_by": {
+      "type": "string",
+      "description": "Email of user or system that detected it"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "verified",
+        "merged",
+        "dismissed",
+        "false_positive"
+      ],
+      "default": "new",
+      "description": "Status of duplicate alert"
+    },
+    "action_taken": {
+      "type": "string",
+      "description": "Description of action taken (merge, delete one, etc.)"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the duplicate was resolved"
+    }
+  },
+  "required": [
+    "entity_type",
+    "primary_entity_id",
+    "duplicate_entity_id",
+    "match_criteria",
+    "detected_at"
+  ]
+}

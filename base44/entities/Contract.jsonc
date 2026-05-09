@@ -78,7 +78,7 @@
     },
     "premium_benchmark": {
       "type": "number",
-      "description": "Durchschnittspr\u00e4mie \u00e4hnlicher Policies"
+      "description": "Durchschnittsspr\u00e4mie \u00e4hnlicher Policies"
     },
     "start_date": {
       "type": "string",
@@ -122,16 +122,14 @@
     "status": {
       "type": "string",
       "enum": [
-        "draft",
         "active",
-        "pending_change",
-        "renewal_due",
-        "renewed",
+        "pending",
         "cancelled",
-        "expired"
+        "expired",
+        "archived"
       ],
-      "default": "draft",
-      "description": "Status: draft\u2192active\u2192(pending_change)\u2192renewal_due\u2192renewed|cancelled\u2192expired"
+      "default": "active",
+      "description": "Status (stabilisierte Liste)"
     },
     "custom_status": {
       "type": "string",
@@ -339,6 +337,24 @@
     "notes": {
       "type": "string",
       "description": "Notizen"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false,
+      "description": "SOFT DELETE: Vertrag ist archiviert"
+    },
+    "archived_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "SOFT DELETE: Archivierungsdatum"
+    },
+    "archived_by": {
+      "type": "string",
+      "description": "SOFT DELETE: E-Mail des Archivierenden"
+    },
+    "archived_reason": {
+      "type": "string",
+      "description": "SOFT DELETE: Grund f\u00fcr Archivierung"
     }
   },
   "required": [

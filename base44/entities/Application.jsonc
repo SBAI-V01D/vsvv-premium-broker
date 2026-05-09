@@ -60,14 +60,15 @@
     "status": {
       "type": "string",
       "enum": [
-        "draft",
-        "submitted",
-        "under_review",
+        "new",
+        "in_progress",
+        "waiting",
         "approved",
-        "rejected"
+        "rejected",
+        "archived"
       ],
-      "default": "draft",
-      "description": "Status (Legacy)"
+      "default": "new",
+      "description": "Status (stabilisierte Liste)"
     },
     "custom_status": {
       "type": "string",
@@ -120,6 +121,24 @@
     "notes": {
       "type": "string",
       "description": "Notizen"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false,
+      "description": "SOFT DELETE: Antrag ist archiviert"
+    },
+    "archived_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "SOFT DELETE: Archivierungsdatum"
+    },
+    "archived_by": {
+      "type": "string",
+      "description": "SOFT DELETE: E-Mail des Archivierenden"
+    },
+    "archived_reason": {
+      "type": "string",
+      "description": "SOFT DELETE: Grund f\u00fcr Archivierung"
     }
   },
   "required": [

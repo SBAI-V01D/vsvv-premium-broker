@@ -91,6 +91,7 @@ const navGroups = [
       { label: 'E-Mail-Kampagnen',       icon: Megaphone,    path: '/email-kampagnen' },
       { label: 'Status-Verwaltung',      icon: CheckSquare,  path: '/status-verwaltung' },
       { label: 'System-Logs',            icon: AlertCircle,  path: '/system-logs' },
+      { label: 'Audit & Error Logs',      icon: Shield,       path: '/admin-logs' },
     ],
   },
 ];

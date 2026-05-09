@@ -1,0 +1,66 @@
+{
+  "name": "AuditLog",
+  "type": "object",
+  "properties": {
+    "entity_type": {
+      "type": "string",
+      "enum": [
+        "customer",
+        "application",
+        "contract",
+        "commission",
+        "task"
+      ],
+      "description": "Entity type that was changed"
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "ID of the changed entity"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "create",
+        "update",
+        "delete",
+        "archive",
+        "restore"
+      ],
+      "description": "Action performed"
+    },
+    "changed_by": {
+      "type": "string",
+      "description": "Email of user who made the change"
+    },
+    "changed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the change was made"
+    },
+    "old_values": {
+      "type": "object",
+      "description": "Previous values of changed fields",
+      "additionalProperties": true
+    },
+    "new_values": {
+      "type": "object",
+      "description": "New values of changed fields",
+      "additionalProperties": true
+    },
+    "summary": {
+      "type": "string",
+      "description": "Human-readable summary of change"
+    },
+    "ip_address": {
+      "type": "string",
+      "description": "IP address of change origin"
+    }
+  },
+  "required": [
+    "entity_type",
+    "entity_id",
+    "action",
+    "changed_by",
+    "changed_at"
+  ]
+}

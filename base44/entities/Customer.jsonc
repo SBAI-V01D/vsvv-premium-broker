@@ -281,13 +281,13 @@
       "format": "date-time",
       "description": "SOFT DELETE: Zeitstempel der Archivierung"
     },
-    "archived_batch_id": {
-      "type": "string",
-      "description": "SOFT DELETE: Batch-ID der Archivierung"
-    },
     "archived_by": {
       "type": "string",
       "description": "SOFT DELETE: E-Mail des Archivierenden"
+    },
+    "archived_reason": {
+      "type": "string",
+      "description": "SOFT DELETE: Grund f\u00fcr Archivierung"
     }
   },
   "required": [

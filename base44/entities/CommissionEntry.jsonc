@@ -126,6 +126,20 @@
     "notes": {
       "type": "string",
       "description": "Notizen"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false,
+      "description": "SOFT DELETE: Commission ist archiviert"
+    },
+    "archived_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "SOFT DELETE: Archivierungsdatum"
+    },
+    "archived_by": {
+      "type": "string",
+      "description": "SOFT DELETE: E-Mail des Archivierenden"
     }
   },
   "required": [

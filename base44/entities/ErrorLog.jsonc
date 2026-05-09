@@ -1,0 +1,74 @@
+{
+  "name": "ErrorLog",
+  "type": "object",
+  "properties": {
+    "error_type": {
+      "type": "string",
+      "enum": [
+        "upload_failed",
+        "automation_failed",
+        "ocr_error",
+        "loading_error",
+        "sync_error",
+        "dashboard_error",
+        "validation_error",
+        "other"
+      ],
+      "description": "Type of error"
+    },
+    "entity_type": {
+      "type": "string",
+      "description": "Entity type affected (if applicable)"
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "Entity ID affected (if applicable)"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Error message details"
+    },
+    "stack_trace": {
+      "type": "string",
+      "description": "Full error stack trace"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the error occurred"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "User who triggered the error (if applicable)"
+    },
+    "function_name": {
+      "type": "string",
+      "description": "Backend function that failed (if applicable)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "reviewed",
+        "resolved",
+        "ignored"
+      ],
+      "default": "new",
+      "description": "Admin review status"
+    },
+    "resolution_notes": {
+      "type": "string",
+      "description": "Notes on how the error was resolved"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the error was resolved"
+    }
+  },
+  "required": [
+    "error_type",
+    "error_message",
+    "occurred_at"
+  ]
+}
