@@ -163,15 +163,28 @@ Dateiname: "${docData.name || ''}"`,
     }
 
     // ── STEP 5: Create broker task ────────────────────────────────────────
+    // Extracted name from document (even if no customer exists yet)
+    const extractedName = customerData.company_name ||
+      (customerData.first_name && customerData.last_name
+        ? `${customerData.first_name} ${customerData.last_name}`.trim()
+        : null);
+
+    const resolvedCustomerName = matchedCustomer
+      ? (matchedCustomer.company_name || `${matchedCustomer.first_name || ''} ${matchedCustomer.last_name || ''}`.trim())
+      : extractedName;
+
+    // Include customer name in task title if known
+    const nameInTitle = resolvedCustomerName ? ` (${resolvedCustomerName})` : ` (${insuranceData.insurer || docData.name})`;
+
     const taskTitleMap = {
-      police: `📄 Neue Police prüfen: ${insuranceData.insurer || docData.name}`,
-      antrag: `📋 Antrag prüfen & verarbeiten: ${insuranceData.insurer || docData.name}`,
-      kuendigung: `⚠️ Kündigung bearbeiten: ${insuranceData.insurer || docData.name}`,
-      schadensmeldung: `🚨 Schadenmeldung prüfen: ${docData.name}`,
-      gesundheitsdeklaration: `🏥 Gesundheitsdeklaration prüfen: ${docData.name}`,
-      rechnung: `💰 Rechnung prüfen: ${insuranceData.insurer || docData.name}`,
-      mahnung: `🔴 Mahnung dringend bearbeiten: ${docData.name}`,
-      offerte: `💡 Offerte prüfen: ${insuranceData.insurer || docData.name}`,
+      police: `📄 Neue Police prüfen${nameInTitle}`,
+      antrag: `📋 Antrag prüfen & verarbeiten${nameInTitle}`,
+      kuendigung: `⚠️ Kündigung bearbeiten${nameInTitle}`,
+      schadensmeldung: `🚨 Schadenmeldung prüfen${nameInTitle}`,
+      gesundheitsdeklaration: `🏥 Gesundheitsdeklaration prüfen${nameInTitle}`,
+      rechnung: `💰 Rechnung prüfen${nameInTitle}`,
+      mahnung: `🔴 Mahnung dringend bearbeiten${nameInTitle}`,
+      offerte: `💡 Offerte prüfen${nameInTitle}`,
     };
 
     const taskTitle = taskTitleMap[category] || `📎 Dokument prüfen: ${docData.name}`;
@@ -183,9 +196,7 @@ Dateiname: "${docData.name || ''}"`,
       title: taskTitle,
       description: `Automatisch erstellt bei Dokumenten-Upload.\nKategorie: ${category}\nKonfidenz: ${Math.round(confidence * 100)}%\n${classification?.summary || ''}`,
       customer_id: matchedCustomer?.id || null,
-      customer_name: matchedCustomer
-        ? (matchedCustomer.company_name || `${matchedCustomer.first_name || ''} ${matchedCustomer.last_name || ''}`.trim())
-        : null,
+      customer_name: resolvedCustomerName || null,
       status: 'open',
       priority: isUrgent ? 'urgent' : confidence < 0.7 ? 'high' : 'medium',
       due_date: dueDate.toISOString().split('T')[0],
