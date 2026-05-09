@@ -109,7 +109,7 @@ export default function Applications() {
     const searchStr = `${a.customer_name} ${a.insurer} ${a.product} ${getSparteLabel(a.sparte || a.insurance_type)}`.toLowerCase()
     const matchSearch = !search.trim() || searchStr.includes(search.toLowerCase())
     const matchSparte = filterSparte === 'all' || a.sparte === filterSparte || a.insurance_type === filterSparte
-    const matchStatus = filterStatus === 'all' || (a.custom_status || a.status) === filterStatus
+    const matchStatus = filterStatus === 'all' || getStatus(a) === filterStatus.toLowerCase().trim()
     const matchBroker = filterBroker === 'all' || a.assigned_broker === filterBroker
     const sparteKey = a.sparte || a.insurance_type
     const kundentyp = a.kundentyp || (PRIVAT_VALUES.includes(sparteKey) ? 'privat' : FIRMA_VALUES.includes(sparteKey) ? 'firma' : null)
@@ -129,7 +129,7 @@ export default function Applications() {
 
   const handleStatusChange = async ({ status, statusDef, note, metadata }) => {
     const app = statusChanging
-    const prevStatus = app.custom_status || app.status
+    const prevStatus = getStatus(app)
     const ACCEPTED_STATUSES = ['angenommen', 'policiert', 'approved', 'angenommen_vorbehalt']
 
     await base44.entities.StatusHistory.create({
@@ -238,10 +238,10 @@ export default function Applications() {
   }
 
   const getStatusDef = (app) => {
-    const key = app.custom_status || app.status
+    const key = getStatus(app)
     return statusDefs.find(s => s.key === key)
   }
-  const getStatusLabel = (app) => getStatusDef(app)?.label || app.status
+  const getStatusLabel = (app) => getStatusDef(app)?.label || getStatus(app)
   const formatDate = (dateStr) => {
     if (!dateStr) return '–'
     return new Date(dateStr).toLocaleDateString('de-CH')
@@ -563,7 +563,7 @@ export default function Applications() {
                     {/* Status + Datum */}
                     <div>
                       <button onClick={() => setStatusChanging(app)} className="hover:opacity-80 transition-opacity mb-1">
-                        <StatusBadge statusDef={getStatusDef(app)} label={getStatusLabel(app)} />
+                        <StatusBadge statusDef={getStatusDef(app)} label={getStatusLabel(app) || getStatus(app)} />
                       </button>
                       {app.status_changed_at && (
                         <p className="text-xs text-muted-foreground mt-0.5">
@@ -625,14 +625,14 @@ export default function Applications() {
                           <DropdownMenuItem onClick={() => { setEditing(app); setShowForm(true) }}>
                             <Edit className="w-4 h-4 mr-2" /> Bearbeiten
                           </DropdownMenuItem>
-                          {activeTab === 'pending' && (
+                          {activeTab === 'pending' && !ACCEPTED_KEYS.includes(getStatus(app)) && (
                             <DropdownMenuItem onClick={() => {
                               updateMutation.mutate({ id: app.id, data: { custom_status: 'angenommen', status_changed_at: new Date().toISOString() } })
                             }}>
                               <Archive className="w-4 h-4 mr-2" /> Archivieren (angenommen)
                             </DropdownMenuItem>
                           )}
-                          {activeTab === 'archived' && (
+                          {activeTab === 'archived' && ARCHIVED_KEYS.includes(getStatus(app)) && (
                             <DropdownMenuItem onClick={() => {
                               updateMutation.mutate({ id: app.id, data: { custom_status: 'in_pruefung', status_changed_at: new Date().toISOString() } })
                             }}>
@@ -673,7 +673,7 @@ export default function Applications() {
         open={!!statusChanging}
         onOpenChange={(open) => { if (!open) setStatusChanging(null) }}
         statusDefinitions={statusDefs}
-        currentStatus={statusChanging?.custom_status || statusChanging?.status}
+        currentStatus={statusChanging ? getStatus(statusChanging) : ''}
         onSave={handleStatusChange}
         title="Antragsstatus ändern"
       />
