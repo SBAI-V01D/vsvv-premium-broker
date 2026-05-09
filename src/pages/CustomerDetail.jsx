@@ -2,14 +2,17 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Edit, Mail, Phone, MapPin, LayoutDashboard, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Plus, Edit, Mail, Phone, MapPin, LayoutDashboard, ExternalLink, MoreHorizontal } from 'lucide-react'
 import AiInsightsPanel from '../components/customers/AiInsightsPanel'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import CustomerForm from '../components/customers/CustomerForm'
 import DocumentsTab from '../components/documents/DocumentsTab'
+import ContractForm from '../components/contracts/ContractForm'
+import StatusChangeDialog from '@/components/status/StatusChangeDialog'
 import EmailLink from '../components/common/EmailLink'
 import { STATUS_LABELS, INSURANCE_TYPE_LABELS, FAMILY_ROLE_LABELS, label } from '@/lib/labels'
 import { getSparteLabel } from '@/lib/insuranceSparten'
@@ -17,10 +20,12 @@ import StatusBadge from '@/components/status/StatusBadge'
 import PortalActivationPanel from '@/components/customers/PortalActivationPanel'
 
 export default function CustomerDetail() {
-  const { id } = useParams()
-  const navigate = useNavigate()
-  const [showEdit, setShowEdit] = useState(false)
-  const queryClient = useQueryClient()
+   const { id } = useParams()
+   const navigate = useNavigate()
+   const [showEdit, setShowEdit] = useState(false)
+   const [editingContract, setEditingContract] = useState(null)
+   const [statusChangingContract, setStatusChangingContract] = useState(null)
+   const queryClient = useQueryClient()
 
   const { data: allCustomers = [] } = useQuery({
     queryKey: ['customers'],
@@ -55,6 +60,16 @@ export default function CustomerDetail() {
     queryFn: () => base44.entities.Document.list(null, 1000),
   })
 
+  const { data: statusDefs = [] } = useQuery({
+    queryKey: ['statusDefinitions'],
+    queryFn: () => base44.entities.StatusDefinition.filter({ type: 'contract' }),
+  })
+
+  const { data: organizations = [] } = useQuery({
+    queryKey: ['organizations'],
+    queryFn: () => base44.entities.Organization.list(),
+  })
+
   // If customer is a family member, show primary customer's ID too
   const primaryCustomerId = customer?.primary_customer_id || customer?.id
   const familyMembers = (Array.isArray(allCustomers) ? allCustomers : []).filter(c => 
@@ -68,11 +83,39 @@ export default function CustomerDetail() {
   const relatedMessages = (Array.isArray(allCustomers) ? allCustomers : []).filter(c => customerIds.includes(c.id)).flatMap(c => c.messages || [])
   const relatedDocuments = allDocuments.filter(d => customerIds.includes(d.customer_id))
 
-  const updateMutation = useMutation({
+  const updateCustomerMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Customer.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setShowEdit(false); },
-  
   })
+
+  const updateContractMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Contract.update(id, data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contracts'] }); setEditingContract(null); },
+  })
+
+  const handleContractSave = (data) => {
+    if (editingContract) {
+      updateContractMutation.mutate({ id: editingContract.id, data })
+    }
+  }
+
+  const handleContractStatusChange = async ({ status, statusDef, note, metadata }) => {
+    if (!statusChangingContract) return
+    const contract = statusChangingContract
+    await base44.entities.StatusHistory.create({
+      entity_type: 'contract',
+      entity_id: contract.id,
+      customer_id: contract.customer_id,
+      from_status: contract.custom_status || contract.status,
+      to_status: status,
+      to_status_label: statusDef?.label || status,
+      note,
+      metadata: JSON.stringify(metadata),
+    })
+    await base44.entities.Contract.update(contract.id, { custom_status: status })
+    queryClient.invalidateQueries({ queryKey: ['contracts'] })
+    setStatusChangingContract(null)
+  }
 
   if (!customer) {
     return <div className="flex items-center justify-center h-64"><p>Laden...</p></div>
@@ -258,8 +301,27 @@ export default function CustomerDetail() {
                         </div>
 
                         {/* Status */}
-                        <div>
-                          <StatusBadge statusDef={{ label: c.custom_status || label(STATUS_LABELS, c.status) }} label={c.custom_status || label(STATUS_LABELS, c.status)} />
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setStatusChangingContract(c)} className="hover:opacity-80 transition-opacity">
+                            <StatusBadge statusDef={{ label: c.custom_status || label(STATUS_LABELS, c.status) }} label={c.custom_status || label(STATUS_LABELS, c.status)} />
+                          </button>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => setEditingContract(c)}>
+                                <Edit className="w-4 h-4 mr-2" /> Bearbeiten
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setStatusChangingContract(c)}>Status ändern</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     </div>
@@ -422,24 +484,48 @@ export default function CustomerDetail() {
       </Tabs>
 
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Kunde bearbeiten</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6">
-            <CustomerForm
-              customer={customer}
-              primaryCustomers={allCustomers.filter(c => !c.is_family_member)}
-              onSave={(data) => updateMutation.mutate({ id: customer.id, data })}
-              onCancel={() => setShowEdit(false)}
-              saving={updateMutation.isPending}
-            />
-            <div className="border-t pt-6">
-              <PortalActivationPanel customer={customer} />
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
+         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+           <DialogHeader>
+             <DialogTitle>Kunde bearbeiten</DialogTitle>
+           </DialogHeader>
+           <div className="space-y-6">
+             <CustomerForm
+               customer={customer}
+               primaryCustomers={allCustomers.filter(c => !c.is_family_member)}
+               onSave={(data) => updateCustomerMutation.mutate({ id: customer.id, data })}
+               onCancel={() => setShowEdit(false)}
+               saving={updateCustomerMutation.isPending}
+             />
+             <div className="border-t pt-6">
+               <PortalActivationPanel customer={customer} />
+             </div>
+           </div>
+         </DialogContent>
+       </Dialog>
+
+       <Dialog open={!!editingContract} onOpenChange={(open) => { if (!open) setEditingContract(null) }}>
+         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+           <DialogHeader>
+             <DialogTitle>Vertrag bearbeiten</DialogTitle>
+           </DialogHeader>
+           <ContractForm
+             contract={editingContract}
+             customers={allCustomers}
+             onSave={handleContractSave}
+             onCancel={() => setEditingContract(null)}
+             saving={updateContractMutation.isPending}
+           />
+         </DialogContent>
+       </Dialog>
+
+       <StatusChangeDialog
+         open={!!statusChangingContract}
+         onOpenChange={(open) => { if (!open) setStatusChangingContract(null) }}
+         statusDefinitions={statusDefs}
+         currentStatus={statusChangingContract ? (statusChangingContract.custom_status || statusChangingContract.status || '').toLowerCase().trim() : ''}
+         onSave={handleContractStatusChange}
+         title="Vertragsstatus ändern"
+       />
+      </div>
+      )
+      }
