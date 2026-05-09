@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { usePostalCodeLookup } from '@/hooks/usePostalCodeLookup'
 
 const CATEGORY_LABELS = {
   versicherung: '🏢 Versicherung',
@@ -39,6 +40,8 @@ const PartnerForm = ({ partner, onSave, onCancel, saving }) => {
     notes: '',
     status: 'aktiv'
   })
+
+  const { plzError, handlePostalCodeChange, selectSuggestion } = usePostalCodeLookup()
 
   return (
     <div className="space-y-4">
@@ -95,9 +98,27 @@ const PartnerForm = ({ partner, onSave, onCancel, saving }) => {
         <div>
           <label className="text-xs font-semibold uppercase text-muted-foreground">PLZ / Stadt</label>
           <div className="flex gap-2 mt-1">
-            <Input placeholder="PLZ" value={data.zip_code} onChange={e => setData({...data, zip_code: e.target.value})} className="w-20" />
-            <Input placeholder="Stadt" value={data.city} onChange={e => setData({...data, city: e.target.value})} className="flex-1" />
+            <Input 
+              placeholder="PLZ" 
+              value={data.zip_code} 
+              onChange={e => {
+                const val = e.target.value.replace(/\D/g, '');
+                setData({...data, zip_code: val});
+                handlePostalCodeChange(val, (updates) => {
+                  setData(prev => ({...prev, ...updates}));
+                });
+              }} 
+              className={`w-20 ${plzError ? 'border-red-500' : ''}`}
+              maxLength="4"
+            />
+            <Input 
+              placeholder="Stadt (automatisch)" 
+              value={data.city} 
+              onChange={e => setData({...data, city: e.target.value})} 
+              className="flex-1" 
+            />
           </div>
+          {plzError && <p className="text-xs text-red-600 mt-1">{plzError}</p>}
         </div>
       </div>
       <div>
@@ -271,16 +292,18 @@ export default function Partners() {
 
       {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? 'Partner bearbeiten' : 'Neuer Partner'}</DialogTitle>
           </DialogHeader>
-          <PartnerForm
-            partner={editing}
-            onSave={handleSave}
-            onCancel={() => { setShowForm(false); setEditing(null) }}
-            saving={createMutation.isPending || updateMutation.isPending}
-          />
+          <div className="overflow-y-auto pr-4">
+            <PartnerForm
+              partner={editing}
+              onSave={handleSave}
+              onCancel={() => { setShowForm(false); setEditing(null) }}
+              saving={createMutation.isPending || updateMutation.isPending}
+            />
+          </div>
         </DialogContent>
       </Dialog>
     </div>
