@@ -178,9 +178,9 @@ export default function Dashboard() {
     }
   }, [commissionEntries])
 
-  // Tasks — visible statuses: open, in_progress, waiting (deduplicated)
+  // Tasks — visible statuses: all except completed (deduplicated)
   const openTasks = useMemo(() => 
-    validateAndDeduplicate(tasks.filter(t => ['open', 'in_progress', 'waiting'].includes(t.status))),
+    validateAndDeduplicate(tasks.filter(t => t.status !== 'completed')),
     [tasks]
   )
   const pendingApplications = applications.filter(a => ['draft', 'submitted', 'under_review'].includes(a.status))
