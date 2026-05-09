@@ -653,7 +653,7 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
       {/* OPERATIVE SECTION — Top Priority (Live Data) */}
       <div className="bg-gradient-to-br from-red-50/50 to-orange-50/50 rounded-xl p-4 space-y-3 border border-red-100/50">
         <h2 className="text-sm font-bold uppercase tracking-wide text-red-700">⚡ Operative Aufgaben</h2>
-        <ExpiringContractsPanel contracts={data.filteredContracts || []} />
+        <ExpiringContractsPanel contracts={data.expiringContracts || []} />
         <OperativeTasksPanel tasks={openTasks} limit={10} />
         <OperativeKPIStrip 
           activeCustomers={data.activeCustomers?.length || 0}
