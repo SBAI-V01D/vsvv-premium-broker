@@ -113,7 +113,7 @@ export default function Tasks() {
     <div>
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Aufgaben</h1>
-        <p className="text-muted-foreground mt-1">{tasks.length} Aufgaben total</p>
+        <p className="text-muted-foreground mt-1">{tasks.filter(t => t.status !== 'completed').length} offene Aufgaben</p>
       </div>
 
       {/* Category Tabs */}
