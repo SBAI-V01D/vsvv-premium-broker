@@ -1,15 +1,65 @@
 // Duplicate Prevention & Customer Matching
 // Safely finds or creates customer records without duplication
 
-export function matchCustomers(customers, searchTerm) {
-  if (!Array.isArray(customers)) return [];
-  if (!searchTerm) return customers;
-  const term = String(searchTerm).toLowerCase();
-  return customers.filter(c => {
-    const fullName = `${c.first_name || ''} ${c.last_name || ''} ${c.company_name || ''}`.toLowerCase();
-    const email = (c.email || '').toLowerCase();
-    return fullName.includes(term) || email.includes(term);
-  });
+/**
+ * Match extracted document data against a list of customers.
+ * Called as matchCustomers(extractedData, customers) from DocumentReviewPanel.
+ * Returns { candidates: [{customer, score}], topScore }.
+ * 
+ * Also supports legacy usage matchCustomers(customers, searchTerm) for text search.
+ */
+export function matchCustomers(extractedDataOrCustomers, customersOrSearchTerm) {
+  // Legacy usage: matchCustomers(customers[], searchTerm string)
+  if (Array.isArray(extractedDataOrCustomers)) {
+    const customers = extractedDataOrCustomers;
+    const searchTerm = customersOrSearchTerm;
+    if (!Array.isArray(customers)) return [];
+    if (!searchTerm) return customers;
+    const term = String(searchTerm).toLowerCase();
+    return customers.filter(c => {
+      const fullName = `${c.first_name || ''} ${c.last_name || ''} ${c.company_name || ''}`.toLowerCase();
+      const email = (c.email || '').toLowerCase();
+      return fullName.includes(term) || email.includes(term);
+    });
+  }
+
+  // Primary usage: matchCustomers(extractedData, customers[])
+  const extractedData = extractedDataOrCustomers;
+  const customers = customersOrSearchTerm;
+
+  if (!Array.isArray(customers)) return { candidates: [], topScore: 0 };
+  if (!extractedData) return { candidates: [], topScore: 0 };
+
+  const norm = (s) => (s || '').toLowerCase().trim().replace(/\s+/g, ' ');
+
+  const scored = customers
+    .filter(c => !c.is_family_member)
+    .map(c => {
+      let score = 0;
+
+      // Name match (required for any score)
+      const firstMatch = norm(c.first_name) === norm(extractedData.first_name);
+      const lastMatch = norm(c.last_name) === norm(extractedData.last_name);
+      if (firstMatch && lastMatch) score += 60;
+      else if (lastMatch && extractedData.last_name) score += 20;
+      else return { customer: c, score: 0 };
+
+      // Email match
+      if (extractedData.email && norm(c.email) === norm(extractedData.email)) score += 25;
+
+      // Birthdate match
+      if (extractedData.birthdate && c.birthdate === extractedData.birthdate) score += 20;
+
+      // Address match
+      if (extractedData.zip_code && c.zip_code === extractedData.zip_code) score += 10;
+
+      return { customer: c, score };
+    })
+    .filter(({ score }) => score >= 20)
+    .sort((a, b) => b.score - a.score);
+
+  const topScore = scored.length > 0 ? scored[0].score : 0;
+  return { candidates: scored, topScore };
 }
 
 export async function findOrCreateCustomer(extractedData, organizationId, base44) {
