@@ -89,11 +89,28 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
             advisor_id: '',
          }
       }
+      // Normalize all string fields: replace null/undefined with ''
+      const normalize = (v) => v == null ? '' : v
       return {
          ...customer,
-         assigned_broker: customer.assigned_broker || '',
-         organization_id: customer.organization_id || '',
-         advisor_id: customer.advisor_id || '',
+         first_name: normalize(customer.first_name),
+         last_name: normalize(customer.last_name),
+         email: normalize(customer.email),
+         phone: normalize(customer.phone),
+         mobile: normalize(customer.mobile),
+         street: normalize(customer.street),
+         zip_code: normalize(customer.zip_code),
+         city: normalize(customer.city),
+         canton: normalize(customer.canton),
+         birthdate: normalize(customer.birthdate),
+         ahv_number: normalize(customer.ahv_number),
+         profession: normalize(customer.profession),
+         drivers_license_date: normalize(customer.drivers_license_date),
+         notes: normalize(customer.notes),
+         assigned_broker: normalize(customer.assigned_broker),
+         organization_id: normalize(customer.organization_id),
+         advisor_id: normalize(customer.advisor_id),
+         primary_customer_id: normalize(customer.primary_customer_id),
       }
    })
 
@@ -110,8 +127,8 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
   const handlePlzChange = (plz) => {
     set('zip_code', plz)
     handlePostalCodeChange(plz, ({ city, canton, autoFilled: auto }) => {
-      if (city) set('city', city)
-      if (canton) set('canton', canton)
+      set('city', city)
+      set('canton', canton)
       setAutoFilled(auto || false)
     })
   }
