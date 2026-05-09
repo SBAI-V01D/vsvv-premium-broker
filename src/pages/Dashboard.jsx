@@ -178,9 +178,18 @@ export default function Dashboard() {
     }
   }, [commissionEntries])
 
-  // Tasks — visible statuses: all except completed (deduplicated)
+  // Tasks — only active, non-deleted, non-archived tasks with valid customer_id & assigned_to
+  // MUST match Tasks.jsx filter logic
+  const isValidTask = (t) => {
+    return t.status !== 'completed' 
+      && !t.deleted 
+      && !t.archived 
+      && !t.is_test_data
+      && t.customer_id 
+      && t.assigned_to
+  }
   const openTasks = useMemo(() => 
-    validateAndDeduplicate(tasks.filter(t => t.status !== 'completed')),
+    validateAndDeduplicate(tasks.filter(isValidTask)),
     [tasks]
   )
   const pendingApplications = applications.filter(a => ['draft', 'submitted', 'under_review'].includes(a.status))

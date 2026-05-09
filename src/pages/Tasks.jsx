@@ -84,9 +84,19 @@ export default function Tasks() {
     return `${day}.${month}.${year}`
   }
 
+  // Filter: only active, non-deleted, non-archived tasks with valid customer_id and assigned_to
+  const isValidTask = (t) => {
+    return t.status !== 'completed' 
+      && !t.deleted 
+      && !t.archived 
+      && !t.is_test_data
+      && t.customer_id 
+      && t.assigned_to
+  }
+
   // Split by category
-  const adminTasks = tasks.filter(t => !CONTRACT_TASK_TYPES.includes(t.task_type))
-  const contractTasks = tasks.filter(t => CONTRACT_TASK_TYPES.includes(t.task_type))
+  const adminTasks = tasks.filter(t => !CONTRACT_TASK_TYPES.includes(t.task_type) && isValidTask(t))
+  const contractTasks = tasks.filter(t => CONTRACT_TASK_TYPES.includes(t.task_type) && isValidTask(t))
   const activeCategoryTasks = categoryTab === 'admin' ? adminTasks : contractTasks
 
   const openTasks = activeCategoryTasks.filter(t => t.status === 'open')
