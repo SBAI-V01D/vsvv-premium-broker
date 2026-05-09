@@ -1,37 +1,41 @@
-import { useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
-import { useAuth } from '@/lib/AuthContext';
-import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import React from 'react'
+import { Navigate } from 'react-router-dom'
+import { useAuth } from '@/lib/AuthContext'
 
-const DefaultFallback = () => (
-  <div className="fixed inset-0 flex items-center justify-center">
-    <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-  </div>
-);
+/**
+ * Role-based route protection
+ * allowedRoles: ['admin', 'manager', 'advisor']
+ */
+export default function ProtectedRoute({ children, allowedRoles = [] }) {
+  const { currentUser, isLoadingAuth } = useAuth()
 
-export default function ProtectedRoute({ fallback = <DefaultFallback />, unauthenticatedElement }) {
-  const { isAuthenticated, isLoadingAuth, authChecked, authError, checkUserAuth } = useAuth();
-
-  useEffect(() => {
-    if (!authChecked && !isLoadingAuth) {
-      checkUserAuth();
-    }
-  }, [authChecked, isLoadingAuth, checkUserAuth]);
-
-  if (isLoadingAuth || !authChecked) {
-    return fallback;
+  if (isLoadingAuth) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-3"></div>
+          <p className="text-sm text-muted-foreground">Authentifizierung...</p>
+        </div>
+      </div>
+    )
   }
 
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    }
-    return unauthenticatedElement;
+  if (!currentUser) {
+    return <Navigate to="/" replace />
   }
 
-  if (!isAuthenticated) {
-    return unauthenticatedElement;
+  if (allowedRoles.length > 0 && !allowedRoles.includes(currentUser.role)) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center p-6 bg-destructive/10 rounded-lg border border-destructive/20">
+          <p className="font-semibold text-destructive mb-2">Zugriff verweigert</p>
+          <p className="text-sm text-muted-foreground">
+            Ihre Rolle ({currentUser.role}) hat keine Berechtigung für diese Seite.
+          </p>
+        </div>
+      </div>
+    )
   }
 
-  return <Outlet />;
+  return children
 }
