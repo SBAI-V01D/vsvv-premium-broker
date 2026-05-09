@@ -112,9 +112,9 @@ export default function Tasks() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Aufgaben</h1>
-        <p className="text-muted-foreground mt-1">{tasks.filter(t => t.status !== 'completed').length} offene Aufgaben</p>
-      </div>
+         <h1 className="text-3xl font-bold">Aufgaben</h1>
+         <p className="text-muted-foreground mt-1">{tasks.filter(t => t.status === 'open' || t.status === 'in_progress').length} offene & in Bearbeitung</p>
+       </div>
 
       {/* Category Tabs */}
       <div className="flex items-center gap-1 mb-6 border-b border-border">
@@ -132,7 +132,7 @@ export default function Tasks() {
           <span className={cn('ml-1.5 px-1.5 py-0.5 text-[10px] rounded-full font-semibold',
             categoryTab === 'admin' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
           )}>
-            {adminTasks.filter(t => t.status !== 'completed').length}
+            {adminTasks.filter(t => t.status === 'open' || t.status === 'in_progress').length}
           </span>
         </button>
         <button
@@ -149,7 +149,7 @@ export default function Tasks() {
           <span className={cn('ml-1.5 px-1.5 py-0.5 text-[10px] rounded-full font-semibold',
             categoryTab === 'contract' ? 'bg-orange-100 text-orange-700' : 'bg-muted text-muted-foreground'
           )}>
-            {contractTasks.filter(t => t.status !== 'completed').length}
+            {contractTasks.filter(t => t.status === 'open' || t.status === 'in_progress').length}
           </span>
         </button>
       </div>
