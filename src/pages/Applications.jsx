@@ -80,7 +80,10 @@ export default function Applications() {
    const ACCEPTED_KEYS = ['angenommen', 'policiert', 'approved', 'angenommen_vorbehalt']
    const OPEN_KEYS = ['neu', 'draft', 'submitted', 'in_bearbeitung', 'under_review', 'eingereicht', 'in_pruefung', 'rueckfrage', 'vorbehalt', 'offen']
    const ARCHIVED_KEYS = [...ACCEPTED_KEYS, ...STORNIERT_ABGELEHNT]
-   const getStatus = (a) => (a.custom_status || a.status || '').toLowerCase().trim()
+   const getStatus = (a) => {
+     if (!a) return ''
+     return (a.custom_status || a.status || '').toLowerCase().trim()
+   }
 
   const activeApps = applications.filter(a => !STORNIERT_ABGELEHNT.includes(getStatus(a)))
   const openApps = applications.filter(a => OPEN_KEYS.includes(getStatus(a)))
@@ -128,6 +131,7 @@ export default function Applications() {
   }
 
   const handleStatusChange = async ({ status, statusDef, note, metadata }) => {
+    if (!statusChanging) return
     const app = statusChanging
     const prevStatus = getStatus(app)
     const ACCEPTED_STATUSES = ['angenommen', 'policiert', 'approved', 'angenommen_vorbehalt']
