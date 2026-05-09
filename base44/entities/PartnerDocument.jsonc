@@ -28,6 +28,7 @@
         "deals_spezialvereinbarungen",
         "korrespondenz",
         "schulungsunterlagen",
+        "verkaufsfoerderung",
         "sonstige"
       ],
       "description": "Dokumentkategorie"

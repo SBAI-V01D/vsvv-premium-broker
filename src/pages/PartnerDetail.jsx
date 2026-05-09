@@ -17,6 +17,7 @@ const CATEGORY_LABELS = {
   vorsorgepartner: '📊 Vorsorgepartner',
   rechtsschutz: '⚖️ Rechtsschutz',
   krankenkasse: '🏥 Krankenkasse',
+  makler: '🤝 Makler',
   sonstige: '📋 Sonstige'
 }
 

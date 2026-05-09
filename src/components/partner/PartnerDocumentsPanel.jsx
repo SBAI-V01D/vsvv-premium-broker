@@ -17,6 +17,7 @@ const CATEGORY_LABELS = {
   deals_spezialvereinbarungen: '⭐ Deals / Spezialvereinbarungen',
   korrespondenz: '✉️ Korrespondenz',
   schulungsunterlagen: '📚 Schulungsunterlagen',
+  verkaufsfoerderung: '📢 Verkaufsförderung',
   sonstige: '📁 Sonstige'
 }
 
@@ -28,6 +29,7 @@ const CATEGORY_COLORS = {
   deals_spezialvereinbarungen: 'bg-red-100 text-red-700',
   korrespondenz: 'bg-gray-100 text-gray-700',
   schulungsunterlagen: 'bg-yellow-100 text-yellow-700',
+  verkaufsfoerderung: 'bg-pink-100 text-pink-700',
   sonstige: 'bg-slate-100 text-slate-700'
 }
 
