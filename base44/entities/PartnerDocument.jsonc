@@ -1,0 +1,58 @@
+{
+  "name": "PartnerDocument",
+  "type": "object",
+  "properties": {
+    "partner_id": {
+      "type": "string",
+      "description": "Partner-ID"
+    },
+    "partner_name": {
+      "type": "string",
+      "description": "Partner-Name (Cache)"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Dateiname"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL zur Datei"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "vertragsdokumente",
+        "courtagevereinbarungen",
+        "provisionsabrechnungen",
+        "zielvereinbarungen",
+        "deals_spezialvereinbarungen",
+        "korrespondenz",
+        "schulungsunterlagen",
+        "sonstige"
+      ],
+      "description": "Dokumentkategorie"
+    },
+    "uploaded_by": {
+      "type": "string",
+      "description": "Email des Uploaders"
+    },
+    "uploaded_by_name": {
+      "type": "string",
+      "description": "Name des Uploaders"
+    },
+    "file_size": {
+      "type": "number",
+      "description": "Dateigr\u00f6\u00dfe in Bytes"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Bemerkungen zum Dokument"
+    }
+  },
+  "required": [
+    "partner_id",
+    "file_name",
+    "file_url",
+    "category"
+  ]
+}

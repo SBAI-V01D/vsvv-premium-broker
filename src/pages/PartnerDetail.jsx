@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import PartnerDocumentsPanel from '@/components/partner/PartnerDocumentsPanel'
+import PartnerActivitiesPanel from '@/components/partner/PartnerActivitiesPanel'
 
 const CATEGORY_LABELS = {
   versicherung: '🏢 Versicherung',
@@ -31,11 +33,7 @@ export default function PartnerDetail() {
 
   const partner = allPartners.find(p => p.id === id)
 
-  const { data: documents = [] } = useQuery({
-    queryKey: ['documents', id],
-    queryFn: () => base44.entities.Document.filter({ linked_partner_id: id }),
-    enabled: !!id,
-  })
+
 
   if (!partner) {
     return (
@@ -94,45 +92,16 @@ export default function PartnerDetail() {
       {/* Tabs */}
       <Tabs defaultValue="dokumente">
         <TabsList className="mb-4">
-          <TabsTrigger value="dokumente">Dokumente ({documents.length})</TabsTrigger>
-          <TabsTrigger value="provisionen">Provisionsabrechnungen</TabsTrigger>
-          <TabsTrigger value="zielvereinbarungen">Zielvereinbarungen</TabsTrigger>
+          <TabsTrigger value="dokumente">Dokumente</TabsTrigger>
           <TabsTrigger value="aktivitaeten">Aktivitäten</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dokumente">
-          {documents.length === 0 ? (
-            <Card><CardContent className="p-6 text-center text-muted-foreground">Keine Dokumente vorhanden</CardContent></Card>
-          ) : (
-            <div className="space-y-2">
-              {documents.map(doc => (
-                <Card key={doc.id}>
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex gap-3">
-                      <FileText className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm truncate">{doc.name}</p>
-                        <p className="text-xs text-muted-foreground">{doc.category || 'Sonstige'}</p>
-                      </div>
-                    </div>
-                    {doc.file_url && <a href={doc.file_url} target="_blank" rel="noopener" className="text-xs text-primary hover:underline">Öffnen</a>}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="provisionen">
-          <Card><CardContent className="p-6 text-center text-muted-foreground">Keine Provisionsabrechnungen vorhanden</CardContent></Card>
-        </TabsContent>
-
-        <TabsContent value="zielvereinbarungen">
-          <Card><CardContent className="p-6 text-center text-muted-foreground">Keine Zielvereinbarungen vorhanden</CardContent></Card>
+          <PartnerDocumentsPanel partnerId={id} partnerName={partner.name} />
         </TabsContent>
 
         <TabsContent value="aktivitaeten">
-          <Card><CardContent className="p-6 text-center text-muted-foreground">Noch keine Aktivitäten</CardContent></Card>
+          <PartnerActivitiesPanel partnerId={id} />
         </TabsContent>
       </Tabs>
 

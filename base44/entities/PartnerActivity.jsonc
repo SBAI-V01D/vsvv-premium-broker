@@ -1,0 +1,50 @@
+{
+  "name": "PartnerActivity",
+  "type": "object",
+  "properties": {
+    "partner_id": {
+      "type": "string",
+      "description": "Partner-ID"
+    },
+    "partner_name": {
+      "type": "string",
+      "description": "Partner-Name (Cache)"
+    },
+    "activity_type": {
+      "type": "string",
+      "enum": [
+        "document_uploaded",
+        "document_deleted",
+        "document_modified",
+        "partner_created",
+        "partner_updated"
+      ],
+      "description": "Aktivit\u00e4tstyp"
+    },
+    "description": {
+      "type": "string",
+      "description": "Aktivit\u00e4tsbeschreibung"
+    },
+    "document_id": {
+      "type": "string",
+      "description": "Verkn\u00fcpfte Dokument-ID (optional)"
+    },
+    "document_name": {
+      "type": "string",
+      "description": "Verkn\u00fcpfter Dokumentname (optional)"
+    },
+    "performed_by": {
+      "type": "string",
+      "description": "Email des Verursachers"
+    },
+    "performed_by_name": {
+      "type": "string",
+      "description": "Name des Verursachers"
+    }
+  },
+  "required": [
+    "partner_id",
+    "activity_type",
+    "description"
+  ]
+}
