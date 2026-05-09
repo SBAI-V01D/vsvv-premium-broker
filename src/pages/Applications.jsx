@@ -76,11 +76,11 @@ export default function Applications() {
   })
 
   // KPIs
-  const STORNIERT_ABGELEHNT = ['abgelehnt', 'rejected', 'storniert', 'cancelled']
-  const ACCEPTED_KEYS = ['angenommen', 'policiert', 'approved', 'angenommen_vorbehalt']
-  const OPEN_KEYS = ['neu', 'draft', 'submitted', 'in_bearbeitung', 'under_review', 'eingereicht', 'in_pruefung', 'rueckfrage', 'vorbehalt']
-  const ARCHIVED_KEYS = [...ACCEPTED_KEYS, ...STORNIERT_ABGELEHNT]
-  const getStatus = (a) => a.custom_status || a.status
+   const STORNIERT_ABGELEHNT = ['abgelehnt', 'rejected', 'storniert', 'cancelled']
+   const ACCEPTED_KEYS = ['angenommen', 'policiert', 'approved', 'angenommen_vorbehalt']
+   const OPEN_KEYS = ['neu', 'draft', 'submitted', 'in_bearbeitung', 'under_review', 'eingereicht', 'in_pruefung', 'rueckfrage', 'vorbehalt', 'offen']
+   const ARCHIVED_KEYS = [...ACCEPTED_KEYS, ...STORNIERT_ABGELEHNT]
+   const getStatus = (a) => (a.custom_status || a.status || '').toLowerCase().trim()
 
   const activeApps = applications.filter(a => !STORNIERT_ABGELEHNT.includes(getStatus(a)))
   const openApps = applications.filter(a => OPEN_KEYS.includes(getStatus(a)))
