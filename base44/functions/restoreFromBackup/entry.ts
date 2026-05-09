@@ -1,64 +1,88 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 /**
- * DATABASE RESTORE COORDINATION
- * 
- * This function coordinates with Base44 backup infrastructure
- * to restore the database to a pre-import state.
- * 
- * REQUIRES: Base44 support team coordination for actual restore
+ * Restore system from backup
+ * DANGEROUS: Use only for emergency recovery
  */
-
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-    
+
     if (!user || user.role !== 'admin') {
       return Response.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const { backup_timestamp, target_state } = await req.json();
+    const body = await req.json();
+    const { backup_data, confirmation } = body;
 
-    if (!backup_timestamp) {
-      return Response.json({
-        status: 'error',
-        message: 'backup_timestamp required (ISO format)',
-        instructions: [
-          '1. Contact Base44 support team immediately',
-          '2. Request database restore to: 2026-05-07T20:00:00Z (or before first import)',
-          '3. Verify backup exists and contains: Customers + Contracts + Applications + Documents',
-          '4. Coordinate restore window (production data loss risk)',
-          '5. Provide restore confirmation timestamp'
-        ]
-      });
+    if (confirmation !== 'RESTORE_NOW') {
+      return Response.json({ 
+        error: 'Restore requires confirmation=RESTORE_NOW',
+        warning: 'This will overwrite all current data!'
+      }, { status: 400 });
     }
 
-    console.log(`[RESTORE] Admin ${user.email} requested restore to: ${backup_timestamp}`);
-    console.log(`[RESTORE] Target state: ${target_state || 'pre-import'}`);
+    if (!backup_data || !backup_data.entities) {
+      return Response.json({ error: 'Invalid backup data' }, { status: 400 });
+    }
 
-    // Log restoration request for audit trail
-    return Response.json({
-      status: 'pending_support',
-      message: 'Restore request logged - awaiting Base44 support team action',
-      timestamp: new Date().toISOString(),
-      admin_email: user.email,
-      target_timestamp: backup_timestamp,
-      next_steps: [
-        'Base44 support team will: 1. Verify backup integrity',
-        '2. Confirm customer/contract/document counts',
-        '3. Execute controlled restore',
-        '4. Verify system integrity post-restore',
-        '5. Confirm completion to admin'
-      ]
-    });
-    
+    const result = {
+      restored: {},
+      failed: {},
+      timestamp: new Date().toISOString()
+    };
+
+    // Restore each entity
+    for (const [entityName, records] of Object.entries(backup_data.entities)) {
+      try {
+        if (!Array.isArray(records) || records.length === 0) {
+          result.restored[entityName] = 0;
+          continue;
+        }
+
+        // Bulk restore
+        let restoredCount = 0;
+        for (const record of records) {
+          try {
+            // Skip system fields
+            const { id, created_date, updated_date, created_by, ...data } = record;
+            
+            // Try update first, then create
+            try {
+              await base44.entities[entityName].update(id, data);
+              restoredCount++;
+            } catch {
+              // Create if update fails
+              await base44.entities[entityName].create({ id, ...data });
+              restoredCount++;
+            }
+          } catch (err) {
+            // Continue with next record
+          }
+        }
+
+        result.restored[entityName] = restoredCount;
+      } catch (err) {
+        result.failed[entityName] = err.message;
+      }
+    }
+
+    // Log restoration
+    try {
+      await base44.entities.AuditLog.create({
+        entity_type: 'system',
+        entity_id: 'backup_restore',
+        action: 'restore',
+        changed_by: user.email,
+        changed_at: new Date().toISOString(),
+        summary: `Restored from backup: ${Object.values(result.restored).reduce((a,b) => a+b, 0)} records`
+      });
+    } catch {}
+
+    return Response.json(result, { status: 200 });
+
   } catch (error) {
-    console.error('[RESTORE] Error:', error.message);
-    return Response.json({ 
-      status: 'error', 
-      error: error.message,
-      support_email: 'support@base44.com'
-    }, { status: 500 });
+    return Response.json({ error: error.message }, { status: 500 });
   }
 });
