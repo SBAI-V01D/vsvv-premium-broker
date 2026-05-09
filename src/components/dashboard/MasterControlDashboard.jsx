@@ -9,6 +9,9 @@ import {
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import ExpiringContractsPanel from './ExpiringContractsPanel'
+import OperativeTasksPanel from './OperativeTasksPanel'
+import OperativeKPIStrip from './OperativeKPIStrip'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmtChf = (n) => n >= 1000
@@ -629,6 +632,7 @@ function CustomerQuickView({ customer, contracts, tasks, documents, onClose }) {
 export default function MasterControlDashboard({ data, onTaskClick }) {
   const navigate = useNavigate()
   const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [open, setOpen] = useState(false) // For Section component
 
   const { tasks = [], contracts = [], documents = [], customers = [] } = data
   const openTasks = data.openTasks || []
@@ -645,6 +649,21 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
 
   return (
     <div className="space-y-3">
+
+      {/* OPERATIVE SECTION — Top Priority (Live Data) */}
+      <div className="bg-gradient-to-br from-red-50/50 to-orange-50/50 rounded-xl p-4 space-y-3 border border-red-100/50">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-red-700">⚡ Operative Aufgaben</h2>
+        <ExpiringContractsPanel contracts={data.filteredContracts || []} />
+        <OperativeTasksPanel tasks={openTasks} limit={10} />
+        <OperativeKPIStrip 
+          activeCustomers={data.activeCustomers?.length || 0}
+          activeLeads={data.activeLeads?.length || 0}
+          openTasks={openTasks.length}
+          expiringContracts={data.expiringContracts?.length || 0}
+          totalMonthlyPremium={data.totalMonthlyPremium || 0}
+          yearlyCommissionForecast={data.yearlyCommissionForecast || 0}
+        />
+      </div>
 
       {/* ① TODAY'S PRIORITY TASKS — highest visual weight */}
       <Section
