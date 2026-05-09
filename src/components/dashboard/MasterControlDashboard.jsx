@@ -73,8 +73,9 @@ function CountBadge({ n, className }) {
 // ── 1. TODAY'S PRIORITY TASKS ─────────────────────────────────────────────────
 const CONTRACT_TASK_TYPES = new Set(['renewal', 'health_declaration'])
 
-function TodayPriorityTasks({ openTasks, onTaskClick }) {
+function TodayPriorityTasks({ openTasks, onTaskClick, customers = [] }) {
   const navigate = useNavigate()
+  const [selectedCustomer, setSelectedCustomer] = useState(null)
   const today = new Date().toISOString().slice(0, 10)
 
   const overdue   = openTasks.filter(t => t.due_date && daysUntil(t.due_date) < 0)
@@ -125,10 +126,16 @@ function TodayPriorityTasks({ openTasks, onTaskClick }) {
         })} />
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold truncate">{t.title}</p>
-          {t.customer_name
-            ? <p className="text-[10px] text-muted-foreground font-medium text-blue-700">{t.customer_name}</p>
-            : <p className="text-[10px] text-amber-600 italic">Kein Kunde verknüpft</p>
-          }
+          {t.customer_name ? (
+            <button 
+              onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customers.find(c => c.id === t.customer_id)) }}
+              className="text-[10px] text-blue-700 font-medium hover:underline"
+            >
+              {t.customer_name}
+            </button>
+          ) : (
+            <p className="text-[10px] text-amber-600 italic">Kein Kunde verknüpft</p>
+          )}
         </div>
         {isContract && (
           <span className="text-[9px] px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded font-semibold flex-shrink-0">VERTRAG</span>
@@ -177,8 +184,7 @@ function TodayPriorityTasks({ openTasks, onTaskClick }) {
 }
 
 // ── 2. URGENT CONTRACT WORKFLOWS ──────────────────────────────────────────────
-function UrgentContracts({ expiringContracts }) {
-  const navigate = useNavigate()
+function UrgentContracts({ expiringContracts, onContractSelect }) {
   const urgent = expiringContracts
     .map(c => ({ ...c, _days: daysUntil(c.end_date) }))
     .sort((a, b) => (a._days ?? 999) - (b._days ?? 999))
@@ -201,7 +207,7 @@ function UrgentContracts({ expiringContracts }) {
         return (
           <button
             key={c.id}
-            onClick={() => navigate('/vertraege')}
+            onClick={() => onContractSelect?.(c)}
             className={cn('w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all hover:shadow-sm', urgencyBg(days))}
           >
             <div className="w-7 h-7 rounded-md bg-orange-100 flex items-center justify-center flex-shrink-0">
@@ -280,7 +286,12 @@ function CustomerActionItems({ data, onCustomerSelect }) {
             {c.first_name?.[0]}{c.last_name?.[0]}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold truncate">{c.first_name} {c.last_name}</p>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onCustomerSelect(c) }}
+              className="text-xs font-semibold truncate hover:underline"
+            >
+              {c.first_name} {c.last_name}
+            </button>
             <p className="text-[10px] text-muted-foreground">Coverage-Lücke erkannt</p>
           </div>
           <span className="text-[9px] px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded font-semibold flex-shrink-0">LÜCKE</span>
@@ -308,7 +319,7 @@ function CustomerActionItems({ data, onCustomerSelect }) {
 }
 
 // ── 4. ALL TASKS SPLIT PANEL ──────────────────────────────────────────────────
-function AllTasksSplit({ openTasks, onTaskClick }) {
+function AllTasksSplit({ openTasks, onTaskClick, customers = [] }) {
   const navigate = useNavigate()
   const adminTasks    = openTasks.filter(t => !CONTRACT_TASK_TYPES.has(t.task_type))
   const contractTasks = openTasks.filter(t => CONTRACT_TASK_TYPES.has(t.task_type))
@@ -332,7 +343,14 @@ function AllTasksSplit({ openTasks, onTaskClick }) {
         })} />
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium truncate">{t.title}</p>
-          {t.customer_name && <p className="text-[10px] text-muted-foreground truncate">{t.customer_name}</p>}
+          {t.customer_name && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); navigate(`/kunden/${t.customer_id}`) }}
+              className="text-[10px] text-blue-700 font-medium hover:underline"
+            >
+              {t.customer_name}
+            </button>
+          )}
         </div>
         {t.due_date && (
           <span className={cn('text-[10px] flex-shrink-0', urgencyColor(days))}>
@@ -553,7 +571,7 @@ function CustomerQuickView({ customer, contracts, tasks, documents, onClose }) {
                 {custContracts.slice(0, 5).map(c => {
                   const days = daysUntil(c.end_date)
                   return (
-                    <div key={c.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 text-xs">
+                    <button key={c.id} onClick={() => navigate(`/vertraege`)} className="w-full flex items-center gap-2 p-2 rounded-lg bg-muted/30 hover:bg-muted/50 text-xs transition-colors text-left">
                       <span className={cn('w-1.5 h-5 rounded-full flex-shrink-0', {
                         'bg-emerald-400': c.status === 'active',
                         'bg-orange-400':  c.status === 'renewal_due',
@@ -562,7 +580,7 @@ function CustomerQuickView({ customer, contracts, tasks, documents, onClose }) {
                       })} />
                       <span className="font-medium flex-1 truncate">{c.insurer} · {c.sparte || c.insurance_type}</span>
                       {c.end_date && <span className={cn('flex-shrink-0', urgencyColor(days))}>{fmtDate(c.end_date)}</span>}
-                    </div>
+                    </button>
                   )
                 })}
               </div>
@@ -573,11 +591,11 @@ function CustomerQuickView({ customer, contracts, tasks, documents, onClose }) {
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Offene Aufgaben</p>
               <div className="space-y-1">
                 {custTasks.slice(0, 3).map(t => (
-                  <div key={t.id} className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 border border-amber-100 text-xs">
+                  <button key={t.id} onClick={() => navigate('/aufgaben')} className="w-full flex items-center gap-2 p-2 rounded-lg bg-amber-50 border border-amber-100 hover:bg-amber-100 text-xs transition-colors text-left">
                     <CheckSquare className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                     <span className="truncate">{t.title}</span>
                     {t.due_date && <span className={cn('ml-auto flex-shrink-0', urgencyColor(daysUntil(t.due_date)))}>{fmtDate(t.due_date)}</span>}
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -590,9 +608,10 @@ function CustomerQuickView({ customer, contracts, tasks, documents, onClose }) {
 
 // ── MASTER CONTROL DASHBOARD ──────────────────────────────────────────────────
 export default function MasterControlDashboard({ data, onTaskClick }) {
+  const navigate = useNavigate()
   const [selectedCustomer, setSelectedCustomer] = useState(null)
 
-  const { tasks = [], contracts = [], documents = [] } = data
+  const { tasks = [], contracts = [], documents = [], customers = [] } = data
   const openTasks = data.openTasks || []
 
   const overdueCount = openTasks.filter(t => t.due_date && daysUntil(t.due_date) <= 0).length
@@ -620,7 +639,7 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
             : null
         }
       >
-        <TodayPriorityTasks openTasks={openTasks} onTaskClick={onTaskClick} />
+        <TodayPriorityTasks openTasks={openTasks} onTaskClick={onTaskClick} customers={customers} />
       </Section>
 
       {/* ② URGENT CONTRACT WORKFLOWS */}
@@ -636,7 +655,7 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
         }
         subtitleBadge={`${data.expiringContracts.length} Abläufe / 90 Tage`}
       >
-        <UrgentContracts expiringContracts={data.expiringContracts} />
+        <UrgentContracts expiringContracts={data.expiringContracts} onContractSelect={(c) => c.customer_id && navigate(`/kunden/${c.customer_id}`)} />
       </Section>
 
       {/* ③ CUSTOMER ACTIONS */}
@@ -669,7 +688,7 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
             : null
         }
       >
-        <AllTasksSplit openTasks={openTasks} onTaskClick={onTaskClick} />
+        <AllTasksSplit openTasks={openTasks} onTaskClick={onTaskClick} customers={customers} />
       </Section>
 
       {/* ⑤ SALES & PIPELINE */}

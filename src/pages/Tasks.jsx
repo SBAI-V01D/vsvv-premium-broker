@@ -98,7 +98,8 @@ export default function Tasks() {
     setFormData({ status: task.status, notes: task.notes || '', file: null, due_date: task.due_date || '', completion_date: task.completion_date || '', assigned_to: task.assigned_to || '' })
   }
 
-  const handleRowClick = (task) => {
+  const handleRowClick = (e, task) => {
+    e.stopPropagation()
     if (task.customer_id) navigate(`/kunden/${task.customer_id}`)
   }
 
@@ -182,18 +183,20 @@ export default function Tasks() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{t.title}</p>
-                      {t.customer_name && <p className="text-xs text-blue-600 font-medium mt-0.5">{t.customer_name}</p>}
+                      {t.customer_name && (
+                        <button 
+                          onClick={(e) => handleRowClick(e, t)}
+                          className="text-xs text-blue-600 font-medium mt-0.5 hover:underline"
+                        >
+                          {t.customer_name}
+                        </button>
+                      )}
                       {t.due_date && (
                         <p className={`text-xs mt-1 ${isOverdue(t.due_date) ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
                           Fällig: {formatDate(t.due_date)}
                         </p>
                       )}
                     </div>
-                    {t.customer_id && (
-                      <button onClick={(e) => { e.stopPropagation(); handleRowClick(t) }} className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                        Kunde
-                      </button>
-                    )}
                   </div>
                 </button>
               ))
@@ -222,18 +225,20 @@ export default function Tasks() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{t.title}</p>
-                      {t.customer_name && <p className="text-xs text-blue-600 font-medium mt-0.5">{t.customer_name}</p>}
+                      {t.customer_name && (
+                        <button 
+                          onClick={(e) => handleRowClick(e, t)}
+                          className="text-xs text-blue-600 font-medium mt-0.5 hover:underline"
+                        >
+                          {t.customer_name}
+                        </button>
+                      )}
                       {t.due_date && (
                         <p className={`text-xs mt-1 ${isOverdue(t.due_date) ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
                           Fällig: {formatDate(t.due_date)}
                         </p>
                       )}
                     </div>
-                    {t.customer_id && (
-                      <button onClick={(e) => { e.stopPropagation(); handleRowClick(t) }} className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                        Kunde
-                      </button>
-                    )}
                   </div>
                 </button>
               ))
@@ -257,13 +262,15 @@ export default function Tasks() {
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{t.title}</p>
-                    {t.customer_name && <p className="text-xs text-blue-600 font-medium mt-0.5">{t.customer_name}</p>}
+                    {t.customer_name && (
+                      <button 
+                        onClick={(e) => handleRowClick(e, t)}
+                        className="text-xs text-blue-600 font-medium mt-0.5 hover:underline"
+                      >
+                        {t.customer_name}
+                      </button>
+                    )}
                   </div>
-                  {t.customer_id && (
-                    <button onClick={(e) => { e.stopPropagation(); handleRowClick(t) }} className="text-xs px-2 py-1 rounded bg-green-200 text-green-700 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                      Kunde
-                    </button>
-                  )}
                 </button>
               ))
             )}
