@@ -21,7 +21,7 @@ export default function Customers() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
   const [newCustomerType, setNewCustomerType] = useState('private')
-  const [filterType, setFilterType] = useState('all')
+  const [filterType, setFilterType] = useState('private')
   const [search, setSearch] = useState('')
   const [expandedFamily, setExpandedFamily] = useState(null)
   const [showImport, setShowImport] = useState(false)
