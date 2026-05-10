@@ -5,7 +5,8 @@ import {
   Users, Target, TrendingUp, Wallet, RefreshCw, CheckSquare,
   FileWarning, ShieldAlert, ChevronDown, AlertTriangle, Clock,
   ArrowRight, FileText, ListTodo, Activity, Zap, Eye, X,
-  CalendarClock, CircleDot, TriangleAlert, CalendarX2
+  CalendarClock, CircleDot, TriangleAlert, CalendarX2, PhoneCall,
+  FileCheck, AlertCircle, TrendingDown, Flame
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { de } from 'date-fns/locale'
@@ -39,7 +40,7 @@ const urgencyColor = (days) => {
 }
 
 const urgencyBg = (days) => {
-  if (days === null) return ''
+  if (days === null) return 'bg-background border-border'
   if (days <= 0)  return 'bg-red-50 border-red-200'
   if (days <= 7)  return 'bg-red-50/60 border-red-100'
   if (days <= 14) return 'bg-orange-50 border-orange-100'
@@ -78,86 +79,74 @@ const CONTRACT_TASK_TYPES = new Set(['renewal', 'health_declaration'])
 
 function TodayPriorityTasks({ openTasks, onTaskClick, customers = [] }) {
   const navigate = useNavigate()
-  const [selectedCustomer, setSelectedCustomer] = useState(null)
   const today = new Date().toISOString().slice(0, 10)
 
-  const overdue   = openTasks.filter(t => t.due_date && daysUntil(t.due_date) < 0)
-  const dueToday  = openTasks.filter(t => t.due_date === today)
+  const overdue     = openTasks.filter(t => t.due_date && daysUntil(t.due_date) < 0)
+  const dueToday    = openTasks.filter(t => t.due_date === today)
   const dueThisWeek = openTasks.filter(t => {
     const d = daysUntil(t.due_date)
     return d !== null && d > 0 && d <= 7
   })
 
-  const totalUrgent = overdue.length + dueToday.length
-
   if (overdue.length === 0 && dueToday.length === 0 && dueThisWeek.length === 0) {
     return (
-      <div className="flex items-center gap-2 py-4 text-emerald-600">
-        <CheckSquare className="w-4 h-4" />
-        <span className="text-sm font-medium">Keine dringenden Aufgaben — alles erledigt ✓</span>
+      <div className="flex items-center gap-2.5 py-3 px-3 bg-emerald-50 rounded-lg border border-emerald-100">
+        <CheckSquare className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+        <span className="text-sm font-medium text-emerald-700">Keine dringenden Aufgaben — alles im grünen Bereich ✓</span>
       </div>
     )
   }
 
-  const statusLabels = {
-    open: 'Offen',
-    in_progress: 'In Bearbeitung',
-    waiting: 'Wartend',
-    completed: 'Erledigt',
-    done: 'Erledigt',
-    archived: 'Archiviert'
-  }
+  const statusLabels = { open: 'Offen', in_progress: 'In Bearb.', waiting: 'Wartend', completed: 'Erledigt', done: 'Erledigt' }
 
-  const renderRow = (t, variant = 'default') => {
+  const renderRow = (t) => {
     const days = daysUntil(t.due_date)
     const isContract = CONTRACT_TASK_TYPES.has(t.task_type)
+    const isOverdue = days !== null && days <= 0
+    const isToday = t.due_date === today
     return (
       <button
         key={t.id}
         onClick={() => onTaskClick(t)}
         className={cn(
-          'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all hover:shadow-sm group',
+          'w-full flex items-center gap-3 px-3 py-3 rounded-lg border text-left transition-all hover:shadow-md group',
           urgencyBg(days)
         )}
       >
-        {/* Type indicator */}
-        <div className={cn('w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0',
-          isContract ? 'bg-orange-100' : 'bg-slate-100'
+        {/* Left urgency stripe */}
+        <span className={cn('w-1.5 h-10 rounded-full flex-shrink-0', {
+          'bg-red-500':    isOverdue || t.priority === 'urgent',
+          'bg-orange-400': !isOverdue && (isToday || t.priority === 'high' || (days !== null && days <= 7)),
+          'bg-blue-400':   !isOverdue && !isToday && t.priority === 'medium',
+          'bg-slate-200':  !isOverdue && !isToday && (!t.priority || t.priority === 'low'),
+        })} />
+
+        {/* Type icon */}
+        <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+          isContract ? 'bg-orange-100' : isOverdue ? 'bg-red-100' : 'bg-slate-100'
         )}>
           {isContract
-            ? <RefreshCw className="w-3.5 h-3.5 text-orange-600" />
-            : <ListTodo className="w-3.5 h-3.5 text-slate-500" />
+            ? <RefreshCw className="w-4 h-4 text-orange-600" />
+            : isOverdue
+              ? <AlertCircle className="w-4 h-4 text-red-600" />
+              : <ListTodo className="w-4 h-4 text-slate-500" />
           }
         </div>
-        {/* Priority bar */}
-        <span className={cn('w-1 h-7 rounded-full flex-shrink-0', {
-          'bg-red-500': t.priority === 'urgent' || days !== null && days <= 0,
-          'bg-orange-400': t.priority === 'high' || (days !== null && days > 0 && days <= 7),
-          'bg-blue-400': t.priority === 'medium' && (days === null || days > 7),
-          'bg-slate-200': t.priority === 'low' || !t.priority,
-        })} />
+
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold truncate">{t.title}</p>
-          {t.customer_name ? (
-            <button 
-              onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customers.find(c => c.id === t.customer_id)) }}
-              className="text-[10px] text-blue-700 font-medium hover:underline"
-            >
-              {t.customer_name}
-            </button>
-          ) : (
-            <p className="text-[10px] text-amber-600 italic">Kein Kunde verknüpft</p>
-          )}
+          <p className="text-xs font-semibold truncate leading-tight">{t.title}</p>
+          {t.customer_name
+            ? <p className="text-[11px] text-blue-700 font-medium mt-0.5">{t.customer_name}</p>
+            : <p className="text-[10px] text-amber-600 italic mt-0.5">Kein Kunde verknüpft</p>
+          }
         </div>
-        {isContract && (
-          <span className="text-[9px] px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded font-semibold flex-shrink-0">VERTRAG</span>
-        )}
-        <span className="text-[9px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 bg-slate-100 text-slate-700">
-          {statusLabels[t.status] || t.status}
-        </span>
-        <span className={cn('text-xs flex-shrink-0', urgencyColor(days))}>
-          {days === null ? '' : days <= 0 ? 'Überfällig' : days === 0 ? 'Heute' : `${days}T`}
-        </span>
+
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+          {isContract && <span className="text-[9px] px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded font-bold">VERTRAG</span>}
+          <span className={cn('text-sm font-bold', urgencyColor(days))}>
+            {days === null ? '–' : days <= 0 ? `${Math.abs(days)}d` : days === 0 ? 'Heute' : `+${days}d`}
+          </span>
+        </div>
       </button>
     )
   }
@@ -167,31 +156,31 @@ function TodayPriorityTasks({ openTasks, onTaskClick, customers = [] }) {
       {overdue.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <TriangleAlert className="w-3.5 h-3.5 text-red-600" />
-            <span className="text-xs font-bold text-red-700 uppercase tracking-wide">Überfällig ({overdue.length})</span>
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-xs font-bold text-red-700 uppercase tracking-wide">Überfällig — sofort handeln ({overdue.length})</span>
           </div>
-          <div className="space-y-1.5">{overdue.map(t => renderRow(t, 'overdue'))}</div>
+          <div className="space-y-1.5">{overdue.map(t => renderRow(t))}</div>
         </div>
       )}
       {dueToday.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-3.5 h-3.5 text-orange-600" />
+            <span className="w-2 h-2 rounded-full bg-orange-500" />
             <span className="text-xs font-bold text-orange-700 uppercase tracking-wide">Heute fällig ({dueToday.length})</span>
           </div>
-          <div className="space-y-1.5">{dueToday.map(t => renderRow(t, 'today'))}</div>
+          <div className="space-y-1.5">{dueToday.map(t => renderRow(t))}</div>
         </div>
       )}
       {dueThisWeek.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <CalendarClock className="w-3.5 h-3.5 text-amber-600" />
+            <span className="w-2 h-2 rounded-full bg-amber-400" />
             <span className="text-xs font-bold text-amber-700 uppercase tracking-wide">Diese Woche ({dueThisWeek.length})</span>
           </div>
-          <div className="space-y-1.5">{dueThisWeek.slice(0, 4).map(t => renderRow(t, 'week'))}</div>
+          <div className="space-y-1.5">{dueThisWeek.slice(0, 4).map(t => renderRow(t))}</div>
         </div>
       )}
-      <button onClick={() => navigate('/aufgaben')} className="flex items-center gap-1.5 text-xs text-primary hover:underline pt-1">
+      <button onClick={() => navigate('/aufgaben')} className="flex items-center gap-1.5 text-xs text-primary hover:underline pt-1 font-medium">
         <ArrowRight className="w-3 h-3" /> Alle Aufgaben öffnen
       </button>
     </div>
@@ -211,42 +200,61 @@ function KuendigungsTermine({ contracts }) {
 
   if (termine.length === 0) {
     return (
-      <div className="flex items-center gap-2 py-4 text-emerald-600">
-        <CalendarX2 className="w-4 h-4" />
-        <span className="text-sm font-medium">Keine Kündigungstermine in den nächsten 180 Tagen ✓</span>
+      <div className="flex items-center gap-2.5 py-3 px-3 bg-emerald-50 rounded-lg border border-emerald-100">
+        <CalendarX2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+        <span className="text-sm font-medium text-emerald-700">Keine Kündigungstermine in den nächsten 180 Tagen ✓</span>
       </div>
     )
   }
 
+  // Action labels based on days remaining
+  const getAction = (days) => {
+    if (days <= 0)  return { label: 'SOFORT KÜNDIGEN', color: 'bg-red-600 text-white' }
+    if (days <= 7)  return { label: 'JETZT HANDELN', color: 'bg-red-500 text-white' }
+    if (days <= 30) return { label: 'DRINGEND', color: 'bg-orange-500 text-white' }
+    if (days <= 60) return { label: 'IN VORBEREITUNG', color: 'bg-amber-400 text-amber-900' }
+    return { label: 'BEOBACHTEN', color: 'bg-slate-100 text-slate-600' }
+  }
+
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       {termine.map(c => {
         const days = c._days
+        const action = getAction(days)
         return (
           <button
             key={c.id}
             onClick={() => navigate('/vertraege')}
-            className={cn('w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all hover:shadow-sm', urgencyBg(days))}
+            className={cn('w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all hover:shadow-md', urgencyBg(days))}
           >
-            <div className="w-7 h-7 rounded-md bg-red-100 flex items-center justify-center flex-shrink-0">
-              <CalendarX2 className="w-3.5 h-3.5 text-red-600" />
+            {/* Days countdown — prominent */}
+            <div className={cn('flex-shrink-0 w-14 h-14 rounded-xl flex flex-col items-center justify-center border-2',
+              days <= 0  ? 'bg-red-600 border-red-700 text-white' :
+              days <= 7  ? 'bg-red-100 border-red-300 text-red-700' :
+              days <= 30 ? 'bg-orange-100 border-orange-300 text-orange-700' :
+              'bg-slate-100 border-slate-200 text-slate-600'
+            )}>
+              <span className="text-lg font-black leading-none">{Math.abs(days)}</span>
+              <span className="text-[9px] font-bold uppercase leading-none mt-0.5">{days <= 0 ? 'überfällig' : 'Tage'}</span>
             </div>
+
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold truncate">{c.customer_name || '–'}</p>
-              <p className="text-[10px] text-muted-foreground truncate">{c.insurer}{c.product ? ` · ${c.product}` : ''}{c.policy_number ? ` · ${c.policy_number}` : ''}</p>
-            </div>
-            <div className="text-right flex-shrink-0">
-              <p className={cn('text-xs font-bold', urgencyColor(days))}>
-                {days <= 0 ? `Überfällig (${Math.abs(days)}d)` : days === 0 ? 'Heute!' : `${days} Tage`}
+              <p className="text-sm font-bold truncate">{c.customer_name || '–'}</p>
+              <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                {c.insurer}{c.product ? ` · ${c.product}` : ''}{c.policy_number ? ` · ${c.policy_number}` : ''}
               </p>
-              <p className="text-[10px] text-muted-foreground">
-                {format(parseISO(c.cancellation_deadline), 'd. MMM yyyy', { locale: de })}
+              <p className="text-[10px] font-semibold text-slate-500 mt-1">
+                Frist: {format(parseISO(c.cancellation_deadline), 'd. MMMM yyyy', { locale: de })}
               </p>
             </div>
+
+            <span className={cn('text-[9px] px-2 py-1 rounded-lg font-bold flex-shrink-0', action.color)}>
+              {action.label}
+            </span>
           </button>
         )
       })}
-      <button onClick={() => navigate('/vertraege')} className="flex items-center gap-1.5 text-xs text-primary hover:underline pt-1">
+      <button onClick={() => navigate('/vertraege')} className="flex items-center gap-1.5 text-xs text-primary hover:underline pt-1 font-medium">
         <ArrowRight className="w-3 h-3" /> Alle Verträge öffnen
       </button>
     </div>
@@ -263,45 +271,70 @@ function UrgentContracts({ expiringContracts, onContractSelect }) {
 
   if (urgent.length === 0) {
     return (
-      <div className="flex items-center gap-2 py-4 text-emerald-600">
-        <RefreshCw className="w-4 h-4" />
-        <span className="text-sm font-medium">Keine ablaufenden Verträge in den nächsten 90 Tagen ✓</span>
+      <div className="flex items-center gap-2.5 py-3 px-3 bg-emerald-50 rounded-lg border border-emerald-100">
+        <RefreshCw className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+        <span className="text-sm font-medium text-emerald-700">Keine ablaufenden Verträge in den nächsten 90 Tagen ✓</span>
       </div>
     )
   }
 
+  // Handlungs-Labels statt Status-Labels
+  const getNextAction = (c) => {
+    const stage = c.renewal_stage || 'early'
+    const days = c._days
+    if (stage === 'early' && days <= 30)   return { text: '→ Kunde kontaktieren', color: 'text-red-600' }
+    if (stage === 'early')                  return { text: '→ Police prüfen', color: 'text-amber-600' }
+    if (stage === 'contact')                return { text: '→ Offerte vorbereiten', color: 'text-blue-600' }
+    if (stage === 'offer')                  return { text: '→ Offerte nachfassen', color: 'text-violet-600' }
+    if (stage === 'negotiation')            return { text: '→ Verhandlung abschliessen', color: 'text-orange-600' }
+    return { text: '→ Verlängerung prüfen', color: 'text-slate-500' }
+  }
+
+  const stageColors = {
+    early:       'bg-slate-100 text-slate-600',
+    contact:     'bg-blue-100 text-blue-700',
+    offer:       'bg-violet-100 text-violet-700',
+    negotiation: 'bg-orange-100 text-orange-700',
+  }
+
+  const stageLabels = { early: 'Early', contact: 'Kontakt', offer: 'Angebot', negotiation: 'Verhandlung', renewed: 'Erneuert', lost: 'Verloren' }
+
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       {urgent.map(c => {
         const days = c._days
-        const stageLabel = { early: 'Early', contact: 'Kontakt', offer: 'Angebot', negotiation: 'Verhandlung', renewed: 'Erneuert', lost: 'Verloren' }[c.renewal_stage] || 'Early'
+        const nextAction = getNextAction(c)
         return (
           <button
             key={c.id}
             onClick={() => onContractSelect?.(c)}
-            className={cn('w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all hover:shadow-sm', urgencyBg(days))}
+            className={cn('w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all hover:shadow-md', urgencyBg(days))}
           >
-            <div className="w-7 h-7 rounded-md bg-orange-100 flex items-center justify-center flex-shrink-0">
-              <RefreshCw className="w-3.5 h-3.5 text-orange-600" />
+            <div className={cn('flex-shrink-0 w-12 h-12 rounded-xl flex flex-col items-center justify-center border',
+              days !== null && days <= 14 ? 'bg-orange-100 border-orange-300 text-orange-700' :
+              days !== null && days <= 30 ? 'bg-amber-50 border-amber-200 text-amber-700' :
+              'bg-slate-50 border-slate-200 text-slate-500'
+            )}>
+              <span className="text-base font-black leading-none">{days === null ? '–' : days <= 0 ? '!' : days}</span>
+              {days !== null && days > 0 && <span className="text-[9px] font-bold uppercase leading-none mt-0.5">Tage</span>}
             </div>
+
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold truncate">{c.customer_name || '–'}</p>
-              <p className="text-[10px] text-muted-foreground">{c.insurer} · {c.sparte || c.insurance_type || '–'}</p>
+              <p className="text-sm font-bold truncate">{c.customer_name || '–'}</p>
+              <p className="text-[11px] text-muted-foreground">{c.insurer} · {c.sparte || c.insurance_type || '–'}</p>
+              <p className={cn('text-[11px] font-semibold mt-0.5', nextAction.color)}>{nextAction.text}</p>
             </div>
-            <span className={cn('text-[9px] px-1.5 py-0.5 rounded font-semibold flex-shrink-0', {
-              'bg-slate-100 text-slate-600': c.renewal_stage === 'early' || !c.renewal_stage,
-              'bg-blue-100 text-blue-700': c.renewal_stage === 'contact',
-              'bg-violet-100 text-violet-700': c.renewal_stage === 'offer',
-              'bg-orange-100 text-orange-700': c.renewal_stage === 'negotiation',
-            })}>{stageLabel}</span>
-            <span className={cn('text-xs flex-shrink-0 w-16 text-right', urgencyColor(days))}>
-              {days === null ? '–' : days <= 0 ? 'Abgelaufen' : `${days}T`}
+
+            <span className={cn('text-[9px] px-1.5 py-1 rounded-lg font-bold flex-shrink-0',
+              stageColors[c.renewal_stage || 'early'] || 'bg-slate-100 text-slate-600'
+            )}>
+              {stageLabels[c.renewal_stage] || 'Early'}
             </span>
           </button>
         )
       })}
       {expiringContracts.length > 8 && (
-        <button onClick={() => navigate('/vertraege')} className="flex items-center gap-1.5 text-xs text-primary hover:underline pt-1">
+        <button onClick={() => navigate('/vertraege')} className="flex items-center gap-1.5 text-xs text-primary hover:underline pt-1 font-medium">
           <ArrowRight className="w-3 h-3" /> +{expiringContracts.length - 8} weitere anzeigen
         </button>
       )}
@@ -323,9 +356,9 @@ function CustomerActionItems({ data, onCustomerSelect }) {
 
   if (total === 0) {
     return (
-      <div className="flex items-center gap-2 py-4 text-emerald-600">
-        <Users className="w-4 h-4" />
-        <span className="text-sm font-medium">Keine Kundenmassnahmen ausstehend ✓</span>
+      <div className="flex items-center gap-2.5 py-3 px-3 bg-emerald-50 rounded-lg border border-emerald-100">
+        <Users className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+        <span className="text-sm font-medium text-emerald-700">Keine Kundenmassnahmen ausstehend ✓</span>
       </div>
     )
   }
@@ -357,9 +390,7 @@ function CustomerActionItems({ data, onCustomerSelect }) {
             {c.first_name?.[0]}{c.last_name?.[0]}
           </div>
           <div className="flex-1 min-w-0">
-            <span className="text-xs font-semibold truncate block">
-              {c.first_name} {c.last_name}
-            </span>
+            <span className="text-xs font-semibold truncate block">{c.first_name} {c.last_name}</span>
             <p className="text-[10px] text-muted-foreground">Coverage-Lücke erkannt</p>
           </div>
           <span className="text-[9px] px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded font-semibold flex-shrink-0">LÜCKE</span>
@@ -392,11 +423,7 @@ function AllTasksSplit({ openTasks, onTaskClick, customers = [] }) {
   const adminTasks    = openTasks.filter(t => !CONTRACT_TASK_TYPES.has(t.task_type))
   const contractTasks = openTasks.filter(t => CONTRACT_TASK_TYPES.has(t.task_type))
 
-  const statusLabels = {
-    open: 'Offen',
-    in_progress: 'In Bearbeitung',
-    waiting: 'Wartend',
-  }
+  const statusLabels = { open: 'Offen', in_progress: 'In Bearb.', waiting: 'Wartend' }
 
   const renderTask = (t) => {
     const days = daysUntil(t.due_date)
@@ -404,10 +431,7 @@ function AllTasksSplit({ openTasks, onTaskClick, customers = [] }) {
       <button
         key={t.id}
         onClick={() => onTaskClick(t)}
-        className={cn(
-          'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-all hover:shadow-sm',
-          urgencyBg(days)
-        )}
+        className={cn('w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-all hover:shadow-sm', urgencyBg(days))}
       >
         <span className={cn('w-1 h-6 rounded-full flex-shrink-0', {
           'bg-red-500':    t.priority === 'urgent' || (days !== null && days <= 0),
@@ -418,10 +442,8 @@ function AllTasksSplit({ openTasks, onTaskClick, customers = [] }) {
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium truncate">{t.title}</p>
           {t.customer_name && (
-            <button 
-              onClick={(e) => { e.stopPropagation(); navigate(`/kunden/${t.customer_id}`) }}
-              className="text-[10px] text-blue-700 font-medium hover:underline"
-            >
+            <button onClick={(e) => { e.stopPropagation(); navigate(`/kunden/${t.customer_id}`) }}
+              className="text-[10px] text-blue-700 font-medium hover:underline">
               {t.customer_name}
             </button>
           )}
@@ -440,11 +462,10 @@ function AllTasksSplit({ openTasks, onTaskClick, customers = [] }) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-      {/* Administrative */}
       <div>
         <div className="flex items-center gap-2 mb-2 pb-2 border-b border-blue-100">
           <ListTodo className="w-4 h-4 text-blue-500" />
-          <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">Administrative Aufgaben</span>
+          <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">Administrative</span>
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold ml-auto">{adminTasks.length}</span>
         </div>
         {adminTasks.length === 0
@@ -457,8 +478,6 @@ function AllTasksSplit({ openTasks, onTaskClick, customers = [] }) {
           </button>
         )}
       </div>
-
-      {/* Contract Workflows */}
       <div>
         <div className="flex items-center gap-2 mb-2 pb-2 border-b border-orange-100">
           <RefreshCw className="w-4 h-4 text-orange-500" />
@@ -501,11 +520,8 @@ function CompactKpiStrip({ data }) {
   return (
     <div className="grid grid-cols-4 lg:grid-cols-8 gap-2">
       {kpis.map(k => (
-        <button
-          key={k.label}
-          onClick={() => navigate(k.path)}
-          className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors border border-transparent hover:border-border text-center"
-        >
+        <button key={k.label} onClick={() => navigate(k.path)}
+          className="flex flex-col items-center gap-1 py-2.5 px-2 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors border border-transparent hover:border-border text-center">
           <span className={cn('text-base font-bold leading-none', k.color)}>{k.value}</span>
           <span className="text-[9px] text-muted-foreground font-medium leading-tight">{k.label}</span>
         </button>
@@ -531,49 +547,66 @@ function SalesPipelineSummary({ data }) {
     return d
   }, [activeLeads])
 
+  // Leads with high conversion probability
+  const hotLeads = activeLeads.filter(l => (l.lead_score || 0) >= 70).length
+  const warmLeads = activeLeads.filter(l => (l.lead_score || 0) >= 40 && (l.lead_score || 0) < 70).length
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
       <div>
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2.5">Lead Pipeline</p>
+        {/* Hot leads highlight */}
+        {hotLeads > 0 && (
+          <div className="flex items-center gap-2 p-2 bg-emerald-50 border border-emerald-100 rounded-lg mb-2">
+            <Flame className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+            <span className="text-xs font-bold text-emerald-700">{hotLeads} heisse Leads (&gt;70%)</span>
+          </div>
+        )}
         <div className="space-y-1.5">
           {[
-            { label: 'Neu',         count: leadStages.new,       color: 'bg-slate-400' },
-            { label: 'Kontaktiert', count: leadStages.contacted, color: 'bg-blue-400' },
-            { label: 'Qualifiziert',count: leadStages.qualified, color: 'bg-violet-500' },
+            { label: 'Neu',          count: leadStages.new,       color: 'bg-slate-400' },
+            { label: 'Kontaktiert',  count: leadStages.contacted, color: 'bg-blue-400' },
+            { label: 'Qualifiziert', count: leadStages.qualified, color: 'bg-violet-500' },
           ].map(s => (
             <div key={s.label} className="flex items-center gap-2">
-              <span className="text-[10px] text-muted-foreground w-18">{s.label}</span>
-              <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+              <span className="text-[10px] text-muted-foreground w-20">{s.label}</span>
+              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                 <div className={cn('h-full rounded-full', s.color)} style={{ width: `${activeLeads.length > 0 ? (s.count / activeLeads.length) * 100 : 0}%` }} />
               </div>
-              <span className="text-xs font-bold w-4 text-right">{s.count}</span>
+              <span className="text-xs font-bold w-5 text-right">{s.count}</span>
             </div>
           ))}
         </div>
-        <button onClick={() => navigate('/leads')} className="flex items-center gap-1 text-xs text-primary mt-3 hover:underline">
+        <button onClick={() => navigate('/leads')} className="flex items-center gap-1 text-xs text-primary mt-3 hover:underline font-medium">
           <ArrowRight className="w-3 h-3" /> Leads öffnen
         </button>
       </div>
 
       <div>
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2.5">Renewal Pipeline</p>
+        {renewalStages.negotiation > 0 && (
+          <div className="flex items-center gap-2 p-2 bg-orange-50 border border-orange-100 rounded-lg mb-2">
+            <AlertCircle className="w-3.5 h-3.5 text-orange-600 flex-shrink-0" />
+            <span className="text-xs font-bold text-orange-700">{renewalStages.negotiation} in Verhandlung</span>
+          </div>
+        )}
         <div className="space-y-1.5">
           {[
-            { label: 'Early',       count: renewalStages.early,       color: 'bg-slate-300' },
-            { label: 'Kontakt',     count: renewalStages.contact,     color: 'bg-amber-400' },
-            { label: 'Angebot',     count: renewalStages.offer,       color: 'bg-orange-500' },
-            { label: 'Verhandlung', count: renewalStages.negotiation, color: 'bg-red-500' },
+            { label: 'Early',        count: renewalStages.early,       color: 'bg-slate-300' },
+            { label: 'Kontakt',      count: renewalStages.contact,     color: 'bg-amber-400' },
+            { label: 'Angebot',      count: renewalStages.offer,       color: 'bg-orange-500' },
+            { label: 'Verhandlung',  count: renewalStages.negotiation, color: 'bg-red-500' },
           ].map(s => (
             <div key={s.label} className="flex items-center gap-2">
-              <span className="text-[10px] text-muted-foreground w-18">{s.label}</span>
-              <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+              <span className="text-[10px] text-muted-foreground w-20">{s.label}</span>
+              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                 <div className={cn('h-full rounded-full', s.color)} style={{ width: `${expiringContracts.length > 0 ? (s.count / expiringContracts.length) * 100 : 0}%` }} />
               </div>
-              <span className="text-xs font-bold w-4 text-right">{s.count}</span>
+              <span className="text-xs font-bold w-5 text-right">{s.count}</span>
             </div>
           ))}
         </div>
-        <button onClick={() => navigate('/vertraege')} className="flex items-center gap-1 text-xs text-primary mt-3 hover:underline">
+        <button onClick={() => navigate('/vertraege')} className="flex items-center gap-1 text-xs text-primary mt-3 hover:underline font-medium">
           <ArrowRight className="w-3 h-3" /> Verträge öffnen
         </button>
       </div>
@@ -583,8 +616,8 @@ function SalesPipelineSummary({ data }) {
         <div className="space-y-1.5">
           {[
             { label: 'Coverage-Lücken', value: customersWithCriticalGaps.length, color: 'text-pink-600', path: '/coverage-intelligence' },
-            { label: 'Conversion Rate', value: `${conversionRate}%`,            color: 'text-emerald-600', path: '/leads' },
-            { label: 'Aktive Policen',  value: activeContracts.length,           color: 'text-blue-600', path: '/vertraege' },
+            { label: 'Conversion Rate',  value: `${conversionRate}%`,            color: 'text-emerald-600', path: '/leads' },
+            { label: 'Aktive Policen',   value: activeContracts.length,           color: 'text-blue-600', path: '/vertraege' },
           ].map(item => (
             <button key={item.label} onClick={() => navigate(item.path)}
               className="w-full flex items-center justify-between px-2.5 py-1.5 rounded bg-muted/40 hover:bg-muted/70 transition-colors">
@@ -630,10 +663,10 @@ function CustomerQuickView({ customer, contracts, tasks, documents, onClose }) {
         <div className="p-5 space-y-4">
           <div className="grid grid-cols-4 gap-2">
             {[
-              { label: 'Policen',   value: custContracts.length,  color: 'text-blue-600' },
-              { label: 'Prämie/J.',  value: fmtChf(totalPremium), color: 'text-emerald-600' },
-              { label: 'Aufgaben',  value: custTasks.length,       color: 'text-amber-600' },
-              { label: 'Dokumente', value: custDocs.length,        color: 'text-slate-600' },
+              { label: 'Policen',    value: custContracts.length,  color: 'text-blue-600' },
+              { label: 'Prämie/J.', value: fmtChf(totalPremium),  color: 'text-emerald-600' },
+              { label: 'Aufgaben',  value: custTasks.length,        color: 'text-amber-600' },
+              { label: 'Dokumente', value: custDocs.length,         color: 'text-slate-600' },
             ].map(k => (
               <div key={k.label} className="text-center p-2 rounded-lg bg-muted/40">
                 <p className={cn('text-base font-bold', k.color)}>{k.value}</p>
@@ -648,7 +681,8 @@ function CustomerQuickView({ customer, contracts, tasks, documents, onClose }) {
                 {custContracts.slice(0, 5).map(c => {
                   const days = daysUntil(c.end_date)
                   return (
-                    <button key={c.id} onClick={() => navigate(`/vertraege`)} className="w-full flex items-center gap-2 p-2 rounded-lg bg-muted/30 hover:bg-muted/50 text-xs transition-colors text-left">
+                    <button key={c.id} onClick={() => navigate('/vertraege')}
+                      className="w-full flex items-center gap-2 p-2 rounded-lg bg-muted/30 hover:bg-muted/50 text-xs transition-colors text-left">
                       <span className={cn('w-1.5 h-5 rounded-full flex-shrink-0', {
                         'bg-emerald-400': c.status === 'active',
                         'bg-orange-400':  c.status === 'renewal_due',
@@ -668,7 +702,8 @@ function CustomerQuickView({ customer, contracts, tasks, documents, onClose }) {
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Offene Aufgaben</p>
               <div className="space-y-1">
                 {custTasks.slice(0, 3).map(t => (
-                  <button key={t.id} onClick={() => navigate('/aufgaben')} className="w-full flex items-center gap-2 p-2 rounded-lg bg-amber-50 border border-amber-100 hover:bg-amber-100 text-xs transition-colors text-left">
+                  <button key={t.id} onClick={() => navigate('/aufgaben')}
+                    className="w-full flex items-center gap-2 p-2 rounded-lg bg-amber-50 border border-amber-100 hover:bg-amber-100 text-xs transition-colors text-left">
                     <CheckSquare className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
                     <span className="truncate">{t.title}</span>
                     {t.due_date && <span className={cn('ml-auto flex-shrink-0', urgencyColor(daysUntil(t.due_date)))}>{fmtDate(t.due_date)}</span>}
@@ -687,7 +722,6 @@ function CustomerQuickView({ customer, contracts, tasks, documents, onClose }) {
 export default function MasterControlDashboard({ data, onTaskClick }) {
   const navigate = useNavigate()
   const [selectedCustomer, setSelectedCustomer] = useState(null)
-  const [open, setOpen] = useState(false) // For Section component
 
   const { tasks = [], contracts = [], documents = [], customers = [] } = data
   const openTasks = data.openTasks || []
@@ -716,31 +750,38 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
 
       {/* ═══════════════════════════════════════════════════════════════════════
           ZONE 1 — KRITISCHER BEREICH: Operatives Führungsinstrument
-          "Wo verliere ich heute Geld oder Kunden?"
       ═══════════════════════════════════════════════════════════════════════ */}
       <div className="rounded-2xl border-2 border-red-200 bg-gradient-to-br from-red-50 via-orange-50/60 to-amber-50/40 shadow-md overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-3.5 bg-gradient-to-r from-red-700 to-red-600 text-white">
-          <TriangleAlert className="w-4 h-4 flex-shrink-0" />
-          <span className="text-sm font-bold uppercase tracking-widest flex-1">⚡ Operative Aufgaben — Tagessteuerung</span>
-          {totalUrgent > 0 && (
-            <span className="bg-white/20 text-white text-xs font-bold px-2.5 py-0.5 rounded-full animate-pulse">
-              {totalUrgent} dringend
-            </span>
+        <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-red-800 to-red-600 text-white">
+          <TriangleAlert className="w-5 h-5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-black uppercase tracking-widest">⚡ Operative Aufgaben — Tagessteuerung</p>
+            <p className="text-[11px] text-red-200 mt-0.5">Risiken · Fristen · Handlungsbedarf</p>
+          </div>
+          {totalUrgent > 0 ? (
+            <div className="flex flex-col items-center bg-white/15 rounded-xl px-3 py-1.5 border border-white/20">
+              <span className="text-2xl font-black leading-none">{totalUrgent}</span>
+              <span className="text-[10px] text-red-200 font-bold uppercase">dringend</span>
+            </div>
+          ) : (
+            <span className="bg-emerald-500/80 text-white text-xs font-bold px-3 py-1 rounded-full">Alles OK ✓</span>
           )}
         </div>
 
         <div className="p-4 space-y-3">
 
           {/* 1a — Heutige Prioritäten */}
-          <div className="rounded-xl border border-red-200/80 bg-white/80 overflow-hidden shadow-sm">
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-red-100 bg-red-50/60">
-              <Zap className="w-3.5 h-3.5 text-red-600" />
-              <span className="text-xs font-bold text-red-800 uppercase tracking-wide flex-1">Heutige Prioritäten</span>
-              {(overdueCount + todayCount) > 0 && (
-                <span className="text-[10px] bg-red-600 text-white px-1.5 py-0.5 rounded-full font-bold animate-pulse">
-                  {overdueCount + todayCount}
+          <div className="rounded-xl border border-red-200/80 bg-white/85 overflow-hidden shadow-sm">
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-red-100 bg-gradient-to-r from-red-50 to-orange-50/50">
+              <Zap className="w-4 h-4 text-red-600" />
+              <span className="text-xs font-black text-red-800 uppercase tracking-wide flex-1">Heutige Prioritäten</span>
+              {(overdueCount + todayCount) > 0 ? (
+                <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">
+                  {overdueCount + todayCount} kritisch
                 </span>
+              ) : (
+                <span className="text-[10px] text-emerald-600 font-semibold">✓ Klar</span>
               )}
             </div>
             <div className="px-4 py-3">
@@ -749,17 +790,21 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
           </div>
 
           {/* 1b — Kündigungstermine */}
-          <div className="rounded-xl border border-red-200/80 bg-white/80 overflow-hidden shadow-sm">
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-red-100 bg-red-50/60">
-              <CalendarX2 className="w-3.5 h-3.5 text-red-600" />
-              <span className="text-xs font-bold text-red-800 uppercase tracking-wide flex-1">Kündigungstermine</span>
-              <span className="text-[10px] text-red-500 mr-1">nächste 180 Tage</span>
-              {kuendigungsTermine.length > 0 && (
-                <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-bold',
+          <div className="rounded-xl border border-red-200/80 bg-white/85 overflow-hidden shadow-sm">
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-red-100 bg-gradient-to-r from-red-50 to-orange-50/50">
+              <CalendarX2 className="w-4 h-4 text-red-600" />
+              <div className="flex-1">
+                <span className="text-xs font-black text-red-800 uppercase tracking-wide">Kündigungstermine</span>
+                <span className="text-[10px] text-red-400 ml-2">nächste 180 Tage</span>
+              </div>
+              {kuendigungsTermine.length > 0 ? (
+                <span className={cn('text-xs px-2 py-0.5 rounded-full font-bold',
                   kuendigungDringend > 0 ? 'bg-red-600 text-white animate-pulse' : 'bg-amber-100 text-amber-800'
                 )}>
-                  {kuendigungsTermine.length}
+                  {kuendigungDringend > 0 ? `${kuendigungDringend} dringend` : `${kuendigungsTermine.length} total`}
                 </span>
+              ) : (
+                <span className="text-[10px] text-emerald-600 font-semibold">✓ Klar</span>
               )}
             </div>
             <div className="px-4 py-3">
@@ -768,15 +813,19 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
           </div>
 
           {/* 1c — Kritische Vertragsabläufe */}
-          <div className="rounded-xl border border-orange-200/80 bg-white/80 overflow-hidden shadow-sm">
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-orange-100 bg-orange-50/60">
-              <RefreshCw className="w-3.5 h-3.5 text-orange-600" />
-              <span className="text-xs font-bold text-orange-800 uppercase tracking-wide flex-1">Kritische Vertragsabläufe</span>
-              <span className="text-[10px] text-orange-500 mr-1">{data.expiringContracts.length} / 90 Tage</span>
-              {urgentContractCount > 0 && (
-                <span className="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">
+          <div className="rounded-xl border border-orange-200/80 bg-white/85 overflow-hidden shadow-sm">
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-orange-100 bg-gradient-to-r from-orange-50 to-amber-50/50">
+              <RefreshCw className="w-4 h-4 text-orange-600" />
+              <div className="flex-1">
+                <span className="text-xs font-black text-orange-800 uppercase tracking-wide">Kritische Vertragsabläufe</span>
+                <span className="text-[10px] text-orange-400 ml-2">{data.expiringContracts.length} / 90 Tage</span>
+              </div>
+              {urgentContractCount > 0 ? (
+                <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full font-bold">
                   {urgentContractCount} kritisch
                 </span>
+              ) : (
+                <span className="text-[10px] text-emerald-600 font-semibold">✓ Klar</span>
               )}
             </div>
             <div className="px-4 py-3">
@@ -784,7 +833,7 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
             </div>
           </div>
 
-          {/* 1d — Offene Aufgaben (inline, eingeklappt) */}
+          {/* 1d — Alle Aufgaben (eingeklappt) */}
           <Section
             title="Alle offenen Aufgaben"
             icon={CheckSquare}
@@ -835,7 +884,7 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
       </Section>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          ZONE 4 — KPIs (Management-Ansicht, eingeklappt)
+          ZONE 4 — KPIs (kompakt, sekundär)
       ═══════════════════════════════════════════════════════════════════════ */}
       <Section
         title="Executive KPIs"
