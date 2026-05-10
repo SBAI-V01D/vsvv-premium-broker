@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Input } from '@/components/ui/input'
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { DialogFooter } from '@/components/ui/dialog'
-import { usePostalCodeLookup } from '@/hooks/usePostalCodeLookup'
+import { lookupPostalCode, isValidPostalCode, fixOcrPostalCode } from '@/lib/swissPostalCodes'
 import PostalCodeInput from '@/components/common/PostalCodeInput'
 
 const CANTONS = ["AG","AI","AR","BE","BL","BS","FR","GE","GL","GR","JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG","TI","UR","VD","VS","ZG","ZH"]
@@ -243,26 +243,40 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
    }, [customer?.id])
 
    const [autoFilled, setAutoFilled] = useState(false)
-   const { plzError, plzSuggestions, handlePostalCodeChange, selectSuggestion } = usePostalCodeLookup()
+   const [plzError, setPlzError] = useState('')
+   const [plzSuggestions, setPlzSuggestions] = useState(null)
 
-   // Auto-lookup when customer is loaded/changed with zip_code but missing city/canton
-   useEffect(() => {
-     const zip = customer?.zip_code
-     const hasCity = customer?.city && customer.city.trim() !== ''
-     const hasCanton = customer?.canton && customer.canton.trim() !== ''
-     if (zip && zip.length === 4 && (!hasCity || !hasCanton)) {
-       handlePostalCodeChange(zip, ({ city, canton, autoFilled: auto }) => {
-         if (city || canton) {
-           setForm(prev => ({
-             ...prev,
-             city: prev.city || city || '',
-             canton: prev.canton || canton || '',
-           }))
-           setAutoFilled(true)
-         }
-       })
+   // Direct PLZ lookup — no hook indirection
+   const doPlzLookup = useCallback((rawPlz, keepExisting = false) => {
+     if (!rawPlz) return
+     const plz = fixOcrPostalCode(rawPlz)
+     if (plz.length !== 4) return
+     if (!isValidPostalCode(plz)) { setPlzError('Ungültige PLZ'); return }
+     setPlzError('')
+     setPlzSuggestions(null)
+     const result = lookupPostalCode(plz)
+     if (!result) return
+     if (!Array.isArray(result)) {
+       // Single match
+       setForm(prev => ({
+         ...prev,
+         city: keepExisting && prev.city ? prev.city : result.ort,
+         canton: keepExisting && prev.canton ? prev.canton : result.kanton,
+       }))
+       setAutoFilled(true)
+     } else if (result.length > 1) {
+       // Multiple — show picker, don't clear existing
+       setPlzSuggestions(result)
      }
-   }, [customer?.id, customer?.zip_code])
+   }, [])
+
+   // Auto-lookup on load if city/canton missing
+   useEffect(() => {
+     if (form.zip_code && (!form.city || !form.canton)) {
+       doPlzLookup(form.zip_code, true)
+     }
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+   }, [customer?.id])
 
    const { data: advisors = [] } = useQuery({
      queryKey: ['advisors'],
@@ -273,14 +287,9 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
 
   const handlePlzChange = (plz) => {
     setForm(prev => ({ ...prev, zip_code: plz }))
-    handlePostalCodeChange(plz, ({ city, canton, autoFilled: auto }) => {
-      setForm(prev => ({
-        ...prev,
-        city: city || prev.city,
-        canton: canton || prev.canton,
-      }))
-      setAutoFilled(auto || false)
-    })
+    setAutoFilled(false)
+    setPlzSuggestions(null)
+    if (plz.length === 4) doPlzLookup(plz, false)
   }
 
   const handleSubmit = (e) => {
@@ -386,11 +395,9 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
         onCityChange={(city) => { set('city', city); setAutoFilled(false) }}
         onCantonChange={(canton) => set('canton', canton)}
         onSelectSuggestion={(suggestion) => {
-          selectSuggestion(suggestion, ({ city, canton, autoFilled: auto }) => {
-            set('city', city)
-            set('canton', canton)
-            setAutoFilled(auto)
-          })
+          setForm(prev => ({ ...prev, city: suggestion.ort, canton: suggestion.kanton }))
+          setAutoFilled(true)
+          setPlzSuggestions(null)
         }}
       />
 
