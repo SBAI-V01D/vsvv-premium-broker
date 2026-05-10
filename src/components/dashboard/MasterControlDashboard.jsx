@@ -77,6 +77,23 @@ function CountBadge({ n, className }) {
 // ── 1. TODAY'S PRIORITY TASKS ─────────────────────────────────────────────────
 const CONTRACT_TASK_TYPES = new Set(['renewal', 'health_declaration'])
 
+// Maps task_type + priority to a human action label
+const getActionLabel = (t) => {
+  if (t.task_type === 'renewal')            return 'Verlängerung prüfen'
+  if (t.task_type === 'health_declaration') return 'Gesundheitserklärung einholen'
+  if (t.task_type === 'follow_up')          return 'Follow-up durchführen'
+  if (t.task_type === 'consultation')       return 'Beratungsgespräch vorbereiten'
+  if (t.task_type === 'onboarding')         return 'Kunden onboarden'
+  if (t.priority === 'urgent')              return 'Sofort handeln'
+  if (t.priority === 'high')               return 'Rückruf erforderlich'
+  const title = (t.title || '').toLowerCase()
+  if (title.includes('kündigung') || title.includes('kündigen')) return 'Kündigung bearbeiten'
+  if (title.includes('offert') || title.includes('angebot'))     return 'Offerte nachfassen'
+  if (title.includes('vertrag'))                                  return 'Vertrag prüfen'
+  if (title.includes('rückruf') || title.includes('call'))        return 'Rückruf tätigen'
+  return 'Aufgabe erledigen'
+}
+
 function TodayPriorityTasks({ openTasks, onTaskClick, customers = [] }) {
   const navigate = useNavigate()
   const today = new Date().toISOString().slice(0, 10)
@@ -97,55 +114,85 @@ function TodayPriorityTasks({ openTasks, onTaskClick, customers = [] }) {
     )
   }
 
-  const statusLabels = { open: 'Offen', in_progress: 'In Bearb.', waiting: 'Wartend', completed: 'Erledigt', done: 'Erledigt' }
-
-  const renderRow = (t) => {
+  const renderRow = (t, level) => {
     const days = daysUntil(t.due_date)
     const isContract = CONTRACT_TASK_TYPES.has(t.task_type)
     const isOverdue = days !== null && days <= 0
-    const isToday = t.due_date === today
+    const actionLabel = getActionLabel(t)
+
+    // Visual config per level
+    const levelConfig = {
+      critical: {
+        card:   'bg-red-50 border-red-300 hover:border-red-400 hover:shadow-red-100',
+        stripe: 'bg-red-500',
+        icon:   'bg-red-100',
+        iconEl: <AlertCircle className="w-4 h-4 text-red-600" />,
+        badge:  'bg-red-600 text-white',
+        days:   'text-red-600 font-black text-base',
+        action: 'text-red-700',
+      },
+      today: {
+        card:   'bg-orange-50 border-orange-200 hover:border-orange-300 hover:shadow-orange-100',
+        stripe: 'bg-orange-500',
+        icon:   'bg-orange-100',
+        iconEl: isContract ? <RefreshCw className="w-4 h-4 text-orange-600" /> : <Clock className="w-4 h-4 text-orange-600" />,
+        badge:  'bg-orange-500 text-white',
+        days:   'text-orange-600 font-bold text-sm',
+        action: 'text-orange-700',
+      },
+      week: {
+        card:   'bg-amber-50/60 border-amber-200 hover:border-amber-300',
+        stripe: 'bg-amber-400',
+        icon:   'bg-amber-100',
+        iconEl: isContract ? <RefreshCw className="w-4 h-4 text-amber-600" /> : <CalendarClock className="w-4 h-4 text-amber-600" />,
+        badge:  'bg-amber-100 text-amber-800',
+        days:   'text-amber-600 font-semibold text-sm',
+        action: 'text-amber-700',
+      },
+    }
+    const cfg = levelConfig[level]
+
     return (
       <button
         key={t.id}
         onClick={() => onTaskClick(t)}
         className={cn(
-          'w-full flex items-center gap-3 px-3 py-3 rounded-lg border text-left transition-all hover:shadow-md group',
-          urgencyBg(days)
+          'w-full flex items-center gap-3 px-3 py-3 rounded-xl border-2 text-left transition-all hover:shadow-md',
+          cfg.card
         )}
       >
-        {/* Left urgency stripe */}
-        <span className={cn('w-1.5 h-10 rounded-full flex-shrink-0', {
-          'bg-red-500':    isOverdue || t.priority === 'urgent',
-          'bg-orange-400': !isOverdue && (isToday || t.priority === 'high' || (days !== null && days <= 7)),
-          'bg-blue-400':   !isOverdue && !isToday && t.priority === 'medium',
-          'bg-slate-200':  !isOverdue && !isToday && (!t.priority || t.priority === 'low'),
-        })} />
+        {/* Urgency stripe */}
+        <span className={cn('w-1.5 h-12 rounded-full flex-shrink-0', cfg.stripe)} />
 
-        {/* Type icon */}
-        <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-          isContract ? 'bg-orange-100' : isOverdue ? 'bg-red-100' : 'bg-slate-100'
-        )}>
-          {isContract
-            ? <RefreshCw className="w-4 h-4 text-orange-600" />
-            : isOverdue
-              ? <AlertCircle className="w-4 h-4 text-red-600" />
-              : <ListTodo className="w-4 h-4 text-slate-500" />
-          }
+        {/* Icon */}
+        <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0', cfg.icon)}>
+          {cfg.iconEl}
         </div>
 
+        {/* Content */}
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold truncate leading-tight">{t.title}</p>
+          <p className="text-xs font-bold truncate leading-tight">{t.title}</p>
+          <p className={cn('text-[11px] font-semibold mt-0.5', cfg.action)}>→ {actionLabel}</p>
           {t.customer_name
-            ? <p className="text-[11px] text-blue-700 font-medium mt-0.5">{t.customer_name}</p>
-            : <p className="text-[10px] text-amber-600 italic mt-0.5">Kein Kunde verknüpft</p>
+            ? <p className="text-[10px] text-blue-700 font-medium mt-0.5">{t.customer_name}</p>
+            : <p className="text-[10px] text-slate-400 italic mt-0.5">Kein Kunde verknüpft</p>
           }
         </div>
 
-        <div className="flex flex-col items-end gap-1 flex-shrink-0">
-          {isContract && <span className="text-[9px] px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded font-bold">VERTRAG</span>}
-          <span className={cn('text-sm font-bold', urgencyColor(days))}>
-            {days === null ? '–' : days <= 0 ? `${Math.abs(days)}d` : days === 0 ? 'Heute' : `+${days}d`}
+        {/* Right: priority badge + countdown */}
+        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+          {isContract && (
+            <span className="text-[9px] px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded-md font-bold">VERTRAG</span>
+          )}
+          {t.priority === 'urgent' && (
+            <span className="text-[9px] px-1.5 py-0.5 bg-red-600 text-white rounded-md font-bold animate-pulse">URGENT</span>
+          )}
+          <span className={cn('font-black leading-none', cfg.days)}>
+            {days === null ? '–' : isOverdue ? `${Math.abs(days)}d` : days === 0 ? 'HEUTE' : `${days}d`}
           </span>
+          {!isOverdue && days !== null && (
+            <span className="text-[9px] text-muted-foreground">{isOverdue ? 'überfällig' : 'verbleibend'}</span>
+          )}
         </div>
       </button>
     )
@@ -155,29 +202,32 @@ function TodayPriorityTasks({ openTasks, onTaskClick, customers = [] }) {
     <div className="space-y-4">
       {overdue.length > 0 && (
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-xs font-bold text-red-700 uppercase tracking-wide">Überfällig — sofort handeln ({overdue.length})</span>
+          <div className="flex items-center gap-2 mb-2 pb-1 border-b border-red-100">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
+            <span className="text-xs font-black text-red-700 uppercase tracking-wide">🔴 Überfällig — sofort handeln</span>
+            <span className="ml-auto text-[10px] bg-red-600 text-white px-2 py-0.5 rounded-full font-bold">{overdue.length}</span>
           </div>
-          <div className="space-y-1.5">{overdue.map(t => renderRow(t))}</div>
+          <div className="space-y-2">{overdue.map(t => renderRow(t, 'critical'))}</div>
         </div>
       )}
       {dueToday.length > 0 && (
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-2 h-2 rounded-full bg-orange-500" />
-            <span className="text-xs font-bold text-orange-700 uppercase tracking-wide">Heute fällig ({dueToday.length})</span>
+          <div className="flex items-center gap-2 mb-2 pb-1 border-b border-orange-100">
+            <span className="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0" />
+            <span className="text-xs font-black text-orange-700 uppercase tracking-wide">🟠 Heute fällig</span>
+            <span className="ml-auto text-[10px] bg-orange-500 text-white px-2 py-0.5 rounded-full font-bold">{dueToday.length}</span>
           </div>
-          <div className="space-y-1.5">{dueToday.map(t => renderRow(t))}</div>
+          <div className="space-y-2">{dueToday.map(t => renderRow(t, 'today'))}</div>
         </div>
       )}
       {dueThisWeek.length > 0 && (
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-2 h-2 rounded-full bg-amber-400" />
-            <span className="text-xs font-bold text-amber-700 uppercase tracking-wide">Diese Woche ({dueThisWeek.length})</span>
+          <div className="flex items-center gap-2 mb-2 pb-1 border-b border-amber-100">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0" />
+            <span className="text-xs font-black text-amber-700 uppercase tracking-wide">🟡 Diese Woche</span>
+            <span className="ml-auto text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">{dueThisWeek.length}</span>
           </div>
-          <div className="space-y-1.5">{dueThisWeek.slice(0, 4).map(t => renderRow(t))}</div>
+          <div className="space-y-2">{dueThisWeek.slice(0, 5).map(t => renderRow(t, 'week'))}</div>
         </div>
       )}
       <button onClick={() => navigate('/aufgaben')} className="flex items-center gap-1.5 text-xs text-primary hover:underline pt-1 font-medium">
@@ -427,20 +477,31 @@ function AllTasksSplit({ openTasks, onTaskClick, customers = [] }) {
 
   const renderTask = (t) => {
     const days = daysUntil(t.due_date)
+    const isOverdue = days !== null && days <= 0
+    const isUrgent = t.priority === 'urgent' || isOverdue
+    const isHigh = !isUrgent && (t.priority === 'high' || (days !== null && days <= 7))
+    const actionLabel = getActionLabel(t)
     return (
       <button
         key={t.id}
         onClick={() => onTaskClick(t)}
-        className={cn('w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-all hover:shadow-sm', urgencyBg(days))}
+        className={cn('w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition-all hover:shadow-sm',
+          isUrgent ? 'bg-red-50 border-red-200 hover:border-red-300' :
+          isHigh   ? 'bg-orange-50 border-orange-200 hover:border-orange-300' :
+          'bg-background border-border hover:border-muted-foreground/30'
+        )}
       >
-        <span className={cn('w-1 h-6 rounded-full flex-shrink-0', {
-          'bg-red-500':    t.priority === 'urgent' || (days !== null && days <= 0),
-          'bg-orange-400': t.priority === 'high'   || (days !== null && days > 0 && days <= 7),
-          'bg-blue-400':   t.priority === 'medium' && (days === null || days > 7),
-          'bg-slate-200':  !t.priority || t.priority === 'low',
+        <span className={cn('w-1 h-8 rounded-full flex-shrink-0', {
+          'bg-red-500':    isUrgent,
+          'bg-orange-400': isHigh,
+          'bg-blue-400':   !isUrgent && !isHigh && t.priority === 'medium',
+          'bg-slate-200':  !isUrgent && !isHigh && (!t.priority || t.priority === 'low'),
         })} />
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium truncate">{t.title}</p>
+          <p className="text-xs font-semibold truncate">{t.title}</p>
+          <p className={cn('text-[10px] font-medium mt-0.5',
+            isUrgent ? 'text-red-600' : isHigh ? 'text-orange-600' : 'text-muted-foreground'
+          )}>→ {actionLabel}</p>
           {t.customer_name && (
             <button onClick={(e) => { e.stopPropagation(); navigate(`/kunden/${t.customer_id}`) }}
               className="text-[10px] text-blue-700 font-medium hover:underline">
@@ -448,14 +509,14 @@ function AllTasksSplit({ openTasks, onTaskClick, customers = [] }) {
             </button>
           )}
         </div>
-        <span className="text-[9px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 bg-slate-100 text-slate-700">
-          {statusLabels[t.status] || t.status}
-        </span>
-        {t.due_date && (
-          <span className={cn('text-[10px] flex-shrink-0', urgencyColor(days))}>
-            {days !== null && days <= 0 ? 'Überfällig' : fmtDate(t.due_date)}
-          </span>
-        )}
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+          {isOverdue && <span className="text-[9px] bg-red-600 text-white px-1.5 py-0.5 rounded font-bold">ÜBERFÄLLIG</span>}
+          {t.due_date && (
+            <span className={cn('text-xs font-bold', urgencyColor(days))}>
+              {isOverdue ? `${Math.abs(days)}d` : `${days}d`}
+            </span>
+          )}
+        </div>
       </button>
     )
   }
