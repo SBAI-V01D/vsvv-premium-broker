@@ -257,8 +257,8 @@ export default function Customers() {
                       <Link to={`/kunden/${customer.id}`} className="flex-1 min-w-0 hover:text-primary group">
                         <p className="font-bold text-base group-hover:text-primary">
                           {customer.customer_type === 'business'
-                            ? (customer.company_name || `${customer.first_name} ${customer.last_name}`)
-                            : `${customer.first_name} ${customer.last_name}`}
+                            ? (customer.company_name || `${customer.last_name} ${customer.first_name}`)
+                            : `${customer.last_name} ${customer.first_name}`}
                         </p>
                         {customer.customer_type === 'business' && (customer.contact_person_firstname || customer.contact_person_lastname) && (
                           <p className="text-xs text-muted-foreground">
@@ -330,7 +330,7 @@ export default function Customers() {
                           }`}
                         >
                           <Link to={`/kunden/${member.id}`} className="flex-1 min-w-0 hover:text-primary group">
-                            <p className="font-medium text-sm group-hover:text-primary">{member.first_name} {member.last_name}</p>
+                            <p className="font-medium text-sm group-hover:text-primary">{member.last_name} {member.first_name}</p>
                             <p className="text-xs text-muted-foreground">
                               {label(FAMILY_ROLE_LABELS, member.family_role)} • {member.email}
                             </p>
