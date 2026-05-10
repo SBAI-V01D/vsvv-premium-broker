@@ -178,15 +178,13 @@ export default function Dashboard() {
     }
   }, [commissionEntries])
 
-  // Tasks — only active, non-deleted, non-archived tasks with valid customer_id & assigned_to
-  // MUST match Tasks.jsx filter logic
+  // Tasks — alle nicht erledigten, nicht gelöschten Aufgaben
+  // customer_id und assigned_to sind optional — nicht als Filter verwenden
   const isValidTask = (t) => {
     return t.status !== 'completed' 
       && !t.deleted 
       && !t.archived 
       && !t.is_test_data
-      && t.customer_id 
-      && t.assigned_to
   }
   const openTasks = useMemo(() => 
     validateAndDeduplicate(tasks.filter(isValidTask)),
