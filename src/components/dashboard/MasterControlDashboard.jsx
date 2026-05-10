@@ -11,9 +11,7 @@ import { format, parseISO } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import ExpiringContractsPanel from './ExpiringContractsPanel'
-import OperativeTasksPanel from './OperativeTasksPanel'
-import OperativeKPIStrip from './OperativeKPIStrip'
+
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmtChf = (n) => n >= 1000
@@ -711,90 +709,105 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
   const adminOpen    = openTasks.filter(t => !CONTRACT_TASK_TYPES.has(t.task_type)).length
   const contractOpen = openTasks.filter(t =>  CONTRACT_TASK_TYPES.has(t.task_type)).length
 
+  const totalUrgent = overdueCount + todayCount + kuendigungDringend + urgentContractCount
+
   return (
     <div className="space-y-3">
 
-      {/* OPERATIVE SECTION — Top Priority (Live Data) */}
-      <div className="bg-gradient-to-br from-red-50/50 to-orange-50/50 rounded-xl p-4 space-y-3 border border-red-100/50">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-red-700">⚡ Operative Aufgaben</h2>
-        <ExpiringContractsPanel contracts={data.expiringContracts || []} />
-        <OperativeTasksPanel tasks={openTasks} limit={10} />
-        <OperativeKPIStrip 
-          activeCustomers={data.activeCustomers?.length || 0}
-          activeLeads={data.activeLeads?.length || 0}
-          openTasks={openTasks.length}
-          expiringContracts={data.expiringContracts?.length || 0}
-          totalMonthlyPremium={data.totalMonthlyPremium || 0}
-          yearlyCommissionForecast={data.yearlyCommissionForecast || 0}
-        />
+      {/* ═══════════════════════════════════════════════════════════════════════
+          ZONE 1 — KRITISCHER BEREICH: Operatives Führungsinstrument
+          "Wo verliere ich heute Geld oder Kunden?"
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <div className="rounded-2xl border-2 border-red-200 bg-gradient-to-br from-red-50 via-orange-50/60 to-amber-50/40 shadow-md overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-3.5 bg-gradient-to-r from-red-700 to-red-600 text-white">
+          <TriangleAlert className="w-4 h-4 flex-shrink-0" />
+          <span className="text-sm font-bold uppercase tracking-widest flex-1">⚡ Operative Aufgaben — Tagessteuerung</span>
+          {totalUrgent > 0 && (
+            <span className="bg-white/20 text-white text-xs font-bold px-2.5 py-0.5 rounded-full animate-pulse">
+              {totalUrgent} dringend
+            </span>
+          )}
+        </div>
+
+        <div className="p-4 space-y-3">
+
+          {/* 1a — Heutige Prioritäten */}
+          <div className="rounded-xl border border-red-200/80 bg-white/80 overflow-hidden shadow-sm">
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-red-100 bg-red-50/60">
+              <Zap className="w-3.5 h-3.5 text-red-600" />
+              <span className="text-xs font-bold text-red-800 uppercase tracking-wide flex-1">Heutige Prioritäten</span>
+              {(overdueCount + todayCount) > 0 && (
+                <span className="text-[10px] bg-red-600 text-white px-1.5 py-0.5 rounded-full font-bold animate-pulse">
+                  {overdueCount + todayCount}
+                </span>
+              )}
+            </div>
+            <div className="px-4 py-3">
+              <TodayPriorityTasks openTasks={openTasks} onTaskClick={onTaskClick} customers={customers} />
+            </div>
+          </div>
+
+          {/* 1b — Kündigungstermine */}
+          <div className="rounded-xl border border-red-200/80 bg-white/80 overflow-hidden shadow-sm">
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-red-100 bg-red-50/60">
+              <CalendarX2 className="w-3.5 h-3.5 text-red-600" />
+              <span className="text-xs font-bold text-red-800 uppercase tracking-wide flex-1">Kündigungstermine</span>
+              <span className="text-[10px] text-red-500 mr-1">nächste 180 Tage</span>
+              {kuendigungsTermine.length > 0 && (
+                <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-bold',
+                  kuendigungDringend > 0 ? 'bg-red-600 text-white animate-pulse' : 'bg-amber-100 text-amber-800'
+                )}>
+                  {kuendigungsTermine.length}
+                </span>
+              )}
+            </div>
+            <div className="px-4 py-3">
+              <KuendigungsTermine contracts={contracts} />
+            </div>
+          </div>
+
+          {/* 1c — Kritische Vertragsabläufe */}
+          <div className="rounded-xl border border-orange-200/80 bg-white/80 overflow-hidden shadow-sm">
+            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-orange-100 bg-orange-50/60">
+              <RefreshCw className="w-3.5 h-3.5 text-orange-600" />
+              <span className="text-xs font-bold text-orange-800 uppercase tracking-wide flex-1">Kritische Vertragsabläufe</span>
+              <span className="text-[10px] text-orange-500 mr-1">{data.expiringContracts.length} / 90 Tage</span>
+              {urgentContractCount > 0 && (
+                <span className="text-[10px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">
+                  {urgentContractCount} kritisch
+                </span>
+              )}
+            </div>
+            <div className="px-4 py-3">
+              <UrgentContracts expiringContracts={data.expiringContracts} onContractSelect={(c) => c.customer_id && navigate(`/kunden/${c.customer_id}`)} />
+            </div>
+          </div>
+
+          {/* 1d — Offene Aufgaben (inline, eingeklappt) */}
+          <Section
+            title="Alle offenen Aufgaben"
+            icon={CheckSquare}
+            accent={{ bar: 'bg-slate-400', border: 'border-slate-200 bg-white/70', icon: 'text-slate-500' }}
+            defaultOpen={false}
+            countBadge={
+              openTasks.length > 0
+                ? <span className="flex gap-1 items-center">
+                    <CountBadge n={adminOpen} className="bg-blue-100 text-blue-700" />
+                    <CountBadge n={contractOpen} className="bg-orange-100 text-orange-700" />
+                  </span>
+                : null
+            }
+          >
+            <AllTasksSplit openTasks={openTasks} onTaskClick={onTaskClick} customers={customers} />
+          </Section>
+
+        </div>
       </div>
 
-      {/* ① TODAY'S PRIORITY TASKS — highest visual weight */}
-      <Section
-        title="Heutige Prioritäten"
-        icon={Zap}
-        accent={{ bar: 'bg-red-500', header: 'bg-red-50/30', border: 'border-red-100 bg-card', icon: 'text-red-500' }}
-        defaultOpen={true}
-        countBadge={
-          (overdueCount + todayCount) > 0
-            ? <CountBadge n={overdueCount + todayCount} className="bg-red-100 text-red-700 animate-pulse" />
-            : null
-        }
-      >
-        <TodayPriorityTasks openTasks={openTasks} onTaskClick={onTaskClick} customers={customers} />
-      </Section>
-
-      {/* ① b KÜNDIGUNGSTERMINE */}
-      <Section
-        title="Kündigungstermine"
-        icon={CalendarX2}
-        accent={{ bar: 'bg-red-500', header: 'bg-red-50/20', border: 'border-red-100 bg-card', icon: 'text-red-500' }}
-        defaultOpen={true}
-        countBadge={
-          kuendigungsTermine.length > 0
-            ? <CountBadge n={kuendigungsTermine.length} className={kuendigungDringend > 0 ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-amber-100 text-amber-700'} />
-            : null
-        }
-        subtitleBadge={`nächste 180 Tage`}
-      >
-        <KuendigungsTermine contracts={contracts} />
-      </Section>
-
-      {/* ② URGENT CONTRACT WORKFLOWS */}
-      <Section
-        title="Kritische Vertragsabläufe"
-        icon={RefreshCw}
-        accent={{ bar: 'bg-orange-500', header: 'bg-orange-50/20', border: 'border-orange-100 bg-card', icon: 'text-orange-500' }}
-        defaultOpen={true}
-        countBadge={
-          urgentContractCount > 0
-            ? <CountBadge n={urgentContractCount} className="bg-orange-100 text-orange-700" />
-            : <CountBadge n={data.expiringContracts.length} className="bg-muted text-muted-foreground" />
-        }
-        subtitleBadge={`${data.expiringContracts.length} Abläufe / 90 Tage`}
-      >
-        <UrgentContracts expiringContracts={data.expiringContracts} onContractSelect={(c) => c.customer_id && navigate(`/kunden/${c.customer_id}`)} />
-      </Section>
-
-      {/* ③ ALL TASKS SPLIT */}
-      <Section
-        title="Alle offenen Aufgaben"
-        icon={CheckSquare}
-        accent={{ bar: 'bg-blue-400', border: 'border-border bg-card', icon: 'text-blue-500' }}
-        defaultOpen={false}
-        countBadge={
-          openTasks.length > 0
-            ? <span className="flex gap-1.5 items-center">
-                <CountBadge n={adminOpen} className="bg-blue-100 text-blue-700" />
-                <CountBadge n={contractOpen} className="bg-orange-100 text-orange-700" />
-              </span>
-            : null
-        }
-      >
-        <AllTasksSplit openTasks={openTasks} onTaskClick={onTaskClick} customers={customers} />
-      </Section>
-
-      {/* ④ CUSTOMER ACTIONS */}
+      {/* ═══════════════════════════════════════════════════════════════════════
+          ZONE 2 — KUNDENMASSNAHMEN
+      ═══════════════════════════════════════════════════════════════════════ */}
       <Section
         title="Kundenmassnahmen"
         icon={Users}
@@ -809,7 +822,9 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
         <CustomerActionItems data={data} onCustomerSelect={setSelectedCustomer} />
       </Section>
 
-      {/* ⑤ SALES & PIPELINE */}
+      {/* ═══════════════════════════════════════════════════════════════════════
+          ZONE 3 — SALES & PIPELINE
+      ═══════════════════════════════════════════════════════════════════════ */}
       <Section
         title="Sales & Pipeline"
         icon={TrendingUp}
@@ -819,13 +834,15 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
         <SalesPipelineSummary data={data} />
       </Section>
 
-      {/* ⑥ KPI STRIP — compact, lowest visual weight */}
+      {/* ═══════════════════════════════════════════════════════════════════════
+          ZONE 4 — KPIs (Management-Ansicht, eingeklappt)
+      ═══════════════════════════════════════════════════════════════════════ */}
       <Section
         title="Executive KPIs"
         icon={Activity}
-        accent={{ bar: 'bg-slate-400', border: 'border-border bg-card', icon: 'text-muted-foreground' }}
+        accent={{ bar: 'bg-slate-300', border: 'border-border bg-card', icon: 'text-muted-foreground' }}
         defaultOpen={false}
-        subtitleBadge="Überblick"
+        subtitleBadge="Statistik-Überblick"
       >
         <CompactKpiStrip data={data} />
       </Section>
