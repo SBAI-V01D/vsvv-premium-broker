@@ -299,6 +299,7 @@ function normalizeData(raw) {
     street:     raw?.adresse?.strasse ?? null,
     zip_code:   raw?.adresse?.plz ?? null,
     city:       raw?.adresse?.ort ?? null,
+    canton:     raw?.adresse?.kanton ?? null,
     // Insurance
     insurer:             raw?.versicherung?.gesellschaft ?? null,
     contract_start_date: contractStartDate,
@@ -446,7 +447,8 @@ Extrahiere in EXAKT dieser Struktur:`,
             properties: {
               strasse: { type: ['string','null'] },
               plz:     { type: ['string','null'] },
-              ort:     { type: ['string','null'] }
+              ort:     { type: ['string','null'] },
+              kanton:  { type: ['string','null'] }
             },
             required: ['strasse','plz','ort']
           },
