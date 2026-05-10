@@ -47,19 +47,21 @@ Deno.serve(async (req) => {
     // Find all related tasks for this contract
     const allTasks = await base44.entities.Task.list();
     const contractTasks = allTasks.filter(t => {
-      // Match by contract_id
+      // Match by explicit contract_id
       if (t.contract_id === contract.id) return true;
       
-      // Match by title keywords (police, vertrag, verlängerung, etc.)
-      const title = (t.title || '').toLowerCase();
-      const isWorkflowTask = 
-        WORKFLOW_TASK_TYPES.has(t.task_type) ||
-        title.includes('police') ||
-        title.includes('vertrag') ||
-        title.includes('verlänger');
-      
-      // Only if related to this customer
-      if (t.customer_id === contract.customer_id && isWorkflowTask) return true;
+      // Match by customer_id + workflow-related task type or title
+      if (t.customer_id === contract.customer_id) {
+        const isWorkflowTaskType = WORKFLOW_TASK_TYPES.has(t.task_type);
+        const title = (t.title || '').toLowerCase();
+        const isWorkflowKeyword = 
+          title.includes('police') ||
+          title.includes('vertrag') ||
+          title.includes('verlänger') ||
+          title.includes('prüf');
+        
+        if (isWorkflowTaskType || isWorkflowKeyword) return true;
+      }
       
       return false;
     }).filter(t => ['open', 'in_progress', 'waiting'].includes(t.status));
