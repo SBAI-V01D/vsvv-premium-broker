@@ -498,7 +498,7 @@ const RAW = [
   ['4415','Lausen','BL'],['4416','Bubendorf','BL'],['4417','Ziefen','BL'],
   ['4418','Reigoldswil','BL'],['4419','Lupsingen','BL'],['4422','Arisdorf','BL'],
   ['4423','Hersberg','BL'],['4424','Arboldswil','BL'],['4425','Titterten','BL'],
-  ['4426','Lauwil','BL'],['4431','Bennwil','BL'],['4432','Lampenberg','BL'],
+  ['4226','Oberbuchsiten','SO'],['4426','Lauwil','BL'],['4431','Bennwil','BL'],['4432','Lampenberg','BL'],
   ['4433','Ramlinsburg','BL'],['4434','Holstein','BL'],['4435','Niederdorf','BL'],
   ['4436','Oberdorf BL','BL'],['4437','Waldenburg','BL'],['4438','Langenbruck','BL'],
   ['4441','Thürnen','BL'],['4442','Diepflingen','BL'],['4443','Wittinsburg','BL'],

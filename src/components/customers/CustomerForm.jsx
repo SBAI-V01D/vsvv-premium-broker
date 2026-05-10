@@ -255,18 +255,30 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
      setPlzError('')
      setPlzSuggestions(null)
      const result = lookupPostalCode(plz)
-     if (!result) return
+     if (!result) {
+       // PLZ not in DB — allow manual entry, no error
+       return
+     }
      if (!Array.isArray(result)) {
-       // Single match
+       // Single match — auto-fill
        setForm(prev => ({
          ...prev,
          city: keepExisting && prev.city ? prev.city : result.ort,
          canton: keepExisting && prev.canton ? prev.canton : result.kanton,
        }))
        setAutoFilled(true)
-     } else if (result.length > 1) {
-       // Multiple — show picker, don't clear existing
-       setPlzSuggestions(result)
+     } else {
+       // Multiple — take first match or show picker
+       if (result.length === 1) {
+         setForm(prev => ({
+           ...prev,
+           city: keepExisting && prev.city ? prev.city : result[0].ort,
+           canton: keepExisting && prev.canton ? prev.canton : result[0].kanton,
+         }))
+         setAutoFilled(true)
+       } else {
+         setPlzSuggestions(result)
+       }
      }
    }, [])
 

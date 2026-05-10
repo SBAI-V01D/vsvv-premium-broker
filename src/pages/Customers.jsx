@@ -120,7 +120,9 @@ export default function Customers() {
     if (editing) {
       updateMutation.mutate({ id: editing.id, data })
     } else {
-      createMutation.mutate(data)
+      // Auto-assign organization_id if not set (required field)
+      const orgId = data.organization_id || organizations[0]?.id || ''
+      createMutation.mutate({ ...data, organization_id: orgId })
     }
   }
 
