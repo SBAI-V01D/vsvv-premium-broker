@@ -49,10 +49,9 @@ export function usePostalCodeLookup() {
       return;
     }
 
-    // Multiple matches - show dropdown
+    // Multiple matches - show dropdown (do NOT clear existing city/canton)
     if (result.length > 1) {
       setPlzSuggestions(result);
-      onUpdate({ city: '', canton: '' });
     }
   }, []);
 

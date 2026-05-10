@@ -276,8 +276,8 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
     handlePostalCodeChange(plz, ({ city, canton, autoFilled: auto }) => {
       setForm(prev => ({
         ...prev,
-        city: city ?? prev.city,
-        canton: canton ?? prev.canton,
+        city: city || prev.city,
+        canton: canton || prev.canton,
       }))
       setAutoFilled(auto || false)
     })
