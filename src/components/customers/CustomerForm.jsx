@@ -245,21 +245,24 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
    const [autoFilled, setAutoFilled] = useState(false)
    const { plzError, plzSuggestions, handlePostalCodeChange, selectSuggestion } = usePostalCodeLookup()
 
-   // Auto-lookup when zip_code exists but city/canton are missing (e.g. after document import)
+   // Auto-lookup when customer is loaded/changed with zip_code but missing city/canton
    useEffect(() => {
-     if (form.zip_code && (!form.city || !form.canton)) {
-       handlePostalCodeChange(form.zip_code, ({ city, canton, autoFilled: auto }) => {
+     const zip = customer?.zip_code
+     const hasCity = customer?.city && customer.city.trim() !== ''
+     const hasCanton = customer?.canton && customer.canton.trim() !== ''
+     if (zip && zip.length === 4 && (!hasCity || !hasCanton)) {
+       handlePostalCodeChange(zip, ({ city, canton, autoFilled: auto }) => {
          if (city || canton) {
            setForm(prev => ({
              ...prev,
-             city: prev.city || city,
-             canton: prev.canton || canton,
+             city: prev.city || city || '',
+             canton: prev.canton || canton || '',
            }))
-           setAutoFilled(auto || false)
+           setAutoFilled(true)
          }
        })
      }
-   }, [form.zip_code])
+   }, [customer?.id, customer?.zip_code])
 
    const { data: advisors = [] } = useQuery({
      queryKey: ['advisors'],
