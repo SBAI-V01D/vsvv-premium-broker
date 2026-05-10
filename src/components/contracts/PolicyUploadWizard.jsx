@@ -109,6 +109,14 @@ function NewCustomerForm({ data, onChange }) {
           <Label className="text-xs">Geburtsdatum</Label>
           <Input type="date" value={data.birthdate || ''} onChange={e => set('birthdate', e.target.value)} className="mt-1 h-8 text-sm" />
         </div>
+        <div className="col-span-2">
+          <Label className="text-xs">Strasse</Label>
+          <Input value={data.street || ''} onChange={e => set('street', e.target.value)} className="mt-1 h-8 text-sm" />
+        </div>
+        <div>
+          <Label className="text-xs">PLZ</Label>
+          <Input value={data.zip_code || ''} onChange={e => set('zip_code', e.target.value)} className="mt-1 h-8 text-sm" maxLength={4} />
+        </div>
         <div>
           <Label className="text-xs">Ort</Label>
           <Input value={data.city || ''} onChange={e => set('city', e.target.value)} className="mt-1 h-8 text-sm" />
@@ -172,8 +180,8 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     setUploading(false)
     setExtracting(true)
 
-    // Extract data
-    const res = await base44.functions.invoke('extractContractDataFromPDF', { file_url })
+    // Extract data via extractPolicyData (comprehensive customer + contract extraction)
+    const res = await base44.functions.invoke('extractPolicyData', { file_url, file_name: file.name })
     setExtracting(false)
 
     if (res.data?.success && res.data?.extractedData) {
@@ -211,13 +219,14 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       const nameParts = (extracted.policy_holder_name || '').trim().split(/\s+/)
       const matchData = {
         first_name: extracted.first_name || nameParts[0] || '',
-        last_name: extracted.last_name || nameParts.slice(1).join(' ') || '',
+        last_name: extracted.last_name || (nameParts.length > 1 ? nameParts.slice(1).join(' ') : '') || '',
         birthdate: extracted.birthdate || '',
         email: extracted.email || '',
         phone: extracted.phone || '',
         street: extracted.street || '',
-        city: extracted.city || extracted.location || '',
+        city: extracted.city || '',
         zip_code: extracted.zip_code || '',
+        canton: extracted.canton || '',
       }
       if (matchData.first_name || matchData.last_name) {
         const { candidates } = matchCustomers(matchData, customers)
@@ -265,6 +274,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         street: nc.street || undefined,
         city: nc.city || undefined,
         zip_code: nc.zip_code || undefined,
+        canton: nc.canton || undefined,
         organization_id: orgId,
         status: 'active',
         customer_type: 'private',
@@ -314,7 +324,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       if (i === 0) firstContract = created
     }
 
-    // Save document reference linked to first contract
+    // Save document reference linked to first contract — category 'police' (not 'contract')
     if (fileUrl && firstContract) {
       await base44.entities.Document.create({
         name: fileName,

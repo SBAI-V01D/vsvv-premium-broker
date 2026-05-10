@@ -10,13 +10,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Card } from '@/components/ui/card'
 
+// Mapping to valid Document entity enum values
 const CATEGORIES = [
-  { value: 'police', label: 'Police', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-  { value: 'rechnung', label: 'Rechnung', color: 'bg-green-50 text-green-700 border-green-200' },
-  { value: 'schadenfall', label: 'Schadenfall', color: 'bg-red-50 text-red-700 border-red-200' },
-  { value: 'vertrag', label: 'Vertrag', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  { value: 'korrespondenz', label: 'Korrespondenz', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  { value: 'sonstiges', label: 'Sonstiges', color: 'bg-slate-100 text-slate-600 border-slate-200' },
+  { value: 'contract', label: 'Police', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  { value: 'correspondence', label: 'Korrespondenz', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+  { value: 'application', label: 'Antrag', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  { value: 'identification', label: 'Ausweis', color: 'bg-green-50 text-green-700 border-green-200' },
+  { value: 'other', label: 'Sonstiges', color: 'bg-slate-100 text-slate-600 border-slate-200' },
 ]
 
 export default function ContractDocumentsPanel({ contract }) {
@@ -25,7 +25,7 @@ export default function ContractDocumentsPanel({ contract }) {
   const [showUpload, setShowUpload] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [file, setFile] = useState(null)
-  const [form, setForm] = useState({ name: '', category: 'police', notes: '' })
+  const [form, setForm] = useState({ name: '', category: 'contract', notes: '' })
 
   const { data: documents = [] } = useQuery({
     queryKey: ['documents', 'contract', contract.id],
@@ -64,7 +64,7 @@ export default function ContractDocumentsPanel({ contract }) {
     setUploading(false)
     setShowUpload(false)
     setFile(null)
-    setForm({ name: '', category: 'police', notes: '' })
+    setForm({ name: '', category: 'contract', notes: '' })
   }
 
   return (
@@ -116,7 +116,7 @@ export default function ContractDocumentsPanel({ contract }) {
       {/* Dialog ausserhalb des open-Blocks damit er immer im DOM ist */}
       <Dialog open={showUpload} onOpenChange={setShowUpload}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Dokument für Vertrag hochladen</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Dokument / Police hochladen</DialogTitle></DialogHeader>
           <form onSubmit={handleUpload} className="space-y-4">
             <div>
               <Label>Datei</Label>
