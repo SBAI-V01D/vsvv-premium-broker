@@ -40,18 +40,27 @@ Deno.serve(async (req) => {
     const statusChanged = oldContract?.status !== contract?.status;
     const isNowActive = contract?.status && ACTIVE_STATUSES.has(contract.status);
 
+    console.log(`Contract ${contract.id}: oldStatus=${oldContract?.status}, newStatus=${contract?.status}, changed=${statusChanged}, isActive=${isNowActive}`);
+
     if (!statusChanged || !isNowActive) {
       return Response.json({ skipped: 'Status not activated' });
     }
 
     // Find all related tasks for this contract
+    console.log(`Looking for tasks related to contract ${contract.id}, customer ${contract.customer_id}`);
+    
     const allTasks = await base44.entities.Task.list();
+    console.log(`Found ${allTasks.length} total tasks in system`);
+
     const contractTasks = allTasks.filter(t => {
       // Match by explicit contract_id
-      if (t.contract_id === contract.id) return true;
+      if (t.contract_id === contract.id) {
+        console.log(`Match: Task ${t.id} linked via contract_id`);
+        return true;
+      }
       
-      // Match by customer_id + workflow-related task type or title
-      if (t.customer_id === contract.customer_id) {
+      // Match by customer + workflow type/keywords
+      if (t.customer_id === contract.customer_id && ['open', 'in_progress', 'waiting'].includes(t.status)) {
         const isWorkflowTaskType = WORKFLOW_TASK_TYPES.has(t.task_type);
         const title = (t.title || '').toLowerCase();
         const isWorkflowKeyword = 
@@ -60,16 +69,23 @@ Deno.serve(async (req) => {
           title.includes('verlänger') ||
           title.includes('prüf');
         
-        if (isWorkflowTaskType || isWorkflowKeyword) return true;
+        if (isWorkflowTaskType || isWorkflowKeyword) {
+          console.log(`Match: Task ${t.id} (${t.title}) for customer ${contract.customer_id}, type=${t.task_type}`);
+          return true;
+        }
       }
       
       return false;
-    }).filter(t => ['open', 'in_progress', 'waiting'].includes(t.status));
+    });
+
+    console.log(`Found ${contractTasks.length} related workflow tasks to complete`);
 
     if (contractTasks.length === 0) {
       return Response.json({ 
         synced: 0, 
-        message: 'No related workflow tasks found'
+        message: 'No related workflow tasks found',
+        contractId: contract.id,
+        customerId: contract.customer_id
       });
     }
 
@@ -82,6 +98,7 @@ Deno.serve(async (req) => {
         notes: (task.notes || '') + `\n[Auto-erledigt durch Vertragsaktivierung am ${new Date().toLocaleDateString('de-CH')}]`
       });
       completedTasks.push(task.id);
+      console.log(`Completed task ${task.id}`);
     }
 
     return Response.json({
