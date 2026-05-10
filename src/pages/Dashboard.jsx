@@ -265,13 +265,7 @@ export default function Dashboard() {
               )}
             </p>
           </div>
-          {/* Primary Action */}
-          <button 
-            onClick={() => navigate('/dokumente')}
-            className="w-full sm:w-auto px-4 py-2 rounded-lg bg-orange-600 text-white font-semibold text-sm hover:bg-orange-700 transition-colors"
-          >
-            📤 Upload
-          </button>
+          {/* Secondary compact actions */}
         </div>
 
         {/* Filters row — mobile responsive */}
@@ -301,29 +295,23 @@ export default function Dashboard() {
         
         </div>
 
-        {/* Secondary actions: now less prominent */}
-        <div className="flex gap-2 flex-wrap text-xs">
+        {/* Quick Actions — minimalistisch */}
+        <div className="flex gap-1.5 flex-wrap text-xs">
           {[
-            { label: '+ Neuer Kunde', path: '/kunden', icon: '👤' },
-            { label: '+ Neuer Lead', path: '/leads', icon: '🎯' },
-            { label: '+ Neuer Vertrag', path: '/vertraege', icon: '📋' },
+            { label: '+ Kunde', path: '/kunden' },
+            { label: '+ Lead', path: '/leads' },
+            { label: '+ Vertrag', path: '/vertraege' },
+            { label: '+ Aufgabe', path: '/aufgaben' },
+            { label: '+ Dokument', path: '/dokumente' },
           ].map(a => (
             <button
               key={a.label}
               onClick={() => navigate(a.path)}
-              className="px-2.5 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              className="px-2 py-1 rounded border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors text-[11px]"
             >
-              {a.icon} {a.label}
+              {a.label}
             </button>
           ))}
-          {openTasks.length > 0 && (
-            <button
-              onClick={() => navigate('/aufgaben')}
-              className="ml-auto px-2.5 py-1 rounded-md bg-red-50 border border-red-200 text-red-700 font-medium hover:bg-red-100 transition-colors flex items-center gap-1"
-            >
-              📋 {openTasks.length} Aufgaben
-            </button>
-          )}
         </div>
       </div>
 
