@@ -5,8 +5,10 @@ import {
   Users, Target, TrendingUp, Wallet, RefreshCw, CheckSquare,
   FileWarning, ShieldAlert, ChevronDown, AlertTriangle, Clock,
   ArrowRight, FileText, ListTodo, Activity, Zap, Eye, X,
-  CalendarClock, CircleDot, TriangleAlert
+  CalendarClock, CircleDot, TriangleAlert, CalendarX2
 } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+import { de } from 'date-fns/locale'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import ExpiringContractsPanel from './ExpiringContractsPanel'
@@ -193,6 +195,61 @@ function TodayPriorityTasks({ openTasks, onTaskClick, customers = [] }) {
       )}
       <button onClick={() => navigate('/aufgaben')} className="flex items-center gap-1.5 text-xs text-primary hover:underline pt-1">
         <ArrowRight className="w-3 h-3" /> Alle Aufgaben öffnen
+      </button>
+    </div>
+  )
+}
+
+// ── 1b. KÜNDIGUNGSTERMINE ─────────────────────────────────────────────────────
+function KuendigungsTermine({ contracts }) {
+  const navigate = useNavigate()
+  const today = new Date()
+
+  const termine = contracts
+    .filter(c => c.cancellation_deadline && c.status === 'active')
+    .map(c => ({ ...c, _days: Math.ceil((new Date(c.cancellation_deadline) - today) / 86400000) }))
+    .filter(c => c._days >= -7 && c._days <= 180)
+    .sort((a, b) => a._days - b._days)
+
+  if (termine.length === 0) {
+    return (
+      <div className="flex items-center gap-2 py-4 text-emerald-600">
+        <CalendarX2 className="w-4 h-4" />
+        <span className="text-sm font-medium">Keine Kündigungstermine in den nächsten 180 Tagen ✓</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-1.5">
+      {termine.map(c => {
+        const days = c._days
+        return (
+          <button
+            key={c.id}
+            onClick={() => navigate('/vertraege')}
+            className={cn('w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-all hover:shadow-sm', urgencyBg(days))}
+          >
+            <div className="w-7 h-7 rounded-md bg-red-100 flex items-center justify-center flex-shrink-0">
+              <CalendarX2 className="w-3.5 h-3.5 text-red-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold truncate">{c.customer_name || '–'}</p>
+              <p className="text-[10px] text-muted-foreground truncate">{c.insurer}{c.product ? ` · ${c.product}` : ''}{c.policy_number ? ` · ${c.policy_number}` : ''}</p>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className={cn('text-xs font-bold', urgencyColor(days))}>
+                {days <= 0 ? `Überfällig (${Math.abs(days)}d)` : days === 0 ? 'Heute!' : `${days} Tage`}
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                {format(parseISO(c.cancellation_deadline), 'd. MMM yyyy', { locale: de })}
+              </p>
+            </div>
+          </button>
+        )
+      })}
+      <button onClick={() => navigate('/vertraege')} className="flex items-center gap-1.5 text-xs text-primary hover:underline pt-1">
+        <ArrowRight className="w-3 h-3" /> Alle Verträge öffnen
       </button>
     </div>
   )
@@ -644,6 +701,13 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
     return d !== null && d <= 14
   }).length
 
+  const today = new Date()
+  const kuendigungsTermine = (contracts || [])
+    .filter(c => c.cancellation_deadline && c.status === 'active')
+    .map(c => ({ ...c, _days: Math.ceil((new Date(c.cancellation_deadline) - today) / 86400000) }))
+    .filter(c => c._days >= -7 && c._days <= 180)
+  const kuendigungDringend = kuendigungsTermine.filter(c => c._days <= 30).length
+
   const adminOpen    = openTasks.filter(t => !CONTRACT_TASK_TYPES.has(t.task_type)).length
   const contractOpen = openTasks.filter(t =>  CONTRACT_TASK_TYPES.has(t.task_type)).length
 
@@ -678,6 +742,22 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
         }
       >
         <TodayPriorityTasks openTasks={openTasks} onTaskClick={onTaskClick} customers={customers} />
+      </Section>
+
+      {/* ① b KÜNDIGUNGSTERMINE */}
+      <Section
+        title="Kündigungstermine"
+        icon={CalendarX2}
+        accent={{ bar: 'bg-red-500', header: 'bg-red-50/20', border: 'border-red-100 bg-card', icon: 'text-red-500' }}
+        defaultOpen={true}
+        countBadge={
+          kuendigungsTermine.length > 0
+            ? <CountBadge n={kuendigungsTermine.length} className={kuendigungDringend > 0 ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-amber-100 text-amber-700'} />
+            : null
+        }
+        subtitleBadge={`nächste 180 Tage`}
+      >
+        <KuendigungsTermine contracts={contracts} />
       </Section>
 
       {/* ② URGENT CONTRACT WORKFLOWS */}
