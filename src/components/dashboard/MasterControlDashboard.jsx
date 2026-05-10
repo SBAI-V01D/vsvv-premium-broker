@@ -74,10 +74,31 @@ function CountBadge({ n, className }) {
   return <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-bold', className)}>{n}</span>
 }
 
-// ── 1. TODAY'S PRIORITY TASKS ─────────────────────────────────────────────────
-const CONTRACT_TASK_TYPES = new Set(['renewal', 'health_declaration'])
+// ── Task Kategorisierung ──────────────────────────────────────────────────────
+// Vertrags-Workflow: fristenkritisch, umsatzkritisch
+const CONTRACT_WORKFLOW_TYPES = new Set(['renewal', 'health_declaration'])
+const CONTRACT_TASK_TYPES = CONTRACT_WORKFLOW_TYPES // alias for backwards compat
 
-// Maps task_type + priority to a human action label
+const isContractWorkflowTask = (t) => {
+  if (CONTRACT_WORKFLOW_TYPES.has(t.task_type)) return true
+  const title = (t.title || '').toLowerCase()
+  return (
+    title.includes('vertrag') ||
+    title.includes('police') ||
+    title.includes('verlänger') ||
+    title.includes('kündigung') ||
+    title.includes('offert') ||
+    title.includes('mutation') ||
+    title.includes('ablauf')
+  )
+}
+
+const isFollowUpTask = (t) => {
+  if (t.task_type === 'follow_up' || t.task_type === 'consultation') return true
+  const title = (t.title || '').toLowerCase()
+  return title.includes('rückruf') || title.includes('follow') || title.includes('angebot nachfass') || title.includes('kontakt')
+}
+
 const getActionLabel = (t) => {
   if (t.task_type === 'renewal')            return 'Verlängerung prüfen'
   if (t.task_type === 'health_declaration') return 'Gesundheitserklärung einholen'
@@ -91,156 +112,178 @@ const getActionLabel = (t) => {
   if (title.includes('offert') || title.includes('angebot'))     return 'Offerte nachfassen'
   if (title.includes('vertrag'))                                  return 'Vertrag prüfen'
   if (title.includes('rückruf') || title.includes('call'))        return 'Rückruf tätigen'
+  if (title.includes('verlänger'))                                return 'Verlängerung vorbereiten'
+  if (title.includes('mutation'))                                 return 'Mutation bearbeiten'
   return 'Aufgabe erledigen'
 }
 
-function TodayPriorityTasks({ openTasks, onTaskClick, customers = [] }) {
+// ── Vertrags-Workflow Tasks (operativ kritisch, volle Karten-Optik) ────────────
+function ContractWorkflowTasks({ tasks, onTaskClick }) {
   const navigate = useNavigate()
-  const today = new Date().toISOString().slice(0, 10)
 
-  const overdue     = openTasks.filter(t => t.due_date && daysUntil(t.due_date) < 0)
-  const dueToday    = openTasks.filter(t => t.due_date === today)
-  const dueThisWeek = openTasks.filter(t => {
-    const d = daysUntil(t.due_date)
-    return d !== null && d > 0 && d <= 7
+  const sorted = [...tasks].sort((a, b) => {
+    const da = daysUntil(a.due_date) ?? 999
+    const db = daysUntil(b.due_date) ?? 999
+    const pa = { urgent: 0, high: 1, medium: 2, low: 3 }[a.priority] ?? 2
+    const pb = { urgent: 0, high: 1, medium: 2, low: 3 }[b.priority] ?? 2
+    return (da + pa * 10) - (db + pb * 10)
   })
 
-  if (overdue.length === 0 && dueToday.length === 0 && dueThisWeek.length === 0) {
+  if (sorted.length === 0) {
     return (
       <div className="flex items-center gap-2.5 py-3 px-3 bg-emerald-50 rounded-lg border border-emerald-100">
         <CheckSquare className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-        <span className="text-sm font-medium text-emerald-700">Keine dringenden Aufgaben — alles im grünen Bereich ✓</span>
+        <span className="text-sm font-medium text-emerald-700">Keine offenen Vertragsaufgaben ✓</span>
       </div>
     )
   }
 
-  const renderRow = (t, level) => {
-    const days = daysUntil(t.due_date)
-    const isContract = CONTRACT_TASK_TYPES.has(t.task_type)
-    const isOverdue = days !== null && days <= 0
-    const actionLabel = getActionLabel(t)
+  return (
+    <div className="space-y-2">
+      {sorted.map(t => {
+        const days = daysUntil(t.due_date)
+        const isOverdue = days !== null && days <= 0
+        const isUrgent = isOverdue || t.priority === 'urgent'
+        const isSoon = !isUrgent && (days !== null && days <= 7 || t.priority === 'high')
+        const actionLabel = getActionLabel(t)
 
-    // Config per urgency level — same visual weight as KuendigungsTermine cards
-    const cfg = {
-      critical: {
-        card:       'bg-red-50 border-red-400 hover:border-red-500 hover:shadow-lg hover:shadow-red-100',
-        countdown:  isOverdue
-                      ? 'bg-red-600 border-red-700 text-white'
-                      : 'bg-red-100 border-red-400 text-red-700',
-        countLabel: isOverdue ? 'ÜBERFÄLLIG' : 'HEUTE',
-        titleColor: 'text-red-900',
-        actionColor:'text-red-700 font-bold',
-        customerColor: 'text-red-600',
-        typeBadge:  isContract ? 'bg-red-800 text-white' : 'bg-red-600 text-white',
-        typLabel:   isContract ? 'VERTRAG' : 'KRITISCH',
-      },
-      today: {
-        card:       'bg-orange-50 border-orange-300 hover:border-orange-400 hover:shadow-lg hover:shadow-orange-100',
-        countdown:  'bg-orange-100 border-orange-400 text-orange-800',
-        countLabel: 'HEUTE',
-        titleColor: 'text-orange-900',
-        actionColor:'text-orange-700 font-semibold',
-        customerColor: 'text-orange-600',
-        typeBadge:  isContract ? 'bg-orange-600 text-white' : 'bg-orange-500 text-white',
-        typLabel:   isContract ? 'VERTRAG' : 'HEUTE',
-      },
-      week: {
-        card:       'bg-amber-50 border-amber-200 hover:border-amber-300 hover:shadow-md',
-        countdown:  'bg-amber-50 border-amber-300 text-amber-700',
-        countLabel: 'Tage',
-        titleColor: 'text-amber-900',
-        actionColor:'text-amber-700 font-medium',
-        customerColor: 'text-amber-600',
-        typeBadge:  isContract ? 'bg-amber-500 text-white' : 'bg-amber-200 text-amber-800',
-        typLabel:   isContract ? 'VERTRAG' : 'BALD',
-      },
-    }[level]
+        return (
+          <button
+            key={t.id}
+            onClick={() => onTaskClick(t)}
+            className={cn(
+              'w-full flex items-center gap-4 px-4 py-3 rounded-xl border-2 text-left transition-all',
+              isUrgent ? 'bg-red-50 border-red-400 hover:border-red-500 hover:shadow-lg hover:shadow-red-100' :
+              isSoon   ? 'bg-orange-50 border-orange-300 hover:border-orange-400 hover:shadow-md' :
+                         'bg-amber-50/60 border-amber-200 hover:border-amber-300 hover:shadow-sm'
+            )}
+          >
+            {/* Countdown box — gleiches Format wie Kündigungstermine */}
+            <div className={cn(
+              'flex-shrink-0 w-14 h-14 rounded-xl flex flex-col items-center justify-center border-2 select-none',
+              isUrgent && isOverdue ? 'bg-red-600 border-red-700 text-white' :
+              isUrgent              ? 'bg-red-100 border-red-400 text-red-700' :
+              isSoon                ? 'bg-orange-100 border-orange-300 text-orange-700' :
+                                     'bg-amber-50 border-amber-300 text-amber-700'
+            )}>
+              {days === null ? (
+                <><CheckSquare className="w-5 h-5" /></>
+              ) : isOverdue ? (
+                <>
+                  <span className="text-base font-black leading-none">{Math.abs(days)}</span>
+                  <span className="text-[8px] font-bold uppercase leading-none mt-0.5 text-center px-0.5">ÜBER<br/>FÄLLIG</span>
+                </>
+              ) : days === 0 ? (
+                <>
+                  <AlertCircle className="w-5 h-5 mb-0.5" />
+                  <span className="text-[9px] font-black uppercase leading-none">HEUTE</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-xl font-black leading-none">{days}</span>
+                  <span className="text-[9px] font-bold uppercase leading-none mt-0.5">Tage</span>
+                </>
+              )}
+            </div>
 
-    return (
-      <button
-        key={t.id}
-        onClick={() => onTaskClick(t)}
-        className={cn(
-          'w-full flex items-center gap-4 px-4 py-3 rounded-xl border-2 text-left transition-all',
-          cfg.card
-        )}
-      >
-        {/* Prominent countdown box — same style as KuendigungsTermine */}
-        <div className={cn(
-          'flex-shrink-0 w-14 h-14 rounded-xl flex flex-col items-center justify-center border-2 select-none',
-          cfg.countdown
-        )}>
-          {days === null ? (
-            <span className="text-lg font-black leading-none">–</span>
-          ) : isOverdue ? (
-            <>
-              <span className="text-base font-black leading-none">{Math.abs(days)}</span>
-              <span className="text-[8px] font-bold uppercase leading-none mt-0.5 text-center px-0.5">ÜBER<br/>FÄLLIG</span>
-            </>
-          ) : days === 0 ? (
-            <>
-              <AlertCircle className="w-5 h-5 mb-0.5" />
-              <span className="text-[9px] font-black uppercase leading-none">HEUTE</span>
-            </>
-          ) : (
-            <>
-              <span className="text-xl font-black leading-none">{days}</span>
-              <span className="text-[9px] font-bold uppercase leading-none mt-0.5">Tage</span>
-            </>
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <p className={cn('text-sm font-bold truncate leading-tight flex-1', cfg.titleColor)}>{t.title}</p>
-            <span className={cn('text-[9px] px-1.5 py-0.5 rounded font-bold flex-shrink-0', cfg.typeBadge)}>
-              {cfg.typLabel}
-            </span>
-          </div>
-          <p className={cn('text-xs mt-0.5', cfg.actionColor)}>→ {actionLabel}</p>
-          {t.customer_name
-            ? <p className={cn('text-[11px] font-semibold mt-1', cfg.customerColor)}>👤 {t.customer_name}</p>
-            : <p className="text-[10px] text-slate-400 italic mt-1">Kein Kunde verknüpft</p>
-          }
-        </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <p className={cn('text-sm font-bold truncate leading-tight flex-1',
+                  isUrgent ? 'text-red-900' : isSoon ? 'text-orange-900' : 'text-amber-900'
+                )}>{t.title}</p>
+                <span className={cn('text-[9px] px-1.5 py-0.5 rounded font-bold flex-shrink-0',
+                  isUrgent ? 'bg-red-700 text-white' : isSoon ? 'bg-orange-600 text-white' : 'bg-amber-500 text-white'
+                )}>VERTRAG</span>
+              </div>
+              <p className={cn('text-xs mt-0.5 font-semibold',
+                isUrgent ? 'text-red-700' : isSoon ? 'text-orange-700' : 'text-amber-700'
+              )}>→ {actionLabel}</p>
+              {t.customer_name
+                ? <p className={cn('text-[11px] font-semibold mt-1',
+                    isUrgent ? 'text-red-600' : isSoon ? 'text-orange-600' : 'text-amber-600'
+                  )}>👤 {t.customer_name}</p>
+                : <p className="text-[10px] text-slate-400 italic mt-1">Kein Kunde verknüpft</p>
+              }
+            </div>
+          </button>
+        )
+      })}
+      <button onClick={() => navigate('/aufgaben')} className="flex items-center gap-1.5 text-xs text-primary hover:underline pt-1 font-medium">
+        <ArrowRight className="w-3 h-3" /> Alle Aufgaben öffnen
       </button>
+    </div>
+  )
+}
+
+// ── Follow-Up & Admin Tasks (kompakte Liste, sekundär) ────────────────────────
+function AdminAndFollowUpTasks({ followUpTasks, adminTasks, onTaskClick }) {
+  const navigate = useNavigate()
+  const allSecondary = [
+    ...followUpTasks.map(t => ({ ...t, _cat: 'followup' })),
+    ...adminTasks.map(t => ({ ...t, _cat: 'admin' })),
+  ].sort((a, b) => {
+    const da = daysUntil(a.due_date) ?? 999
+    const db = daysUntil(b.due_date) ?? 999
+    return da - db
+  })
+
+  if (allSecondary.length === 0) {
+    return (
+      <div className="flex items-center gap-2.5 py-2 px-3 bg-slate-50 rounded-lg border border-slate-100">
+        <CheckSquare className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+        <span className="text-xs font-medium text-slate-500">Keine weiteren Aufgaben ✓</span>
+      </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      {overdue.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-2 pb-1 border-b border-red-100">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
-            <span className="text-xs font-black text-red-700 uppercase tracking-wide">🔴 Überfällig — sofort handeln</span>
-            <span className="ml-auto text-[10px] bg-red-600 text-white px-2 py-0.5 rounded-full font-bold">{overdue.length}</span>
-          </div>
-          <div className="space-y-2">{overdue.map(t => renderRow(t, 'critical'))}</div>
-        </div>
-      )}
-      {dueToday.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-2 pb-1 border-b border-orange-100">
-            <span className="w-2.5 h-2.5 rounded-full bg-orange-500 flex-shrink-0" />
-            <span className="text-xs font-black text-orange-700 uppercase tracking-wide">🟠 Heute fällig</span>
-            <span className="ml-auto text-[10px] bg-orange-500 text-white px-2 py-0.5 rounded-full font-bold">{dueToday.length}</span>
-          </div>
-          <div className="space-y-2">{dueToday.map(t => renderRow(t, 'today'))}</div>
-        </div>
-      )}
-      {dueThisWeek.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-2 pb-1 border-b border-amber-100">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0" />
-            <span className="text-xs font-black text-amber-700 uppercase tracking-wide">🟡 Diese Woche</span>
-            <span className="ml-auto text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">{dueThisWeek.length}</span>
-          </div>
-          <div className="space-y-2">{dueThisWeek.slice(0, 5).map(t => renderRow(t, 'week'))}</div>
-        </div>
-      )}
-      <button onClick={() => navigate('/aufgaben')} className="flex items-center gap-1.5 text-xs text-primary hover:underline pt-1 font-medium">
+    <div className="space-y-1.5">
+      {allSecondary.map(t => {
+        const days = daysUntil(t.due_date)
+        const isOverdue = days !== null && days <= 0
+        const isFollowup = t._cat === 'followup'
+        const actionLabel = getActionLabel(t)
+        return (
+          <button
+            key={t.id}
+            onClick={() => onTaskClick(t)}
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2 rounded-lg border text-left transition-all hover:shadow-sm',
+              isOverdue ? 'bg-red-50 border-red-200' :
+              isFollowup ? 'bg-orange-50/40 border-orange-100 hover:border-orange-200' :
+              'bg-slate-50 border-slate-100 hover:border-slate-200'
+            )}
+          >
+            <span className={cn('w-1 h-6 rounded-full flex-shrink-0',
+              isOverdue ? 'bg-red-500' :
+              isFollowup && days !== null && days <= 7 ? 'bg-orange-400' :
+              isFollowup ? 'bg-amber-300' :
+              'bg-slate-200'
+            )} />
+            <div className="flex-1 min-w-0">
+              <p className={cn('text-xs font-semibold truncate',
+                isOverdue ? 'text-red-800' : isFollowup ? 'text-orange-800' : 'text-slate-700'
+              )}>{t.title}</p>
+              {t.customer_name && (
+                <p className="text-[10px] text-muted-foreground truncate">{t.customer_name}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {isFollowup && (
+                <span className="text-[8px] px-1 py-0.5 bg-orange-100 text-orange-700 rounded font-bold">FOLLOW-UP</span>
+              )}
+              {days !== null && (
+                <span className={cn('text-[10px] font-bold',
+                  isOverdue ? 'text-red-600' : days <= 7 ? 'text-orange-600' : 'text-slate-400'
+                )}>
+                  {isOverdue ? `+${Math.abs(days)}d` : `${days}d`}
+                </span>
+              )}
+            </div>
+          </button>
+        )
+      })}
+      <button onClick={() => navigate('/aufgaben')} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary hover:underline pt-0.5">
         <ArrowRight className="w-3 h-3" /> Alle Aufgaben öffnen
       </button>
     </div>
@@ -477,98 +520,6 @@ function CustomerActionItems({ data, onCustomerSelect }) {
   )
 }
 
-// ── 4. ALL TASKS SPLIT PANEL ──────────────────────────────────────────────────
-function AllTasksSplit({ openTasks, onTaskClick, customers = [] }) {
-  const navigate = useNavigate()
-  const adminTasks    = openTasks.filter(t => !CONTRACT_TASK_TYPES.has(t.task_type))
-  const contractTasks = openTasks.filter(t => CONTRACT_TASK_TYPES.has(t.task_type))
-
-  const statusLabels = { open: 'Offen', in_progress: 'In Bearb.', waiting: 'Wartend' }
-
-  const renderTask = (t) => {
-    const days = daysUntil(t.due_date)
-    const isOverdue = days !== null && days <= 0
-    const isUrgent = t.priority === 'urgent' || isOverdue
-    const isHigh = !isUrgent && (t.priority === 'high' || (days !== null && days <= 7))
-    const actionLabel = getActionLabel(t)
-    return (
-      <button
-        key={t.id}
-        onClick={() => onTaskClick(t)}
-        className={cn('w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition-all hover:shadow-sm',
-          isUrgent ? 'bg-red-50 border-red-200 hover:border-red-300' :
-          isHigh   ? 'bg-orange-50 border-orange-200 hover:border-orange-300' :
-          'bg-background border-border hover:border-muted-foreground/30'
-        )}
-      >
-        <span className={cn('w-1 h-8 rounded-full flex-shrink-0', {
-          'bg-red-500':    isUrgent,
-          'bg-orange-400': isHigh,
-          'bg-blue-400':   !isUrgent && !isHigh && t.priority === 'medium',
-          'bg-slate-200':  !isUrgent && !isHigh && (!t.priority || t.priority === 'low'),
-        })} />
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold truncate">{t.title}</p>
-          <p className={cn('text-[10px] font-medium mt-0.5',
-            isUrgent ? 'text-red-600' : isHigh ? 'text-orange-600' : 'text-muted-foreground'
-          )}>→ {actionLabel}</p>
-          {t.customer_name && (
-            <button onClick={(e) => { e.stopPropagation(); navigate(`/kunden/${t.customer_id}`) }}
-              className="text-[10px] text-blue-700 font-medium hover:underline">
-              {t.customer_name}
-            </button>
-          )}
-        </div>
-        <div className="flex flex-col items-end gap-1 flex-shrink-0">
-          {isOverdue && <span className="text-[9px] bg-red-600 text-white px-1.5 py-0.5 rounded font-bold">ÜBERFÄLLIG</span>}
-          {t.due_date && (
-            <span className={cn('text-xs font-bold', urgencyColor(days))}>
-              {isOverdue ? `${Math.abs(days)}d` : `${days}d`}
-            </span>
-          )}
-        </div>
-      </button>
-    )
-  }
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-      <div>
-        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-blue-100">
-          <ListTodo className="w-4 h-4 text-blue-500" />
-          <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">Administrative</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold ml-auto">{adminTasks.length}</span>
-        </div>
-        {adminTasks.length === 0
-          ? <p className="text-xs text-muted-foreground py-3 text-center">Alle erledigt ✓</p>
-          : <div className="space-y-1.5">{adminTasks.slice(0, 6).map(renderTask)}</div>
-        }
-        {adminTasks.length > 6 && (
-          <button onClick={() => navigate('/aufgaben')} className="flex items-center gap-1 text-xs text-primary mt-2 hover:underline">
-            <ArrowRight className="w-3 h-3" /> +{adminTasks.length - 6} weitere
-          </button>
-        )}
-      </div>
-      <div>
-        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-orange-100">
-          <RefreshCw className="w-4 h-4 text-orange-500" />
-          <span className="text-xs font-bold text-orange-700 uppercase tracking-wide">Vertrags-Workflows</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-bold ml-auto">{contractTasks.length}</span>
-        </div>
-        {contractTasks.length === 0
-          ? <p className="text-xs text-muted-foreground py-3 text-center">Keine offenen Vertragsaufgaben ✓</p>
-          : <div className="space-y-1.5">{contractTasks.slice(0, 6).map(renderTask)}</div>
-        }
-        {contractTasks.length > 6 && (
-          <button onClick={() => navigate('/aufgaben')} className="flex items-center gap-1 text-xs text-primary mt-2 hover:underline">
-            <ArrowRight className="w-3 h-3" /> +{contractTasks.length - 6} weitere
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ── 5. KPI STRIP (compact, secondary) ────────────────────────────────────────
 function CompactKpiStrip({ data }) {
   const navigate = useNavigate()
@@ -797,8 +748,11 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
   const { tasks = [], contracts = [], documents = [], customers = [] } = data
   const openTasks = data.openTasks || []
 
-  const overdueCount = openTasks.filter(t => t.due_date && daysUntil(t.due_date) <= 0).length
-  const todayCount   = openTasks.filter(t => t.due_date === new Date().toISOString().slice(0, 10)).length
+  // Aufgaben nach operativer Kategorie aufteilen
+  const contractWorkflowTasks = openTasks.filter(t => isContractWorkflowTask(t))
+  const followUpTasks = openTasks.filter(t => !isContractWorkflowTask(t) && isFollowUpTask(t))
+  const adminTasks = openTasks.filter(t => !isContractWorkflowTask(t) && !isFollowUpTask(t))
+
   const urgentContractCount = data.expiringContracts.filter(c => {
     const d = daysUntil(c.end_date)
     return d !== null && d <= 14
@@ -811,10 +765,12 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
     .filter(c => c._days >= -7 && c._days <= 180)
   const kuendigungDringend = kuendigungsTermine.filter(c => c._days <= 30).length
 
-  const adminOpen    = openTasks.filter(t => !CONTRACT_TASK_TYPES.has(t.task_type)).length
-  const contractOpen = openTasks.filter(t =>  CONTRACT_TASK_TYPES.has(t.task_type)).length
+  const urgentWorkflowCount = contractWorkflowTasks.filter(t => {
+    const d = daysUntil(t.due_date)
+    return (d !== null && d <= 0) || t.priority === 'urgent'
+  }).length
 
-  const totalUrgent = overdueCount + todayCount + kuendigungDringend + urgentContractCount
+  const totalUrgent = kuendigungDringend + urgentContractCount + urgentWorkflowCount
 
   return (
     <div className="space-y-3">
@@ -842,44 +798,22 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
 
         <div className="p-4 space-y-3">
 
-          {/* 1a — Heutige Prioritäten */}
-          <div className="rounded-xl border-2 border-red-300 bg-white/90 overflow-hidden shadow-md">
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-red-200 bg-gradient-to-r from-red-600 to-red-500 text-white">
-              <Zap className="w-4 h-4 flex-shrink-0" />
+          {/* ── BLOCK A: KÜNDIGUNGSTERMINE — höchste Priorität ── */}
+          <div className="rounded-xl border-2 border-red-400 bg-white/90 overflow-hidden shadow-md">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-red-300 bg-gradient-to-r from-red-700 to-red-600 text-white">
+              <CalendarX2 className="w-4 h-4 flex-shrink-0" />
               <div className="flex-1">
-                <span className="text-xs font-black uppercase tracking-widest">Offene Aufgaben — Prioritätsleitstand</span>
-                <p className="text-[10px] text-red-200 mt-0.5">Überfällig · Heute fällig · Diese Woche</p>
-              </div>
-              {(overdueCount + todayCount) > 0 ? (
-                <div className="flex flex-col items-center bg-white/20 rounded-lg px-2.5 py-1 border border-white/25">
-                  <span className="text-xl font-black leading-none">{overdueCount + todayCount}</span>
-                  <span className="text-[9px] text-red-200 font-bold uppercase">kritisch</span>
-                </div>
-              ) : (
-                <span className="bg-emerald-500/80 text-white text-xs font-bold px-3 py-1 rounded-full">✓ Klar</span>
-              )}
-            </div>
-            <div className="px-4 py-3">
-              <TodayPriorityTasks openTasks={openTasks} onTaskClick={onTaskClick} customers={customers} />
-            </div>
-          </div>
-
-          {/* 1b — Kündigungstermine */}
-          <div className="rounded-xl border border-red-200/80 bg-white/85 overflow-hidden shadow-sm">
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-red-100 bg-gradient-to-r from-red-50 to-orange-50/50">
-              <CalendarX2 className="w-4 h-4 text-red-600" />
-              <div className="flex-1">
-                <span className="text-xs font-black text-red-800 uppercase tracking-wide">Kündigungstermine</span>
-                <span className="text-[10px] text-red-400 ml-2">nächste 180 Tage</span>
+                <span className="text-xs font-black uppercase tracking-widest">Kündigungstermine</span>
+                <p className="text-[10px] text-red-200 mt-0.5">Vertragsfristen · nächste 180 Tage</p>
               </div>
               {kuendigungsTermine.length > 0 ? (
                 <span className={cn('text-xs px-2 py-0.5 rounded-full font-bold',
-                  kuendigungDringend > 0 ? 'bg-red-600 text-white animate-pulse' : 'bg-amber-100 text-amber-800'
+                  kuendigungDringend > 0 ? 'bg-white text-red-700 animate-pulse' : 'bg-red-800/60 text-white'
                 )}>
                   {kuendigungDringend > 0 ? `${kuendigungDringend} dringend` : `${kuendigungsTermine.length} total`}
                 </span>
               ) : (
-                <span className="text-[10px] text-emerald-600 font-semibold">✓ Klar</span>
+                <span className="bg-emerald-500/80 text-white text-xs font-bold px-3 py-1 rounded-full">✓ Klar</span>
               )}
             </div>
             <div className="px-4 py-3">
@@ -887,20 +821,20 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
             </div>
           </div>
 
-          {/* 1c — Kritische Vertragsabläufe */}
-          <div className="rounded-xl border border-orange-200/80 bg-white/85 overflow-hidden shadow-sm">
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-orange-100 bg-gradient-to-r from-orange-50 to-amber-50/50">
-              <RefreshCw className="w-4 h-4 text-orange-600" />
+          {/* ── BLOCK B: KRITISCHE VERTRAGSABLÄUFE ── */}
+          <div className="rounded-xl border-2 border-orange-400 bg-white/90 overflow-hidden shadow-md">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-orange-300 bg-gradient-to-r from-orange-600 to-orange-500 text-white">
+              <RefreshCw className="w-4 h-4 flex-shrink-0" />
               <div className="flex-1">
-                <span className="text-xs font-black text-orange-800 uppercase tracking-wide">Kritische Vertragsabläufe</span>
-                <span className="text-[10px] text-orange-400 ml-2">{data.expiringContracts.length} / 90 Tage</span>
+                <span className="text-xs font-black uppercase tracking-widest">Kritische Vertragsabläufe</span>
+                <p className="text-[10px] text-orange-100 mt-0.5">Ablaufende Policen · {data.expiringContracts.length} in 90 Tagen</p>
               </div>
               {urgentContractCount > 0 ? (
-                <span className="text-xs bg-orange-500 text-white px-2 py-0.5 rounded-full font-bold">
+                <span className="bg-white text-orange-700 text-xs font-bold px-2 py-0.5 rounded-full">
                   {urgentContractCount} kritisch
                 </span>
               ) : (
-                <span className="text-[10px] text-emerald-600 font-semibold">✓ Klar</span>
+                <span className="bg-emerald-500/80 text-white text-xs font-bold px-3 py-1 rounded-full">✓ Klar</span>
               )}
             </div>
             <div className="px-4 py-3">
@@ -908,23 +842,52 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
             </div>
           </div>
 
-          {/* 1d — Alle Aufgaben (eingeklappt) */}
-          <Section
-            title="Alle offenen Aufgaben"
-            icon={CheckSquare}
-            accent={{ bar: 'bg-slate-400', border: 'border-slate-200 bg-white/70', icon: 'text-slate-500' }}
-            defaultOpen={false}
-            countBadge={
-              openTasks.length > 0
-                ? <span className="flex gap-1 items-center">
-                    <CountBadge n={adminOpen} className="bg-blue-100 text-blue-700" />
-                    <CountBadge n={contractOpen} className="bg-orange-100 text-orange-700" />
-                  </span>
-                : null
-            }
-          >
-            <AllTasksSplit openTasks={openTasks} onTaskClick={onTaskClick} customers={customers} />
-          </Section>
+          {/* ── BLOCK C: VERTRAGS-WORKFLOW AUFGABEN — operativ kritisch ── */}
+          <div className="rounded-xl border-2 border-amber-400 bg-white/90 overflow-hidden shadow-md">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-300 bg-gradient-to-r from-amber-600 to-amber-500 text-white">
+              <FileCheck className="w-4 h-4 flex-shrink-0" />
+              <div className="flex-1">
+                <span className="text-xs font-black uppercase tracking-widest">Vertrags-Workflow Aufgaben</span>
+                <p className="text-[10px] text-amber-100 mt-0.5">Verlängerung · Mutation · Police · Offerte</p>
+              </div>
+              {urgentWorkflowCount > 0 ? (
+                <span className="bg-white text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                  {urgentWorkflowCount} dringend
+                </span>
+              ) : contractWorkflowTasks.length > 0 ? (
+                <span className="bg-amber-800/50 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  {contractWorkflowTasks.length} offen
+                </span>
+              ) : (
+                <span className="bg-emerald-500/80 text-white text-xs font-bold px-3 py-1 rounded-full">✓ Klar</span>
+              )}
+            </div>
+            <div className="px-4 py-3">
+              <ContractWorkflowTasks tasks={contractWorkflowTasks} onTaskClick={onTaskClick} />
+            </div>
+          </div>
+
+          {/* ── BLOCK D: FOLLOW-UPS & ADMIN — sekundär, einklappbar ── */}
+          {(followUpTasks.length > 0 || adminTasks.length > 0) && (
+            <Section
+              title="Follow-ups & Administrative Aufgaben"
+              icon={ListTodo}
+              accent={{ bar: 'bg-slate-300', border: 'border-slate-200 bg-white/70', icon: 'text-slate-400' }}
+              defaultOpen={followUpTasks.length > 0}
+              countBadge={
+                <span className="flex gap-1 items-center">
+                  {followUpTasks.length > 0 && <CountBadge n={followUpTasks.length} className="bg-orange-100 text-orange-700" />}
+                  {adminTasks.length > 0 && <CountBadge n={adminTasks.length} className="bg-slate-100 text-slate-600" />}
+                </span>
+              }
+            >
+              <AdminAndFollowUpTasks
+                followUpTasks={followUpTasks}
+                adminTasks={adminTasks}
+                onTaskClick={onTaskClick}
+              />
+            </Section>
+          )}
 
         </div>
       </div>
