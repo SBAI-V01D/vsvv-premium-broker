@@ -120,79 +120,89 @@ function TodayPriorityTasks({ openTasks, onTaskClick, customers = [] }) {
     const isOverdue = days !== null && days <= 0
     const actionLabel = getActionLabel(t)
 
-    // Visual config per level
-    const levelConfig = {
+    // Config per urgency level — same visual weight as KuendigungsTermine cards
+    const cfg = {
       critical: {
-        card:   'bg-red-50 border-red-300 hover:border-red-400 hover:shadow-red-100',
-        stripe: 'bg-red-500',
-        icon:   'bg-red-100',
-        iconEl: <AlertCircle className="w-4 h-4 text-red-600" />,
-        badge:  'bg-red-600 text-white',
-        days:   'text-red-600 font-black text-base',
-        action: 'text-red-700',
+        card:       'bg-red-50 border-red-400 hover:border-red-500 hover:shadow-lg hover:shadow-red-100',
+        countdown:  isOverdue
+                      ? 'bg-red-600 border-red-700 text-white'
+                      : 'bg-red-100 border-red-400 text-red-700',
+        countLabel: isOverdue ? 'ÜBERFÄLLIG' : 'HEUTE',
+        titleColor: 'text-red-900',
+        actionColor:'text-red-700 font-bold',
+        customerColor: 'text-red-600',
+        typeBadge:  isContract ? 'bg-red-800 text-white' : 'bg-red-600 text-white',
+        typLabel:   isContract ? 'VERTRAG' : 'KRITISCH',
       },
       today: {
-        card:   'bg-orange-50 border-orange-200 hover:border-orange-300 hover:shadow-orange-100',
-        stripe: 'bg-orange-500',
-        icon:   'bg-orange-100',
-        iconEl: isContract ? <RefreshCw className="w-4 h-4 text-orange-600" /> : <Clock className="w-4 h-4 text-orange-600" />,
-        badge:  'bg-orange-500 text-white',
-        days:   'text-orange-600 font-bold text-sm',
-        action: 'text-orange-700',
+        card:       'bg-orange-50 border-orange-300 hover:border-orange-400 hover:shadow-lg hover:shadow-orange-100',
+        countdown:  'bg-orange-100 border-orange-400 text-orange-800',
+        countLabel: 'HEUTE',
+        titleColor: 'text-orange-900',
+        actionColor:'text-orange-700 font-semibold',
+        customerColor: 'text-orange-600',
+        typeBadge:  isContract ? 'bg-orange-600 text-white' : 'bg-orange-500 text-white',
+        typLabel:   isContract ? 'VERTRAG' : 'HEUTE',
       },
       week: {
-        card:   'bg-amber-50/60 border-amber-200 hover:border-amber-300',
-        stripe: 'bg-amber-400',
-        icon:   'bg-amber-100',
-        iconEl: isContract ? <RefreshCw className="w-4 h-4 text-amber-600" /> : <CalendarClock className="w-4 h-4 text-amber-600" />,
-        badge:  'bg-amber-100 text-amber-800',
-        days:   'text-amber-600 font-semibold text-sm',
-        action: 'text-amber-700',
+        card:       'bg-amber-50 border-amber-200 hover:border-amber-300 hover:shadow-md',
+        countdown:  'bg-amber-50 border-amber-300 text-amber-700',
+        countLabel: 'Tage',
+        titleColor: 'text-amber-900',
+        actionColor:'text-amber-700 font-medium',
+        customerColor: 'text-amber-600',
+        typeBadge:  isContract ? 'bg-amber-500 text-white' : 'bg-amber-200 text-amber-800',
+        typLabel:   isContract ? 'VERTRAG' : 'BALD',
       },
-    }
-    const cfg = levelConfig[level]
+    }[level]
 
     return (
       <button
         key={t.id}
         onClick={() => onTaskClick(t)}
         className={cn(
-          'w-full flex items-center gap-3 px-3 py-3 rounded-xl border-2 text-left transition-all hover:shadow-md',
+          'w-full flex items-center gap-4 px-4 py-3 rounded-xl border-2 text-left transition-all',
           cfg.card
         )}
       >
-        {/* Urgency stripe */}
-        <span className={cn('w-1.5 h-12 rounded-full flex-shrink-0', cfg.stripe)} />
-
-        {/* Icon */}
-        <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0', cfg.icon)}>
-          {cfg.iconEl}
+        {/* Prominent countdown box — same style as KuendigungsTermine */}
+        <div className={cn(
+          'flex-shrink-0 w-14 h-14 rounded-xl flex flex-col items-center justify-center border-2 select-none',
+          cfg.countdown
+        )}>
+          {days === null ? (
+            <span className="text-lg font-black leading-none">–</span>
+          ) : isOverdue ? (
+            <>
+              <span className="text-base font-black leading-none">{Math.abs(days)}</span>
+              <span className="text-[8px] font-bold uppercase leading-none mt-0.5 text-center px-0.5">ÜBER<br/>FÄLLIG</span>
+            </>
+          ) : days === 0 ? (
+            <>
+              <AlertCircle className="w-5 h-5 mb-0.5" />
+              <span className="text-[9px] font-black uppercase leading-none">HEUTE</span>
+            </>
+          ) : (
+            <>
+              <span className="text-xl font-black leading-none">{days}</span>
+              <span className="text-[9px] font-bold uppercase leading-none mt-0.5">Tage</span>
+            </>
+          )}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold truncate leading-tight">{t.title}</p>
-          <p className={cn('text-[11px] font-semibold mt-0.5', cfg.action)}>→ {actionLabel}</p>
+          <div className="flex items-center gap-2 mb-0.5">
+            <p className={cn('text-sm font-bold truncate leading-tight flex-1', cfg.titleColor)}>{t.title}</p>
+            <span className={cn('text-[9px] px-1.5 py-0.5 rounded font-bold flex-shrink-0', cfg.typeBadge)}>
+              {cfg.typLabel}
+            </span>
+          </div>
+          <p className={cn('text-xs mt-0.5', cfg.actionColor)}>→ {actionLabel}</p>
           {t.customer_name
-            ? <p className="text-[10px] text-blue-700 font-medium mt-0.5">{t.customer_name}</p>
-            : <p className="text-[10px] text-slate-400 italic mt-0.5">Kein Kunde verknüpft</p>
+            ? <p className={cn('text-[11px] font-semibold mt-1', cfg.customerColor)}>👤 {t.customer_name}</p>
+            : <p className="text-[10px] text-slate-400 italic mt-1">Kein Kunde verknüpft</p>
           }
-        </div>
-
-        {/* Right: priority badge + countdown */}
-        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-          {isContract && (
-            <span className="text-[9px] px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded-md font-bold">VERTRAG</span>
-          )}
-          {t.priority === 'urgent' && (
-            <span className="text-[9px] px-1.5 py-0.5 bg-red-600 text-white rounded-md font-bold animate-pulse">URGENT</span>
-          )}
-          <span className={cn('font-black leading-none', cfg.days)}>
-            {days === null ? '–' : isOverdue ? `${Math.abs(days)}d` : days === 0 ? 'HEUTE' : `${days}d`}
-          </span>
-          {!isOverdue && days !== null && (
-            <span className="text-[9px] text-muted-foreground">{isOverdue ? 'überfällig' : 'verbleibend'}</span>
-          )}
         </div>
       </button>
     )
@@ -833,16 +843,20 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
         <div className="p-4 space-y-3">
 
           {/* 1a — Heutige Prioritäten */}
-          <div className="rounded-xl border border-red-200/80 bg-white/85 overflow-hidden shadow-sm">
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b border-red-100 bg-gradient-to-r from-red-50 to-orange-50/50">
-              <Zap className="w-4 h-4 text-red-600" />
-              <span className="text-xs font-black text-red-800 uppercase tracking-wide flex-1">Heutige Prioritäten</span>
+          <div className="rounded-xl border-2 border-red-300 bg-white/90 overflow-hidden shadow-md">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-red-200 bg-gradient-to-r from-red-600 to-red-500 text-white">
+              <Zap className="w-4 h-4 flex-shrink-0" />
+              <div className="flex-1">
+                <span className="text-xs font-black uppercase tracking-widest">Offene Aufgaben — Prioritätsleitstand</span>
+                <p className="text-[10px] text-red-200 mt-0.5">Überfällig · Heute fällig · Diese Woche</p>
+              </div>
               {(overdueCount + todayCount) > 0 ? (
-                <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">
-                  {overdueCount + todayCount} kritisch
-                </span>
+                <div className="flex flex-col items-center bg-white/20 rounded-lg px-2.5 py-1 border border-white/25">
+                  <span className="text-xl font-black leading-none">{overdueCount + todayCount}</span>
+                  <span className="text-[9px] text-red-200 font-bold uppercase">kritisch</span>
+                </div>
               ) : (
-                <span className="text-[10px] text-emerald-600 font-semibold">✓ Klar</span>
+                <span className="bg-emerald-500/80 text-white text-xs font-bold px-3 py-1 rounded-full">✓ Klar</span>
               )}
             </div>
             <div className="px-4 py-3">
