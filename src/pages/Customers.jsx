@@ -40,7 +40,7 @@ export default function Customers() {
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
     queryFn: async () => {
-      const allCustomers = await base44.entities.Customer.list('last_name')
+      const allCustomers = await base44.entities.Customer.list('last_name,first_name')
       
       // Role-based filtering
       if (currentUser?.role === 'admin') {
