@@ -776,22 +776,7 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
         <UrgentContracts expiringContracts={data.expiringContracts} onContractSelect={(c) => c.customer_id && navigate(`/kunden/${c.customer_id}`)} />
       </Section>
 
-      {/* ③ CUSTOMER ACTIONS */}
-      <Section
-        title="Kundenmassnahmen"
-        icon={Users}
-        accent={{ bar: 'bg-violet-500', header: 'bg-violet-50/10', border: 'border-border bg-card', icon: 'text-violet-500' }}
-        defaultOpen={true}
-        countBadge={
-          (data.customersWithCriticalGaps.length + data.contractsWithoutDoc) > 0
-            ? <CountBadge n={data.customersWithCriticalGaps.length + data.contractsWithoutDoc} className="bg-violet-100 text-violet-700" />
-            : null
-        }
-      >
-        <CustomerActionItems data={data} onCustomerSelect={setSelectedCustomer} />
-      </Section>
-
-      {/* ④ ALL TASKS SPLIT */}
+      {/* ③ ALL TASKS SPLIT */}
       <Section
         title="Alle offenen Aufgaben"
         icon={CheckSquare}
@@ -807,6 +792,21 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
         }
       >
         <AllTasksSplit openTasks={openTasks} onTaskClick={onTaskClick} customers={customers} />
+      </Section>
+
+      {/* ④ CUSTOMER ACTIONS */}
+      <Section
+        title="Kundenmassnahmen"
+        icon={Users}
+        accent={{ bar: 'bg-violet-500', header: 'bg-violet-50/10', border: 'border-border bg-card', icon: 'text-violet-500' }}
+        defaultOpen={true}
+        countBadge={
+          (data.customersWithCriticalGaps.length + data.contractsWithoutDoc) > 0
+            ? <CountBadge n={data.customersWithCriticalGaps.length + data.contractsWithoutDoc} className="bg-violet-100 text-violet-700" />
+            : null
+        }
+      >
+        <CustomerActionItems data={data} onCustomerSelect={setSelectedCustomer} />
       </Section>
 
       {/* ⑤ SALES & PIPELINE */}
