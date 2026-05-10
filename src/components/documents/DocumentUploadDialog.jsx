@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -7,14 +7,26 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Upload, Zap, Paperclip, Loader2 } from 'lucide-react'
+import { Upload, Zap, Paperclip, Loader2, CheckCircle2, AlertCircle, FileText } from 'lucide-react'
+
+const MAX_FILE_SIZE_MB = 50
+const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx']
+
+const sanitizeFilename = (name) =>
+  name.replace(/[^\w\s.\-_()äöüÄÖÜ]/g, '_').replace(/\s+/g, '_')
 
 export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) {
   const [uploadMode, setUploadMode] = useState(null)
   const [file, setFile] = useState(null)
+  const [fileError, setFileError] = useState('')
   const [form, setForm] = useState({ name: '', notes: '', customer_id: '', contract_id: '' })
   const [uploading, setUploading] = useState(false)
-  const [step, setStep] = useState('mode') // mode | form | uploading
+  const [uploadProgress, setUploadProgress] = useState(0) // 0-100
+  const [uploadError, setUploadError] = useState('')
+  const [step, setStep] = useState('mode') // mode | form | uploading | success
+  const [dragOver, setDragOver] = useState(false)
 
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
@@ -34,18 +46,41 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
   const reset = () => {
     setUploadMode(null)
     setFile(null)
+    setFileError('')
     setForm({ name: '', notes: '', customer_id: '', contract_id: '' })
     setUploading(false)
+    setUploadProgress(0)
+    setUploadError('')
     setStep('mode')
+    setDragOver(false)
   }
 
   const handleClose = () => { reset(); onOpenChange(false) }
 
+  const validateFile = (f) => {
+    if (!f) return 'Keine Datei ausgewählt.'
+    const ext = '.' + f.name.split('.').pop().toLowerCase()
+    if (!ALLOWED_EXTENSIONS.includes(ext)) return `Dateityp nicht erlaubt. Erlaubt: ${ALLOWED_EXTENSIONS.join(', ')}`
+    if (f.size > MAX_FILE_SIZE_MB * 1024 * 1024) return `Datei zu gross. Maximum: ${MAX_FILE_SIZE_MB} MB`
+    if (f.size === 0) return 'Datei ist leer.'
+    return ''
+  }
+
   const applyFile = (f) => {
     if (!f) return
-    setFile(f)
-    setForm(p => ({ ...p, name: p.name || f.name.replace(/\.[^.]+$/, '') }))
+    const err = validateFile(f)
+    setFileError(err)
+    if (!err) {
+      setFile(f)
+      setForm(p => ({ ...p, name: p.name || sanitizeFilename(f.name.replace(/\.[^.]+$/, '')) }))
+    }
   }
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault()
+    setDragOver(false)
+    applyFile(e.dataTransfer.files[0])
+  }, [])
 
   const handleModeSelect = (mode) => {
     setUploadMode(mode)
@@ -54,15 +89,20 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
 
   const handleUpload = async (e) => {
     e.preventDefault()
-    if (!file) return
+    const err = validateFile(file)
+    if (err) { setFileError(err); return }
+
     setUploading(true)
+    setUploadError('')
+    setUploadProgress(10)
     setStep('uploading')
 
-    // Step 1: Upload file (fast)
+    // Step 1: Upload file
+    setUploadProgress(30)
     const { file_url } = await base44.integrations.Core.UploadFile({ file })
+    setUploadProgress(60)
 
     if (uploadMode === 'antrag') {
-      // Step 2: Save document immediately with status "queued"
       const doc = await base44.entities.Document.create({
         name: form.name,
         file_url,
@@ -72,8 +112,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
         notes: form.notes || undefined,
         uploaded_by: 'broker',
       })
-
-      // Step 3: Queue background KI job (fire & forget – don't await)
+      setUploadProgress(85)
       base44.entities.AutomationQueue.create({
         job_type: 'ki_extraction',
         status: 'pending',
@@ -82,9 +121,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
         related_entity_id: doc.id,
         payload: JSON.stringify({ file_url, file_name: form.name, document_id: doc.id }),
       }).catch(err => console.error('Queue creation failed:', err))
-
     } else {
-      // Anlage: save directly, no KI needed
       await base44.entities.Document.create({
         name: form.name,
         file_url,
@@ -97,11 +134,15 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
         customer_name: selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : undefined,
         linked_contract_id: form.contract_id || undefined,
       })
+      setUploadProgress(90)
     }
 
-    setUploading(false)
-    onSuccess()
-    handleClose()
+    setUploadProgress(100)
+    setStep('success')
+    setTimeout(() => {
+      onSuccess()
+      handleClose()
+    }, 1200)
   }
 
   return (
@@ -153,10 +194,53 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
               <button type="button" onClick={() => setStep('mode')} className="ml-auto text-xs underline opacity-60 hover:opacity-100">Ändern</button>
             </div>
 
+            {/* Drag & Drop File Area */}
             <div>
-              <Label>Datei (PDF / JPG / PNG / DOCX)</Label>
-              <Input type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" onChange={e => applyFile(e.target.files[0])} required className="mt-1" />
+              <Label>Datei (PDF / JPG / PNG / DOCX) — max. {MAX_FILE_SIZE_MB} MB</Label>
+              <div
+                onDrop={handleDrop}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+                onDragLeave={() => setDragOver(false)}
+                className={`mt-1 border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
+                  dragOver ? 'border-primary bg-primary/5' :
+                  fileError ? 'border-red-400 bg-red-50' :
+                  file ? 'border-emerald-400 bg-emerald-50' :
+                  'border-border hover:border-primary/40 hover:bg-muted/30'
+                }`}
+                onClick={() => document.getElementById('doc-file-input').click()}
+              >
+                <input
+                  id="doc-file-input"
+                  type="file"
+                  accept={ALLOWED_EXTENSIONS.join(',')}
+                  className="hidden"
+                  onChange={e => applyFile(e.target.files[0])}
+                />
+                {file ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <FileText className="w-5 h-5 text-emerald-600" />
+                    <div className="text-left">
+                      <p className="text-sm font-semibold text-emerald-800">{file.name}</p>
+                      <p className="text-xs text-emerald-600">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500 ml-2" />
+                  </div>
+                ) : (
+                  <div>
+                    <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Datei hier ablegen oder <span className="text-primary font-medium">auswählen</span></p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">{ALLOWED_EXTENSIONS.join(' · ')}</p>
+                  </div>
+                )}
+              </div>
+              {fileError && (
+                <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                  <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                  <p className="text-xs text-red-700 font-medium">{fileError}</p>
+                </div>
+              )}
             </div>
+
             <div>
               <Label>Name</Label>
               <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required placeholder="Dokumentname" className="mt-1" />
@@ -204,25 +288,57 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
               </div>
             )}
 
+            {uploadError && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                <p className="text-xs text-red-700 font-medium">{uploadError}</p>
+              </div>
+            )}
+
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={handleClose}>Abbrechen</Button>
-              <Button type="submit" disabled={uploading}>
+              <Button type="submit" disabled={uploading || !!fileError || !file}>
                 <Upload className="w-4 h-4 mr-2" /> Hochladen
               </Button>
             </div>
           </form>
         )}
 
-        {/* Step 3: Uploading */}
+        {/* Step 3: Uploading with progress */}
         {step === 'uploading' && (
-          <div className="py-8 flex flex-col items-center gap-4 text-center">
-            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          <div className="py-8 flex flex-col items-center gap-5 text-center">
+            <div className="relative w-16 h-16">
+              <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="28" fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+                <circle cx="32" cy="32" r="28" fill="none" stroke="hsl(var(--primary))" strokeWidth="6"
+                  strokeDasharray={`${2 * Math.PI * 28}`}
+                  strokeDashoffset={`${2 * Math.PI * 28 * (1 - uploadProgress / 100)}`}
+                  className="transition-all duration-500"
+                />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-primary">{uploadProgress}%</span>
+            </div>
             <div>
-              <p className="font-semibold">Dokument wird gespeichert...</p>
+              <p className="font-semibold">Dokument wird hochgeladen...</p>
               <p className="text-sm text-muted-foreground mt-1">
-                {uploadMode === 'antrag'
-                  ? 'Upload abgeschlossen – KI-Verarbeitung läuft im Hintergrund'
-                  : 'Wird gespeichert...'}
+                {uploadProgress < 60 ? 'Datei wird übertragen...' :
+                 uploadProgress < 90 ? 'Dokument wird gespeichert...' :
+                 uploadMode === 'antrag' ? 'KI-Verarbeitung wird gestartet...' : 'Fast fertig...'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Success */}
+        {step === 'success' && (
+          <div className="py-8 flex flex-col items-center gap-4 text-center">
+            <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+            </div>
+            <div>
+              <p className="font-bold text-emerald-800">Erfolgreich gespeichert!</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {uploadMode === 'antrag' ? 'KI-Verarbeitung läuft im Hintergrund.' : 'Dokument wurde gespeichert.'}
               </p>
             </div>
           </div>

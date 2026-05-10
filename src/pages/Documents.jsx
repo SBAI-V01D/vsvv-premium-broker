@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   Search, Plus, MoreHorizontal, FileText, ExternalLink,
-  Zap, Paperclip, Tag, Trash2, Eye, RefreshCw, Clock
+  Zap, Paperclip, Tag, Trash2, Eye, RefreshCw, Clock, Download, AlertCircle
 } from 'lucide-react'
 import DocumentTypeBadge from '@/components/documents/DocumentTypeBadge'
 import DocumentUploadDialog from '@/components/documents/DocumentUploadDialog'
@@ -88,6 +88,28 @@ export default function Documents() {
 
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('de-CH') : '–'
   const isImage = (url) => url?.match(/\.(jpg|jpeg|png)$/i)
+
+  const openDocument = (url, name) => {
+    if (!url) return
+    // Open in new tab — safest cross-browser method for PDFs
+    const win = window.open(url, '_blank', 'noopener,noreferrer')
+    if (!win) {
+      // Popup blocked — fallback to direct navigation
+      window.location.href = url
+    }
+  }
+
+  const downloadDocument = (url, name) => {
+    if (!url) return
+    const a = document.createElement('a')
+    a.href = url
+    a.download = name || 'dokument'
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
 
   // Full-Page Review Mode — ersetzt die ganze Seite, kein Modal
   if (reviewDoc) {
@@ -251,11 +273,26 @@ export default function Documents() {
                     </Button>
                   )}
                   {doc.file_url && (
-                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </Button>
-                    </a>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground"
+                      title="Dokument öffnen"
+                      onClick={() => openDocument(doc.file_url, doc.name)}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                  {doc.file_url && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground"
+                      title="Herunterladen"
+                      onClick={() => downloadDocument(doc.file_url, doc.name)}
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </Button>
                   )}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -284,10 +321,13 @@ export default function Documents() {
                         <Paperclip className="w-4 h-4 mr-2 text-slate-500" /> Als ANLAGE markieren
                       </DropdownMenuItem>
                       {doc.file_url && (
-                        <DropdownMenuItem asChild>
-                          <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center">
-                            <ExternalLink className="w-4 h-4 mr-2" /> Öffnen
-                          </a>
+                        <DropdownMenuItem onClick={() => openDocument(doc.file_url, doc.name)}>
+                          <ExternalLink className="w-4 h-4 mr-2" /> Öffnen
+                        </DropdownMenuItem>
+                      )}
+                      {doc.file_url && (
+                        <DropdownMenuItem onClick={() => downloadDocument(doc.file_url, doc.name)}>
+                          <Download className="w-4 h-4 mr-2" /> Herunterladen
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
