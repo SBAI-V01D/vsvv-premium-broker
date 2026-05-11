@@ -208,7 +208,15 @@ export default function Vertragsablaeufe() {
   // Verträge mit Handlungsbedarf analysieren
   const actionableItems = useMemo(() => {
     return contracts
-      .filter(c => !['cancelled', 'archived', 'expired'].includes(c.status))
+      .filter(c => {
+        if (['cancelled', 'archived'].includes(c.status)) return false
+        // expired: nur anzeigen wenn Kündigungsfrist noch relevant
+        if (c.status === 'expired') {
+          const cancelDays = c.cancellation_deadline ? Math.ceil((new Date(c.cancellation_deadline) - new Date()) / 86400000) : null
+          return cancelDays !== null && cancelDays >= -30 && cancelDays <= 90
+        }
+        return true
+      })
       .map(c => {
         const actions = analyzeContract(c)
         return { contract: c, actions, topAction: actions[0] }

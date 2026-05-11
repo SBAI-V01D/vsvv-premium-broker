@@ -27,7 +27,11 @@ function useSidebarBadges() {
         const overdueTasks = openTasks.filter(t => t.due_date && new Date(t.due_date) < today);
         // Vertragsabläufe badge: nur echte Handlungsbedarfe (Frist <= 90 Tage)
         const vertragsablaeufe = contracts.filter(c => {
-          if (['cancelled', 'archived', 'expired'].includes(c.status)) return false
+          if (['cancelled', 'archived'].includes(c.status)) return false
+          if (c.status === 'expired') {
+            const cancelDays = c.cancellation_deadline ? Math.ceil((new Date(c.cancellation_deadline) - today) / 86400000) : null
+            return cancelDays !== null && cancelDays >= -30 && cancelDays <= 90
+          }
           const endDays   = c.end_date   ? Math.ceil((new Date(c.end_date)   - today) / 86400000) : null
           const cancelDays = c.cancellation_deadline ? Math.ceil((new Date(c.cancellation_deadline) - today) / 86400000) : null
           return (endDays !== null && endDays >= -30 && endDays <= 90) ||
