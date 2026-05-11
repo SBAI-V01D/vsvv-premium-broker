@@ -429,11 +429,13 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
 
       // AUTO-SKIP TO STEP 3 if policy holder found and child detected
       if (isChildOfPolicyHolder && policyHolderCustomer) {
+        const insuredFirstName = (d.first_name || '').trim();
+        const insuredLastName = (d.last_name || '').trim();
         setSelectedCustomer(policyHolderCustomer);
         setCustomerMode('policy_holder_main');
         setNewCustomerData({
-          first_name: (d.first_name || '').trim(),
-          last_name: (d.last_name || '').trim(),
+          first_name: insuredFirstName,
+          last_name: insuredLastName,
           birthdate: d.birthdate || '',
           email: policyHolderCustomer.email || '', // Inherit from policy holder
           phone: (d.phone || '').trim(),
@@ -453,8 +455,8 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       setContractList([baseContract, ...additionalContracts])
       setActiveContractIdx(0)
 
-      // Setze versicherte Person Daten
-      setNewCustomerData({
+      // Setze versicherte Person Daten (IMMER mit Extraktion füllen)
+      const extractedCustomerData = {
         first_name: (d.first_name || '').trim(),
         last_name: (d.last_name || '').trim(),
         birthdate: d.birthdate || '',
@@ -465,7 +467,8 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         city: (d.city || '').trim(),
         zip_code: (d.zip_code || '').trim(),
         canton: (d.canton || '').trim(),
-      })
+      }
+      setNewCustomerData(extractedCustomerData)
 
       // Entscheidungslogik: AUTO-SKIP zu Step 3 wenn neuer Kunde?
       const insuredFirstName = (d.first_name || '').trim();
