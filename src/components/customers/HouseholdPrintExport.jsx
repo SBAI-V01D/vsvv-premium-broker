@@ -45,7 +45,20 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
   }
 
   const getSparteLabel = (sparte) => {
+    if (!sparte) return '–'
+    
+    const normalized = String(sparte).toLowerCase().trim()
+    
     const spartenMap = {
+      'hausrat': 'Hausrat',
+      'hausratversicherung': 'Hausratversicherung',
+      'haftpflicht': 'Haftpflicht',
+      'motorfahrzeug': 'Motorfahrzeug',
+      'krankenversicherung': 'Krankenversicherung',
+      'lebensversicherung': 'Lebensversicherung',
+      'sachversicherung': 'Sachversicherung',
+      'bvg': 'BVG',
+      'pensionskasse': 'Pensionskasse',
       'household': 'Hausrat',
       'householdinsurance': 'Hausratversicherung',
       'liability': 'Haftpflicht',
@@ -53,12 +66,10 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
       'health': 'Krankenversicherung',
       'life': 'Lebensversicherung',
       'property': 'Sachversicherung',
-      'bvg': 'BVG',
       'pension': 'Pensionskasse',
-      'other': 'Sonstige'
     }
-    if (!sparte) return '–'
-    return spartenMap[sparte?.toLowerCase?.()?.replace(/\s+/g, '')] || sparte
+    
+    return spartenMap[normalized] || sparte
   }
 
   // DEBUG: Logging
