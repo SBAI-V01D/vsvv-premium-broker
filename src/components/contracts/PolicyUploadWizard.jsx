@@ -335,41 +335,32 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     setFileUrl(file_url)
     setUploading(false)
     setExtracting(true)
+    setError(null)
 
     let res;
     try {
       res = await base44.functions.invoke('extractPolicyData', { file_url, file_name: file.name })
     } catch (err) {
       setExtracting(false)
-      setError(`Upload-Fehler: ${err.message || 'Unbekannter Fehler bei der Analyse'}`)
+      setError(`Datei konnte nicht verarbeitet werden. Bitte versuche es später erneut oder erfasse manuell.`)
       return
     }
 
     setExtracting(false)
 
-    if (!res.data) {
-      setError('Leere Antwort vom Server erhalten')
-      return
-    }
+    // Tolerant: Always proceed with extraction result
+    const d = res?.data?.extractedData || {}
 
-    if (res.data?.error) {
-      setError(`Analyse-Fehler: ${res.data.error}`)
-      return
-    }
-
-    if (res.data?.success && res.data?.extractedData) {
-      const d = res.data.extractedData
-      
-      // Auto-lookup PLZ → Ort + Kanton
-      if (d.zip_code && !d.city) {
-        const lookup = autoLookupPlz(d.zip_code)
-        if (lookup) {
-          d.city = lookup.ort
-          if (!d.canton) d.canton = lookup.kanton
-        }
+    // Auto-lookup PLZ → Ort + Kanton
+    if (d.zip_code && !d.city) {
+      const lookup = autoLookupPlz(d.zip_code)
+      if (lookup) {
+        d.city = lookup.ort
+        if (!d.canton) d.canton = lookup.kanton
       }
-      
-      setExtractedRaw(d)
+    }
+    
+    setExtractedRaw(d)
 
       // Build contracts from extracted data
       const sparteKey = mapInsuranceType(d.insurance_type) || d.insurance_type || ''
@@ -420,7 +411,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
 
       // Only proceed if we have at least first_name AND last_name from extraction
       const hasValidName = customerFields.first_name && customerFields.last_name
-      
+
       if (hasValidName) {
         const candidates = matchCustomers(customerFields, customers)
         setMatchCandidates(candidates)
@@ -433,7 +424,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
           setStep(3)
           return
         }
-        
+
         // GUTE KONFIDENZ (50-85%) → Step 2 für manuelle Prüfung mit Vorauswahl
         if (candidates.length > 0 && candidates[0].score >= 50) {
           setSelectedCustomer(candidates[0].customer)
@@ -442,23 +433,22 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
           setStep(2)
           return
         }
-        
+
         // KEIN TREFFER → Auto-create Kunde und direkt zu Step 3
         // (KI hat Name erkannt, aber Kunde existiert nicht → erstelle)
         await createAndProceed(customerFields)
         return
       }
-      
+
       // Unzureichende Daten → Step 2 für manuelle Eingabe
       setNewCustomerData(customerFields)
       setCustomerMode('new')
       setStep(2)
-       }
-       } catch (err) {
-       setExtracting(false)
-       setError(`Fehler: ${err.message || 'Unbekannter Fehler beim Upload'}`)
-       }
-       }
+      } catch (err) {
+        setExtracting(false)
+        setError(`Fehler: ${err.message || 'Unbekannter Fehler beim Upload'}`)
+      }
+      }
 
        // ── Step 3: Save ─────────────────────────────────────────────────────────────
   const handleSave = async () => {
