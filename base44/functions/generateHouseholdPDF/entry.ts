@@ -1,6 +1,19 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import { jsPDF } from 'npm:jspdf@4.0.0';
 
+// Helper: Sanitize text for UTF-8 in PDF
+const sanitizeText = (text) => {
+  if (!text) return '';
+  return String(text)
+    .replace(/\u00c4/g, 'Ä')
+    .replace(/\u00d6/g, 'Ö')
+    .replace(/\u00dc/g, 'Ü')
+    .replace(/\u00e4/g, 'ä')
+    .replace(/\u00f6/g, 'ö')
+    .replace(/\u00fc/g, 'ü')
+    .replace(/\u00df/g, 'ß');
+};
+
 // Helper: Format date
 const formatDate = (dateStr) => {
   if (!dateStr) return '–';
@@ -22,11 +35,11 @@ const getDaysUntilExpiry = (endDate) => {
 // Helper: Get status color for contract
 const getStatusColor = (contract) => {
   const days = getDaysUntilExpiry(contract.end_date);
-  if (days === null) return { bg: [200, 230, 201], text: [27, 94, 32], label: 'unbegrenzt' }; // green
-  if (days < 0) return { bg: [255, 205, 210], text: [179, 0, 0], label: 'abgelaufen' }; // red
-  if (days <= 30) return { bg: [255, 179, 71], text: [230, 126, 34], label: 'kritisch' }; // orange-red
-  if (days <= 90) return { bg: [255, 235, 130], text: [240, 175, 0], label: 'warnung' }; // orange
-  return { bg: [200, 230, 201], text: [27, 94, 32], label: 'stabil' }; // green
+  if (days === null) return { bg: [200, 230, 201], text: [27, 94, 32], label: 'stabil' };
+  if (days < 0) return { bg: [255, 205, 210], text: [179, 0, 0], label: 'überfällig' };
+  if (days <= 30) return { bg: [255, 179, 71], text: [230, 126, 34], label: 'kritisch' };
+  if (days <= 90) return { bg: [255, 235, 130], text: [240, 175, 0], label: 'warnung' };
+  return { bg: [200, 230, 201], text: [27, 94, 32], label: 'stabil' };
 };
 
 // Helper: Format currency
@@ -82,7 +95,7 @@ Deno.serve(async (req) => {
       ['open', 'in_progress'].includes(t.status)
     );
 
-    // Create PDF in LANDSCAPE format
+    // Create PDF in LANDSCAPE format (UTF-8 compatible)
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'A4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -94,11 +107,12 @@ Deno.serve(async (req) => {
     // Title
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
-    doc.text('Haushaltsübersicht', margin, yPos);
+    doc.text(sanitizeText('Haushaltsübersicht'), margin, yPos);
     yPos += 12;
 
     // Divider
-    doc.setDrawColor(200, 200, 200);
+    doc.setDrawColor(100, 150, 200);
+    doc.setLineWidth(0.5);
     doc.line(margin, yPos, pageWidth - margin, yPos);
     yPos += 8;
 
@@ -106,30 +120,34 @@ Deno.serve(async (req) => {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
 
-    const contactBoxHeight = 35;
-    doc.setFillColor(245, 245, 245);
-    doc.rect(margin, yPos, pageWidth - 2 * margin, contactBoxHeight, 'F');
+    const contactBoxHeight = 40;
+    doc.setFillColor(240, 245, 250);
+    doc.setDrawColor(100, 150, 200);
+    doc.setLineWidth(0.3);
+    doc.rect(margin, yPos, pageWidth - 2 * margin, contactBoxHeight, 'FD');
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text(`${customer.first_name} ${customer.last_name}`, margin + 5, yPos + 8);
+    doc.setFontSize(13);
+    doc.setTextColor(33, 33, 33);
+    doc.text(sanitizeText(`${customer.first_name} ${customer.last_name}`), margin + 5, yPos + 8);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
     const addressLines = [
-      customer.street ? `${customer.street}` : '',
-      `${customer.zip_code} ${customer.city}`,
+      customer.street ? sanitizeText(`${customer.street}`) : '',
+      `${customer.zip_code} ${sanitizeText(customer.city || '')}`,
       customer.email || '',
       customer.phone || ''
     ].filter(l => l);
 
-    let addressY = yPos + 15;
+    let addressY = yPos + 16;
     addressLines.forEach(line => {
       doc.text(line, margin + 5, addressY);
       addressY += 5;
     });
 
-    yPos += contactBoxHeight + 8;
+    yPos += contactBoxHeight + 10;
 
     // Summary stats
     const activeContracts = householdContracts.filter(c => c.status === 'active').length;
@@ -142,36 +160,41 @@ Deno.serve(async (req) => {
     }).length;
 
     const stats = [
-      { label: 'Familienmitglieder', value: householdMembers.length },
-      { label: 'Aktive Verträge', value: activeContracts },
-      { label: 'Gesellschaften', value: insurers },
-      { label: 'Jahresprämie gesamt', value: formatCurrency(totalPremium) },
-      { label: 'Offene Reviews', value: openReviews },
-      { label: 'Abläufe (180d)', value: expiringCount }
+      { label: sanitizeText('Familienmitglieder'), value: householdMembers.length },
+      { label: sanitizeText('Aktive Verträge'), value: activeContracts },
+      { label: sanitizeText('Gesellschaften'), value: insurers },
+      { label: sanitizeText('Jahresprämie gesamt'), value: formatCurrency(totalPremium) },
+      { label: sanitizeText('Offene Reviews'), value: openReviews },
+      { label: sanitizeText('Abläufe (180d)'), value: expiringCount }
     ];
 
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
+    doc.setTextColor(50, 50, 50);
     const statColWidth = (pageWidth - 2 * margin) / 3;
 
     stats.forEach((stat, idx) => {
       const row = Math.floor(idx / 3);
       const col = idx % 3;
       const x = margin + col * statColWidth;
-      const y = yPos + row * 12;
+      const y = yPos + row * 13;
 
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.text(stat.label, x + 2, y);
+      doc.setFontSize(8);
+      doc.text(stat.label, x + 3, y);
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      doc.text(String(stat.value), x + 2, y + 6);
+      doc.setTextColor(0, 0, 0);
+      doc.text(String(stat.value), x + 3, y + 6);
+      doc.setTextColor(50, 50, 50);
     });
 
-    yPos += 30;
+    yPos += 32;
+    doc.setDrawColor(100, 150, 200);
+    doc.setLineWidth(0.5);
     doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 8;
+    yPos += 10;
 
     // ===== FAMILY MEMBER SECTIONS =====
 
@@ -304,24 +327,31 @@ Deno.serve(async (req) => {
     doc.line(margin, yPos, pageWidth - margin, yPos);
     yPos += 8;
 
-    doc.setFontSize(14);
+    doc.setDrawColor(100, 150, 200);
+    doc.setLineWidth(0.5);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 8;
+
+    doc.setFontSize(13);
     doc.setFont('helvetica', 'bold');
-    doc.text('Beratungspotential & Abläufe', margin, yPos);
+    doc.setTextColor(33, 105, 180);
+    doc.text(sanitizeText('Beratungspotential & Abläufe'), margin, yPos);
     yPos += 10;
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
 
     // Open opportunities
     const openOpportunities = verkaufschancen.filter(v => !['gewonnen', 'verloren'].includes(v.status));
     if (openOpportunities.length > 0) {
       doc.setFont('helvetica', 'bold');
-      doc.text('Offene Verkaufschancen:', margin, yPos);
+      doc.text(sanitizeText('Offene Verkaufschancen:'), margin, yPos);
       yPos += 6;
 
       doc.setFont('helvetica', 'normal');
       openOpportunities.slice(0, 5).forEach(opp => {
-        doc.text(`• ${opp.title} (${opp.sparte || '–'})`, margin + 5, yPos);
+        doc.text(sanitizeText(`• ${opp.title} (${opp.sparte || '–'})`), margin + 5, yPos);
         yPos += 5;
       });
 
@@ -331,13 +361,13 @@ Deno.serve(async (req) => {
     // Open reviews
     if (householdTasks.length > 0) {
       doc.setFont('helvetica', 'bold');
-      doc.text('Offene Aufgaben:', margin, yPos);
+      doc.text(sanitizeText('Offene Aufgaben:'), margin, yPos);
       yPos += 6;
 
       doc.setFont('helvetica', 'normal');
       householdTasks.slice(0, 5).forEach(task => {
-        const priority = task.priority === 'urgent' ? '🔴' : task.priority === 'high' ? '🟠' : '🟡';
-        doc.text(`${priority} ${task.title}`, margin + 5, yPos);
+        const priorityEmoji = task.priority === 'urgent' ? '[!]' : task.priority === 'high' ? '[!]' : '[i]';
+        doc.text(sanitizeText(`${priorityEmoji} ${task.title}`), margin + 5, yPos);
         yPos += 5;
       });
 
@@ -345,32 +375,43 @@ Deno.serve(async (req) => {
     }
 
     // Status legend
-    yPos += 5;
-    doc.setDrawColor(200, 200, 200);
+    yPos += 8;
+    doc.setDrawColor(100, 150, 200);
+    doc.setLineWidth(0.5);
     doc.line(margin, yPos, pageWidth - margin, yPos);
     yPos += 8;
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text('Status-Legende:', margin, yPos);
-    yPos += 6;
+    doc.setFontSize(10);
+    doc.setTextColor(33, 105, 180);
+    doc.text(sanitizeText('Status-Farbcodierung:'), margin, yPos);
+    yPos += 7;
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
+    doc.setTextColor(50, 50, 50);
 
     const legend = [
-      { color: [200, 230, 201], label: 'GRÜN: Stabil – keine Massnahmen nötig' },
-      { color: [255, 235, 130], label: 'ORANGE: Warnung – Ablauf in < 90 Tagen' },
-      { color: [255, 179, 71], label: 'ORANGE-ROT: Kritisch – Ablauf in < 30 Tagen' },
-      { color: [255, 205, 210], label: 'ROT: Überfällig – sofort handeln' }
+      { color: [200, 230, 201], label: sanitizeText('GRÜN: stabil – keine Massnahmen nötig') },
+      { color: [255, 235, 130], label: sanitizeText('ORANGE: Warnung – Ablauf in < 90 Tagen') },
+      { color: [255, 179, 71], label: sanitizeText('ORANGE-ROT: kritisch – Ablauf in < 30 Tagen') },
+      { color: [255, 205, 210], label: sanitizeText('ROT: überfällig – sofort handeln') }
     ];
 
     legend.forEach(item => {
       doc.setFillColor(...item.color);
-      doc.rect(margin + 5, yPos - 2, 4, 4, 'F');
-      doc.text(item.label, margin + 11, yPos);
+      doc.setDrawColor(...item.color);
+      doc.rect(margin + 5, yPos - 2, 5, 5, 'FD');
+      doc.text(item.label, margin + 12, yPos);
       yPos += 6;
     });
+
+    // Footer
+    yPos += 8;
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.setFont('helvetica', 'normal');
+    doc.text(sanitizeText(`Erstellt: ${new Date().toLocaleDateString('de-CH', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`), margin, pageHeight - 5);
 
     // Export PDF as binary
     const pdfBytes = doc.output('arraybuffer');

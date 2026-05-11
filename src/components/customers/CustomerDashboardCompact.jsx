@@ -94,59 +94,59 @@ export default function CustomerDashboardCompact({
 
   return (
     <div className="space-y-4">
-      {/* Quick Actions */}
-      <div className="flex flex-wrap gap-2 sticky top-0 z-10 bg-background/95 backdrop-blur p-2 -mx-2 px-2 rounded-lg border">
-        <Button size="sm" variant="default" onClick={onDownloadPDF} disabled={isDownloading}>
-          <FileText className="w-4 h-4 mr-1" />
-          {isDownloading ? 'PDF...' : 'PDF'}
-        </Button>
-        <Button size="sm" variant="outline" onClick={onNewOpportunity}>
-          💡 Chance
-        </Button>
-        <Button size="sm" variant="outline" onClick={onNewFamilyMember}>
-          👥 Mitglied
-        </Button>
+      {/* Quick Actions - Sticky, Mobile Optimized */}
+      <div className="sticky top-0 z-20 bg-background/98 backdrop-blur border-b mb-4 -mx-4 px-4 py-3 md:rounded-lg md:mx-0 md:mb-4">
+        <div className="flex flex-wrap gap-2 md:gap-3">
+          <Button size="sm" variant="default" onClick={onDownloadPDF} disabled={isDownloading} className="flex-1 md:flex-none">
+            <FileText className="w-4 h-4 mr-2" />
+            {isDownloading ? 'PDF...' : 'PDF'}
+          </Button>
+          <Button size="sm" variant="outline" onClick={onNewOpportunity} className="flex-1 md:flex-none">
+            💡 Chance
+          </Button>
+          <Button size="sm" variant="outline" onClick={onNewFamilyMember} className="flex-1 md:flex-none">
+            👥 Mitglied
+          </Button>
+        </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+      {/* KPIs - Responsive Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
         {kpis.map((kpi, i) => {
           const Icon = kpi.icon;
           const [bgColor, textColor] = kpi.color.split(' ');
           return (
-            <Card key={i} className="p-3">
+            <Card key={i} className="p-3 md:p-4">
               <div className={`flex items-center gap-2 ${bgColor} p-2 rounded mb-2`}>
                 <Icon className={`w-4 h-4 ${textColor}`} />
               </div>
               <p className="text-xs text-muted-foreground">{kpi.label}</p>
-              <p className="text-lg font-bold">{kpi.value}</p>
+              <p className="text-xl md:text-2xl font-bold">{kpi.value}</p>
             </Card>
           );
         })}
       </div>
 
-      {/* SECTION 1: Handlungsbedarf */}
+      {/* SECTION 1: Handlungsbedarf - Always show if exists */}
       {urgentIssues.length > 0 && (
-        <Card className="border-red-200 bg-red-50">
-          <CardHeader className="pb-2 cursor-pointer" onClick={() => toggle('urgent')}>
+        <Card className="border-2 border-red-300 bg-red-50 shadow-sm">
+          <CardHeader className="pb-2 cursor-pointer hover:bg-red-100/50 transition-colors" onClick={() => toggle('urgent')}>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-red-600" />
-                🔴 Handlungsbedarf ({urgentIssues.length})
+              <CardTitle className="text-sm md:text-base flex items-center gap-2 text-red-700">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                Handlungsbedarf ({urgentIssues.length})
               </CardTitle>
               {expanded.urgent ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </div>
           </CardHeader>
           {expanded.urgent && (
-            <CardContent>
-              <div className="space-y-2">
-                {urgentIssues.map((issue, i) => (
-                  <div key={i} className="flex items-center gap-2 p-2 bg-white rounded border border-red-200">
-                    <div className="w-2 h-2 rounded-full bg-red-600"></div>
-                    <p className="text-sm font-medium text-red-900">{issue.label}</p>
-                  </div>
-                ))}
-              </div>
+            <CardContent className="space-y-2">
+              {urgentIssues.map((issue, i) => (
+                <div key={i} className="flex items-start gap-2 p-2 md:p-3 bg-white rounded border-l-4 border-red-500">
+                  <div className="w-2 h-2 rounded-full bg-red-600 mt-1.5 flex-shrink-0"></div>
+                  <p className="text-sm font-medium text-red-900">{issue.label}</p>
+                </div>
+              ))}
             </CardContent>
           )}
         </Card>
@@ -219,31 +219,34 @@ export default function CustomerDashboardCompact({
         </Card>
       )}
 
-      {/* SECTION 4: Wichtigste Verträge */}
+      {/* SECTION 4: Verträge - Compact List */}
       {contracts.length > 0 && (
         <Card>
-          <CardHeader className="pb-2 cursor-pointer" onClick={() => toggle('contracts')}>
+          <CardHeader className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggle('contracts')}>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">
-                📋 Verträge ({contracts.length})
+              <CardTitle className="text-sm md:text-base">
+                Verträge ({contracts.length})
               </CardTitle>
               {expanded.contracts ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </div>
           </CardHeader>
           {expanded.contracts && (
             <CardContent>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {contracts.slice(0, 8).map(c => (
-                  <div key={c.id} className="flex items-center justify-between p-2 bg-muted/20 rounded text-xs">
+              <div className="space-y-2">
+                {contracts.slice(0, 6).map(c => (
+                  <div key={c.id} className="flex items-center justify-between p-2 md:p-3 bg-muted/20 hover:bg-muted/40 rounded transition-colors text-xs md:text-sm">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{c.insurer}</p>
-                      <p className="text-[11px] text-muted-foreground">{c.sparte || c.insurance_type}</p>
+                      <p className="text-[11px] md:text-xs text-muted-foreground truncate">{c.sparte || c.insurance_type}</p>
                     </div>
-                    <Badge variant="secondary" className="text-[10px] flex-shrink-0">
+                    <Badge variant={c.status === 'active' ? 'default' : 'secondary'} className="text-[10px] flex-shrink-0">
                       {c.status === 'active' ? '✓' : '✗'}
                     </Badge>
                   </div>
                 ))}
+                {contracts.length > 6 && (
+                  <p className="text-xs text-muted-foreground pt-2 text-center">+{contracts.length - 6} weitere</p>
+                )}
               </div>
             </CardContent>
           )}
