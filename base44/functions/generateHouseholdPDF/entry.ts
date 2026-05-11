@@ -87,21 +87,32 @@ Deno.serve(async (req) => {
 
     const { customer_id } = await req.json();
 
-    // Fetch Daten
-    const [customers, contracts] = await Promise.all([
-      base44.asServiceRole.entities.Customer.list(null, 500),
-      base44.asServiceRole.entities.Contract.list(null, 1000),
-    ]);
+    // Hole Kundendaten direkt (bypasses list-Filter)
+    let customer;
+    try {
+      customer = await base44.asServiceRole.entities.Customer.get(customer_id);
+    } catch (e) {
+      console.error('Customer fetch error:', e);
+      return Response.json({ error: 'Customer not found' }, { status: 404 });
+    }
 
-    const customer = customers.find(c => c.id === customer_id);
-    if (!customer) return Response.json({ error: 'Customer not found' }, { status: 404 });
+    if (!customer) {
+      return Response.json({ error: 'Customer not found' }, { status: 404 });
+    }
 
+    // Fetch Familienmitglieder und Verträge
     const primaryCustomerId = customer.primary_customer_id || customer.id;
-    const householdMembers = [
-      customer,
-      ...customers.filter(c => c.primary_customer_id === primaryCustomerId && c.id !== customer.id),
-    ];
-    const customerIds = householdMembers.map(m => m.id);
+    const allCustomers = await base44.asServiceRole.entities.Customer.list(null, 500);
+    const allContracts = await base44.asServiceRole.entities.Contract.list(null, 1000);
+    
+    const familyMembers = allCustomers.filter(c => 
+      c.primary_customer_id === primaryCustomerId || c.id === primaryCustomerId
+    );
+    
+    // Fallback: Wenn keine Familienmitglieder gefunden, nur dieser Kunde
+    const customers = familyMembers.length > 0 ? familyMembers : [customer];
+    const contracts = allContracts || [];
+    const customerIds = customers.map(m => m.id);
     const householdContracts = contracts.filter(c => customerIds.includes(c.customer_id));
 
     // PDF im Querformat
@@ -117,7 +128,7 @@ Deno.serve(async (req) => {
     const margin = 20;
 
     // ========== SEITE 1: ÜBERSICHT ==========
-    let yPos = addHeader(doc, pageWidth, 'Haushaltsübersicht', `${customer.first_name} ${customer.last_name}`);
+    let yPos = addHeader(doc, pageWidth, 'Haushaltsübersicht', `${customer.first_name || ''} ${customer.last_name || ''}`);
     yPos += 10;
 
     // Kontakt-Sektion
@@ -130,7 +141,7 @@ Deno.serve(async (req) => {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
-    doc.text(`${customer.first_name} ${customer.last_name}`, margin, yPos);
+    doc.text(`${customer.first_name || ''} ${customer.last_name || ''}`, margin, yPos);
     yPos += 6;
 
     if (customer.street) doc.text(`${customer.street}`, margin, yPos), (yPos += 6);
@@ -150,7 +161,7 @@ Deno.serve(async (req) => {
     }).length;
 
     const kpis = [
-      { label: 'Familienmitglieder', value: householdMembers.length },
+      { label: 'Familienmitglieder', value: customers.length },
       { label: 'Aktive Verträge', value: activeCount },
       { label: 'Jahresprämie', value: formatCurrency(totalPremium) },
       { label: 'Abläufe (180d)', value: expiringCount },
@@ -185,7 +196,7 @@ Deno.serve(async (req) => {
     yPos += 26;
 
     // ========== FAMILIENMITGLIEDER MIT VERTRÄGEN ==========
-    householdMembers.forEach((member, memberIdx) => {
+    customers.forEach((member, memberIdx) => {
       const memberContracts = householdContracts.filter(c => c.customer_id === member.id);
 
       // Seitenumbruch wenn nötig
@@ -212,7 +223,7 @@ Deno.serve(async (req) => {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
       doc.setTextColor(255, 255, 255);
-      doc.text(`${member.first_name} ${member.last_name} ${roleLabel}`, margin + 4, yPos + 9);
+      doc.text(`${member.first_name || ''} ${member.last_name || ''} ${roleLabel}`, margin + 4, yPos + 9);
       doc.setTextColor(0, 0, 0);
 
       yPos += 16;
@@ -358,7 +369,7 @@ Deno.serve(async (req) => {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename=Haushaltsübersicht_${customer.last_name}_${new Date().toISOString().split('T')[0]}.pdf`,
+        'Content-Disposition': `attachment; filename=Haushaltsübersicht_${customer.last_name || 'Export'}_${new Date().toISOString().split('T')[0]}.pdf`,
       },
     });
   } catch (error) {
