@@ -17,12 +17,7 @@ const PLZ_TO_CANTON = {
 function cantonFromZip(zip) {
   if (!zip || zip.length !== 4) return null;
   
-  // Check exact match first
   if (PLZ_TO_CANTON[zip]) return PLZ_TO_CANTON[zip];
-  
-  // Fallback by prefix
-  const prefix = zip.substring(0, 2);
-  const firstDigit = parseInt(zip[0]);
   
   const prefixMap = {
     '10': 'VD', '11': 'VD', '12': 'GE', '13': 'VD', '14': 'VD', '15': 'VD', '16': 'VD', '17': 'VD', '18': 'VS', '19': 'VS',
@@ -36,7 +31,7 @@ function cantonFromZip(zip) {
     '90': 'AR', '91': 'AI', '92': 'AI', '93': 'SG', '94': 'SG', '95': 'SG', '96': 'SG', '97': 'SG',
   };
   
-  return prefixMap[prefix] || null;
+  return prefixMap[zip.substring(0, 2)] || null;
 }
 
 Deno.serve(async (req) => {
@@ -60,9 +55,11 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Invalid file_url provided' }, { status: 400 });
     }
 
-    const response = await base44.integrations.Core.InvokeLLM({
-      model: 'automatic',
-      prompt: `Du bist ein SPEZIALISIERTER OCR-Experte für Schweizer Versicherungspolicen mit PERFEKTER Zeichenerkennung.
+    let response;
+    try {
+      response = await base44.integrations.Core.InvokeLLM({
+        model: 'automatic',
+        prompt: `Du bist ein SPEZIALISIERTER OCR-Experte für Schweizer Versicherungspolicen mit PERFEKTER Zeichenerkennung.
 
 KRITISCHE AUFGABE: Extrahiere EXAKT die Kundendaten (Name, Vorname, Geburtsdatum, Adresse) und Vertragsdaten aus dieser Police.
 
@@ -78,175 +75,107 @@ SUCHE NACH DIESEN LABELS IM DOKUMENT:
 
 EXTRAHIERE GENAU:
 1. first_name: Vorname (z.B. "Hans", "Maria", "José")
-   - Suche: Erstes Wort des Namens, NICHT Geburtsnamen
-   
-2. last_name: Nachname/Familienname (z.B. "Müller", "Meyer", "De Marchi")
-   - Suche: Zweites Wort oder Bindestrich-Namen
-   
-3. birthdate: Geburtsdatum im Format YYYY-MM-DD (z.B. 1975-08-23)
-   - SUCHE NACH: "geb.", "Geburtsdatum", "Geb.datum", "geboren am"
-   - ODER: Datum neben dem Namen in Klammern oder hinter dem Schrägstrich
-   - FORMAT: DD.MM.YYYY → konvertiere zu YYYY-MM-DD
-   - ⚠️ NUR EINTRAGEN wenn EXPLIZIT im Dokument, sonst null!
-   
-4. street: Strasse + Hausnummer (z.B. "Musterstrasse 12", "Bahnhofplatz 2A")
-   - Exakt wie im Dokument
-   - Häufig NACH dem Namen
-   
+2. last_name: Nachname/Familienname (z.B. "Müller", "Meyer")
+3. birthdate: Geburtsdatum im Format YYYY-MM-DD
+4. street: Strasse + Hausnummer (z.B. "Musterstrasse 12")
 5. zip_code: Postleitzahl - IMMER 4-stellig (z.B. "8001", "3000", "1201")
-   - ⚠️ REGEL: Schweizer PLZ sind IMMER 4-stellig!
-   - Falls du "80010" siehst → nimm nur "8001"
-   - Falls du "100" siehst → füge "0" vorne hinzu → "0100"
-   - MUSS numerisch sein
-   
-6. city: Ortsname (z.B. "Zürich", "Bern", "Genève", "Montreux")
-   - Exakt wie im Dokument geschrieben
-   - NICHT abkürzen
-   
+6. city: Ortsname (z.B. "Zürich", "Bern", "Genève")
 7. canton: 2-Buchstaben Kantonskürzel (z.B. ZH, BE, GE, VD, AG, LU, SG)
-   - Kann aus PLZ abgeleitet werden
-   - ODER steht explizit im Dokument
-   - Standard: ZH, BE, LU, UR, SZ, OW, NW, GL, ZG, FR, SO, BS, BL, SH, AR, AI, SG, GR, AG, TG, TI, VD, VS, NE, GE, JU
-   
-8. phone: Telefonnummer (z.B. "044 123 45 67")
-   - Falls vorhanden, sonst null
-   
-9. email: E-Mail-Adresse (z.B. "hans.mueller@example.com")
-   - Falls vorhanden, sonst null
-   
-10. mobile: Mobilnummer (z.B. "079 123 45 67")
-    - Falls vorhanden, sonst null
+8. phone: Telefonnummer (falls vorhanden)
+9. email: E-Mail-Adresse (falls vorhanden)
+10. mobile: Mobilnummer (falls vorhanden)
 
 ═══════════════════════════════════════════════════════════════════════════════════════
 SECTION 2: VERTRAGSDATEN
 ═══════════════════════════════════════════════════════════════════════════════════════
 
-11. policy_number: Policennummer (z.B. "123.456.789", "36 644 066")
-    - EXAKT wie auf dem Dokument
-    
-12. insurer: Versicherungsgesellschaft (z.B. "Helsana AG", "Assura SA", "CSS")
-    - Vollständiger Name
-    
-13. insurance_type: Versicherungsart (z.B. "KVG", "Motorfahrzeug", "Hausrat")
-    - Mögliche Werte: KVG, VVG_Zusatz, Motorfahrzeug, Hausrat, Haftpflicht, Leben, Unfall, Rechtsschutz
-    
-14. product: Produkt-/Tarifname (z.B. "COMPACT", "HMO 1500", "SB 500")
-    
+11. policy_number: Policennummer (z.B. "123.456.789")
+12. insurer: Versicherungsgesellschaft (z.B. "Helsana AG")
+13. insurance_type: Versicherungsart (z.B. "KVG", "Motorfahrzeug")
+14. product: Produkt-/Tarifname (z.B. "COMPACT", "HMO 1500")
 15. start_date: Versicherungsbeginn (YYYY-MM-DD)
-    
 16. end_date: Vertragsende/Ablaufdatum (YYYY-MM-DD)
-    
 17. cancellation_deadline: Kündigungsfrist (YYYY-MM-DD)
-    
 18. premium_monthly: Monatsprämie als Dezimalzahl (z.B. 142.05)
-    - Trennzeichen: Punkt (.)
-    
 19. premium_yearly: Jahresprämie (z.B. 1704.60)
-    - Wenn nur monthly vorhanden: monthly × 12
 
 ═══════════════════════════════════════════════════════════════════════════════════════
-SECTION 3: SPARTENSPEZIFISCHE DATEN (sparte_data = JSON Object)
+SECTION 3: SPARTENSPEZIFISCHE DATEN
 ═══════════════════════════════════════════════════════════════════════════════════════
 
-20. sparte_data JSON Object mit:
-    - franchise: Franchisebetrag (z.B. "300", "1500") - NUR bei KVG
-    - model: Kassenmodell (z.B. "Hausarztmodell", "HMO", "Freie Arztwahl")
-    - age_group: Altersgruppe (z.B. "Erwerbstätig", "Student", "Rentner")
-    - coverage: Deckungsumfang oder besondere Optionen
-
+20. sparte_data: JSON Object mit franchise, model, age_group, coverage (falls relevant)
 21. additional_products: Array von Zusatzversicherungen
-    Format: [{"product": "HOSPITAL PLUS", "premium_monthly": 45.20, "policy_number": "..."}]
 
-═══════════════════════════════════════════════════════════════════════════════════════
-WICHTIGE REGELN (EINHALTEN!)
-═══════════════════════════════════════════════════════════════════════════════════════
-
+WICHTIGE REGELN:
 🚫 NIEMALS erfinden oder raten - unbekannte Felder → null!
-🚫 KEINE Geburtsdaten erfinden - nur wenn explizit im Dokument
 ✅ Datumsformate: DD.MM.YYYY → YYYY-MM-DD
-✅ Dezimalzahlen: Komma → Punkt (z.B. "1'500,50" → 1500.50)
-✅ Postleitzahlen: IMMER 4-stellig prüfen und ggf. mit Nullen auffüllen
-✅ Namen: Exakt wie im Dokument (Bindestriche, Umlaute etc.)
-✅ Versicherer: Vollständigen Namen nehmen (nicht abkürzen)
+✅ Postleitzahlen: IMMER 4-stellig prüfen
+✅ Namen: Exakt wie im Dokument
 
 RÜCKGABE: Gültiges JSON mit allen Feldern. Fehlende Felder = null.`,
-      file_urls: [file_url],
-      model: 'gemini_3_flash',
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          first_name: { type: ['string', 'null'] },
-          last_name: { type: ['string', 'null'] },
-          birthdate: { type: ['string', 'null'] },
-          street: { type: ['string', 'null'] },
-          zip_code: { type: ['string', 'null'] },
-          city: { type: ['string', 'null'] },
-          canton: { type: ['string', 'null'] },
-          phone: { type: ['string', 'null'] },
-          mobile: { type: ['string', 'null'] },
-          email: { type: ['string', 'null'] },
-          policy_number: { type: ['string', 'null'] },
-          insurer: { type: ['string', 'null'] },
-          insurance_type: { type: ['string', 'null'] },
-          product: { type: ['string', 'null'] },
-          start_date: { type: ['string', 'null'] },
-          end_date: { type: ['string', 'null'] },
-          cancellation_deadline: { type: ['string', 'null'] },
-          premium_monthly: { type: ['number', 'null'] },
-          premium_yearly: { type: ['number', 'null'] },
-          sparte_data: {
-            type: ['object', 'null'],
-            additionalProperties: true
-          },
-          additional_products: {
-            type: ['array', 'null'],
-            items: {
-              type: 'object',
-              properties: {
-                product: { type: 'string' },
-                premium_monthly: { type: ['number', 'null'] },
-                premium_yearly: { type: ['number', 'null'] },
-                policy_number: { type: ['string', 'null'] }
-              },
-              required: []
+        file_urls: [file_url],
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            first_name: { type: ['string', 'null'] },
+            last_name: { type: ['string', 'null'] },
+            birthdate: { type: ['string', 'null'] },
+            street: { type: ['string', 'null'] },
+            zip_code: { type: ['string', 'null'] },
+            city: { type: ['string', 'null'] },
+            canton: { type: ['string', 'null'] },
+            phone: { type: ['string', 'null'] },
+            mobile: { type: ['string', 'null'] },
+            email: { type: ['string', 'null'] },
+            policy_number: { type: ['string', 'null'] },
+            insurer: { type: ['string', 'null'] },
+            insurance_type: { type: ['string', 'null'] },
+            product: { type: ['string', 'null'] },
+            start_date: { type: ['string', 'null'] },
+            end_date: { type: ['string', 'null'] },
+            cancellation_deadline: { type: ['string', 'null'] },
+            premium_monthly: { type: ['number', 'null'] },
+            premium_yearly: { type: ['number', 'null'] },
+            sparte_data: { type: ['object', 'null'], additionalProperties: true },
+            additional_products: {
+              type: ['array', 'null'],
+              items: { type: 'object', properties: { product: { type: 'string' }, premium_monthly: { type: ['number', 'null'] }, premium_yearly: { type: ['number', 'null'] }, policy_number: { type: ['string', 'null'] } } }
             }
           }
         }
+      });
+    } catch (llmError) {
+      const llmMsg = llmError instanceof Error ? llmError.message : String(llmError);
+      console.error(`[extractPolicyData] LLM ERROR: ${llmMsg}`);
+      
+      if (llmMsg.includes('no pages') || llmMsg.includes('document has no pages')) {
+        return Response.json({ error: 'Die PDF-Datei ist leer oder beschädigt.' }, { status: 400 });
       }
-    });
+      if (llmMsg.includes('missing field') || llmMsg.includes('schema')) {
+        return Response.json({ error: 'Fehler bei der Datenverarbeitung. Bitte versuche es später erneut.' }, { status: 400 });
+      }
+      
+      return Response.json({ error: `Extraktion fehlgeschlagen: ${llmMsg}` }, { status: 400 });
+    }
 
     if (!response) {
       console.error('[extractPolicyData] Empty LLM response');
-      return Response.json({ error: 'No data extracted from file' }, { status: 400 });
+      return Response.json({ error: 'Keine Daten aus der Datei extrahiert' }, { status: 400 });
     }
 
-    // Normalize & validate zip_code
     let zip = response.zip_code || null;
     if (zip) {
       zip = String(zip).replace(/\D/g, '');
-      // Pad with leading zero if necessary
-      while (zip.length < 4) {
-        zip = '0' + zip;
-      }
+      while (zip.length < 4) zip = '0' + zip;
       zip = zip.slice(0, 4);
       if (zip.length !== 4) zip = null;
     }
 
-    // Derive canton from zip using comprehensive mapping
     let canton = response.canton || null;
-    if (!canton && zip) {
-      canton = cantonFromZip(zip);
-    }
+    if (!canton && zip) canton = cantonFromZip(zip);
+    if (canton) canton = String(canton).toUpperCase().slice(0, 2);
 
-    // Normalize canton to uppercase 2-letter
-    if (canton) {
-      canton = String(canton).toUpperCase().slice(0, 2);
-    }
-
-    // Build sparte_data
     const sparteData = response.sparte_data || {};
-
-    // If only monthly premium given, calculate yearly
     let premiumMonthly = response.premium_monthly || null;
     let premiumYearly = response.premium_yearly || null;
     if (premiumMonthly && !premiumYearly) {
@@ -282,19 +211,13 @@ RÜCKGABE: Gültiges JSON mit allen Feldern. Fehlende Felder = null.`,
         notes: null,
       }
     });
+
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error(`[extractPolicyData] ERROR: ${errorMsg}`);
-    
-    // Check if it's a file validation error from LLM
-    if (errorMsg.includes('no pages') || errorMsg.includes('document') || errorMsg.includes('file')) {
-      return Response.json({ 
-        error: 'Die PDF-Datei konnte nicht analysiert werden. Bitte prüfe, ob die Datei lesbar ist.' 
-      }, { status: 400 });
-    }
+    console.error(`[extractPolicyData] OUTER ERROR: ${errorMsg}`);
     
     return Response.json({ 
-      error: `Analyse fehlgeschlagen: ${errorMsg}` 
+      error: `Systemfehler: ${errorMsg}` 
     }, { status: 500 });
   }
 });
