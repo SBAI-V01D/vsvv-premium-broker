@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { FileText, AlertCircle, ListTodo, FileWarning, ExternalLink, Shield } from 'lucide-react'
+import { FileText, AlertCircle, ListTodo, FileWarning, ExternalLink, Shield, ClipboardList } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // Contract workflow task types
@@ -376,7 +376,7 @@ export default function Tasks() {
               )}
 
               {/* Verknüpfungen */}
-              {(selectedTask.customer_id || selectedTask.contract_id) && (
+              {(selectedTask.customer_id || selectedTask.contract_id || selectedTask.application_id) && (
                 <div className="pt-2 border-t border-border space-y-1.5">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Verknüpfungen</p>
                   {selectedTask.customer_id && (
@@ -398,6 +398,17 @@ export default function Tasks() {
                       <Shield className="w-3.5 h-3.5 text-orange-600 flex-shrink-0" />
                       <span className="text-xs font-medium text-orange-700">
                         → Vertragsabläufe öffnen
+                      </span>
+                    </button>
+                  )}
+                  {selectedTask.application_id && (
+                    <button
+                      onClick={() => { navigate('/antraege'); setSelectedTask(null) }}
+                      className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg bg-violet-50 border border-violet-100 hover:bg-violet-100 transition-colors"
+                    >
+                      <ClipboardList className="w-3.5 h-3.5 text-violet-600 flex-shrink-0" />
+                      <span className="text-xs font-medium text-violet-700 truncate">
+                        Antrag: {selectedTask.application_name || selectedTask.application_id}
                       </span>
                     </button>
                   )}

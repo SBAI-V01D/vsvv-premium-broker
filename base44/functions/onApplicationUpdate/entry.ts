@@ -153,7 +153,20 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── 4. LOG bei Ablehnung ──────────────────────────────────────────────────
+    // ── 4. TASKS mit application_id automatisch auf completed setzen ─────────
+    if (statusChanged && newStatus && newStatus !== oldStatus) {
+      const linkedTasks = await base44.asServiceRole.entities.Task.filter({ application_id: app.id });
+      const openLinkedTasks = linkedTasks.filter(t => t.status !== 'completed');
+      for (const task of openLinkedTasks) {
+        await base44.asServiceRole.entities.Task.update(task.id, {
+          status: 'completed',
+          completion_date: new Date().toISOString().slice(0, 10),
+          notes: (task.notes ? task.notes + '\n' : '') + `Automatisch erledigt durch Statusänderung: ${newStatus}`,
+        });
+      }
+    }
+
+    // ── 5. LOG bei Ablehnung ──────────────────────────────────────────────────
     if (statusChanged && REJECTED_STATUSES.includes(newStatus) && !REJECTED_STATUSES.includes(oldStatus)) {
       await base44.asServiceRole.entities.SystemLog.create({
         level: 'warn',
