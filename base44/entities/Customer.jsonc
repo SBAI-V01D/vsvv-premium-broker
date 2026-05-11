@@ -73,7 +73,7 @@
     },
     "ahv_number": {
       "type": "string",
-      "description": "AHV-Nummer (Format: 756.1234.5678.90)"
+      "description": "AHV-Nummer"
     },
     "civil_status": {
       "type": "string",
@@ -93,7 +93,7 @@
     },
     "nationality": {
       "type": "string",
-      "description": "Nationalit\u00e4t (L\u00e4ndercode, z.B. CH, DE, FR, IT)"
+      "description": "Nationalit\u00e4t"
     },
     "drivers_license_date": {
       "type": "string",
@@ -102,7 +102,7 @@
     },
     "bank_account": {
       "type": "string",
-      "description": "Bank- oder Postkontoverbindung (IBAN oder Kontonummer)"
+      "description": "Bank- oder Postkontoverbindung"
     },
     "risk_profile": {
       "type": "string",
@@ -120,7 +120,7 @@
         "business"
       ],
       "default": "private",
-      "description": "Kundentyp (private = Privatkunde, business = Unternehmen)"
+      "description": "Kundentyp"
     },
     "status": {
       "type": "string",
@@ -141,7 +141,7 @@
         "expired"
       ],
       "default": "pending",
-      "description": "GUARD: Mandat-Status \u2013 nur mit 'valid' ist Portal-Login m\u00f6glich"
+      "description": "Mandat-Status"
     },
     "association_membership": {
       "type": "string",
@@ -171,11 +171,11 @@
     "is_family_member": {
       "type": "boolean",
       "default": false,
-      "description": "Ist Familienmitglied (true = Familienmitglied, false = Hauptkunde)"
+      "description": "Ist Familienmitglied"
     },
     "primary_customer_id": {
       "type": "string",
-      "description": "ID des Hauptkunden (wenn Familienmitglied)"
+      "description": "ID des Hauptkunden"
     },
     "family_role": {
       "type": "string",
@@ -200,21 +200,21 @@
     "portal_enabled": {
       "type": "boolean",
       "default": false,
-      "description": "GUARD: Portal-Freischaltung durch Admin"
+      "description": "Portal-Freischaltung"
     },
     "portal_password_hash": {
       "type": "string",
-      "description": "Passwort-Hash f\u00fcr Portal (bcrypt)"
+      "description": "Passwort-Hash f\u00fcr Portal"
     },
     "portal_must_change_password": {
       "type": "boolean",
       "default": true,
-      "description": "GUARD: Passwort MUSS beim ersten Login ge\u00e4ndert werden"
+      "description": "Passwort MUSS beim n\u00e4chsten Login ge\u00e4ndert werden"
     },
     "portal_password_last_changed": {
       "type": "string",
       "format": "date",
-      "description": "GUARD: Datum letzte Passwort\u00e4nderung \u2013 f\u00fcr 28-Tage-Rotation"
+      "description": "Datum letzte Passwort\u00e4nderung"
     },
     "portal_last_login": {
       "type": "string",
@@ -223,75 +223,104 @@
     },
     "company_name": {
       "type": "string",
-      "description": "Unternehmensname (nur f\u00fcr Firmenkunden)"
+      "description": "Unternehmensname"
     },
     "legal_form": {
       "type": "string",
-      "description": "Rechtsform (AG, GmbH, etc.) \u2013 nur Firmenkunden"
+      "description": "Rechtsform"
     },
     "uid_number": {
       "type": "string",
-      "description": "UID-Nummer / CHE-Nummer \u2013 nur Firmenkunden"
+      "description": "UID-Nummer"
     },
     "industry": {
       "type": "string",
-      "description": "Branche \u2013 nur Firmenkunden"
+      "description": "Branche"
     },
     "contact_person_firstname": {
       "type": "string",
-      "description": "Vorname Kontaktperson \u2013 nur Firmenkunden"
+      "description": "Vorname Kontaktperson"
     },
     "contact_person_lastname": {
       "type": "string",
-      "description": "Nachname Kontaktperson \u2013 nur Firmenkunden"
+      "description": "Nachname Kontaktperson"
     },
     "organization_id": {
       "type": "string",
-      "description": "Organisations-ID (Pflicht) \u2013 definiert Zugeh\u00f6rigkeit zu Makler/Strukturvertrieb"
+      "description": "Organisations-ID"
     },
     "teamlead_id": {
       "type": "string",
-      "description": "ID des Teamleiters (optional) \u2013 muss aus derselben Organisation sein"
+      "description": "ID des Teamleiters"
     },
     "advisor_id": {
       "type": "string",
-      "description": "ID des Beraters (optional) \u2013 muss aus derselben Organisation sein"
+      "description": "ID des Beraters"
     },
     "total_premium": {
       "type": "number",
       "default": 0,
-      "description": "KPI: Gesamte Jahrespr\u00e4mie aller aktiven Policies (CHF) - Cache"
+      "description": "Gesamte Jahrespr\u00e4mie"
     },
     "import_batch_id": {
       "type": "string",
-      "description": "SECURITY: Batch-ID f\u00fcr Import-Tracking (verhindert unkontrolliertes L\u00f6schen)"
+      "description": "Batch-ID f\u00fcr Import-Tracking"
     },
     "imported_at": {
       "type": "string",
       "format": "date-time",
-      "description": "AUDIT: Zeitstempel des Imports"
+      "description": "Zeitstempel des Imports"
     },
     "imported_by": {
       "type": "string",
-      "description": "AUDIT: E-Mail des Importers"
+      "description": "E-Mail des Importers"
     },
     "archived": {
       "type": "boolean",
       "default": false,
-      "description": "SOFT DELETE: Kunde ist archiviert (nicht wirklich gel\u00f6scht)"
+      "description": "Kunde ist archiviert"
     },
     "archived_at": {
       "type": "string",
       "format": "date-time",
-      "description": "SOFT DELETE: Zeitstempel der Archivierung"
+      "description": "Zeitstempel der Archivierung"
     },
     "archived_by": {
       "type": "string",
-      "description": "SOFT DELETE: E-Mail des Archivierenden"
+      "description": "E-Mail des Archivierenden"
     },
     "archived_reason": {
       "type": "string",
-      "description": "SOFT DELETE: Grund f\u00fcr Archivierung"
+      "description": "Grund f\u00fcr Archivierung"
+    },
+    "primary_advisor_id": {
+      "type": "string",
+      "description": "ACCESS CONTROL: Hauptberater-ID (User)"
+    },
+    "assigned_advisors": {
+      "type": "array",
+      "description": "ACCESS CONTROL: Array von zugewiesenen Berater-IDs",
+      "items": {
+        "type": "string"
+      }
+    },
+    "assigned_assistants": {
+      "type": "array",
+      "description": "ACCESS CONTROL: Array von zugewiesenen Assistenten-IDs",
+      "items": {
+        "type": "string"
+      }
+    },
+    "access_level": {
+      "type": "string",
+      "enum": [
+        "public_admin_only",
+        "assigned_advisors_only",
+        "team_visible",
+        "all_internal"
+      ],
+      "default": "assigned_advisors_only",
+      "description": "ACCESS CONTROL: Sichtbarkeitsstufe"
     }
   },
   "required": [

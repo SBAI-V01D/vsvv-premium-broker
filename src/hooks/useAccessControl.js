@@ -2,8 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 
 /**
- * Hook für Zugriffskontrolle
- * Prüft, ob Benutzer auf einen Kunden/Vertrag zugreifen darf
+ * Hook für echte Backend-basierte Zugriffskontrolle
  */
 export function useAccessControl() {
   const { data: currentUser } = useQuery({
@@ -12,74 +11,102 @@ export function useAccessControl() {
     staleTime: Infinity,
   });
 
-  const { data: assignedCustomers = [] } = useQuery({
-    queryKey: ['assignedCustomers', currentUser?.id],
-    queryFn: () => {
+  // Prüfe Kundenzugriff über Backend-Funktion
+  const checkCustomerAccess = async (customerId) => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    
+    try {
+      const result = await base44.functions.invoke('guardDataAccess', {
+        entityType: 'Customer',
+        entityId: customerId,
+      });
+      return result.data?.allowed || false;
+    } catch {
+      return false;
+    }
+  };
+
+  // Prüfe Vertragszugriff über Backend-Funktion
+  const checkContractAccess = async (contractId) => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    
+    try {
+      const result = await base44.functions.invoke('guardDataAccess', {
+        entityType: 'Contract',
+        entityId: contractId,
+      });
+      return result.data?.allowed || false;
+    } catch {
+      return false;
+    }
+  };
+
+  // Prüfe Dokumentzugriff über Backend-Funktion
+  const checkDocumentAccess = async (documentId) => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    
+    try {
+      const result = await base44.functions.invoke('guardDataAccess', {
+        entityType: 'Document',
+        entityId: documentId,
+      });
+      return result.data?.allowed || false;
+    } catch {
+      return false;
+    }
+  };
+
+  // Hole sichtbare Kunden
+  const { data: visibleCustomers = [] } = useQuery({
+    queryKey: ['visibleCustomers', currentUser?.id],
+    queryFn: async () => {
       if (!currentUser?.id) return [];
-      if (currentUser.role === 'admin') return null; // Admins sehen alles
-      return base44.entities.CustomerAdvisor.filter({ advisor_id: currentUser.id });
+      if (currentUser.role === 'admin') {
+        return base44.asServiceRole.entities.Customer.list(null, 100);
+      }
+      const result = await base44.functions.invoke('getUserVisibleData', {
+        entityType: 'Customer',
+        limit: 100,
+      });
+      return result.data?.data || [];
     },
     enabled: !!currentUser?.id,
   });
 
-  const { data: assignedContracts = [] } = useQuery({
-    queryKey: ['assignedContracts', currentUser?.id],
-    queryFn: () => {
+  // Hole sichtbare Verträge
+  const { data: visibleContracts = [] } = useQuery({
+    queryKey: ['visibleContracts', currentUser?.id],
+    queryFn: async () => {
       if (!currentUser?.id) return [];
-      if (currentUser.role === 'admin') return null; // Admins sehen alles
-      return base44.entities.ContractAdvisor.filter({ advisor_id: currentUser.id });
+      if (currentUser.role === 'admin') {
+        return base44.asServiceRole.entities.Contract.list(null, 100);
+      }
+      const result = await base44.functions.invoke('getUserVisibleData', {
+        entityType: 'Contract',
+        limit: 100,
+      });
+      return result.data?.data || [];
     },
     enabled: !!currentUser?.id,
   });
-
-  const canViewCustomer = (customerId) => {
-    if (!currentUser) return false;
-    if (currentUser.role === 'admin') return true;
-    if (assignedCustomers === null) return true; // Admins
-    return assignedCustomers.some(ca => ca.customer_id === customerId);
-  };
-
-  const canViewContract = (contractId, contractCustomerId) => {
-    if (!currentUser) return false;
-    if (currentUser.role === 'admin') return true;
-    
-    // Prüfe Vertrags-Zuordnung
-    if (assignedContracts !== null && assignedContracts.some(ca => ca.contract_id === contractId)) {
-      return true;
-    }
-    
-    // Fallback: Kunden-Zuordnung
-    if (assignedCustomers !== null && assignedCustomers.some(ca => ca.customer_id === contractCustomerId)) {
-      return true;
-    }
-    
-    return false;
-  };
 
   const canEditAdvisor = () => {
     return currentUser?.role === 'admin';
   };
 
-  const getVisibleCustomerIds = () => {
-    if (!currentUser) return [];
-    if (currentUser.role === 'admin') return null; // null = alle sichtbar
-    return assignedCustomers?.map(ca => ca.customer_id) || [];
-  };
-
-  const getVisibleContractIds = () => {
-    if (!currentUser) return [];
-    if (currentUser.role === 'admin') return null; // null = alle sichtbar
-    return assignedContracts?.map(ca => ca.contract_id) || [];
-  };
-
   return {
     currentUser,
-    canViewCustomer,
-    canViewContract,
+    checkCustomerAccess,
+    checkContractAccess,
+    checkDocumentAccess,
+    visibleCustomers,
+    visibleContracts,
     canEditAdvisor,
-    getVisibleCustomerIds,
-    getVisibleContractIds,
     isAdmin: currentUser?.role === 'admin',
     isBroker: currentUser?.role === 'broker',
+    isAssistant: currentUser?.role === 'assistenz',
   };
 }

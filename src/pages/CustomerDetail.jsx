@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Link, useParams, useNavigate } from 'react-router-dom'
+import { useAccessControl } from '@/hooks/useAccessControl'
 import { ArrowLeft, Plus, Edit, Mail, Phone, MapPin, LayoutDashboard, ExternalLink, MoreHorizontal } from 'lucide-react'
 import AiInsightsPanel from '../components/customers/AiInsightsPanel'
 import ActivityTimeline from '../components/customers/ActivityTimeline'
@@ -36,10 +37,13 @@ import { Badge } from '@/components/ui/badge'
 export default function CustomerDetail() {
    const { id } = useParams()
    const navigate = useNavigate()
+   const { checkCustomerAccess, isAdmin } = useAccessControl()
    const [showEdit, setShowEdit] = useState(false)
    const [editingContract, setEditingContract] = useState(null)
    const [statusChangingContract, setStatusChangingContract] = useState(null)
    const [showAddFamilyMember, setShowAddFamilyMember] = useState(false)
+   const [accessChecked, setAccessChecked] = useState(false)
+   const [hasAccess, setHasAccess] = useState(false)
    const queryClient = useQueryClient()
 
   const { data: allCustomers = [] } = useQuery({
@@ -51,6 +55,21 @@ export default function CustomerDetail() {
     queryKey: ['advisors'],
     queryFn: () => base44.entities.Advisor.list(),
   })
+
+  // Prüfe Kundenzugriff
+  useQuery({
+    queryKey: ['customerAccess', id],
+    queryFn: async () => {
+      const canAccess = await checkCustomerAccess(id);
+      setHasAccess(canAccess);
+      setAccessChecked(true);
+      if (!canAccess && !isAdmin) {
+        navigate('/kunden');
+      }
+      return canAccess;
+    },
+    enabled: !!id,
+  });
 
   const customer = allCustomers.find(x => x.id === id)
 
@@ -155,6 +174,14 @@ export default function CustomerDetail() {
     await base44.entities.Contract.update(contract.id, { custom_status: status })
     queryClient.invalidateQueries({ queryKey: ['contracts'] })
     setStatusChangingContract(null)
+  }
+
+  if (!accessChecked) {
+    return <div className="flex items-center justify-center h-64"><p>Prüfe Zugriff...</p></div>
+  }
+
+  if (!hasAccess) {
+    return <div className="flex items-center justify-center h-64"><p className="text-destructive">Kein Zugriff auf diesen Kunden</p></div>
   }
 
   if (!customer) {

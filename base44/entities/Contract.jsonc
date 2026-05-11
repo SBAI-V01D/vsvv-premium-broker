@@ -4,15 +4,15 @@
   "properties": {
     "customer_id": {
       "type": "string",
-      "description": "Kunden-ID (Hauptkunde oder Familienmitglied)"
+      "description": "Kunden-ID"
     },
     "customer_name": {
       "type": "string",
-      "description": "Kundenname (Display)"
+      "description": "Kundenname"
     },
     "primary_customer_id": {
       "type": "string",
-      "description": "ID des Hauptkunden (f\u00fcr \u00dcbersicht)"
+      "description": "ID des Hauptkunden"
     },
     "is_family_member": {
       "type": "boolean",
@@ -21,11 +21,11 @@
     },
     "organization_id": {
       "type": "string",
-      "description": "Organisations-ID (aus Kunde geerbt)"
+      "description": "Organisations-ID"
     },
     "advisor_id": {
       "type": "string",
-      "description": "Berater-ID (aus Kunde geerbt)"
+      "description": "Berater-ID"
     },
     "insurer": {
       "type": "string",
@@ -38,11 +38,11 @@
     "version_number": {
       "type": "number",
       "default": 1,
-      "description": "Versionsnummer (1, 2, 3...)"
+      "description": "Versionsnummer"
     },
     "parent_policy_id": {
       "type": "string",
-      "description": "ID der Vorg\u00e4nger-Policy (bei Verl\u00e4ngerung/Mutation)"
+      "description": "ID der Vorg\u00e4nger-Policy"
     },
     "insurance_type": {
       "type": "string",
@@ -70,15 +70,15 @@
     },
     "premium_current": {
       "type": "number",
-      "description": "Aktuelle Jahrespr\u00e4mie (f\u00fcr Vergleich)"
+      "description": "Aktuelle Jahrespr\u00e4mie"
     },
     "premium_previous": {
       "type": "number",
-      "description": "Vorherige Jahrespr\u00e4mie (f\u00fcr Trend)"
+      "description": "Vorherige Jahrespr\u00e4mie"
     },
     "premium_benchmark": {
       "type": "number",
-      "description": "Durchschnittspr\u00e4mie \u00e4hnlicher Policies"
+      "description": "Benchmark-Pr\u00e4mie"
     },
     "start_date": {
       "type": "string",
@@ -93,7 +93,7 @@
     "renewal_date": {
       "type": "string",
       "format": "date",
-      "description": "Verl\u00e4ngerungsdatum (z.B. 30 Tage vor end_date)"
+      "description": "Verl\u00e4ngerungsdatum"
     },
     "auto_renew": {
       "type": "boolean",
@@ -129,7 +129,7 @@
         "archived"
       ],
       "default": "active",
-      "description": "Status (stabilisierte Liste)"
+      "description": "Status"
     },
     "process_status": {
       "type": "string",
@@ -142,11 +142,11 @@
         "erledigt"
       ],
       "default": "neu",
-      "description": "Operativer Prozess-Status f\u00fcr Vertragsabl\u00e4ufe"
+      "description": "Operativer Prozess-Status"
     },
     "custom_status": {
       "type": "string",
-      "description": "Dynamischer Status-Schl\u00fcssel (aus StatusDefinition)"
+      "description": "Dynamischer Status-Schl\u00fcssel"
     },
     "sparte": {
       "type": "string",
@@ -180,7 +180,7 @@
     "renewal_alert_start_date": {
       "type": "string",
       "format": "date",
-      "description": "Ablauf-Alert startet (end_date - 180 Tage)"
+      "description": "Ablauf-Alert startet"
     },
     "renewal_status": {
       "type": "string",
@@ -191,12 +191,12 @@
         "completed"
       ],
       "default": "none",
-      "description": "Verl\u00e4ngerungs-Status (Steuerung)"
+      "description": "Verl\u00e4ngerungs-Status"
     },
     "renewal_last_reminder": {
       "type": "string",
       "format": "date",
-      "description": "Datum der letzten Erinnerung (f\u00fcr 14-Tage-Logik)"
+      "description": "Datum der letzten Erinnerung"
     },
     "renewal_priority": {
       "type": "string",
@@ -206,7 +206,7 @@
         "high"
       ],
       "default": "low",
-      "description": "KI-Priorisierung: high (<60d), medium (60-120d), low (>120d)"
+      "description": "KI-Priorisierung"
     },
     "renewal_stage": {
       "type": "string",
@@ -250,7 +250,7 @@
     },
     "renewal_offer_policy_id": {
       "type": "string",
-      "description": "Kopie der Policy als Angebot (Entwurf)"
+      "description": "Kopie der Policy als Angebot"
     },
     "renewal_customer_accepted": {
       "type": "boolean",
@@ -330,7 +330,8 @@
         "high",
         "optimized"
       ],
-      "default": "normal"
+      "default": "normal",
+      "description": "Pricing-Status"
     },
     "pricing_suggestion_id": {
       "type": "string"
@@ -338,7 +339,7 @@
     "last_review_date": {
       "type": "string",
       "format": "date",
-      "description": "Datum der letzten Policenpr\u00fcfung/Beratung"
+      "description": "Datum der letzten Policenpr\u00fcfung"
     },
     "next_review_date": {
       "type": "string",
@@ -362,6 +363,35 @@
     },
     "archived_reason": {
       "type": "string"
+    },
+    "primary_broker_id": {
+      "type": "string",
+      "description": "ACCESS CONTROL: Hauptberater-ID (User)"
+    },
+    "assigned_brokers": {
+      "type": "array",
+      "description": "ACCESS CONTROL: Array von zugewiesenen Berater-IDs",
+      "items": {
+        "type": "string"
+      }
+    },
+    "assigned_team": {
+      "type": "array",
+      "description": "ACCESS CONTROL: Array von Mitarbeitern mit Zugriff",
+      "items": {
+        "type": "string"
+      }
+    },
+    "access_level": {
+      "type": "string",
+      "enum": [
+        "public_admin_only",
+        "assigned_brokers_only",
+        "team_visible",
+        "all_internal"
+      ],
+      "default": "assigned_brokers_only",
+      "description": "ACCESS CONTROL: Sichtbarkeitsstufe"
     }
   },
   "required": [

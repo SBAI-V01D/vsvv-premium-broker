@@ -4,7 +4,7 @@
   "properties": {
     "customer_id": {
       "type": "string",
-      "description": "Kunden-ID (Hauptkunde oder Familienmitglied)"
+      "description": "Kunden-ID"
     },
     "customer_name": {
       "type": "string",
@@ -12,7 +12,7 @@
     },
     "primary_customer_id": {
       "type": "string",
-      "description": "ID des Hauptkunden (f\u00fcr \u00dcbersicht)"
+      "description": "ID des Hauptkunden"
     },
     "is_family_member": {
       "type": "boolean",
@@ -22,7 +22,7 @@
     "customer_locked": {
       "type": "boolean",
       "default": false,
-      "description": "Kunde wurde manuell gesetzt \u2013 KI darf nicht \u00fcberschreiben"
+      "description": "Kunde wurde manuell gesetzt"
     },
     "processing_stage": {
       "type": "string",
@@ -35,19 +35,19 @@
         "policy_created"
       ],
       "default": "uploaded",
-      "description": "Pipeline-Status \u2013 kontrolliert Reihenfolge der Verarbeitung"
+      "description": "Pipeline-Status"
     },
     "policy_holder_name": {
       "type": "string",
-      "description": "Versicherungsnehmer (aus 'Ihre Adresse' oder 'Versicherungsnehmer')"
+      "description": "Versicherungsnehmer"
     },
     "driver_name": {
       "type": "string",
-      "description": "Lenker/Fahrer (aus Rollen-Feld, NIEMALS als Kunde)"
+      "description": "Lenker/Fahrer"
     },
     "insured_person_name": {
       "type": "string",
-      "description": "Versicherte Person (optional, weitere Person)"
+      "description": "Versicherte Person"
     },
     "name": {
       "type": "string",
@@ -76,7 +76,7 @@
         "unbekannt"
       ],
       "default": "unbekannt",
-      "description": "Klassifizierungstyp: antrag oder anlage"
+      "description": "Klassifizierungstyp"
     },
     "classification_status": {
       "type": "string",
@@ -91,7 +91,7 @@
     },
     "classification_confidence": {
       "type": "number",
-      "description": "Konfidenz der automatischen Klassifizierung (0-1)"
+      "description": "Konfidenz der automatischen Klassifizierung"
     },
     "classification_reason": {
       "type": "string",
@@ -99,11 +99,11 @@
     },
     "linked_contract_id": {
       "type": "string",
-      "description": "Verkn\u00fcpfte Vertrags-ID"
+      "description": "Verkn\u00ad\u00fcpfte Vertrags-ID"
     },
     "linked_application_id": {
       "type": "string",
-      "description": "Verkn\u00fcpfte Antrags-ID"
+      "description": "Verkn\u00ad\u00fcpfte Antrags-ID"
     },
     "uploaded_by": {
       "type": "string",
@@ -112,6 +112,31 @@
     "notes": {
       "type": "string",
       "description": "Notizen"
+    },
+    "access_advisors": {
+      "type": "array",
+      "description": "ACCESS CONTROL: Berater-IDs mit Zugriff",
+      "items": {
+        "type": "string"
+      }
+    },
+    "access_teams": {
+      "type": "array",
+      "description": "ACCESS CONTROL: Team-IDs mit Zugriff",
+      "items": {
+        "type": "string"
+      }
+    },
+    "access_level": {
+      "type": "string",
+      "enum": [
+        "public_admin_only",
+        "assigned_advisors_only",
+        "team_visible",
+        "all_internal"
+      ],
+      "default": "assigned_advisors_only",
+      "description": "ACCESS CONTROL: Sichtbarkeitsstufe"
     }
   },
   "required": [
