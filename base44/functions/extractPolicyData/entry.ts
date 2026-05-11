@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
     }
 
     const response = await base44.integrations.Core.InvokeLLM({
+      model: 'automatic',
       prompt: `Du bist ein SPEZIALISIERTER OCR-Experte für Schweizer Versicherungspolicen mit PERFEKTER Zeichenerkennung.
 
 KRITISCHE AUFGABE: Extrahiere EXAKT die Kundendaten (Name, Vorname, Geburtsdatum, Adresse) und Vertragsdaten aus dieser Police.
