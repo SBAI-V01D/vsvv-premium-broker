@@ -15,16 +15,16 @@ function useSidebarBadges() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [tasks, contracts, docs] = await Promise.all([
+        const [tasks, contracts, docs, leads, verkaufschancen] = await Promise.all([
           base44.entities.Task.list(),
           base44.entities.Contract.list(),
           base44.entities.Document.list(),
+          base44.entities.Lead.list(),
+          base44.entities.Verkaufschance.list(),
         ]);
         const today = new Date();
-        const in90 = new Date(today); in90.setDate(today.getDate() + 90);
 
         const openTasks = tasks.filter(t => t.status === 'open' || t.status === 'in_progress');
-        const overdueTasks = openTasks.filter(t => t.due_date && new Date(t.due_date) < today);
         // Vertragsabläufe badge: nur echte Handlungsbedarfe (Frist <= 90 Tage)
         const vertragsablaeufe = contracts.filter(c => {
           if (['cancelled', 'archived'].includes(c.status)) return false
@@ -32,17 +32,21 @@ function useSidebarBadges() {
             const cancelDays = c.cancellation_deadline ? Math.ceil((new Date(c.cancellation_deadline) - today) / 86400000) : null
             return cancelDays !== null && cancelDays >= -30 && cancelDays <= 90
           }
-          const endDays   = c.end_date   ? Math.ceil((new Date(c.end_date)   - today) / 86400000) : null
+          const endDays    = c.end_date             ? Math.ceil((new Date(c.end_date)             - today) / 86400000) : null
           const cancelDays = c.cancellation_deadline ? Math.ceil((new Date(c.cancellation_deadline) - today) / 86400000) : null
           return (endDays !== null && endDays >= -30 && endDays <= 90) ||
                  (cancelDays !== null && cancelDays >= -30 && cancelDays <= 90)
         });
         const pendingDocs = docs.filter(d => d.classification_status === 'ausstehend');
+        const activeLeads = leads.filter(l => ['new', 'contacted', 'qualified'].includes(l.status));
+        const openVs = verkaufschancen.filter(v => !['gewonnen', 'verloren'].includes(v.status));
 
         setBadges({
-          '/aufgaben':          overdueTasks.length || null,
+          '/aufgaben':          openTasks.length || null,
           '/vertragsablaeufe':  vertragsablaeufe.length || null,
           '/dokumente':         pendingDocs.length || null,
+          '/leads':             activeLeads.length || null,
+          '/verkaufschancen':   openVs.length || null,
         });
       } catch {}
     };
