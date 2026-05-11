@@ -174,51 +174,64 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
                 )}
 
                 {memberContracts.length > 0 ? (
-                  <table style={{ width: '100%', fontSize: '12px', borderCollapse: 'collapse', marginBottom: '15px' }}>
-                    <thead>
-                      <tr style={{ background: '#f5f5f5', borderBottom: '1px solid #ddd' }}>
-                        <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold' }}>Sparte</th>
-                        <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold' }}>Gesellschaft</th>
-                        <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold' }}>Police</th>
-                        <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold' }}>Ablauf</th>
-                        <th style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold' }}>Jahresprämie</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {memberContracts.map((contract) => {
-                        const status = getStatusColor(contract)
-                        return (
-                          <tr key={contract.id} style={{ 
-                            background: status.bg, 
-                            color: status.text,
-                            borderBottom: '1px solid #ddd',
-                            height: '30px'
-                          }}>
-                            <td style={{ padding: '8px' }}>{contract.sparte || contract.insurance_type || '–'}</td>
-                            <td style={{ padding: '8px' }}>{contract.insurer || '–'}</td>
-                            <td style={{ padding: '8px' }}>{contract.policy_number || '–'}</td>
-                            <td style={{ padding: '8px' }}>
-                              {contract.end_date ? (
-                                <>
-                                  {formatDate(contract.end_date)}
-                                  {(() => {
-                                    const days = getDaysUntilExpiry(contract.end_date)
-                                    return days !== null ? ` (${days}d)` : ''
-                                  })()}
-                                </>
-                              ) : '–'}
-                            </td>
-                            <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold' }}>
-                              {formatCurrency(contract.premium_yearly)}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                ) : (
-                  <p style={{ fontSize: '12px', color: '#999', fontStyle: 'italic' }}>Keine Verträge</p>
-                )}
+                   <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse', marginBottom: '15px' }}>
+                     <thead>
+                       <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #2169B4' }}>
+                         <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #ddd' }}>Versicherer</th>
+                         <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #ddd' }}>Sparte</th>
+                         <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #ddd' }}>Policen-Nr</th>
+                         <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #ddd' }}>Produkt</th>
+                         <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #ddd' }}>Beginn</th>
+                         <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #ddd' }}>Ende</th>
+                         <th style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', borderRight: '1px solid #ddd' }}>Jahresprämie</th>
+                         <th style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>Status</th>
+                       </tr>
+                     </thead>
+                     <tbody>
+                       {memberContracts.map((contract) => {
+                         const status = getStatusColor(contract)
+                         return (
+                           <tr key={contract.id} style={{ 
+                             borderBottom: '1px solid #ddd',
+                             height: 'auto'
+                           }}>
+                             <td style={{ padding: '8px', borderRight: '1px solid #ddd' }}>{contract.insurer || '–'}</td>
+                             <td style={{ padding: '8px', borderRight: '1px solid #ddd' }}>{contract.sparte || contract.insurance_type || '–'}</td>
+                             <td style={{ padding: '8px', borderRight: '1px solid #ddd', fontFamily: 'monospace' }}>{contract.policy_number || '–'}</td>
+                             <td style={{ padding: '8px', borderRight: '1px solid #ddd' }}>{contract.product || '–'}</td>
+                             <td style={{ padding: '8px', borderRight: '1px solid #ddd' }}>{contract.start_date ? formatDate(contract.start_date) : '–'}</td>
+                             <td style={{ padding: '8px', borderRight: '1px solid #ddd' }}>
+                               {contract.end_date ? (
+                                 <>
+                                   {formatDate(contract.end_date)}
+                                   {(() => {
+                                     const days = getDaysUntilExpiry(contract.end_date)
+                                     return days !== null ? ` (${days}d)` : ''
+                                   })()}
+                                 </>
+                               ) : '–'}
+                             </td>
+                             <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', borderRight: '1px solid #ddd' }}>
+                               {formatCurrency(contract.premium_yearly)}
+                             </td>
+                             <td style={{ 
+                               padding: '8px', 
+                               textAlign: 'center',
+                               background: status.bg,
+                               color: status.text,
+                               fontWeight: 'bold',
+                               fontSize: '11px'
+                             }}>
+                               {status.label}
+                             </td>
+                           </tr>
+                         )
+                       })}
+                     </tbody>
+                   </table>
+                 ) : (
+                   <p style={{ fontSize: '12px', color: '#999', fontStyle: 'italic' }}>Keine Verträge</p>
+                 )}
               </div>
             )
           })}
