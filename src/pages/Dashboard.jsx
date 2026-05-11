@@ -37,13 +37,14 @@ export default function Dashboard() {
   const today = new Date()
   const in90 = new Date(today); in90.setDate(today.getDate() + 90)
 
-  // Vertragsabläufe: alle nicht-gekündigten Verträge mit end_date in den nächsten 90 Tagen
+  // expiringContracts: NUR für KPI-Chip im Header — Verträge die HEUTE oder in den nächsten 90 Tagen ablaufen
+  // (nicht bereits abgelaufene, nicht alle aktiven)
   const expiringContracts = useMemo(() =>
-    contracts.filter(c =>
-      c.end_date &&
-      !['cancelled', 'archived', 'expired'].includes(c.status) &&
-      new Date(c.end_date + 'T00:00:00') <= in90
-    ),
+    contracts.filter(c => {
+      if (!c.end_date || ['cancelled', 'archived', 'expired'].includes(c.status)) return false
+      const d = new Date(c.end_date + 'T00:00:00')
+      return d >= today && d <= in90
+    }),
     [contracts]
   )
 

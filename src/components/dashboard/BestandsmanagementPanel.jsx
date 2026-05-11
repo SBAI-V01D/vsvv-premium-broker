@@ -25,24 +25,20 @@ function calcContractPriority(contract) {
   const endDays = daysUntil(contract.end_date)
   const cancelDays = daysUntil(contract.cancellation_deadline)
 
-  // Kündigungsfrist
-  if (cancelDays !== null) {
-    if (cancelDays <= 0)   issues.push({ type: 'kuendigung', label: 'Kündigungsfrist ABGELAUFEN', severity: 'critical', days: cancelDays })
-    else if (cancelDays <= 30) issues.push({ type: 'kuendigung', label: `Kündigungsfrist in ${cancelDays}d`, severity: 'red', days: cancelDays })
-    else if (cancelDays <= 60) issues.push({ type: 'kuendigung', label: `Kündigungsfrist in ${cancelDays}d`, severity: 'orange', days: cancelDays })
+  // Kündigungsfrist — nur wenn relevant (max. 30 Tage überfällig, max. 90 Tage in Zukunft)
+  if (cancelDays !== null && cancelDays >= -30 && cancelDays <= 90) {
+    if (cancelDays <= 0)        issues.push({ type: 'kuendigung', label: 'Kündigungsfrist ABGELAUFEN', severity: 'critical', days: cancelDays })
+    else if (cancelDays <= 30)  issues.push({ type: 'kuendigung', label: `Kündigungsfrist in ${cancelDays}d`, severity: 'red', days: cancelDays })
+    else if (cancelDays <= 60)  issues.push({ type: 'kuendigung', label: `Kündigungsfrist in ${cancelDays}d`, severity: 'orange', days: cancelDays })
+    else                        issues.push({ type: 'kuendigung', label: `Kündigungsfrist in ${cancelDays}d`, severity: 'yellow', days: cancelDays })
   }
 
-  // Vertragsablauf
+  // Vertragsablauf — nur wenn wirklich in den nächsten 90 Tagen (oder max. 30 Tage überfällig)
   if (endDays !== null && !['cancelled', 'archived', 'expired'].includes(contract.status)) {
-    if (endDays <= 0)   issues.push({ type: 'ablauf', label: 'Vertrag ABGELAUFEN', severity: 'critical', days: endDays })
-    else if (endDays <= 30)  issues.push({ type: 'ablauf', label: `Läuft in ${endDays}d ab`, severity: 'red', days: endDays })
-    else if (endDays <= 60)  issues.push({ type: 'ablauf', label: `Läuft in ${endDays}d ab`, severity: 'orange', days: endDays })
-    else if (endDays <= 90)  issues.push({ type: 'ablauf', label: `Läuft in ${endDays}d ab`, severity: 'yellow', days: endDays })
-  }
-
-  // Fehlende Dokumente (contract hat keine policy_document_url)
-  if (!contract.policy_document_url && contract.status === 'active') {
-    issues.push({ type: 'dokument', label: 'Police fehlt', severity: 'yellow', days: null })
+    if (endDays >= -30 && endDays <= 0)  issues.push({ type: 'ablauf', label: 'Vertrag ABGELAUFEN', severity: 'critical', days: endDays })
+    else if (endDays > 0 && endDays <= 30)  issues.push({ type: 'ablauf', label: `Läuft in ${endDays}d ab`, severity: 'red', days: endDays })
+    else if (endDays > 30 && endDays <= 60) issues.push({ type: 'ablauf', label: `Läuft in ${endDays}d ab`, severity: 'orange', days: endDays })
+    else if (endDays > 60 && endDays <= 90) issues.push({ type: 'ablauf', label: `Läuft in ${endDays}d ab`, severity: 'yellow', days: endDays })
   }
 
   const severityOrder = { critical: 0, red: 1, orange: 2, yellow: 3 }
