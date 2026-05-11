@@ -396,29 +396,6 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         console.warn('[PolicyUploadWizard] Matching error (non-fatal):', matchErr.message);
       }
 
-      // AUTO-SKIP TO STEP 3 if policy holder found and child detected
-      if (isChildOfPolicyHolder && policyHolderCustomer) {
-        setSelectedCustomer(policyHolderCustomer);
-        setCustomerMode('policy_holder_main');
-        setNewCustomerData({
-          first_name: (d.first_name || '').trim(),
-          last_name: (d.last_name || '').trim(),
-          birthdate: d.birthdate || '',
-          email: policyHolderCustomer.email || '', // Inherit from policy holder
-          phone: (d.phone || '').trim(),
-          mobile: (d.mobile || '').trim(),
-          street: (d.street || '').trim(),
-          city: (d.city || '').trim(),
-          zip_code: (d.zip_code || '').trim(),
-          canton: (d.canton || '').trim(),
-          family_role: d.role === 'Kind' ? 'child' : d.role === 'Ehepartner' ? 'spouse' : 'other'
-        });
-        setContractList([baseContract, ...additionalContracts]);
-        setActiveContractIdx(0);
-        setStep(3);
-        return;
-      }
-
       // Build contracts from extracted data
       const sparteKey = mapInsuranceType(d.insurance_type) || d.insurance_type || ''
       const sparteData = d.sparte_data || {}
@@ -449,6 +426,29 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         notes: '',
         sparte_data: {},
       }))
+
+      // AUTO-SKIP TO STEP 3 if policy holder found and child detected
+      if (isChildOfPolicyHolder && policyHolderCustomer) {
+        setSelectedCustomer(policyHolderCustomer);
+        setCustomerMode('policy_holder_main');
+        setNewCustomerData({
+          first_name: (d.first_name || '').trim(),
+          last_name: (d.last_name || '').trim(),
+          birthdate: d.birthdate || '',
+          email: policyHolderCustomer.email || '', // Inherit from policy holder
+          phone: (d.phone || '').trim(),
+          mobile: (d.mobile || '').trim(),
+          street: (d.street || '').trim(),
+          city: (d.city || '').trim(),
+          zip_code: (d.zip_code || '').trim(),
+          canton: (d.canton || '').trim(),
+          family_role: d.role === 'Kind' ? 'child' : d.role === 'Ehepartner' ? 'spouse' : 'other'
+        });
+        setContractList([baseContract, ...additionalContracts]);
+        setActiveContractIdx(0);
+        setStep(3);
+        return;
+      }
 
       setContractList([baseContract, ...additionalContracts])
       setActiveContractIdx(0)
