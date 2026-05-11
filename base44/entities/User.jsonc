@@ -6,23 +6,33 @@
       "type": "string",
       "enum": [
         "admin",
-        "advisor",
-        "customer"
+        "broker",
+        "assistenz",
+        "partner"
       ],
-      "default": "customer",
-      "description": "Benutzerrolle \u2013 admin (alle Daten), advisor (zugewiesene Kunden), customer (nur eigene Daten)"
+      "default": "broker",
+      "description": "Benutzerrolle (admin = Vollzugriff, broker = Berater, assistenz = Innendienst, partner = Externer Berater)"
+    },
+    "team_id": {
+      "type": "string",
+      "description": "Zuordnung zu Team/Abteilung (optional)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Benutzer aktiv oder inaktiv"
     },
     "phone": {
       "type": "string",
-      "description": "Telefonnummer"
+      "description": "Telefonnummer des Beraters"
     },
-    "avatar_url": {
+    "mobile": {
       "type": "string",
-      "description": "Profilbild URL"
+      "description": "Mobilnummer des Beraters"
+    },
+    "department": {
+      "type": "string",
+      "description": "Abteilung / Funktion (z.B. Krankenversicherungen, Motorfahrzeuge)"
     }
-  },
-  "required": [
-    "phone",
-    "avatar_url"
-  ]
+  }
 }

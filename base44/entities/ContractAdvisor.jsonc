@@ -1,0 +1,54 @@
+{
+  "name": "ContractAdvisor",
+  "type": "object",
+  "properties": {
+    "contract_id": {
+      "type": "string",
+      "description": "Vertrags-ID"
+    },
+    "contract_policy_number": {
+      "type": "string",
+      "description": "Police-Nummer (Cache)"
+    },
+    "advisor_id": {
+      "type": "string",
+      "description": "Berater-ID (User)"
+    },
+    "advisor_name": {
+      "type": "string",
+      "description": "Berater-Name (Cache)"
+    },
+    "advisor_email": {
+      "type": "string",
+      "description": "Berater-Email (Cache)"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "primary",
+        "co_advisor",
+        "assistant",
+        "specialist"
+      ],
+      "default": "primary",
+      "description": "Rolle des Beraters f\u00fcr diesen Vertrag"
+    },
+    "is_primary": {
+      "type": "boolean",
+      "default": false,
+      "description": "Ist Hauptberater f\u00fcr diesen Vertrag"
+    },
+    "specialization": {
+      "type": "string",
+      "description": "Spezialisierung (z.B. BVG-Spezialist, Motorfahrzeuge)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notizen zur Zuordnung"
+    }
+  },
+  "required": [
+    "contract_id",
+    "advisor_id"
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "name": "CustomerAdvisor",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Kunden-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Kundenname (Cache)"
+    },
+    "advisor_id": {
+      "type": "string",
+      "description": "Berater-ID (User)"
+    },
+    "advisor_name": {
+      "type": "string",
+      "description": "Berater-Name (Cache)"
+    },
+    "advisor_email": {
+      "type": "string",
+      "description": "Berater-Email (Cache)"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "primary",
+        "co_advisor",
+        "assistant",
+        "specialist"
+      ],
+      "default": "primary",
+      "description": "Rolle des Beraters (primary = Hauptberater, co_advisor = Co-Berater, assistant = Assistenz, specialist = Spezialist)"
+    },
+    "is_primary": {
+      "type": "boolean",
+      "default": false,
+      "description": "Ist Hauptberater (f\u00fcr schnelle Filterung)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notizen zur Zuordnung"
+    }
+  },
+  "required": [
+    "customer_id",
+    "advisor_id"
+  ]
+}

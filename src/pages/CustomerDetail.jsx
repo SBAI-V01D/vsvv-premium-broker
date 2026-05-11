@@ -29,6 +29,7 @@ import { getSparteLabel } from '@/lib/insuranceSparten'
 import StatusBadge from '@/components/status/StatusBadge'
 import PortalActivationPanel from '@/components/customers/PortalActivationPanel'
 import AddFamilyMemberDialog from '@/components/customers/AddFamilyMemberDialog'
+import AdvisorAssignmentPanel from '@/components/advisors/AdvisorAssignmentPanel'
 import { Download, FileText } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
@@ -239,6 +240,7 @@ export default function CustomerDetail() {
       <Tabs defaultValue="dashboard">
         <TabsList className="mb-4">
           <TabsTrigger value="dashboard">📊 Dashboard</TabsTrigger>
+          <TabsTrigger value="betreuung">👥 Betreuung</TabsTrigger>
           <TabsTrigger value="vertraege">Verträge ({relatedContracts.length})</TabsTrigger>
           <TabsTrigger value="antraege">Anträge ({relatedApplications.length})</TabsTrigger>
           <TabsTrigger value="familie">Familie ({familyMembers.length > 1 ? familyMembers.length - 1 : 0})</TabsTrigger>
@@ -346,6 +348,12 @@ export default function CustomerDetail() {
             </Tabs>
 
 
+          </div>
+        </TabsContent>
+
+        <TabsContent value="betreuung">
+          <div className="space-y-4">
+            <AdvisorAssignmentPanel customerId={id} />
           </div>
         </TabsContent>
 
