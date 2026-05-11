@@ -85,14 +85,14 @@ export default function Tasks() {
     return `${day}.${month}.${year}`
   }
 
-  // Filter: only active, non-deleted, non-archived tasks with valid customer_id and assigned_to
+  // Filter: nur echte, aktive Tasks (keine Zombie-Tasks)
+  // assigned_to ist optional — viele auto-erstellte Tasks haben keinen Broker gesetzt
   const isValidTask = (t) => {
-    return t.status !== 'completed' 
-      && !t.deleted 
-      && !t.archived 
+    return t.status !== 'completed'
+      && !t.deleted
+      && !t.archived
       && !t.is_test_data
-      && t.customer_id 
-      && t.assigned_to
+      && t.customer_id  // muss einen Kundenbezug haben
   }
 
   // Split by category

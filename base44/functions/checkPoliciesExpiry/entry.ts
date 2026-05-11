@@ -1,15 +1,13 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 /**
- * CHECK POLICIES EXPIRY — Täglicher Job
- * 
- * 1. Markiert abgelaufene Verträge als expired
- * 2. Erstellt automatisch Aufgaben bei:
- *    - 90 Tage vor Ablauf → Vertragsablauf erfassen + Aufgabe
- *    - 60 Tage → Wiedervorlage / Kunde kontaktieren
- *    - 30 Tage → Beratung empfehlen + Verkaufschance
- *    - Kündigungsfrist <= 30 Tage → Urgente Aufgabe
- * 3. Setzt process_status auf dem Contract
+ * CHECK POLICIES EXPIRY — Täglicher Job (06:30 UTC)
+ *
+ * ANTI-DUPLICATION RULES:
+ * - Pro Vertrag + Schwellenwert (90/60/30d + Kündigungsfrist) darf exakt EINE offene Task existieren
+ * - Duplikatschutz: contract_id + task_type + title-Fragment (Fallback für alte Tasks ohne contract_id)
+ * - Verkaufschancen: nur wenn KEIN offener VS mit linked_contract_id existiert
+ * - process_status wird NUR vorwärts geschrieben (nie rückwärts)
  */
 
 const addDays = (dateStr, days) => {
@@ -23,47 +21,76 @@ const daysUntil = (dateStr) => {
   return Math.ceil((new Date(dateStr + 'T00:00:00Z') - new Date()) / 86400000);
 };
 
+// Strikte Duplikatprüfung: contract_id + task_type, fallback auf customer_id + task_type + insurer im Titel
+const hasOpenTask = (existingTasks, contract, taskType, titleFragment) => {
+  return existingTasks.some(t => {
+    if (t.status === 'completed') return false;
+    if (t.contract_id && t.contract_id === contract.id && t.task_type === taskType) return true;
+    if (!t.contract_id && t.customer_id === contract.customer_id && t.task_type === taskType) {
+      if (titleFragment && t.title?.includes(titleFragment)) return true;
+    }
+    return false;
+  });
+};
+
+// Strikte VS-Duplikatprüfung: linked_contract_id ODER customer_id + sparte + nicht verloren
+const hasOpenVerkaufschance = (existingVs, contract) => {
+  return existingVs.some(v => {
+    if (['gewonnen', 'verloren'].includes(v.status)) return false;
+    if (v.linked_contract_id === contract.id) return true;
+    return false;
+  });
+};
+
+// process_status Reihenfolge — nie rückwärts
+const PROCESS_STATUS_ORDER = ['neu', 'pruefung_offen', 'kunde_kontaktieren', 'verlaengerung_vorbereiten', 'beratung_erfolgt', 'erledigt'];
+const canAdvanceStatus = (current, target) => {
+  const ci = PROCESS_STATUS_ORDER.indexOf(current || 'neu');
+  const ti = PROCESS_STATUS_ORDER.indexOf(target);
+  return ti > ci;
+};
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const today = new Date().toISOString().split('T')[0];
     console.log(`[checkPoliciesExpiry] START date=${today}`);
 
-    const contracts = await base44.asServiceRole.entities.Contract.list();
-    const existingTasks = await base44.asServiceRole.entities.Task.list();
+    // Alles auf einmal laden — minimale DB-Calls
+    const [contracts, existingTasks, existingVs] = await Promise.all([
+      base44.asServiceRole.entities.Contract.list(),
+      base44.asServiceRole.entities.Task.list(),
+      base44.asServiceRole.entities.Verkaufschance.list(),
+    ]);
 
     let expiredCount = 0;
     let tasksCreated = 0;
     let vsCreated = 0;
+    let skippedDuplicates = 0;
 
     for (const c of contracts) {
       if (['cancelled', 'archived'].includes(c.status)) continue;
+      // Erledigte Prozesse überspringen
+      if (c.process_status === 'erledigt' || c.process_status === 'beratung_erfolgt') continue;
 
       const endDays = daysUntil(c.end_date);
       const cancelDays = daysUntil(c.cancellation_deadline);
+      const insurer = c.insurer || '';
 
-      // ── 1. Vertrag abgelaufen → expired ─────────────────────────────────
+      // ── 1. Vertrag abgelaufen → expired ────────────────────────────────
       if (c.status === 'active' && c.end_date && today > c.end_date) {
         await base44.asServiceRole.entities.Contract.update(c.id, { status: 'expired' });
         expiredCount++;
-        console.log(`[expired] ${c.customer_name} | ${c.insurer} | ${c.end_date}`);
+        console.log(`[expired] ${c.customer_name} | ${insurer} | ${c.end_date}`);
+        continue; // Keine weiteren Tasks für abgelaufene
       }
 
-      // ── Aufgaben-Duplikat-Check — auch nach Titel für alte Tasks ohne contract_id ──
-      const hasTaskForContract = (taskType) => existingTasks.some(t =>
-        t.status !== 'completed' &&
-        (
-          (t.contract_id === c.id && t.task_type === taskType) ||
-          (t.customer_id === c.customer_id && t.task_type === taskType && t.title?.includes(c.insurer || ''))
-        )
-      );
-
-      // ── 2. 90 Tage vor Ablauf: process_status setzen + Aufgabe ──────────
-      if (endDays !== null && endDays <= 90 && endDays > 60 && c.status !== 'expired') {
-        if (!hasTaskForContract('renewal')) {
+      // ── 2. 90 Tage vor Ablauf: Prüfungs-Aufgabe ────────────────────────
+      if (endDays !== null && endDays <= 90 && endDays > 60 && c.status === 'active') {
+        if (!hasOpenTask(existingTasks, c, 'renewal', insurer)) {
           await base44.asServiceRole.entities.Task.create({
-            title: `Vertragsablauf prüfen — ${c.insurer} (${c.customer_name})`,
-            description: `Vertrag läuft in ${endDays} Tagen ab. Verlängerung/Kündigung prüfen.`,
+            title: `Vertragsablauf prüfen — ${insurer} (${c.customer_name || ''})`,
+            description: `Vertrag läuft in ${endDays} Tagen ab. Verlängerung oder Kündigung prüfen.`,
             customer_id: c.customer_id,
             customer_name: c.customer_name,
             contract_id: c.id,
@@ -74,18 +101,19 @@ Deno.serve(async (req) => {
             assigned_to: c.assigned_broker || null,
           });
           tasksCreated++;
-
-          if (c.process_status === 'neu' || !c.process_status) {
+          if (canAdvanceStatus(c.process_status, 'pruefung_offen')) {
             await base44.asServiceRole.entities.Contract.update(c.id, { process_status: 'pruefung_offen' });
           }
+        } else {
+          skippedDuplicates++;
         }
       }
 
-      // ── 3. 60 Tage: Kunde kontaktieren ──────────────────────────────────
-      if (endDays !== null && endDays <= 60 && endDays > 30 && c.status !== 'expired') {
-        if (!hasTaskForContract('follow_up')) {
+      // ── 3. 60 Tage: Kundenkontakt-Aufgabe ──────────────────────────────
+      if (endDays !== null && endDays <= 60 && endDays > 30 && c.status === 'active') {
+        if (!hasOpenTask(existingTasks, c, 'follow_up', insurer)) {
           await base44.asServiceRole.entities.Task.create({
-            title: `Kunde kontaktieren — ${c.insurer} Verlängerung (${c.customer_name})`,
+            title: `Kunde kontaktieren — ${insurer} Verlängerung (${c.customer_name || ''})`,
             description: `Vertrag läuft in ${endDays} Tagen ab. Kunden anrufen und Verlängerungsoptionen besprechen.`,
             customer_id: c.customer_id,
             customer_name: c.customer_name,
@@ -97,18 +125,19 @@ Deno.serve(async (req) => {
             assigned_to: c.assigned_broker || null,
           });
           tasksCreated++;
-
-          if (!['kunde_kontaktieren', 'verlaengerung_vorbereiten', 'beratung_erfolgt', 'erledigt'].includes(c.process_status)) {
+          if (canAdvanceStatus(c.process_status, 'kunde_kontaktieren')) {
             await base44.asServiceRole.entities.Contract.update(c.id, { process_status: 'kunde_kontaktieren' });
           }
+        } else {
+          skippedDuplicates++;
         }
       }
 
-      // ── 4. 30 Tage: Dringende Beratung + Verkaufschance ─────────────────
-      if (endDays !== null && endDays <= 30 && endDays >= 0 && c.status !== 'expired') {
-        if (!hasTaskForContract('consultation')) {
+      // ── 4. 30 Tage: Dringende Beratung + Verkaufschance ────────────────
+      if (endDays !== null && endDays <= 30 && endDays >= 0 && c.status === 'active') {
+        if (!hasOpenTask(existingTasks, c, 'consultation', insurer)) {
           await base44.asServiceRole.entities.Task.create({
-            title: `⚠️ DRINGEND: Beratung ${c.insurer} (${c.customer_name})`,
+            title: `DRINGEND: Beratung ${insurer} (${c.customer_name || ''})`,
             description: `Vertrag läuft in ${endDays} Tagen ab! Sofortige Beratung und Entscheid notwendig.`,
             customer_id: c.customer_id,
             customer_name: c.customer_name,
@@ -120,45 +149,45 @@ Deno.serve(async (req) => {
             assigned_to: c.assigned_broker || null,
           });
           tasksCreated++;
-
-          // Verkaufschance automatisch erstellen
-          const existingVs = await base44.asServiceRole.entities.Verkaufschance.filter({
-            customer_id: c.customer_id,
-            linked_contract_id: c.id,
-          });
-          if (existingVs.length === 0) {
-            await base44.asServiceRole.entities.Verkaufschance.create({
-              customer_id: c.customer_id,
-              customer_name: c.customer_name,
-              organization_id: c.organization_id,
-              sparte: c.sparte || c.insurance_type,
-              status: 'neu',
-              linked_contract_id: c.id,
-              title: `Verlängerung ${c.insurer} — ${c.customer_name}`,
-              estimated_value: c.premium_yearly || 0,
-              notes: `Automatisch erstellt — Vertrag läuft in ${endDays} Tagen ab.`,
-              assigned_broker: c.assigned_broker || null,
-            });
-            vsCreated++;
-          }
-
-          if (!['verlaengerung_vorbereiten', 'beratung_erfolgt', 'erledigt'].includes(c.process_status)) {
+          if (canAdvanceStatus(c.process_status, 'verlaengerung_vorbereiten')) {
             await base44.asServiceRole.entities.Contract.update(c.id, { process_status: 'verlaengerung_vorbereiten' });
           }
+        } else {
+          skippedDuplicates++;
+        }
+
+        // Verkaufschance — NUR wenn noch keine mit diesem Vertrag verknüpft
+        if (!hasOpenVerkaufschance(existingVs, c)) {
+          const newVs = await base44.asServiceRole.entities.Verkaufschance.create({
+            customer_id: c.customer_id,
+            customer_name: c.customer_name,
+            organization_id: c.organization_id,
+            sparte: c.sparte || c.insurance_type,
+            status: 'neu',
+            linked_contract_id: c.id,
+            title: `Verlängerung ${insurer} — ${c.customer_name || ''}`,
+            estimated_value: c.premium_yearly || 0,
+            notes: `Automatisch erstellt — Vertrag läuft in ${endDays} Tagen ab.`,
+            assigned_broker: c.assigned_broker || null,
+          });
+          existingVs.push(newVs); // In-Memory aktualisieren für weitere Loop-Iterationen
+          vsCreated++;
+        } else {
+          skippedDuplicates++;
         }
       }
 
-      // ── 5. Kündigungsfrist <= 30 Tage: Urgente Aufgabe ──────────────────
+      // ── 5. Kündigungsfrist <= 30 Tage: Urgente Aufgabe ─────────────────
       if (cancelDays !== null && cancelDays <= 30 && cancelDays >= -30) {
         const hasCancelTask = existingTasks.some(t =>
+          t.status !== 'completed' &&
           t.contract_id === c.id &&
           t.task_type === 'general' &&
-          t.title?.includes('Kündigungsfrist') &&
-          t.status !== 'completed'
+          t.title?.includes('Kündigungsfrist')
         );
         if (!hasCancelTask) {
           await base44.asServiceRole.entities.Task.create({
-            title: `⚠️ Kündigungsfrist läuft ab — ${c.insurer} (${c.customer_name})`,
+            title: `Kündigungsfrist läuft ab — ${insurer} (${c.customer_name || ''})`,
             description: cancelDays <= 0
               ? `Kündigungsfrist ist vor ${Math.abs(cancelDays)} Tagen abgelaufen! Sofort handeln.`
               : `Kündigungsfrist in ${cancelDays} Tagen. Entscheid: Kündigen oder verlängern?`,
@@ -172,12 +201,14 @@ Deno.serve(async (req) => {
             assigned_to: c.assigned_broker || null,
           });
           tasksCreated++;
+        } else {
+          skippedDuplicates++;
         }
       }
     }
 
-    console.log(`[checkPoliciesExpiry] ✅ DONE: ${expiredCount} expired, ${tasksCreated} tasks, ${vsCreated} VS created`);
-    return Response.json({ success: true, date: today, expiredCount, tasksCreated, vsCreated });
+    console.log(`[checkPoliciesExpiry] DONE: ${expiredCount} expired, ${tasksCreated} tasks, ${vsCreated} VS, ${skippedDuplicates} duplicates skipped`);
+    return Response.json({ success: true, date: today, expiredCount, tasksCreated, vsCreated, skippedDuplicates });
 
   } catch (error) {
     console.error(`[checkPoliciesExpiry] ERROR: ${error.message}`);
