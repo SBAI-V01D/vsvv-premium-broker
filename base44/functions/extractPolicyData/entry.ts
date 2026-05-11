@@ -117,37 +117,36 @@ RÜCKGABE: Gültiges JSON mit allen Feldern. Fehlende Felder = null.`,
         response_json_schema: {
           type: 'object',
           properties: {
-            first_name: { type: ['string', 'null'] },
-            last_name: { type: ['string', 'null'] },
-            birthdate: { type: ['string', 'null'] },
-            street: { type: ['string', 'null'] },
-            zip_code: { type: ['string', 'null'] },
-            city: { type: ['string', 'null'] },
-            canton: { type: ['string', 'null'] },
-            phone: { type: ['string', 'null'] },
-            mobile: { type: ['string', 'null'] },
-            email: { type: ['string', 'null'] },
-            policy_number: { type: ['string', 'null'] },
-            insurer: { type: ['string', 'null'] },
-            insurance_type: { type: ['string', 'null'] },
-            product: { type: ['string', 'null'] },
-            start_date: { type: ['string', 'null'] },
-            end_date: { type: ['string', 'null'] },
-            cancellation_deadline: { type: ['string', 'null'] },
-            premium_monthly: { type: ['number', 'null'] },
-            premium_yearly: { type: ['number', 'null'] },
-            sparte_data: { type: ['object', 'null'], additionalProperties: true },
+            first_name: { type: 'string' },
+            last_name: { type: 'string' },
+            birthdate: { type: 'string' },
+            street: { type: 'string' },
+            zip_code: { type: 'string' },
+            city: { type: 'string' },
+            canton: { type: 'string' },
+            phone: { type: 'string' },
+            mobile: { type: 'string' },
+            email: { type: 'string' },
+            policy_number: { type: 'string' },
+            insurer: { type: 'string' },
+            insurance_type: { type: 'string' },
+            product: { type: 'string' },
+            start_date: { type: 'string' },
+            end_date: { type: 'string' },
+            cancellation_deadline: { type: 'string' },
+            premium_monthly: { type: 'number' },
+            premium_yearly: { type: 'number' },
+            sparte_data: { type: 'object', additionalProperties: true },
             additional_products: {
-              type: ['array', 'null'],
+              type: 'array',
               items: { 
                 type: 'object', 
                 properties: { 
                   product: { type: 'string' }, 
-                  premium_monthly: { type: ['number', 'null'] }, 
-                  premium_yearly: { type: ['number', 'null'] }, 
-                  policy_number: { type: ['string', 'null'] } 
-                },
-                additionalProperties: false
+                  premium_monthly: { type: 'number' }, 
+                  premium_yearly: { type: 'number' }, 
+                  policy_number: { type: 'string' } 
+                }
               }
             }
           }
