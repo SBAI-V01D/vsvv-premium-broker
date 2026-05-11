@@ -62,6 +62,9 @@ const addHeader = (doc, pageWidth, title, subtitle) => {
     doc.text(subtitle, margin, y + 22);
   }
 
+  // WICHTIG: Farbe zurücksetzen
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
   doc.setTextColor(0, 0, 0);
   return y + 35;
 };
