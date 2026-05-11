@@ -6,6 +6,8 @@ import { ArrowLeft, Plus, Edit, Mail, Phone, MapPin, LayoutDashboard, ExternalLi
 import AiInsightsPanel from '../components/customers/AiInsightsPanel'
 import ActivityTimeline from '../components/customers/ActivityTimeline'
 import AutoAISummary from '../components/customers/AutoAISummary'
+import FamilyOverviewPanel from '../components/customers/FamilyOverviewPanel'
+import HouseholdContractsCockpit from '../components/customers/HouseholdContractsCockpit'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -21,6 +23,7 @@ import { getSparteLabel } from '@/lib/insuranceSparten'
 import StatusBadge from '@/components/status/StatusBadge'
 import PortalActivationPanel from '@/components/customers/PortalActivationPanel'
 import AddFamilyMemberDialog from '@/components/customers/AddFamilyMemberDialog'
+import { Download } from 'lucide-react'
 
 export default function CustomerDetail() {
    const { id } = useParams()
@@ -83,6 +86,19 @@ export default function CustomerDetail() {
     queryKey: ['verkaufschancen', id],
     queryFn: () => base44.entities.Verkaufschance.filter({ customer_id: id }),
     enabled: !!id,
+  })
+
+  const downloadPDFMutation = useMutation({
+    mutationFn: () => base44.functions.invoke('generateHouseholdPDF', { customer_id: id }),
+    onSuccess: (response) => {
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Haushaltsübersicht_${customer?.last_name}_${new Date().toISOString().split('T')[0]}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
   })
 
   // If customer is a family member, show primary customer's ID too
@@ -227,13 +243,62 @@ export default function CustomerDetail() {
 
         <TabsContent value="dashboard">
           <div className="space-y-4">
-            <AutoAISummary 
-              customer={customer}
-              contracts={relatedContracts}
-              applications={relatedApplications}
-              documents={relatedDocuments}
-              tasks={custTasks}
-            />
+            {/* PDF Export */}
+            <div className="flex justify-end">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => downloadPDFMutation.mutate()}
+                disabled={downloadPDFMutation.isPending}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                {downloadPDFMutation.isPending ? 'PDF wird erstellt...' : 'Haushaltsübersicht PDF'}
+              </Button>
+            </div>
+
+            {/* Kundenakte verdichtet */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Linke Spalte: Familie */}
+              <div className="lg:col-span-1">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">👨‍👩‍👧‍👦 Familie / Haushalt</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <FamilyOverviewPanel 
+                      primaryCustomer={customer}
+                      familyMembers={familyMembers.filter(m => m.id !== id)}
+                      contracts={relatedContracts}
+                    />
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Rechte Spalten: Verträge + Rest */}
+              <div className="lg:col-span-2 space-y-4">
+                {/* Vertrags-Cockpit */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">📋 Haushalts-Verträge (Ampel-Übersicht)</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <HouseholdContractsCockpit 
+                      contracts={relatedContracts}
+                      familyMembers={familyMembers.filter(m => m.id !== id)}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Dashboard Summary */}
+                <AutoAISummary 
+                  customer={customer}
+                  contracts={relatedContracts}
+                  applications={relatedApplications}
+                  documents={relatedDocuments}
+                  tasks={custTasks}
+                />
+              </div>
+            </div>
           </div>
         </TabsContent>
 
