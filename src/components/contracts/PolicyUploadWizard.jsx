@@ -362,18 +362,51 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     
     setExtractedRaw(d)
 
-      // Call automatic customer matching
+      // CRITICAL: Check if extracted person is the POLICY HOLDER (Versicherungsnehmer)
+      // If policy_holder_name matches a customer → that customer is the Hauptkontakt
+      let policyHolderCustomer = null;
+      if (d.policy_holder_name) {
+        const phName = d.policy_holder_name.trim().toLowerCase();
+        policyHolderCustomer = customers.find(c => {
+          const fullName = `${c.first_name} ${c.last_name}`.trim().toLowerCase();
+          return fullName === phName;
+        });
+      }
+
+      // Call automatic customer matching for VERSICHERTE PERSON (extracted first_name/last_name)
       let matchingResult = { decision: { action: 'new_customer' }, all_matches: [] };
       try {
         const matchRes = await base44.functions.invoke('matchCustomerAndFamily', {
           extractedData: d,
-          organization_id: organizations[0]?.id || ''
+          organization_id: organizations[0]?.id || '',
+          policyHolderCustomerId: policyHolderCustomer?.id || null
         });
         if (matchRes?.data?.success) {
           matchingResult = matchRes.data;
         }
       } catch (matchErr) {
         console.warn('[PolicyUploadWizard] Matching error (non-fatal):', matchErr.message);
+      }
+
+      // If we found the policy holder, use him as Hauptkontakt
+      if (policyHolderCustomer) {
+        setSelectedCustomer(policyHolderCustomer);
+        setCustomerMode('matched');
+        setNewCustomerData({
+          first_name: d.first_name || '',
+          last_name: d.last_name || '',
+          birthdate: d.birthdate || '',
+          email: d.email || '',
+          phone: d.phone || '',
+          mobile: d.mobile || '',
+          street: d.street || '',
+          city: d.city || '',
+          zip_code: d.zip_code || '',
+          canton: d.canton || '',
+          policy_holder_name: d.policy_holder_name || ''
+        });
+        setStep(3);
+        return;
       }
 
       // Build contracts from extracted data
@@ -501,96 +534,53 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     setSaving(true)
     setError(null)
 
-    let customerId = selectedCustomer?.id || null
-    let customerName = selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : ''
-    let orgId = selectedCustomer?.organization_id || organizations[0]?.id || ''
-
-    // FAMILY MEMBER (MANUAL or EXISTING): Use the recognized family member + manuell selected primary
-    if ((customerMode === 'family_member_manual' || customerMode === 'family_member_existing') && newCustomerData.actual_customer_id) {
-      customerId = newCustomerData.actual_customer_id
-      customerName = `${newCustomerData.first_name} ${newCustomerData.last_name}`
-      // selectedCustomer is the manually chosen primary contact
-      if (!selectedCustomer) {
-        setError('Bitte den Hauptkontakt auswählen')
-        setSaving(false)
-        return
-      }
-      newCustomerData.primary_customer_id = selectedCustomer.id
+    if (!selectedCustomer) {
+      setError('Bitte einen Hauptkontakt auswählen')
+      setSaving(false)
+      return
     }
-    // NEW FAMILY MEMBER: Create as family member, not as independent customer
-    else if (customerMode === 'family_member' && newCustomerData.is_family_member) {
-      const nc = newCustomerData
-      if (!nc.first_name || !nc.last_name) {
-        setError('Vorname und Nachname sind erforderlich')
-        setSaving(false)
-        return
-      }
-      if (!customerId) {
-        setError('Hauptkontakt ist erforderlich')
-        setSaving(false)
-        return
-      }
 
-      const emailValue = nc.email?.trim()
-        ? nc.email.trim()
-        : `${nc.first_name.toLowerCase()}.${nc.last_name.toLowerCase()}.${Date.now()}@import.local`
+    // HAUPTKONTAKT ist IMMER selectedCustomer
+    const customerId = selectedCustomer.id
+    const customerName = `${selectedCustomer.first_name} ${selectedCustomer.last_name}`
+    const orgId = selectedCustomer.organization_id
 
-      const created = await base44.entities.Customer.create({
-        first_name: nc.first_name,
-        last_name: nc.last_name,
+    // Check: Ist die VERSICHERTE PERSON ein FAMILIENMITGLIED (Kind unter 18)?
+    const insuredFirstName = newCustomerData.first_name?.trim()
+    const insuredLastName = newCustomerData.last_name?.trim()
+    const insuredBirthdate = newCustomerData.birthdate
+
+    // Bestimme: Ist versicherte Person ein Kind?
+    const isMinor = insuredBirthdate
+      ? new Date().getFullYear() - new Date(insuredBirthdate).getFullYear() < 18
+      : false
+
+    let insuredPersonId = customerId  // Default: Versicherte Person = Hauptkontakt
+
+    // Falls versicherte Person ein Kind ist UND ein Familienmitglied → erstelle es als Familie
+    if (isMinor && insuredFirstName && insuredLastName && insuredFirstName !== selectedCustomer.first_name) {
+      const emailValue = newCustomerData.email?.trim()
+        ? newCustomerData.email.trim()
+        : `${insuredFirstName.toLowerCase()}.${insuredLastName.toLowerCase()}.${Date.now()}@import.local`
+
+      const familyMember = await base44.entities.Customer.create({
+        first_name: insuredFirstName,
+        last_name: insuredLastName,
         email: emailValue,
-        phone: nc.phone || undefined,
-        birthdate: nc.birthdate || undefined,
-        street: selectedCustomer.street || nc.street || undefined,
-        city: selectedCustomer.city || nc.city || undefined,
-        zip_code: selectedCustomer.zip_code || nc.zip_code || undefined,
-        canton: selectedCustomer.canton || nc.canton || undefined,
+        phone: newCustomerData.phone || undefined,
+        birthdate: insuredBirthdate || undefined,
+        street: selectedCustomer.street,
+        city: selectedCustomer.city,
+        zip_code: selectedCustomer.zip_code,
+        canton: selectedCustomer.canton,
         organization_id: orgId,
         status: 'active',
         customer_type: 'private',
         is_family_member: true,
         primary_customer_id: customerId,
-        family_role: nc.family_role || 'other'
+        family_role: 'child'
       })
-      customerId = created.id
-      customerName = `${nc.first_name} ${nc.last_name}`
-      orgId = created.organization_id || orgId
-    }
-    // NEW CUSTOMER: Create as independent customer
-    else if (!customerId && customerMode === 'new') {
-      const nc = newCustomerData
-      if (!nc.first_name || !nc.last_name) {
-        setError('Vorname und Nachname sind erforderlich')
-        setSaving(false)
-        return
-      }
-      const emailValue = nc.email?.trim()
-        ? nc.email.trim()
-        : `${nc.first_name.toLowerCase()}.${nc.last_name.toLowerCase()}.${Date.now()}@import.local`
-
-      const created = await base44.entities.Customer.create({
-        first_name: nc.first_name,
-        last_name: nc.last_name,
-        email: emailValue,
-        phone: nc.phone || undefined,
-        birthdate: nc.birthdate || undefined,
-        street: nc.street || undefined,
-        city: nc.city || undefined,
-        zip_code: nc.zip_code || undefined,
-        canton: nc.canton || undefined,
-        organization_id: orgId,
-        status: 'active',
-        customer_type: 'private',
-      })
-      customerId = created.id
-      customerName = `${nc.first_name} ${nc.last_name}`
-      orgId = created.organization_id || orgId
-    }
-
-    if (!customerId) {
-      setError('Bitte einen Kunden auswählen oder neu erfassen')
-      setSaving(false)
-      return
+      insuredPersonId = familyMember.id
     }
     if (!contract.insurer) {
       setError('Versicherungsgesellschaft ist erforderlich')
@@ -603,9 +593,10 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       const c = contractList[i]
       if (!c.insurer) continue
       const created = await base44.entities.Contract.create({
-        customer_id: customerId,
-        customer_name: customerName,
-        primary_customer_id: selectedCustomer?.is_family_member ? selectedCustomer.primary_customer_id : customerId,
+        customer_id: insuredPersonId,  // Versicherte Person (kann Kind sein)
+        customer_name: insuredFirstName && insuredLastName ? `${insuredFirstName} ${insuredLastName}` : customerName,
+        primary_customer_id: customerId,  // Hauptkontakt (Versicherungsnehmer)
+        is_family_member: insuredPersonId !== customerId,
         organization_id: orgId,
         advisor_id: selectedCustomer?.advisor_id || undefined,
         insurer: c.insurer,
@@ -630,8 +621,8 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       await base44.entities.Document.create({
         name: fileName,
         file_url: fileUrl,
-        customer_id: customerId,
-        customer_name: customerName,
+        customer_id: insuredPersonId,
+        customer_name: insuredFirstName && insuredLastName ? `${insuredFirstName} ${insuredLastName}` : customerName,
         category: 'contract',
         doc_type: 'anlage',
         classification_status: 'klassifiziert',
@@ -853,6 +844,13 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
               </div>
             )}
 
+            {(customerMode === 'search' || customerMode === 'matched' || !selectedCustomer) && (
+              <div className="space-y-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs font-semibold text-blue-900">💡 Tipp:</p>
+                <p className="text-xs text-blue-800">Der Hauptkontakt muss existieren. Falls die versicherte Person ein Kind ist, wähle den Elternteil oder Vormund als Hauptkontakt.</p>
+              </div>
+            )}
+
             {customerMode !== 'new' && (
               <button type="button" onClick={() => { setCustomerMode('new'); setSelectedCustomer(null) }}
                 className="flex items-center gap-2 text-sm text-primary hover:underline">
@@ -892,6 +890,21 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
               <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                 KI hat Daten aus <strong>{fileName}</strong> extrahiert – bitte prüfen und ergänzen
+              </div>
+            )}
+
+            {/* Show Hauptkontakt + Versicherte Person */}
+            {selectedCustomer && (newCustomerData.first_name || newCustomerData.last_name) && (
+              <div className="grid grid-cols-2 gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs">
+                <div className="bg-white p-2 rounded border border-blue-100">
+                  <p className="text-muted-foreground font-semibold">👤 Hauptkontakt</p>
+                  <p className="font-bold text-sm mt-1">{selectedCustomer.first_name} {selectedCustomer.last_name}</p>
+                </div>
+                <div className="bg-white p-2 rounded border border-blue-100">
+                  <p className="text-muted-foreground font-semibold">🔍 Versicherte Person</p>
+                  <p className="font-bold text-sm mt-1">{newCustomerData.first_name} {newCustomerData.last_name}</p>
+                  {newCustomerData.birthdate && <p className="text-[10px] text-muted-foreground mt-0.5">Geb: {newCustomerData.birthdate}</p>}
+                </div>
               </div>
             )}
 
