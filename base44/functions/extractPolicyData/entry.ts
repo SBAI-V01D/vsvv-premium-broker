@@ -139,7 +139,16 @@ RÜCKGABE: Gültiges JSON mit allen Feldern. Fehlende Felder = null.`,
             sparte_data: { type: ['object', 'null'], additionalProperties: true },
             additional_products: {
               type: ['array', 'null'],
-              items: { type: 'object', properties: { product: { type: 'string' }, premium_monthly: { type: ['number', 'null'] }, premium_yearly: { type: ['number', 'null'] }, policy_number: { type: ['string', 'null'] } } }
+              items: { 
+                type: 'object', 
+                properties: { 
+                  product: { type: 'string' }, 
+                  premium_monthly: { type: ['number', 'null'] }, 
+                  premium_yearly: { type: ['number', 'null'] }, 
+                  policy_number: { type: ['string', 'null'] } 
+                },
+                additionalProperties: false
+              }
             }
           }
         }
