@@ -13,6 +13,7 @@ import FamilyMemberCard from '../components/customers/FamilyMemberCard'
 import HouseholdActionStrip from '../components/customers/HouseholdActionStrip'
 import ContractsBySparteGroup from '../components/contracts/ContractsBySparteGroup'
 import CoverageGapsPanel from '../components/contracts/CoverageGapsPanel'
+import CustomerDashboardCompact from '../components/customers/CustomerDashboardCompact'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -248,94 +249,103 @@ export default function CustomerDetail() {
         </TabsList>
 
         <TabsContent value="dashboard">
-          <div className="space-y-5">
-            {/* KPI Summary */}
-            <HouseholdSummaryStats 
+          <div className="space-y-4">
+            {/* Compact Dashboard - Priorisiert & Verdichtet */}
+            <CustomerDashboardCompact
+              customer={customer}
               familyMembers={familyMembers.filter(m => m.id !== id)}
               contracts={relatedContracts}
-              opportunities={verkaufschancen}
               tasks={custTasks}
-            />
-
-            {/* Quick Actions */}
-            <HouseholdActionStrip 
+              opportunities={verkaufschancen}
               onDownloadPDF={() => downloadPDFMutation.mutate()}
-              isDownloading={downloadPDFMutation.isPending}
               onNewOpportunity={() => {/* TODO: open new opportunity dialog */}}
               onNewFamilyMember={() => {/* TODO: open add family member dialog */}}
-              onReview={() => {/* TODO: start review workflow */}}
+              isDownloading={downloadPDFMutation.isPending}
             />
 
-            {/* Family Members Grid */}
-            {familyMembers.filter(m => m.id !== id).length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold mb-3">👨‍👩‍👧‍👦 Haushalt ({familyMembers.length} Personen)</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* Primary Customer Card */}
-                  <Card className="p-4 border-l-4 border-l-primary bg-primary/5">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h4 className="font-semibold text-sm">{customer.first_name} {customer.last_name}</h4>
-                        <p className="text-xs text-muted-foreground">Hauptkontakt</p>
-                      </div>
-                      <Badge variant="outline" className="bg-green-100 text-green-700 border-0 text-xs">
-                        ✓ Aktiv
-                      </Badge>
-                    </div>
-                    {customer.birthdate && (
-                      <p className="text-xs text-muted-foreground mb-2">
-                        <strong>Geb.:</strong> {customer.birthdate}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
-                      <FileText className="w-3.5 h-3.5" />
-                      <span>{relatedContracts.filter(c => c.customer_id === customer.id).length} Verträge</span>
-                    </div>
-                  </Card>
+            {/* Weitere Details (einklappbar via Tabs) */}
+            <Tabs defaultValue="contracts" className="mt-6">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="contracts">Verträge</TabsTrigger>
+                <TabsTrigger value="family">Familie</TabsTrigger>
+                <TabsTrigger value="cockpit">Cockpit</TabsTrigger>
+                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+              </TabsList>
 
-                  {/* Family Members */}
-                  {familyMembers.filter(m => m.id !== id).map(member => (
-                    <FamilyMemberCard 
-                      key={member.id}
-                      member={member}
-                      memberContracts={relatedContracts.filter(c => c.customer_id === member.id)}
-                      onEdit={() => {/* TODO: open member detail */}}
+              <TabsContent value="contracts" className="space-y-4">
+                {relatedContracts.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-3">📋 Bestands- & Beratungs-Cockpit</h3>
+                    <div className="mb-4">
+                      <CoverageGapsPanel 
+                        contracts={relatedContracts}
+                        onAddCoverage={(sparte) => {/* TODO: open new opportunity dialog with sparte */}}
+                      />
+                    </div>
+                    <ContractsBySparteGroup 
+                      contracts={relatedContracts}
+                      familyMembers={familyMembers.filter(m => m.id !== id)}
+                      primaryCustomer={customer}
+                      onStartReview={(contract) => {/* TODO: start review workflow */}}
+                      onCreateOpportunity={(contract) => {/* TODO: create opportunity from contract */}}
                     />
-                  ))}
-                </div>
-              </div>
-            )}
+                  </div>
+                )}
+              </TabsContent>
 
-            {/* Contract Cockpit */}
-            <div>
-              <h3 className="text-sm font-semibold mb-3">📋 Bestands- & Beratungs-Cockpit</h3>
-              
-              {/* Coverage Gaps */}
-              <div className="mb-4">
-                <CoverageGapsPanel 
+              <TabsContent value="family" className="space-y-4">
+                {familyMembers.filter(m => m.id !== id).length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-3">👨‍👩‍👧‍👦 Haushalt ({familyMembers.length} Personen)</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <Card className="p-4 border-l-4 border-l-primary bg-primary/5">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 className="font-semibold text-sm">{customer.first_name} {customer.last_name}</h4>
+                            <p className="text-xs text-muted-foreground">Hauptkontakt</p>
+                          </div>
+                          <Badge variant="outline" className="bg-green-100 text-green-700 border-0 text-xs">
+                            ✓ Aktiv
+                          </Badge>
+                        </div>
+                        {customer.birthdate && (
+                          <p className="text-xs text-muted-foreground mb-2">
+                            <strong>Geb.:</strong> {customer.birthdate}
+                          </p>
+                        )}
+                      </Card>
+
+                      {familyMembers.filter(m => m.id !== id).map(member => (
+                        <FamilyMemberCard 
+                          key={member.id}
+                          member={member}
+                          memberContracts={relatedContracts.filter(c => c.customer_id === member.id)}
+                          onEdit={() => {/* TODO: open member detail */}}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="cockpit">
+                <HouseholdContractsCockpit 
                   contracts={relatedContracts}
-                  onAddCoverage={(sparte) => {/* TODO: open new opportunity dialog with sparte */}}
+                  familyMembers={familyMembers.filter(m => m.id !== id)}
                 />
-              </div>
+              </TabsContent>
 
-              {/* Contracts by Sparte */}
-              <ContractsBySparteGroup 
-                contracts={relatedContracts}
-                familyMembers={familyMembers.filter(m => m.id !== id)}
-                primaryCustomer={customer}
-                onStartReview={(contract) => {/* TODO: start review workflow */}}
-                onCreateOpportunity={(contract) => {/* TODO: create opportunity from contract */}}
-              />
-            </div>
+              <TabsContent value="timeline">
+                <ActivityTimeline 
+                  customer={customer}
+                  documents={relatedDocuments}
+                  contracts={relatedContracts}
+                  tasks={custTasks}
+                />
+              </TabsContent>
+            </Tabs>
 
-            {/* AI Summary */}
-            <AutoAISummary 
-              customer={customer}
-              contracts={relatedContracts}
-              applications={relatedApplications}
-              documents={relatedDocuments}
-              tasks={custTasks}
-            />
+
           </div>
         </TabsContent>
 
