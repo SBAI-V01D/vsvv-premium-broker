@@ -93,6 +93,7 @@ Deno.serve(async (req) => {
     const completedTasks = [];
     for (const task of contractTasks) {
       await base44.entities.Task.update(task.id, {
+        contract_id: contract.id,
         status: 'completed',
         completion_date: new Date().toISOString().split('T')[0],
         notes: (task.notes || '') + `\n[Auto-erledigt durch Vertragsaktivierung am ${new Date().toLocaleDateString('de-CH')}]`
