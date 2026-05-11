@@ -55,6 +55,11 @@ Deno.serve(async (req) => {
 
     console.log(`[extractPolicyData] START file=${file_name}`);
 
+    if (!file_url || typeof file_url !== 'string') {
+      console.error('[extractPolicyData] Invalid file_url:', file_url);
+      return Response.json({ error: 'Invalid file_url provided' }, { status: 400 });
+    }
+
     const response = await base44.integrations.Core.InvokeLLM({
       prompt: `Du bist ein SPEZIALISIERTER OCR-Experte für Schweizer Versicherungspolicen mit PERFEKTER Zeichenerkennung.
 
@@ -208,6 +213,11 @@ RÜCKGABE: Gültiges JSON mit allen Feldern. Fehlende Felder = null.`,
       }
     });
 
+    if (!response) {
+      console.error('[extractPolicyData] Empty LLM response');
+      return Response.json({ error: 'No data extracted from file' }, { status: 400 });
+    }
+
     // Normalize & validate zip_code
     let zip = response.zip_code || null;
     if (zip) {
@@ -271,7 +281,18 @@ RÜCKGABE: Gültiges JSON mit allen Feldern. Fehlende Felder = null.`,
       }
     });
   } catch (error) {
-    console.error(`[extractPolicyData] ERROR: ${error.message}`);
-    return Response.json({ error: error.message }, { status: 500 });
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error(`[extractPolicyData] ERROR: ${errorMsg}`);
+    
+    // Check if it's a file validation error from LLM
+    if (errorMsg.includes('no pages') || errorMsg.includes('document') || errorMsg.includes('file')) {
+      return Response.json({ 
+        error: 'Die PDF-Datei konnte nicht analysiert werden. Bitte prüfe, ob die Datei lesbar ist.' 
+      }, { status: 400 });
+    }
+    
+    return Response.json({ 
+      error: `Analyse fehlgeschlagen: ${errorMsg}` 
+    }, { status: 500 });
   }
 });

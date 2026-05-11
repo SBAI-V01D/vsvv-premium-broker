@@ -336,8 +336,26 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     setUploading(false)
     setExtracting(true)
 
-    const res = await base44.functions.invoke('extractPolicyData', { file_url, file_name: file.name })
+    let res;
+    try {
+      res = await base44.functions.invoke('extractPolicyData', { file_url, file_name: file.name })
+    } catch (err) {
+      setExtracting(false)
+      setError(`Upload-Fehler: ${err.message || 'Unbekannter Fehler bei der Analyse'}`)
+      return
+    }
+
     setExtracting(false)
+
+    if (!res.data) {
+      setError('Leere Antwort vom Server erhalten')
+      return
+    }
+
+    if (res.data?.error) {
+      setError(`Analyse-Fehler: ${res.data.error}`)
+      return
+    }
 
     if (res.data?.success && res.data?.extractedData) {
       const d = res.data.extractedData
@@ -437,8 +455,8 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       setStep(2)
        }
        } catch (err) {
-       setError(`Fehler bei der Analyse: ${err.message}`)
        setExtracting(false)
+       setError(`Fehler: ${err.message || 'Unbekannter Fehler beim Upload'}`)
        }
        }
 
