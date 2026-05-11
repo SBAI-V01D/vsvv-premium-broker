@@ -34,7 +34,7 @@ function calcContractPriority(contract) {
   }
 
   // Vertragsablauf — nur wenn wirklich in den nächsten 90 Tagen (oder max. 30 Tage überfällig)
-  if (endDays !== null && !['cancelled', 'archived', 'expired'].includes(contract.status)) {
+  if (endDays !== null && !['cancelled', 'archived'].includes(contract.status)) {
     if (endDays >= -30 && endDays <= 0)  issues.push({ type: 'ablauf', label: 'Vertrag ABGELAUFEN', severity: 'critical', days: endDays })
     else if (endDays > 0 && endDays <= 30)  issues.push({ type: 'ablauf', label: `Läuft in ${endDays}d ab`, severity: 'red', days: endDays })
     else if (endDays > 30 && endDays <= 60) issues.push({ type: 'ablauf', label: `Läuft in ${endDays}d ab`, severity: 'orange', days: endDays })
@@ -127,7 +127,14 @@ export default function BestandsmanagementPanel({ contracts = [], tasks = [], ve
     const in90 = new Date(today); in90.setDate(today.getDate() + 90)
 
     return contracts
-      .filter(c => !['cancelled', 'archived', 'expired'].includes(c.status))
+      .filter(c => {
+        if (['cancelled', 'archived'].includes(c.status)) return false
+        if (c.status === 'expired') {
+          const cancelDays = c.cancellation_deadline ? Math.ceil((new Date(c.cancellation_deadline) - new Date()) / 86400000) : null
+          return cancelDays !== null && cancelDays >= -30 && cancelDays <= 90
+        }
+        return true
+      })
       .map(c => {
         const issues = calcContractPriority(c)
         return { contract: c, issues, topIssue: issues[0] }
