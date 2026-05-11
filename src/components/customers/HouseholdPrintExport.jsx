@@ -27,11 +27,11 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
 
   const getStatusColor = (contract) => {
     const days = getDaysUntilExpiry(contract.end_date)
-    if (days === null) return { bg: '#4CAF50', text: '#fff', label: '✓ Stabil' }
+    if (days === null) return { bg: '#4CAF50', text: '#fff', label: '✓ Aktiv' }
     if (days < 0) return { bg: '#F44336', text: '#fff', label: '✗ Überfällig' }
     if (days <= 30) return { bg: '#E91E63', text: '#fff', label: '⚠ Kritisch' }
     if (days <= 90) return { bg: '#FF9800', text: '#fff', label: '! Ablauf' }
-    return { bg: '#4CAF50', text: '#fff', label: '✓ Stabil' }
+    return { bg: '#4CAF50', text: '#fff', label: '✓ Aktiv' }
   }
 
   const formatCurrency = (value) => {
@@ -249,7 +249,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
           <div>
             <span style={{ display: 'inline-block', width: '20px', height: '20px', background: '#4CAF50', marginRight: '8px', borderRadius: '3px' }}></span>
-            Stabil
+            Aktiv
           </div>
           <div>
             <span style={{ display: 'inline-block', width: '20px', height: '20px', background: '#FF9800', marginRight: '8px', borderRadius: '3px' }}></span>
