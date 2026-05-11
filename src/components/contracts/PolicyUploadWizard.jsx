@@ -467,10 +467,25 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         canton: (d.canton || '').trim(),
       })
 
-      // Go to Step 2: Broker entscheidet Zuordnung
-      setCustomerMode('existing_structure')
-      setSelectedCustomer(null)
-      setStep(2)
+      // Entscheidungslogik: AUTO-SKIP zu Step 3 wenn neuer Kunde?
+      const insuredFirstName = (d.first_name || '').trim();
+      const insuredLastName = (d.last_name || '').trim();
+      const insuredFullName = `${insuredFirstName} ${insuredLastName}`.trim();
+      const policyHolderMatches = policyHolderCustomer !== null;
+      const familyMemberMatches = isChildOfPolicyHolder;
+      const isNewCustomer = !policyHolderMatches && !familyMemberMatches;
+
+      if (isNewCustomer && insuredFirstName && insuredLastName) {
+        // ✓ Neuer Kunde: Direkt zu Step 3 mit Pre-Filled Daten
+        setSelectedCustomer(null);
+        setCustomerMode('new');
+        setStep(3);
+      } else {
+        // Broker-Entscheidung nötig: Go to Step 2
+        setCustomerMode('existing_structure');
+        setSelectedCustomer(null);
+        setStep(2);
+      }
       } catch (err) {
         setExtracting(false)
         setError(`Fehler: ${err.message || 'Unbekannter Fehler beim Upload'}`)
