@@ -48,6 +48,68 @@ Deno.serve(async (req) => {
 
     if (exactMatch) {
       console.log(`[matchCustomerAndFamily] EXACT MATCH found: ${exactMatch.id}`);
+
+      // CRITICAL: Check if this person is already a family member
+      // If so, DO NOT treat as independent customer — load the primary contact instead
+      if (exactMatch.is_family_member && exactMatch.primary_customer_id) {
+        console.log(`[matchCustomerAndFamily] EXACT MATCH is family member of ${exactMatch.primary_customer_id}`);
+        
+        // Load the primary contact
+        const primaryContact = customers.find(c => c.id === exactMatch.primary_customer_id);
+        if (primaryContact) {
+          return Response.json({
+            success: true,
+            decision: {
+              action: 'link_family_member_to_primary',
+              customer_id: exactMatch.id,  // The recognized person (family member)
+              primary_customer_id: primaryContact.id,
+              is_family_member: true,
+              family_role: exactMatch.family_role || 'other',
+              confidence: 100,
+              matched_customer: primaryContact,
+              matched_customers: [primaryContact, exactMatch],
+              reasons: ['first_name_exact', 'last_name_exact', 'birthdate_exact', 'existing_family_member'],
+              message: `${exactMatch.first_name} ist Familienmitglied von ${primaryContact.first_name} ${primaryContact.last_name}. Police wird ${exactMatch.first_name} zugeordnet.`
+            },
+            all_matches: []
+          });
+        }
+      }
+
+      // Also check: if person is under 18, never treat as primary contact
+      if (exactMatch.birthdate) {
+        const birthYear = new Date(exactMatch.birthdate).getFullYear();
+        const currentYear = new Date().getFullYear();
+        const age = currentYear - birthYear;
+        
+        if (age < 18) {
+          console.log(`[matchCustomerAndFamily] EXACT MATCH is minor (${age} years old) — load primary contact`);
+          
+          if (exactMatch.primary_customer_id) {
+            const primaryContact = customers.find(c => c.id === exactMatch.primary_customer_id);
+            if (primaryContact) {
+              return Response.json({
+                success: true,
+                decision: {
+                  action: 'link_family_member_to_primary',
+                  customer_id: exactMatch.id,
+                  primary_customer_id: primaryContact.id,
+                  is_family_member: true,
+                  family_role: 'child',
+                  confidence: 100,
+                  matched_customer: primaryContact,
+                  matched_customers: [primaryContact, exactMatch],
+                  reasons: ['first_name_exact', 'last_name_exact', 'birthdate_exact', 'minor_under_18'],
+                  message: `${exactMatch.first_name} (${age} Jahre) ist Kind von ${primaryContact.first_name} ${primaryContact.last_name}.`
+                },
+                all_matches: []
+              });
+            }
+          }
+        }
+      }
+
+      // Normal case: exact match and independent customer
       return Response.json({
         success: true,
         decision: {

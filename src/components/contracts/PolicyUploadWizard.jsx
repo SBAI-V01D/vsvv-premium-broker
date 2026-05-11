@@ -428,15 +428,29 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       const decision = matchingResult.decision;
 
       if (decision.action === 'link_existing') {
-        // EXACT MATCH: gleicher Vorname + Nachname + Geburtsdatum
+        // EXACT MATCH: gleicher Vorname + Nachname + Geburtsdatum (independent customer)
         setSelectedCustomer(decision.matched_customer)
         setCustomerMode('matched')
         setNewCustomerData(customerFields)
         setStep(3)
         return
+      } else if (decision.action === 'link_family_member_to_primary') {
+        // EXACT MATCH BUT: Person is already a family member
+        // → Load primary contact, assign contract to family member
+        setSelectedCustomer(decision.matched_customer)  // Primary contact shown
+        setCustomerMode('family_member_existing')
+        setNewCustomerData({
+          ...customerFields,
+          primary_customer_id: decision.primary_customer_id,
+          actual_customer_id: decision.customer_id,  // The recognized person (family member)
+          family_role: decision.family_role,
+          is_family_member: true
+        })
+        setStep(2)  // Confirm family member assignment
+        return
       } else if (decision.action === 'create_family_member') {
-        // FAMILY MEMBER: gleicher Nachname + Adresse ABER anderer Vorname/Geburtsdatum
-        // → Familienmitglied vorbereiten
+        // FAMILY MEMBER PATTERN: gleicher Nachname + Adresse aber anderer Vorname/Geburtsdatum
+        // → Neues Familienmitglied erstellen
         setSelectedCustomer(decision.matched_customer)
         setCustomerMode('family_member')
         setNewCustomerData({
@@ -481,8 +495,14 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     let customerName = selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : ''
     let orgId = selectedCustomer?.organization_id || organizations[0]?.id || ''
 
-    // FAMILY MEMBER: Create as family member, not as independent customer
-    if (customerMode === 'family_member' && newCustomerData.is_family_member) {
+    // EXISTING FAMILY MEMBER: Use the recognized family member, not the primary contact
+    if (customerMode === 'family_member_existing' && newCustomerData.actual_customer_id) {
+      customerId = newCustomerData.actual_customer_id
+      customerName = `${newCustomerData.first_name} ${newCustomerData.last_name}`
+      // orgId stays from primary contact
+    }
+    // NEW FAMILY MEMBER: Create as family member, not as independent customer
+    else if (customerMode === 'family_member' && newCustomerData.is_family_member) {
       const nc = newCustomerData
       if (!nc.first_name || !nc.last_name) {
         setError('Vorname und Nachname sind erforderlich')
@@ -682,7 +702,30 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
            <div className="space-y-4 py-2">
              {extractedRaw && <ExtractionSummary data={extractedRaw} />}
 
-             {/* FAMILY MEMBER DETECTION UI */}
+             {/* EXISTING FAMILY MEMBER UI */}
+             {customerMode === 'family_member_existing' && selectedCustomer && (
+               <div className="p-4 bg-emerald-50 border-2 border-emerald-300 rounded-lg space-y-3">
+                 <p className="text-sm font-bold text-emerald-900">✓ Bestehendes Familienmitglied erkannt</p>
+                 <div className="grid grid-cols-2 gap-3 text-xs">
+                   <div className="bg-white p-2 rounded border border-emerald-100">
+                     <p className="text-muted-foreground font-semibold">Hauptkontakt</p>
+                     <p className="font-bold text-sm mt-1">{selectedCustomer.first_name} {selectedCustomer.last_name}</p>
+                     <p className="text-[10px] text-muted-foreground mt-0.5">{selectedCustomer.birthdate || '–'}</p>
+                   </div>
+                   <div className="bg-emerald-100/50 p-2 rounded border border-emerald-200">
+                     <p className="text-muted-foreground font-semibold">Erkannte Person</p>
+                     <p className="font-bold text-sm mt-1">{newCustomerData.first_name} {newCustomerData.last_name}</p>
+                     <p className="text-[10px] text-emerald-700 font-semibold mt-0.5">bereits im System</p>
+                   </div>
+                   <div className="col-span-2 bg-emerald-100/50 p-2 rounded text-xs">
+                     <p>✓ Familienverknüpfung bleibt bestehen</p>
+                     <p className="text-muted-foreground text-[10px] mt-0.5">Die Police wird dem Familienmitglied zugeordnet</p>
+                   </div>
+                 </div>
+               </div>
+             )}
+
+             {/* NEW FAMILY MEMBER DETECTION UI */}
              {customerMode === 'family_member' && selectedCustomer && (
                <div className="p-4 bg-blue-50 border-2 border-blue-300 rounded-lg space-y-3">
                  <p className="text-sm font-bold text-blue-900">👨‍👩‍👧 Familienmitglied erkannt</p>
