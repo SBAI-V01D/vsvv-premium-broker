@@ -389,21 +389,23 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
             {criticalExpiring.map(c => {
               const days = daysUntil(c.end_date)
               const style = urgencyStyle(days)
+              const target = c.customer_id ? `/kunden/${c.customer_id}/360` : '/vertraege'
               return (
                 <button
                   key={c.id}
-                  onClick={() => navigate('/vertraege')}
+                  onClick={() => navigate(target)}
                   className={cn('w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left hover:shadow-sm transition-all', style.bg, style.border)}
                 >
                   <div className={cn('w-12 h-10 rounded-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-black text-sm',
                     days <= 0 ? 'bg-red-600' : days <= 14 ? 'bg-orange-500' : days <= 30 ? 'bg-amber-500' : 'bg-slate-400'
                   )}>
-                    <span className="leading-none">{Math.abs(days)}</span>
+                    <span className="leading-none">{Math.abs(days ?? 0)}</span>
                     <span className="text-[8px] font-bold">Tage</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{c.customer_name}</p>
+                    <p className="text-sm font-semibold truncate">{c.customer_name || '–'}</p>
                     <p className="text-xs text-muted-foreground truncate">{c.insurer} · {c.sparte || c.insurance_type || '–'}</p>
+                    <p className="text-[10px] text-muted-foreground">Ablauf: {new Date(c.end_date).toLocaleDateString('de-CH')}</p>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="text-xs font-bold text-primary">→ Verlängerung</p>

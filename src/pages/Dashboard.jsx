@@ -36,16 +36,17 @@ export default function Dashboard() {
     [tasks]
   )
 
-  const activeContracts = useMemo(() =>
-    contracts.filter(c => c.status === 'active'),
-    [contracts]
-  )
-
   const today = new Date()
   const in90 = new Date(today); in90.setDate(today.getDate() + 90)
+
+  // Vertragsabläufe: alle nicht-gekündigten Verträge mit end_date in den nächsten 90 Tagen
   const expiringContracts = useMemo(() =>
-    activeContracts.filter(c => c.end_date && new Date(c.end_date) <= in90),
-    [activeContracts]
+    contracts.filter(c =>
+      c.end_date &&
+      !['cancelled', 'archived', 'expired'].includes(c.status) &&
+      new Date(c.end_date + 'T00:00:00') <= in90
+    ),
+    [contracts]
   )
 
   const activeLeads = useMemo(() =>
