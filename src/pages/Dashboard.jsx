@@ -170,6 +170,7 @@ export default function Dashboard() {
           <TodayDashboard
             openTasks={openTasks}
             expiringContracts={expiringContracts}
+            contracts={contracts}
             activeLeads={activeLeads}
             verkaufschancen={openVerkaufschancen}
             onTaskClick={handleTaskClick}
