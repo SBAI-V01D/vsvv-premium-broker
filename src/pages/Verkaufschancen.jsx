@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, Search, TrendingUp, Trophy, Target, BarChart3, Trash2 } from 'lucide-react'
+import { Plus, Search, TrendingUp, Trophy, Target, BarChart3, Trash2, LayoutGrid, List } from 'lucide-react'
 import VerkaufschanceStatusBadge, { ALLE_STATUS } from '@/components/verkaufschance/VerkaufschanceStatusBadge'
 import VerkaufschanceDetail from '@/components/verkaufschance/VerkaufschanceDetail'
 import VerkaufschanceForm from '@/components/verkaufschance/VerkaufschanceForm'
+import VerkaufschancenKanban from '@/components/verkaufschance/VerkaufschancenKanban'
 import { getSparteLabel } from '@/lib/insuranceSparten'
 import { cn } from '@/lib/utils'
 
@@ -26,6 +27,7 @@ export default function Verkaufschancen() {
   const [selectedId, setSelectedId] = useState(null)
   const [showNewForm, setShowNewForm] = useState(false)
   const [newFormCustomer, setNewFormCustomer] = useState(null)
+  const [view, setView] = useState('kanban') // 'kanban' | 'list'
 
   const { data: verkaufschancen = [] } = useQuery({
     queryKey: ['verkaufschancen'],
@@ -107,6 +109,28 @@ export default function Verkaufschancen() {
         ))}
       </div>
 
+      {/* View Toggle */}
+      <div className="flex items-center gap-2">
+        <div className="flex rounded-lg border border-border overflow-hidden">
+          <button
+            onClick={() => setView('kanban')}
+            className={cn('flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+              view === 'kanban' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground'
+            )}
+          >
+            <LayoutGrid className="w-3.5 h-3.5" /> Kanban
+          </button>
+          <button
+            onClick={() => setView('list')}
+            className={cn('flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
+              view === 'list' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground'
+            )}
+          >
+            <List className="w-3.5 h-3.5" /> Liste
+          </button>
+        </div>
+      </div>
+
       {/* Pipeline-Wert Banner */}
       {pipeline > 0 && (
         <div className="flex items-center gap-3 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl">
@@ -124,17 +148,30 @@ export default function Verkaufschancen() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Suche (Kunde, Sparte...)" value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-48"><SelectValue placeholder="Alle Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Alle Status</SelectItem>
-            {ALLE_STATUS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        {view === 'list' && (
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-48"><SelectValue placeholder="Alle Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Status</SelectItem>
+              {ALLE_STATUS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
+      {/* Kanban View */}
+      {view === 'kanban' && (
+        <VerkaufschancenKanban
+          verkaufschancen={verkaufschancen.filter(v => {
+            const s = `${v.customer_name} ${v.title} ${v.sparte}`.toLowerCase()
+            return !search.trim() || s.includes(search.toLowerCase())
+          })}
+          onSelect={setSelectedId}
+        />
+      )}
+
       {/* Liste */}
-      <Card>
+      {view === 'list' && <Card>
         <CardContent className="p-0">
           <div className="hidden md:grid grid-cols-[2fr_1.5fr_1.5fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             <div>Kunde / Bezeichnung</div>
@@ -210,7 +247,7 @@ export default function Verkaufschancen() {
             })
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
       {/* Detail-Dialog */}
       <Dialog open={!!selectedVs} onOpenChange={(o) => { if (!o) setSelectedId(null) }}>

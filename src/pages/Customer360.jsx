@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
-  ArrowLeft, Phone, Mail, MapPin, Briefcase, Plus, FileText, TrendingUp, 
+  ArrowLeft, Phone, Mail, MapPin, Plus, FileText, TrendingUp, 
   CheckCircle2, Clock, AlertCircle, Download, MessageSquare 
 } from 'lucide-react'
 import NewOfferDialog from '@/components/customers/NewOfferDialog'
@@ -341,14 +341,19 @@ export default function Customer360() {
         {/* VERKAUFSCHANCEN */}
         <TabsContent value="verkaufschancen" className="space-y-3">
           <div className="flex justify-between items-center">
-            <p className="text-sm text-muted-foreground">{verkaufschancen.length} Verkaufschance(n)</p>
+            <div>
+              <p className="text-sm font-semibold">{verkaufschancen.length} Verkaufschance(n)</p>
+              <p className="text-xs text-muted-foreground">Strikt getrennt von Verträgen und Policen</p>
+            </div>
             <Button size="sm" onClick={() => setShowVsForm(true)} className="gap-1.5">
               <Plus className="w-3.5 h-3.5" /> Neue Chance
             </Button>
           </div>
+
           {verkaufschancen.length === 0 ? (
             <Card>
               <CardContent className="pt-8 pb-8 text-center">
+                <TrendingUp className="w-8 h-8 mx-auto mb-2 opacity-20" />
                 <p className="text-sm text-muted-foreground">Noch keine Verkaufschancen erfasst</p>
                 <Button size="sm" variant="outline" className="mt-3" onClick={() => setShowVsForm(true)}>
                   <Plus className="w-3.5 h-3.5 mr-1" /> Erste Chance erfassen
@@ -356,42 +361,105 @@ export default function Customer360() {
               </CardContent>
             </Card>
           ) : (
-            verkaufschancen.map(vs => {
-              const gesellschaften = vs.gesellschaften || []
-              const isSelected = selectedVsId === vs.id
-              return (
-                <Card key={vs.id}
-                  className={`border-l-4 cursor-pointer transition-all hover:shadow-md ${
-                    vs.status === 'gewonnen' ? 'border-l-green-500' :
-                    vs.status === 'verloren' ? 'border-l-red-400' :
-                    'border-l-primary'
-                  }`}
-                  onClick={() => setSelectedVsId(vs.id)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm">{vs.title || getSparteLabel(vs.sparte)}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{getSparteLabel(vs.sparte)}</p>
-                        {gesellschaften.length > 0 && (
-                          <div className="flex gap-1 mt-1.5 flex-wrap">
-                            {gesellschaften.slice(0, 4).map(g => (
-                              <span key={g.id} className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200 font-medium">
-                                {g.gesellschaft}
-                              </span>
-                            ))}
+            <div className="space-y-2">
+              {verkaufschancen.map(vs => {
+                const gesellschaften = vs.gesellschaften || []
+                const offerten = gesellschaften.filter(g => g.status === 'offerte_erhalten' || g.praemie_yearly)
+                const bestOfferte = offerten.length > 0
+                  ? Math.min(...offerten.map(g => g.praemie_yearly).filter(Boolean))
+                  : null
+                const NEXT_STEP = {
+                  neu: 'Gesellschaften anfragen',
+                  in_ausschreibung: 'Offerten abwarten',
+                  offerten_erhalten: 'Vergleich erstellen & beraten',
+                  beratung_erfolgt: 'Entscheid abwarten',
+                  kunde_entscheidet: 'Entscheid nachfassen',
+                  gewonnen: 'Vertrag erstellen',
+                  verloren: '–',
+                  wiedervorlage: vs.wiedervorlage_date ? `Wiedervorlage: ${new Date(vs.wiedervorlage_date).toLocaleDateString('de-CH')}` : 'Wiedervorlage prüfen',
+                }
+                return (
+                  <Card key={vs.id}
+                    className={`border-l-4 cursor-pointer transition-all hover:shadow-md ${
+                      vs.status === 'gewonnen' ? 'border-l-green-500' :
+                      vs.status === 'verloren' ? 'border-l-red-400' :
+                      vs.status === 'wiedervorlage' ? 'border-l-orange-400' :
+                      'border-l-primary'
+                    }`}
+                    onClick={() => setSelectedVsId(vs.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-bold text-sm">{vs.title || getSparteLabel(vs.sparte)}</p>
+                            <VerkaufschanceStatusBadge status={vs.status} size="xs" />
                           </div>
-                        )}
-                        {vs.estimated_value && (
-                          <p className="text-xs text-emerald-700 font-semibold mt-1.5">CHF {vs.estimated_value.toLocaleString('de-CH')}/J.</p>
-                        )}
+                          <p className="text-xs text-muted-foreground mt-0.5">{getSparteLabel(vs.sparte)}</p>
+
+                          {/* Gesellschaften */}
+                          {gesellschaften.length > 0 && (
+                            <div className="mt-2">
+                              <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide mb-1">
+                                {gesellschaften.length} Gesellschaft(en) · {offerten.length} Offerte(n)
+                              </p>
+                              <div className="flex gap-1 flex-wrap">
+                                {gesellschaften.map(g => (
+                                  <span key={g.id} className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${
+                                    g.status === 'ausgewaehlt' ? 'bg-green-100 text-green-700 border-green-200' :
+                                    g.status === 'offerte_erhalten' ? 'bg-violet-100 text-violet-700 border-violet-200' :
+                                    g.status === 'abgelehnt' ? 'bg-red-50 text-red-500 border-red-100 line-through' :
+                                    'bg-slate-100 text-slate-600 border-slate-200'
+                                  }`}>
+                                    {g.gesellschaft}{g.praemie_yearly ? ` · CHF ${g.praemie_yearly.toLocaleString('de-CH')}` : ''}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Finanzen + nächster Schritt */}
+                          <div className="flex flex-wrap gap-3 mt-2">
+                            {vs.estimated_value > 0 && (
+                              <div>
+                                <p className="text-[10px] text-muted-foreground">Gesch. Volumen</p>
+                                <p className="text-xs font-semibold text-emerald-700">CHF {vs.estimated_value.toLocaleString('de-CH')}/J.</p>
+                              </div>
+                            )}
+                            {bestOfferte && (
+                              <div>
+                                <p className="text-[10px] text-muted-foreground">Beste Offerte</p>
+                                <p className="text-xs font-semibold text-violet-700">CHF {bestOfferte.toLocaleString('de-CH')}/J.</p>
+                              </div>
+                            )}
+                            {vs.expected_close_date && (
+                              <div>
+                                <p className="text-[10px] text-muted-foreground">Erwarteter Abschluss</p>
+                                <p className="text-xs font-medium">{new Date(vs.expected_close_date).toLocaleDateString('de-CH')}</p>
+                              </div>
+                            )}
+                            {vs.wiedervorlage_date && vs.status === 'wiedervorlage' && (
+                              <div>
+                                <p className="text-[10px] text-muted-foreground">Wiedervorlage</p>
+                                <p className="text-xs font-medium text-orange-600">{new Date(vs.wiedervorlage_date).toLocaleDateString('de-CH')}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Nächster Schritt */}
+                          {!['gewonnen', 'verloren'].includes(vs.status) && (
+                            <p className="text-xs text-primary font-medium mt-2">→ {NEXT_STEP[vs.status] || '–'}</p>
+                          )}
+                          {vs.notes && (
+                            <p className="text-xs text-muted-foreground italic mt-1 line-clamp-1">{vs.notes}</p>
+                          )}
+                        </div>
                       </div>
-                      <VerkaufschanceStatusBadge status={vs.status} size="xs" />
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
           )}
         </TabsContent>
 

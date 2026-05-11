@@ -6,8 +6,9 @@ import {
   FileWarning, ShieldAlert, ChevronDown, AlertTriangle, Clock,
   ArrowRight, FileText, ListTodo, Activity, Zap, Eye, X,
   CalendarClock, CircleDot, TriangleAlert, CalendarX2, PhoneCall,
-  FileCheck, AlertCircle, TrendingDown, Flame
+  FileCheck, AlertCircle, TrendingDown, Flame, Trophy, Building2
 } from 'lucide-react'
+import VerkaufschancenWidget from './VerkaufschancenWidget'
 import { format, parseISO } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { Card, CardContent } from '@/components/ui/card'
@@ -953,7 +954,20 @@ export default function MasterControlDashboard({ data, onTaskClick }) {
       </Section>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          ZONE 4 — KPIs (kompakt, sekundär)
+          ZONE 4 — VERKAUFSCHANCEN (eigene Zone, strikt getrennt)
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <Section
+        title="Verkaufschancen & Ausschreibungen"
+        icon={TrendingUp}
+        accent={{ bar: 'bg-emerald-400', border: 'border-emerald-200 bg-emerald-50/20', icon: 'text-emerald-600' }}
+        defaultOpen={true}
+        subtitleBadge="Offerte · Pipeline · Abschluss — separat von Verträgen"
+      >
+        <VerkaufschancenWidget />
+      </Section>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          ZONE 5 — KPIs (kompakt, sekundär)
       ═══════════════════════════════════════════════════════════════════════ */}
       <Section
         title="Executive KPIs"

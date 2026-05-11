@@ -24,11 +24,13 @@ import MasterControlDashboard from '@/components/dashboard/MasterControlDashboar
 import RawDataDiagnostic from '@/components/admin/RawDataDiagnostic'
 import VisibilityAnalyzer from '@/components/admin/VisibilityAnalyzer'
 import CommissionDataValidator from '@/components/dashboard/CommissionDataValidator'
-import { Layers } from 'lucide-react'
+import VerkaufschancenWidget from '@/components/dashboard/VerkaufschancenWidget'
+import { Layers, TrendingUp as TrendingUpIcon } from 'lucide-react'
 
 const TABS = [
   { id: 'diagnostic', label: '⚙️ Diagnose', icon: Layers },
   { id: 'master',     label: 'Command Center', icon: Layers },
+  { id: 'chancen',    label: 'Verkaufschancen', icon: TrendingUpIcon },
   { id: 'ceo',        label: 'CEO',          icon: Crown },
   { id: 'executive',  label: 'BrokerOS',     icon: LayoutDashboard },
   { id: 'sales',      label: 'Sales',        icon: Target },
@@ -343,6 +345,27 @@ export default function Dashboard() {
           )
         })}
 
+        {/* Chancen tab — direkt nach Master */}
+        {TABS.filter(t => t.id === 'chancen').map(tab => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
+                isActive
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          )
+        })}
+
         {/* Revenue/Finance tabs */}
         {TABS.filter(t => ['executive', 'operations', 'coverage'].includes(t.id)).map(tab => {
           const Icon = tab.icon
@@ -436,6 +459,15 @@ export default function Dashboard() {
           </div>
         )}
         {activeTab === 'master'     && <MasterControlDashboard data={sharedData} onTaskClick={handleTaskClick} />}
+        {activeTab === 'chancen'    && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-bold">Verkaufschancen & Ausschreibungen</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">Pipeline-Übersicht aller offenen Chancen — separat von Verträgen und Policen</p>
+            </div>
+            <VerkaufschancenWidget />
+          </div>
+        )}
         {activeTab === 'ceo'        && <TabCEO />}
         {activeTab === 'executive'  && <TabExecutive  data={sharedData} />}
         {activeTab === 'sales'      && <TabSales      data={sharedData} />}
