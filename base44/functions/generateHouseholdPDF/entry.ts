@@ -37,11 +37,11 @@ Deno.serve(async (req) => {
 
     const contracts = [...allContracts, ...allFamilyContracts];
 
-    // Create PDF
-    const doc = new jsPDF();
-    let yPos = 20;
+    // Create PDF (A4 Landscape)
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    let yPos = 15;
     const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 15;
+    const margin = 12;
     const contentWidth = pageWidth - 2 * margin;
 
     // Helper functions
@@ -50,53 +50,53 @@ Deno.serve(async (req) => {
       doc.setFont(undefined, 'bold');
       doc.text(title, margin, yPos);
       yPos += 8;
-      doc.setDrawColor(200);
+      doc.setDrawColor(180);
       doc.line(margin, yPos - 2, pageWidth - margin, yPos - 2);
-      yPos += 3;
+      yPos += 4;
     };
 
     const addSubsection = (title) => {
-      doc.setFontSize(11);
+      doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
       doc.text(title, margin, yPos);
       yPos += 6;
     };
 
     const addField = (label, value) => {
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       doc.setFont(undefined, 'bold');
       doc.text(label, margin, yPos);
       doc.setFont(undefined, 'normal');
       const fieldWidth = contentWidth / 2 - 5;
-      doc.text((value || '—').toString(), margin + 45, yPos, { maxWidth: fieldWidth });
+      doc.text((value || '—').toString(), margin + 55, yPos, { maxWidth: fieldWidth });
       yPos += 5;
     };
 
     const newPageIfNeeded = () => {
-      if (yPos > 270) {
+      if (yPos > 185) {
         doc.addPage();
-        yPos = 20;
+        yPos = 15;
       }
     };
 
     // === HEADER ===
-    doc.setFontSize(16);
+    doc.setFontSize(18);
     doc.setFont(undefined, 'bold');
     doc.text('Haushalts-/Familienübersicht', margin, yPos);
-    yPos += 8;
-    doc.setFontSize(9);
+    yPos += 10;
+    doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
     doc.text(`Erstellt: ${new Date().toLocaleDateString('de-CH')}`, margin, yPos);
-    yPos += 10;
+    yPos += 12;
 
     // === HAUPTKONTAKT ===
     addSection('Hauptkontakt');
-    addField('Name', `${customer.first_name} ${customer.last_name}`);
-    addField('Email', customer.email);
-    addField('Telefon', customer.phone || '—');
+    addField('Name', `${customer.first_name || ''} ${customer.last_name || ''}`);
+    addField('Email', customer.email || '—');
+    addField('Telefon', customer.phone || customer.mobile || '—');
     addField('Geburtsdatum', customer.birthdate ? new Date(customer.birthdate).toLocaleDateString('de-CH') : '—');
     addField('Adresse', `${customer.street || '—'}, ${customer.zip_code || '—'} ${customer.city || '—'}`);
-    yPos += 3;
+    yPos += 5;
 
     newPageIfNeeded();
 
@@ -104,10 +104,10 @@ Deno.serve(async (req) => {
     if (familyMembers.length > 0) {
       addSection('Familienmitglieder');
       familyMembers.forEach((member, i) => {
-        addSubsection(`${i + 1}. ${member.first_name} ${member.last_name}`);
-        addField('Rolle', member.family_role === 'spouse' ? 'Ehepartner' : member.family_role === 'child' ? 'Kind' : member.family_role || 'Mitglied');
+        addSubsection(`${i + 1}. ${member.first_name || ''} ${member.last_name || ''}`);
+        addField('Rolle', member.family_role === 'spouse' ? 'Ehepartner/in' : member.family_role === 'child' ? 'Kind' : member.family_role || 'Mitglied');
         addField('Geburtsdatum', member.birthdate ? new Date(member.birthdate).toLocaleDateString('de-CH') : '—');
-        yPos += 3;
+        yPos += 4;
         newPageIfNeeded();
       });
     }
@@ -120,47 +120,47 @@ Deno.serve(async (req) => {
       const primaryContracts = contracts.filter(c => c.customer_id === customer.id);
       
       if (primaryContracts.length > 0) {
-        addSubsection(`${customer.first_name} ${customer.last_name}`);
+        addSubsection(`${customer.first_name || ''} ${customer.last_name || ''}`);
         primaryContracts.forEach(c => {
           const statusLabel = c.status === 'active' ? '✓ Aktiv' : c.status === 'expired' ? '✗ Abgelaufen' : '— Inaktiv';
-          doc.setFontSize(8);
+          doc.setFontSize(9);
           doc.setFont(undefined, 'normal');
-          const contractText = `${c.insurer} | ${c.sparte || c.insurance_type || '—'} | ${c.policy_number || '—'} | ${statusLabel}`;
+          const contractText = `${c.insurer || '—'} | ${c.sparte || c.insurance_type || '—'} | ${c.policy_number || '—'} | ${statusLabel}`;
           doc.text(contractText, margin + 5, yPos, { maxWidth: contentWidth - 10 });
           yPos += 4;
           
           if (c.end_date) {
             doc.setFont(undefined, 'bold');
-            doc.setFontSize(8);
+            doc.setFontSize(9);
             doc.text(`Ablauf: ${new Date(c.end_date).toLocaleDateString('de-CH')}`, margin + 5, yPos);
             yPos += 4;
           }
           newPageIfNeeded();
         });
-        yPos += 2;
+        yPos += 3;
       }
 
       familyMembers.forEach(member => {
         const memberContracts = contracts.filter(c => c.customer_id === member.id);
         if (memberContracts.length > 0) {
-          addSubsection(`${member.first_name} ${member.last_name}`);
+          addSubsection(`${member.first_name || ''} ${member.last_name || ''}`);
           memberContracts.forEach(c => {
             const statusLabel = c.status === 'active' ? '✓ Aktiv' : c.status === 'expired' ? '✗ Abgelaufen' : '— Inaktiv';
-            doc.setFontSize(8);
+            doc.setFontSize(9);
             doc.setFont(undefined, 'normal');
-            const contractText = `${c.insurer} | ${c.sparte || c.insurance_type || '—'} | ${c.policy_number || '—'} | ${statusLabel}`;
+            const contractText = `${c.insurer || '—'} | ${c.sparte || c.insurance_type || '—'} | ${c.policy_number || '—'} | ${statusLabel}`;
             doc.text(contractText, margin + 5, yPos, { maxWidth: contentWidth - 10 });
             yPos += 4;
             
             if (c.end_date) {
               doc.setFont(undefined, 'bold');
-              doc.setFontSize(8);
+              doc.setFontSize(9);
               doc.text(`Ablauf: ${new Date(c.end_date).toLocaleDateString('de-CH')}`, margin + 5, yPos);
               yPos += 4;
             }
             newPageIfNeeded();
           });
-          yPos += 2;
+          yPos += 3;
         }
       });
     }
@@ -173,9 +173,9 @@ Deno.serve(async (req) => {
       if (openTasks.length > 0) {
         addSection('Offene Aufgaben');
         openTasks.forEach(t => {
-          doc.setFontSize(8);
+          doc.setFontSize(9);
           doc.setFont(undefined, 'normal');
-          const taskText = `${t.title} | Priorität: ${t.priority || '—'}`;
+          const taskText = `${t.title || '—'} | Priorität: ${t.priority || '—'}`;
           doc.text(taskText, margin + 5, yPos, { maxWidth: contentWidth - 10 });
           yPos += 4;
           newPageIfNeeded();
@@ -191,9 +191,9 @@ Deno.serve(async (req) => {
       if (openOpp.length > 0) {
         addSection('Verkaufschancen');
         openOpp.forEach(o => {
-          doc.setFontSize(8);
+          doc.setFontSize(9);
           doc.setFont(undefined, 'normal');
-          const oppText = `${o.title} | ${o.sparte || '—'} | Status: ${o.status || '—'}`;
+          const oppText = `${o.title || '—'} | ${o.sparte || '—'} | Status: ${o.status || '—'}`;
           doc.text(oppText, margin + 5, yPos, { maxWidth: contentWidth - 10 });
           yPos += 4;
           newPageIfNeeded();
