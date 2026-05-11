@@ -66,7 +66,8 @@ Deno.serve(async (req) => {
               is_family_member: true,
               family_role: exactMatch.family_role || 'other',
               confidence: 100,
-              matched_customer: primaryContact,
+              matched_customer: primaryContact,  // Show primary contact
+              actual_customer_id: exactMatch.id,  // But assign contract to family member
               matched_customers: [primaryContact, exactMatch],
               reasons: ['first_name_exact', 'last_name_exact', 'birthdate_exact', 'existing_family_member'],
               message: `${exactMatch.first_name} ist Familienmitglied von ${primaryContact.first_name} ${primaryContact.last_name}. Police wird ${exactMatch.first_name} zugeordnet.`
@@ -97,7 +98,8 @@ Deno.serve(async (req) => {
                   is_family_member: true,
                   family_role: 'child',
                   confidence: 100,
-                  matched_customer: primaryContact,
+                  matched_customer: primaryContact,  // Show primary contact
+                  actual_customer_id: exactMatch.id,  // But assign contract to family member
                   matched_customers: [primaryContact, exactMatch],
                   reasons: ['first_name_exact', 'last_name_exact', 'birthdate_exact', 'minor_under_18'],
                   message: `${exactMatch.first_name} (${age} Jahre) ist Kind von ${primaryContact.first_name} ${primaryContact.last_name}.`
