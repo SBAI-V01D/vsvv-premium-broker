@@ -11,6 +11,8 @@ import HouseholdContractsCockpit from '../components/customers/HouseholdContract
 import HouseholdSummaryStats from '../components/customers/HouseholdSummaryStats'
 import FamilyMemberCard from '../components/customers/FamilyMemberCard'
 import HouseholdActionStrip from '../components/customers/HouseholdActionStrip'
+import ContractsBySparteGroup from '../components/contracts/ContractsBySparteGroup'
+import CoverageGapsPanel from '../components/contracts/CoverageGapsPanel'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -304,20 +306,27 @@ export default function CustomerDetail() {
               </div>
             )}
 
-            {/* Contract Overview */}
-            {relatedContracts.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">📋 Verträge (Ampel-Übersicht)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <HouseholdContractsCockpit 
-                    contracts={relatedContracts}
-                    familyMembers={familyMembers.filter(m => m.id !== id)}
-                  />
-                </CardContent>
-              </Card>
-            )}
+            {/* Contract Cockpit */}
+            <div>
+              <h3 className="text-sm font-semibold mb-3">📋 Bestands- & Beratungs-Cockpit</h3>
+              
+              {/* Coverage Gaps */}
+              <div className="mb-4">
+                <CoverageGapsPanel 
+                  contracts={relatedContracts}
+                  onAddCoverage={(sparte) => {/* TODO: open new opportunity dialog with sparte */}}
+                />
+              </div>
+
+              {/* Contracts by Sparte */}
+              <ContractsBySparteGroup 
+                contracts={relatedContracts}
+                familyMembers={familyMembers.filter(m => m.id !== id)}
+                primaryCustomer={customer}
+                onStartReview={(contract) => {/* TODO: start review workflow */}}
+                onCreateOpportunity={(contract) => {/* TODO: create opportunity from contract */}}
+              />
+            </div>
 
             {/* AI Summary */}
             <AutoAISummary 
