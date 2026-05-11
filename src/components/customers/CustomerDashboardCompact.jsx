@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, ChevronDown, ChevronUp, AlertTriangle, Clock, TrendingUp, FileText, Users } from 'lucide-react'
 import { differenceInDays } from 'date-fns'
+import { getSparteLabel } from '@/lib/insuranceSparten'
 
 export default function CustomerDashboardCompact({ 
   customer, 
@@ -219,7 +221,7 @@ export default function CustomerDashboardCompact({
         </Card>
       )}
 
-      {/* SECTION 4: Verträge - Compact List */}
+      {/* SECTION 4: Verträge - Full Detail View (same as Verträge Tab) */}
       {contracts.length > 0 && (
         <Card>
           <CardHeader className="pb-2 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggle('contracts')}>
@@ -231,23 +233,73 @@ export default function CustomerDashboardCompact({
             </div>
           </CardHeader>
           {expanded.contracts && (
-            <CardContent>
-              <div className="space-y-2">
-                {contracts.slice(0, 6).map(c => (
-                  <div key={c.id} className="flex items-center justify-between p-2 md:p-3 bg-muted/20 hover:bg-muted/40 rounded transition-colors text-xs md:text-sm">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{c.insurer}</p>
-                      <p className="text-[11px] md:text-xs text-muted-foreground truncate">{c.sparte || c.insurance_type}</p>
-                    </div>
-                    <Badge variant={c.status === 'active' ? 'default' : 'secondary'} className="text-[10px] flex-shrink-0">
-                      {c.status === 'active' ? '✓' : '✗'}
-                    </Badge>
-                  </div>
-                ))}
-                {contracts.length > 6 && (
-                  <p className="text-xs text-muted-foreground pt-2 text-center">+{contracts.length - 6} weitere</p>
-                )}
+            <CardContent className="p-0">
+              <div className="hidden md:grid grid-cols-[1.5fr_1.8fr_1fr_1.2fr_1fr_0.8fr_0.8fr_auto] gap-2 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                <div>Versicherer</div>
+                <div>Sparte</div>
+                <div>Policen-Nr</div>
+                <div>Produkt</div>
+                <div>Vertragsdaten</div>
+                <div>Prämie</div>
+                <div>Status</div>
+                <div className="w-10"></div>
               </div>
+              {contracts.map((c, idx) => {
+                const formatDate = (dateStr) => {
+                  if (!dateStr) return '–'
+                  return new Date(dateStr).toLocaleDateString('de-CH')
+                }
+                return (
+                  <div key={c.id} className={idx > 0 ? 'border-t border-border' : ''}>
+                    <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1.8fr_1fr_1.2fr_1fr_0.8fr_0.8fr_auto] gap-2 px-4 py-3 items-center hover:bg-muted/20 transition-colors text-xs">
+                      {/* Versicherer */}
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{c.insurer}</p>
+                      </div>
+
+                      {/* Sparte */}
+                      <div className="min-w-0">
+                        <p className="text-muted-foreground truncate">{getSparteLabel(c.sparte || c.insurance_type)}</p>
+                      </div>
+
+                      {/* Policen-Nr */}
+                      <div className="min-w-0">
+                        <p className="font-medium">{c.policy_number || '–'}</p>
+                      </div>
+
+                      {/* Produkt */}
+                      <div className="min-w-0">
+                        <p className="text-muted-foreground">{c.product || '–'}</p>
+                      </div>
+
+                      {/* Vertragsdaten */}
+                      <div className="text-muted-foreground">
+                        {c.start_date && <p>{formatDate(c.start_date)}</p>}
+                        {c.end_date && <p>{formatDate(c.end_date)}</p>}
+                        {!c.start_date && !c.end_date && <p>–</p>}
+                      </div>
+
+                      {/* Jahresprämie */}
+                      <div className="text-right">
+                        {c.premium_yearly ? (
+                          <p className="font-semibold">
+                            CHF {c.premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          </p>
+                        ) : (
+                          <p className="text-muted-foreground">–</p>
+                        )}
+                      </div>
+
+                      {/* Status */}
+                      <div>
+                        <Badge variant={c.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                          {c.status === 'active' ? '✓ Aktiv' : c.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </CardContent>
           )}
         </Card>
