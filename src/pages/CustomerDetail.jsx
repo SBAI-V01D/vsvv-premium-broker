@@ -116,15 +116,26 @@ export default function CustomerDetail() {
   })
 
   const downloadPDFMutation = useMutation({
-    mutationFn: () => base44.functions.invoke('generateHouseholdPDF', { customer_id: id }),
+    mutationFn: async () => {
+      if (!customer?.id) throw new Error('Kunde nicht geladen');
+      const response = await base44.functions.invoke('generateHouseholdPDF', { customer_id: customer.id });
+      return response;
+    },
     onSuccess: (response) => {
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Haushaltsübersicht_${customer?.last_name}_${new Date().toISOString().split('T')[0]}.pdf`;
-      a.click();
-      window.URL.revokeObjectURL(url);
+      try {
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Haushaltsübersicht_${customer?.last_name}_${new Date().toISOString().split('T')[0]}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('PDF-Download Fehler:', error);
+      }
+    },
+    onError: (error) => {
+      console.error('PDF-Generierung fehlgeschlagen:', error);
     }
   })
 
@@ -286,7 +297,13 @@ export default function CustomerDetail() {
               contracts={relatedContracts}
               tasks={custTasks}
               opportunities={verkaufschancen}
-              onDownloadPDF={() => downloadPDFMutation.mutate()}
+              onDownloadPDF={() => {
+                if (!customer?.id) {
+                  alert('Bitte warten Sie, bis alle Daten geladen sind.');
+                  return;
+                }
+                downloadPDFMutation.mutate();
+              }}
               onNewOpportunity={() => {/* TODO: open new opportunity dialog */}}
               onNewFamilyMember={() => {/* TODO: open add family member dialog */}}
               isDownloading={downloadPDFMutation.isPending}
