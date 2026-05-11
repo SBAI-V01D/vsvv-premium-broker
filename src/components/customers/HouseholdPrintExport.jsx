@@ -44,6 +44,23 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
     }).format(value)
   }
 
+  const getSparteLabel = (sparte) => {
+    const spartenMap = {
+      'household': 'Hausrat',
+      'householdinsurance': 'Hausratversicherung',
+      'liability': 'Haftpflicht',
+      'motor': 'Motorfahrzeug',
+      'health': 'Krankenversicherung',
+      'life': 'Lebensversicherung',
+      'property': 'Sachversicherung',
+      'bvg': 'BVG',
+      'pension': 'Pensionskasse',
+      'other': 'Sonstige'
+    }
+    if (!sparte) return '–'
+    return spartenMap[sparte?.toLowerCase?.()?.replace(/\s+/g, '')] || sparte
+  }
+
   // DEBUG: Logging
   console.log('HouseholdPrintExport rendering:', {
     customer: customer?.id,
@@ -196,7 +213,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
                              height: 'auto'
                            }}>
                              <td style={{ padding: '8px', borderRight: '1px solid #ddd' }}>{contract.insurer || '–'}</td>
-                             <td style={{ padding: '8px', borderRight: '1px solid #ddd' }}>{contract.sparte || contract.insurance_type || '–'}</td>
+                             <td style={{ padding: '8px', borderRight: '1px solid #ddd' }}>{getSparteLabel(contract.sparte || contract.insurance_type)}</td>
                              <td style={{ padding: '8px', borderRight: '1px solid #ddd', fontFamily: 'monospace' }}>{contract.policy_number || '–'}</td>
                              <td style={{ padding: '8px', borderRight: '1px solid #ddd' }}>{contract.product || '–'}</td>
                              <td style={{ padding: '8px', borderRight: '1px solid #ddd' }}>{contract.start_date ? formatDate(contract.start_date) : '–'}</td>
