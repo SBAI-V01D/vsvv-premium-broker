@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { FileText, AlertCircle, ListTodo, FileWarning, ExternalLink, Shield, ClipboardList } from 'lucide-react'
+import { FileText, AlertCircle, ListTodo, FileWarning, ExternalLink, Shield, ClipboardList, AlertTriangle, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import PriorityBadge, { taskPriorityToLevel } from '@/components/shared/PriorityBadge'
 
 // Contract workflow task types
 const CONTRACT_TASK_TYPES = ['renewal', 'health_declaration']
@@ -192,7 +193,7 @@ export default function Tasks() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{t.title}</p>
+                      <p className="text-sm font-medium leading-tight">{t.title}</p>
                       {t.customer_name && (
                         <button 
                           onClick={(e) => handleRowClick(e, t)}
@@ -201,11 +202,14 @@ export default function Tasks() {
                           {t.customer_name}
                         </button>
                       )}
-                      {t.due_date && (
-                        <p className={`text-xs mt-1 ${isOverdue(t.due_date) ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
-                          Fällig: {formatDate(t.due_date)}
-                        </p>
-                      )}
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {t.due_date && (
+                          <p className={`text-xs ${isOverdue(t.due_date) ? 'text-red-600 font-bold' : 'text-muted-foreground'}`}>
+                            {isOverdue(t.due_date) ? '⚠ ' : ''}Fällig: {formatDate(t.due_date)}
+                          </p>
+                        )}
+                        <PriorityBadge level={isOverdue(t.due_date) ? 'critical' : taskPriorityToLevel(t.priority)} />
+                      </div>
                     </div>
                   </div>
                 </button>
@@ -234,7 +238,7 @@ export default function Tasks() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{t.title}</p>
+                      <p className="text-sm font-medium leading-tight">{t.title}</p>
                       {t.customer_name && (
                         <button 
                           onClick={(e) => handleRowClick(e, t)}
@@ -243,11 +247,14 @@ export default function Tasks() {
                           {t.customer_name}
                         </button>
                       )}
-                      {t.due_date && (
-                        <p className={`text-xs mt-1 ${isOverdue(t.due_date) ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
-                          Fällig: {formatDate(t.due_date)}
-                        </p>
-                      )}
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {t.due_date && (
+                          <p className={`text-xs ${isOverdue(t.due_date) ? 'text-red-600 font-bold' : 'text-muted-foreground'}`}>
+                            {isOverdue(t.due_date) ? '⚠ ' : ''}Fällig: {formatDate(t.due_date)}
+                          </p>
+                        )}
+                        <PriorityBadge level={isOverdue(t.due_date) ? 'critical' : taskPriorityToLevel(t.priority)} />
+                      </div>
                     </div>
                   </div>
                 </button>

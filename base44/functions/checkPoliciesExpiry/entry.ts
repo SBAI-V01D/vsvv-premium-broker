@@ -49,11 +49,13 @@ Deno.serve(async (req) => {
         console.log(`[expired] ${c.customer_name} | ${c.insurer} | ${c.end_date}`);
       }
 
-      // ── Aufgaben-Duplikat-Check (Vertragsablauf-Tasks für diese Policy) ──
+      // ── Aufgaben-Duplikat-Check — auch nach Titel für alte Tasks ohne contract_id ──
       const hasTaskForContract = (taskType) => existingTasks.some(t =>
-        t.contract_id === c.id &&
-        t.task_type === taskType &&
-        t.status !== 'completed'
+        t.status !== 'completed' &&
+        (
+          (t.contract_id === c.id && t.task_type === taskType) ||
+          (t.customer_id === c.customer_id && t.task_type === taskType && t.title?.includes(c.insurer || ''))
+        )
       );
 
       // ── 2. 90 Tage vor Ablauf: process_status setzen + Aufgabe ──────────

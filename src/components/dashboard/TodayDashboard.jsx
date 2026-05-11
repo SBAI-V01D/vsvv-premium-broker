@@ -251,12 +251,8 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
         </div>
       )}
 
-      {/* ── Vertragsabläufe / Bestandsmanagement ────────────────────────── */}
-      <BestandsmanagementPanel
-        contracts={contracts}
-        tasks={openTasks}
-        verkaufschancen={verkaufschancen}
-      />
+      {/* ── Vertragsabläufe / Bestandsmanagement ── PROMINENT ── */}
+      <BestandsmanagementPanel contracts={contracts} />
 
       {/* ── Dringende Aufgaben ───────────────────────────────────────────── */}
       <Section

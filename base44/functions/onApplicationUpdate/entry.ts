@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     const statusChanged = eventType === 'create' || (oldStatus !== newStatus && !!newStatus);
     const isNewAcceptance = ACCEPTED_STATUSES.includes(newStatus) && !ACCEPTED_STATUSES.includes(oldStatus);
 
-    // ── 1. STATUS CHANGE LOGGING ──────────────────────────────────────────────
+    // ── 1. STATUS CHANGE LOGGING + TIMELINE ──────────────────────────────────
     if (statusChanged && newStatus) {
       await base44.asServiceRole.entities.SystemLog.create({
         level: 'info',
@@ -48,6 +48,23 @@ Deno.serve(async (req) => {
         related_entity_id: app.id,
         user_email: app.assigned_broker || null,
       });
+
+      // Timeline: StatusHistory entry
+      if (app.customer_id) {
+        try {
+          await base44.asServiceRole.entities.StatusHistory.create({
+            entity_type: 'application',
+            entity_id: app.id,
+            customer_id: app.customer_id,
+            from_status: oldStatus || 'neu',
+            to_status: newStatus,
+            changed_by: app.assigned_broker || 'system',
+            note: `${app.insurer || '–'} · ${app.sparte || app.insurance_type || '–'}`,
+          });
+        } catch (shErr) {
+          console.warn('[onApplicationUpdate] StatusHistory create failed (non-fatal):', shErr.message);
+        }
+      }
     }
 
     // ── 2. FOLLOW-UP TASK bei Rückfrage/Vorbehalt ────────────────────────────

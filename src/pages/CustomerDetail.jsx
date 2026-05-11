@@ -79,6 +79,12 @@ export default function CustomerDetail() {
     queryFn: () => base44.entities.Task.list(null, 1000),
   })
 
+  const { data: verkaufschancen = [] } = useQuery({
+    queryKey: ['verkaufschancen', id],
+    queryFn: () => base44.entities.Verkaufschance.filter({ customer_id: id }),
+    enabled: !!id,
+  })
+
   // If customer is a family member, show primary customer's ID too
   const primaryCustomerId = customer?.primary_customer_id || customer?.id
   const familyMembers = (Array.isArray(allCustomers) ? allCustomers : []).filter(c => 
@@ -237,8 +243,10 @@ export default function CustomerDetail() {
             contracts={relatedContracts}
             applications={relatedApplications}
             documents={relatedDocuments}
-            tasks={custTasks}
+            tasks={tasks.filter(t => t.customer_id === customer?.id)}
             messages={relatedMessages}
+            verkaufschancen={verkaufschancen}
+            limit={50}
           />
         </TabsContent>
 

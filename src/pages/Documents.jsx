@@ -10,15 +10,33 @@ import {
   Zap, Paperclip, Tag, Trash2, Eye, RefreshCw, Clock, Download, AlertCircle
 } from 'lucide-react'
 import DocumentTypeBadge from '@/components/documents/DocumentTypeBadge'
+import DocumentTagBadge from '@/components/documents/DocumentTagBadge'
 import DocumentUploadDialog from '@/components/documents/DocumentUploadDialog'
 import DocumentReviewPanel from '@/components/documents/DocumentReviewPanel'
 
 const TABS = [
-  { key: 'all', label: 'Alle Dokumente' },
+  { key: 'all', label: 'Alle' },
   { key: 'antrag', label: 'Anträge' },
   { key: 'anlage', label: 'Anlagen' },
-  { key: 'pruefung_erforderlich', label: 'Prüfung erforderlich' },
+  { key: 'pruefung_erforderlich', label: 'Prüfung nötig' },
 ]
+
+// Extract doc_tag from classification_reason or category
+function extractTag(doc) {
+  const reason = (doc.classification_reason || '').toLowerCase()
+  if (reason.includes('police') || doc.category === 'contract') return 'police'
+  if (reason.includes('kündigung')) return 'kuendigung'
+  if (reason.includes('offerte')) return 'offerte'
+  if (reason.includes('nachtrag')) return 'nachtrag'
+  if (reason.includes('antrag')) return 'antrag'
+  if (reason.includes('schaden')) return 'schadensmeldung'
+  if (reason.includes('gesundheit')) return 'gesundheitsdeklaration'
+  if (reason.includes('rechnung')) return 'rechnung'
+  if (reason.includes('mahnung')) return 'mahnung'
+  if (reason.includes('vollmacht')) return 'vollmacht'
+  if (doc.doc_type === 'antrag') return 'antrag'
+  return null
+}
 
 export default function Documents() {
   const queryClient = useQueryClient()
@@ -67,7 +85,7 @@ export default function Documents() {
 
   const filtered = documents.filter(doc => {
     const matchSearch = !search.trim() ||
-      `${doc.name} ${doc.customer_name} ${doc.notes}`.toLowerCase().includes(search.toLowerCase())
+      `${doc.name} ${doc.customer_name} ${doc.notes} ${doc.classification_reason}`.toLowerCase().includes(search.toLowerCase())
 
     const matchTab =
       tab === 'all' ? true :
@@ -77,6 +95,14 @@ export default function Documents() {
       true
 
     return matchSearch && matchTab
+  })
+
+  // Sort: pruefung_erforderlich first, then by date
+  filtered.sort((a, b) => {
+    const pa = a.classification_status === 'pruefung_erforderlich' ? 0 : a.classification_status === 'ausstehend' ? 1 : 2
+    const pb = b.classification_status === 'pruefung_erforderlich' ? 0 : b.classification_status === 'ausstehend' ? 1 : 2
+    if (pa !== pb) return pa - pb
+    return new Date(b.created_date) - new Date(a.created_date)
   })
 
   const counts = {
@@ -256,7 +282,11 @@ export default function Documents() {
 
                 <div><DocumentTypeBadge doc={doc} /></div>
 
-                <div className="text-xs text-muted-foreground capitalize">{doc.category || '–'}</div>
+                <div className="flex items-center gap-1 flex-wrap">
+                  {extractTag(doc) && <DocumentTagBadge tag={extractTag(doc)} />}
+                  {doc.linked_contract_id && <span className="text-[9px] px-1 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-semibold">Vertrag</span>}
+                  {doc.linked_application_id && <span className="text-[9px] px-1 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded font-semibold">Antrag</span>}
+                </div>
 
                 <div className="text-xs text-muted-foreground">{formatDate(doc.created_date)}</div>
 
