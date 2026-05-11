@@ -11,11 +11,13 @@ import {
   ArrowLeft, Phone, Mail, MapPin, Briefcase, Plus, FileText, TrendingUp, 
   CheckCircle2, Clock, AlertCircle, Download, MessageSquare 
 } from 'lucide-react'
+import NewOfferDialog from '@/components/customers/NewOfferDialog'
 
 export default function Customer360() {
   const { customerId } = useParams()
   const navigate = useNavigate()
   const [contractFilter, setContractFilter] = useState('active')
+  const [showOfferDialog, setShowOfferDialog] = useState(false)
 
   // Data fetching
   const { data: customer, isLoading: customerLoading } = useQuery({
@@ -127,7 +129,7 @@ export default function Customer360() {
 
         {/* QUICK ACTIONS */}
         <div className="flex gap-2 flex-wrap sm:flex-col">
-          <Button size="sm" className="bg-primary hover:bg-primary/90">
+          <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={() => setShowOfferDialog(true)}>
             <Plus className="w-4 h-4 mr-1" /> Angebot
           </Button>
           <Button size="sm" variant="outline">
@@ -412,6 +414,15 @@ export default function Customer360() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* NEW OFFER DIALOG */}
+      {customer && (
+        <NewOfferDialog
+          open={showOfferDialog}
+          onOpenChange={setShowOfferDialog}
+          customer={customer}
+        />
+      )}
 
       {/* AI RECOMMENDATIONS */}
       {(metrics.renewalsSoon > 0 || metrics.upsellPotential > 0) && (
