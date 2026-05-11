@@ -32,18 +32,28 @@ Deno.serve(async (req) => {
 
 Extrahieren Sie alle Kundendaten und Vertragsinformationen aus diesem Dokument.
 
-KRITISCH - ROLLEN RICHTIG ERKENNEN:
-1. "Versicherungsnehmer" oder "Versicherte Person (Name)" am Anfang = HAUPTKONTAKT (Zahler, Vertragspartner)
-2. "Versicherte Person" im Detail = Die PERSON auf der Police (kann das Kind, Ehepartner, Parent sein!)
+KRITISCH – ROLLEN MÜSSEN STRENG GETRENNT WERDEN:
 
-HAUPTKONTAKT (Versicherungsnehmer = policy_holder_name):
-- policy_holder_name: Name des VERSICHERUNGSNEHMERS/HAUPTKUNDEN - er steht in "Ihrer Adresse" oder "Versicherungsnehmer" am Anfang
-- Beispiel: Wenn "Samanta Albertin, Musterstrasse 42" am Anfang steht → Hauptkontakt = Samanta Albertin
+**VERSICHERUNGSNEHMER (policy_holder_name)**
+= Name in "Ihre Adresse" / "Versicherungsnehmer" GANZ OBEN
+= Der Vertragspartner / Zahler
+= Beispiel: "Samanta Albertin, Musterstrasse 42"
 
-VERSICHERTE PERSON (kann ANDERS sein als Hauptkontakt):
-- first_name: Vorname der VERSICHERTEN PERSON (z.B. "Kyllian Adolf" wenn nur Kinder versichert)
-- last_name: Nachname der VERSICHERTEN PERSON
-- birthdate: Geburtsdatum der VERSICHERTEN PERSON (YYYY-MM-DD)
+**VERSICHERTE PERSON (first_name, last_name)**
+= Name in "Versicherte Person" / "Versicherte Personen"
+= Die Person auf der Police (kann Kind sein!)
+= Beispiel: "Kyllian Adolf Albertin"
+
+**WICHTIG:**
+- Diese KÖNNEN unterschiedlich sein
+- Baby/Familienmitglieder NICHT im "Versicherungsnehmer"-Feld
+- Nur echte Personen extrahieren (keine "Baby" Placeholder)
+
+PERSONENDATEN:
+- policy_holder_name: VERSICHERUNGSNEHMER (Vertragspartner)
+- first_name: VERSICHERTE PERSON (Person auf Police)
+- last_name: VERSICHERTE PERSON
+- birthdate: VERSICHERTE PERSON Geburtsdatum (YYYY-MM-DD)
 
 ADRESSDATEN:
 - street: Straßenname und Nummer (z.B. "Musterstrasse 42")

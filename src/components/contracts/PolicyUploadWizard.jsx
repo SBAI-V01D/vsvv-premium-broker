@@ -388,27 +388,6 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         console.warn('[PolicyUploadWizard] Matching error (non-fatal):', matchErr.message);
       }
 
-      // If we found the policy holder, use him as Hauptkontakt
-      if (policyHolderCustomer) {
-        setSelectedCustomer(policyHolderCustomer);
-        setCustomerMode('matched');
-        setNewCustomerData({
-          first_name: d.first_name || '',
-          last_name: d.last_name || '',
-          birthdate: d.birthdate || '',
-          email: d.email || '',
-          phone: d.phone || '',
-          mobile: d.mobile || '',
-          street: d.street || '',
-          city: d.city || '',
-          zip_code: d.zip_code || '',
-          canton: d.canton || '',
-          policy_holder_name: d.policy_holder_name || ''
-        });
-        setStep(3);
-        return;
-      }
-
       // Build contracts from extracted data
       const sparteKey = mapInsuranceType(d.insurance_type) || d.insurance_type || ''
       const sparteData = d.sparte_data || {}
@@ -443,8 +422,8 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       setContractList([baseContract, ...additionalContracts])
       setActiveContractIdx(0)
 
-      // Customer matching + validation
-      const customerFields = {
+      // Setze versicherte Person Daten
+      setNewCustomerData({
         first_name: (d.first_name || '').trim(),
         last_name: (d.last_name || '').trim(),
         birthdate: d.birthdate || '',
@@ -455,73 +434,11 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         city: (d.city || '').trim(),
         zip_code: (d.zip_code || '').trim(),
         canton: (d.canton || '').trim(),
-      }
+      })
 
-      // Use automatic matching result
-      const decision = matchingResult.decision;
-
-      if (decision.action === 'link_existing') {
-        // EXACT MATCH: gleicher Vorname + Nachname + Geburtsdatum (independent customer)
-        setSelectedCustomer(decision.matched_customer)
-        setCustomerMode('matched')
-        setNewCustomerData(customerFields)
-        setStep(3)
-        return
-      } else if (decision.action === 'link_family_member_to_primary') {
-        // EXACT MATCH BUT: Person is already a family member
-        // → Show the recognized person, let user manually select primary contact
-        const familyMember = decision.matched_customer
-        
-        setSelectedCustomer(null)  // NO auto-fill: user must select primary contact manually
-        setCustomerMode('family_member_manual')
-        setNewCustomerData({
-          first_name: familyMember.first_name,
-          last_name: familyMember.last_name,
-          birthdate: familyMember.birthdate,
-          email: familyMember.email,
-          phone: familyMember.phone,
-          mobile: familyMember.mobile,
-          street: familyMember.street,
-          city: familyMember.city,
-          zip_code: familyMember.zip_code,
-          canton: familyMember.canton,
-          actual_customer_id: decision.customer_id,
-          family_role: decision.family_role,
-          is_family_member: true
-        })
-        setStep(2)  // Confirm family member assignment
-        return
-      } else if (decision.action === 'create_family_member') {
-        // FAMILY MEMBER PATTERN: gleicher Nachname + Adresse aber anderer Vorname/Geburtsdatum
-        // → Neues Familienmitglied erstellen
-        setSelectedCustomer(decision.matched_customer)
-        setCustomerMode('family_member')
-        setNewCustomerData({
-          ...customerFields,
-          primary_customer_id: decision.primary_customer_id,
-          family_role: decision.family_role,
-          is_family_member: true
-        })
-        setStep(2)  // Step 2 to confirm family member creation
-        return
-      } else if (decision.action === 'ask_confirmation') {
-        // PARTIAL MATCH: E-Mail oder Telefon
-        setMatchCandidates(
-          matchingResult.all_matches.map(m => ({
-            customer: m,
-            score: m.score
-          }))
-        )
-        setSelectedCustomer(decision.matched_customer)
-        setCustomerMode('partial')
-        setNewCustomerData(customerFields)
-        setStep(2)
-        return
-      }
-
-      // NO MATCH: neuer Kunde
-      setNewCustomerData(customerFields)
-      setCustomerMode('new')
+      // Go to Step 2: Broker entscheidet Zuordnung
+      setCustomerMode('existing_structure')
+      setSelectedCustomer(null)
       setStep(2)
       } catch (err) {
         setExtracting(false)
@@ -534,53 +451,100 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     setSaving(true)
     setError(null)
 
-    if (!selectedCustomer) {
-      setError('Bitte einen Hauptkontakt auswählen')
-      setSaving(false)
-      return
-    }
-
-    // HAUPTKONTAKT ist IMMER selectedCustomer
-    const customerId = selectedCustomer.id
-    const customerName = `${selectedCustomer.first_name} ${selectedCustomer.last_name}`
-    const orgId = selectedCustomer.organization_id
-
-    // Check: Ist die VERSICHERTE PERSON ein FAMILIENMITGLIED (Kind unter 18)?
     const insuredFirstName = newCustomerData.first_name?.trim()
     const insuredLastName = newCustomerData.last_name?.trim()
     const insuredBirthdate = newCustomerData.birthdate
 
-    // Bestimme: Ist versicherte Person ein Kind?
-    const isMinor = insuredBirthdate
-      ? new Date().getFullYear() - new Date(insuredBirthdate).getFullYear() < 18
-      : false
+    let customerId, customerName, orgId, insuredPersonId
 
-    let insuredPersonId = customerId  // Default: Versicherte Person = Hauptkontakt
+    // ── OPTION 1: Bestehende Familienstruktur verwenden ──
+    if (customerMode === 'existing_structure') {
+      if (!selectedCustomer) {
+        setError('Bitte einen Kunden auswählen')
+        setSaving(false)
+        return
+      }
+      customerId = selectedCustomer.id
+      customerName = `${selectedCustomer.first_name} ${selectedCustomer.last_name}`
+      orgId = selectedCustomer.organization_id
+      insuredPersonId = customerId  // Vertrag gehört Hauptkontakt
+    }
 
-    // Falls versicherte Person ein Kind ist UND ein Familienmitglied → erstelle es als Familie
-    if (isMinor && insuredFirstName && insuredLastName && insuredFirstName !== selectedCustomer.first_name) {
+    // ── OPTION 2: Versicherungsnehmer als Hauptkontakt ──
+    else if (customerMode === 'policy_holder_main') {
+      if (!selectedCustomer) {
+        setError('Bitte den Versicherungsnehmer auswählen oder erstellen')
+        setSaving(false)
+        return
+      }
+      customerId = selectedCustomer.id  // Hauptkontakt
+      customerName = `${selectedCustomer.first_name} ${selectedCustomer.last_name}`
+      orgId = selectedCustomer.organization_id
+
+      // Falls versicherte Person unterschiedlich: als Familienmitglied erstellen
+      if (insuredFirstName && insuredLastName && `${insuredFirstName} ${insuredLastName}` !== customerName) {
+        const emailValue = newCustomerData.email?.trim()
+          ? newCustomerData.email.trim()
+          : `${insuredFirstName.toLowerCase()}.${insuredLastName.toLowerCase()}.${Date.now()}@import.local`
+
+        const familyMember = await base44.entities.Customer.create({
+          first_name: insuredFirstName,
+          last_name: insuredLastName,
+          email: emailValue,
+          phone: newCustomerData.phone || undefined,
+          birthdate: insuredBirthdate || undefined,
+          street: selectedCustomer.street,
+          city: selectedCustomer.city,
+          zip_code: selectedCustomer.zip_code,
+          canton: selectedCustomer.canton,
+          organization_id: orgId,
+          status: 'active',
+          customer_type: 'private',
+          is_family_member: true,
+          primary_customer_id: customerId,
+          family_role: 'child'
+        })
+        insuredPersonId = familyMember.id
+      } else {
+        insuredPersonId = customerId
+      }
+    }
+
+    // ── OPTION 3: Unabhängiger Kunde ──
+    else if (customerMode === 'independent' || customerMode === 'new') {
+      if (!insuredFirstName || !insuredLastName) {
+        setError('Vorname und Nachname sind erforderlich')
+        setSaving(false)
+        return
+      }
       const emailValue = newCustomerData.email?.trim()
         ? newCustomerData.email.trim()
         : `${insuredFirstName.toLowerCase()}.${insuredLastName.toLowerCase()}.${Date.now()}@import.local`
 
-      const familyMember = await base44.entities.Customer.create({
+      const created = await base44.entities.Customer.create({
         first_name: insuredFirstName,
         last_name: insuredLastName,
         email: emailValue,
         phone: newCustomerData.phone || undefined,
         birthdate: insuredBirthdate || undefined,
-        street: selectedCustomer.street,
-        city: selectedCustomer.city,
-        zip_code: selectedCustomer.zip_code,
-        canton: selectedCustomer.canton,
-        organization_id: orgId,
+        street: newCustomerData.street || undefined,
+        city: newCustomerData.city || undefined,
+        zip_code: newCustomerData.zip_code || undefined,
+        canton: newCustomerData.canton || undefined,
+        organization_id: organizations[0]?.id || '',
         status: 'active',
         customer_type: 'private',
-        is_family_member: true,
-        primary_customer_id: customerId,
-        family_role: 'child'
       })
-      insuredPersonId = familyMember.id
+      customerId = created.id
+      customerName = `${insuredFirstName} ${insuredLastName}`
+      orgId = created.organization_id || organizations[0]?.id || ''
+      insuredPersonId = created.id
+    }
+
+    if (!customerId) {
+      setError('Kunde konnte nicht erstellt werden')
+      setSaving(false)
+      return
     }
     if (!contract.insurer) {
       setError('Versicherungsgesellschaft ist erforderlich')
@@ -709,25 +673,98 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
            <div className="space-y-4 py-2">
              {extractedRaw && <ExtractionSummary data={extractedRaw} />}
 
-             {/* FAMILY MEMBER — MANUAL PRIMARY SELECTION */}
-             {customerMode === 'family_member_manual' && (
-               <div className="p-4 bg-violet-50 border-2 border-violet-300 rounded-lg space-y-3">
-                 <p className="text-sm font-bold text-violet-900">👶 Versicherte Person: {newCustomerData.first_name} {newCustomerData.last_name}</p>
-                 <div className="bg-violet-100/50 p-3 rounded text-xs text-violet-800">
-                   <p className="font-semibold mb-2">Bitte den Hauptkontakt auswählen:</p>
-                   <p className="text-[10px]">Ein Kind kann kein Hauptkontakt sein. Wähle den Elternteil oder Vormund.</p>
-                 </div>
-                 {selectedCustomer && (
-                   <div className="bg-white p-2 rounded border border-violet-200">
-                     <p className="text-muted-foreground font-semibold text-xs">✓ Hauptkontakt ausgewählt:</p>
-                     <p className="font-bold text-sm mt-1">{selectedCustomer.first_name} {selectedCustomer.last_name}</p>
+             {/* BROKER DECISION: Wie wird die Police zugeordnet? */}
+             <div className="p-4 bg-blue-50 border-2 border-blue-300 rounded-lg space-y-3">
+               <p className="text-sm font-bold text-blue-900">📋 KI-Analyse:</p>
+               <div className="space-y-2 text-xs">
+                 {extractedRaw?.policy_holder_name && (
+                   <div className="flex items-start gap-2">
+                     <span className="text-blue-600 font-bold">Versicherungsnehmer:</span>
+                     <span className="text-blue-800">{extractedRaw.policy_holder_name}</span>
+                   </div>
+                 )}
+                 {(extractedRaw?.first_name || extractedRaw?.last_name) && (
+                   <div className="flex items-start gap-2">
+                     <span className="text-blue-600 font-bold">Versicherte Person:</span>
+                     <span className="text-blue-800">{extractedRaw.first_name} {extractedRaw.last_name}</span>
                    </div>
                  )}
                </div>
-             )}
+             </div>
 
-             {/* EXISTING FAMILY MEMBER UI (old, kept for backwards compatibility) */}
-             {customerMode === 'family_member_existing' && selectedCustomer && (
+             {/* OPTION 1: Bestehende CRM Struktur verwenden */}
+             <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg space-y-3">
+               <button
+                 type="button"
+                 onClick={() => { setCustomerMode('existing_structure'); setSelectedCustomer(null) }}
+                 className="w-full flex items-center gap-3 text-left hover:opacity-80"
+               >
+                 <input type="radio" checked={customerMode === 'existing_structure'} readOnly className="w-4 h-4" />
+                 <div>
+                   <p className="font-semibold text-sm text-green-900">✓ Bestehende Familienstruktur verwenden</p>
+                   <p className="text-xs text-green-700 mt-1">Keine Änderungen. CRM Rollen bleiben bestehen.</p>
+                 </div>
+               </button>
+               {customerMode === 'existing_structure' && (
+                 <div className="ml-7 space-y-2 text-xs border-t border-green-200 pt-2">
+                   <p className="text-green-800 font-semibold">Suche existierende Struktur...</p>
+                   <CustomerSearch customers={customers} onSelect={c => { setSelectedCustomer(c); }} />
+                 </div>
+               )}
+             </div>
+
+             {/* OPTION 2: Versicherungsnehmer als Hauptkontakt */}
+             <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-lg space-y-3">
+               <button
+                 type="button"
+                 onClick={() => { setCustomerMode('policy_holder_main'); setSelectedCustomer(null) }}
+                 className="w-full flex items-center gap-3 text-left hover:opacity-80"
+               >
+                 <input type="radio" checked={customerMode === 'policy_holder_main'} readOnly className="w-4 h-4" />
+                 <div>
+                   <p className="font-semibold text-sm text-amber-900">👤 Versicherungsnehmer als Hauptkontakt</p>
+                   <p className="text-xs text-amber-700 mt-1">{extractedRaw?.policy_holder_name || 'KI erkannt'} = Hauptkontakt, Versicherte Person = Familienmitglied</p>
+                 </div>
+               </button>
+               {customerMode === 'policy_holder_main' && (
+                 <div className="ml-7 space-y-2 text-xs border-t border-amber-200 pt-2">
+                   <p className="text-amber-800">Suche Versicherungsnehmer: <span className="font-bold">{extractedRaw?.policy_holder_name}</span></p>
+                   <CustomerSearch customers={customers} onSelect={c => { setSelectedCustomer(c); setNewCustomerData(prev => ({...prev, is_family_member: true})) }} />
+                   {!selectedCustomer && (
+                     <button
+                       type="button"
+                       onClick={() => { setCustomerMode('new'); setNewCustomerData({first_name: extractedRaw?.policy_holder_name?.split(' ')[0] || '', last_name: extractedRaw?.policy_holder_name?.split(' ').slice(1).join(' ') || ''}) }}
+                       className="flex items-center gap-2 text-xs text-primary hover:underline font-medium"
+                     >
+                       <UserPlus className="w-3 h-3" /> Neuen Kunden erstellen
+                     </button>
+                   )}
+                 </div>
+               )}
+             </div>
+
+             {/* OPTION 3: Unabhängiger Kunde */}
+             <div className="p-4 bg-slate-50 border-2 border-slate-200 rounded-lg space-y-3">
+               <button
+                 type="button"
+                 onClick={() => { setCustomerMode('independent'); setSelectedCustomer(null) }}
+                 className="w-full flex items-center gap-3 text-left hover:opacity-80"
+               >
+                 <input type="radio" checked={customerMode === 'independent'} readOnly className="w-4 h-4" />
+                 <div>
+                   <p className="font-semibold text-sm text-slate-900">🆕 Eigenständiger Kunde</p>
+                   <p className="text-xs text-slate-600 mt-1">Neue Familie oder unabhängige Person. Keine Verknüpfung zu bestehender Struktur.</p>
+                 </div>
+               </button>
+               {customerMode === 'independent' && (
+                 <div className="ml-7 space-y-2 text-xs border-t border-slate-200 pt-2">
+                   <NewCustomerForm data={newCustomerData} onChange={setNewCustomerData} />
+                 </div>
+               )}
+             </div>
+
+             {/* FAMILY MEMBER — MANUAL PRIMARY SELECTION (legacy) */}
+             {customerMode === 'family_member_manual' && (
                <div className="p-4 bg-emerald-50 border-2 border-emerald-300 rounded-lg space-y-3">
                  <p className="text-sm font-bold text-emerald-900">✓ Bestehendes Familienmitglied erkannt</p>
                  <div className="grid grid-cols-2 gap-3 text-xs">
