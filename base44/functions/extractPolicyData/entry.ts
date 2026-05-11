@@ -207,7 +207,8 @@ RÜCKGABE: Gültiges JSON mit allen Feldern. Fehlende Felder = null.`,
                 premium_monthly: { type: ['number', 'null'] },
                 premium_yearly: { type: ['number', 'null'] },
                 policy_number: { type: ['string', 'null'] }
-              }
+              },
+              required: []
             }
           }
         }
