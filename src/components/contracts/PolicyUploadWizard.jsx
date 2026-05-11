@@ -300,6 +300,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
 
   // ── Step 1: Upload + Extract ────────────────────────────────────────────────
   const handleFileUpload = async (e) => {
+    try {
     const file = e.target.files?.[0]
     if (!file) return
     e.target.value = ''
@@ -383,7 +384,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
            setStep(2)
          } else if (customerFields.first_name && customerFields.last_name) {
            // No good match BUT we have valid first+last name → auto-create customer
-           createAndProceed(customerFields)
+           await createAndProceed(customerFields)
            return
          } else {
            // Not enough info → go to step 2 for manual entry
@@ -395,6 +396,10 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
           setNewCustomerData(customerFields)
           setStep(2)
         }
+       }
+       } catch (err) {
+       setError(`Fehler bei der Analyse: ${err.message}`)
+       setExtracting(false)
        }
        }
 
