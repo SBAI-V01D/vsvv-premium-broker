@@ -8,16 +8,14 @@ import { useNavigate } from 'react-router-dom'
 import { base44 } from '@/api/base44Client'
 import { getSparteLabel } from '@/lib/insuranceSparten'
 import { cn } from '@/lib/utils'
-import { format, parseISO, differenceInDays } from 'date-fns'
 import {
-  Shield, AlertTriangle, Clock, CheckCircle2, ChevronRight,
-  Plus, Filter, RefreshCw, FileWarning, CalendarClock,
-  TrendingUp, Users, Phone, ArrowRight, Eye
+  Shield, CheckCircle2, ChevronRight,
+  RefreshCw, FileWarning
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
+import ContractTasksPanel from '@/components/vertragsablaeufe/ContractTasksPanel'
 
 // ── Prioritäts-Logik ──────────────────────────────────────────────────────────
 const daysUntil = (d) => d ? Math.ceil((new Date(d) - new Date()) / 86400000) : null
@@ -67,15 +65,21 @@ const ACTION_NEXT_STEP = {
 }
 
 // ── Contract Card ─────────────────────────────────────────────────────────────
-function ContractCard({ item, onNavigate, onCreateVs, creating }) {
+function ContractCard({ item, onNavigate, onCreateVs, creating, tasks = [] }) {
   const { contract, topAction } = item
   const cfg = SEVERITY_CONFIG[topAction.severity] || SEVERITY_CONFIG.yellow
 
+  const contractTasks = tasks.filter(t =>
+    t.contract_id === contract.id ||
+    (t.customer_id === contract.customer_id && t.task_type === 'renewal')
+  )
+  const openTaskCount = contractTasks.filter(t => t.status !== 'completed').length
+
   return (
-    <div className={cn('rounded-xl border-l-4 border p-4 flex gap-4 hover:shadow-md transition-all group cursor-pointer', cfg.bg, cfg.border)}
+    <div className={cn('rounded-xl border-l-4 border p-4 hover:shadow-md transition-all group', cfg.bg, cfg.border)}
       style={{ borderLeftColor: topAction.severity === 'critical' ? '#dc2626' : topAction.severity === 'red' ? '#ef4444' : topAction.severity === 'orange' ? '#f97316' : '#f59e0b' }}
-      onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}/360`)}
     >
+    <div className="flex gap-4 cursor-pointer" onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}/360`)}>
       {/* Countdown Box */}
       <div className={cn('w-14 h-14 rounded-xl flex flex-col items-center justify-center flex-shrink-0 text-white font-black',
         topAction.severity === 'critical' ? 'bg-red-600' :
@@ -150,8 +154,16 @@ function ContractCard({ item, onNavigate, onCreateVs, creating }) {
         >
           + Chance
         </button>
+        {openTaskCount > 0 && (
+          <span className="text-[9px] px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded-full font-bold whitespace-nowrap">
+            {openTaskCount} Aufgabe{openTaskCount > 1 ? 'n' : ''}
+          </span>
+        )}
         <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
+    </div>
+    {/* Tasks Panel — direkt verknüpft */}
+    <ContractTasksPanel contract={contract} tasks={tasks} onNavigateCustomer={onNavigate} />
     </div>
   )
 }
@@ -178,6 +190,11 @@ export default function Vertragsablaeufe() {
   const { data: contracts = [], isLoading } = useQuery({
     queryKey: ['contracts'],
     queryFn: () => base44.entities.Contract.list(),
+  })
+
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => base44.entities.Task.list(),
   })
 
   const createVsMutation = useMutation({
@@ -329,6 +346,7 @@ export default function Vertragsablaeufe() {
               onNavigate={navigate}
               onCreateVs={handleCreateVs}
               creating={creating}
+              tasks={tasks}
             />
           ))}
         </div>
