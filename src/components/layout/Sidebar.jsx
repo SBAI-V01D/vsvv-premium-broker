@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
   ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink, AlertCircle,
-  Megaphone, Mail, Zap, Target, ShieldCheck, BarChart3, User, Briefcase, TrendingUp
+  Target, User, Briefcase, TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -48,52 +48,33 @@ function useSidebarBadges() {
 
 const navGroups = [
   {
-    label: 'Übersicht',
+    label: 'Cockpit',
     items: [
       { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
     ],
   },
   {
-    label: 'Akquisition',
+    label: 'Vertrieb',
     items: [
-      { label: 'Lead Pipeline',       icon: Target,    path: '/leads' },
-      { label: 'Verkaufschancen',     icon: TrendingUp, path: '/verkaufschancen' },
-      { label: 'Coverage & Upselling',icon: ShieldCheck,path: '/coverage-intelligence' },
-      { label: 'Aufgaben',            icon: CheckSquare, path: '/aufgaben' },
+      { label: 'Leads',           icon: Target,      path: '/leads' },
+      { label: 'Verkaufschancen', icon: TrendingUp,  path: '/verkaufschancen' },
+      { label: 'Aufgaben',        icon: CheckSquare, path: '/aufgaben' },
     ],
   },
   {
-    label: 'Kundenverwaltung',
+    label: 'Kunden & Verträge',
     items: [
-      { label: 'Kunden',   icon: Users,    path: '/kunden' },
-      { label: 'Verträge', icon: FileText, path: '/vertraege' },
-      { label: 'Anträge',  icon: FileText, path: '/antraege' },
+      { label: 'Kunden',    icon: Users,    path: '/kunden' },
+      { label: 'Verträge',  icon: Shield,   path: '/vertraege' },
+      { label: 'Dokumente', icon: FileText, path: '/dokumente' },
     ],
   },
   {
-    label: 'Operations',
+    label: 'Administration',
     items: [
-      { label: 'Dokumente',   icon: FileText,    path: '/dokumente' },
-      { label: 'Nachrichten', icon: Mail,        path: '/nachrichten' },
-    ],
-  },
-  {
-    label: 'Finanzen',
-    items: [
-      { label: 'Provisionen & Courtagen', icon: Wallet,   path: '/provisionen-courtagen' },
-      { label: 'Finanz-Dashboard',        icon: BarChart3, path: '/finanz-dashboard' },
-    ],
-  },
-  {
-    label: 'Management',
-    items: [
-      { label: 'Partner',                icon: Briefcase,    path: '/partner' },
-      { label: 'Berater & Organisation', icon: Users,        path: '/berater-organisation' },
-      { label: 'Sales Autopilot',        icon: Zap,          path: '/sales-autopilot' },
-      { label: 'E-Mail-Kampagnen',       icon: Megaphone,    path: '/email-kampagnen' },
-      { label: 'Status-Verwaltung',      icon: CheckSquare,  path: '/status-verwaltung' },
-      { label: 'System-Logs',            icon: AlertCircle,  path: '/system-logs' },
-      { label: 'Audit & Error Logs',      icon: Shield,       path: '/admin-logs' },
+      { label: 'Provisionen',        icon: Wallet,    path: '/provisionen-courtagen' },
+      { label: 'Berater & Partner',  icon: Briefcase, path: '/berater-organisation' },
+      { label: 'System',             icon: AlertCircle, path: '/admin-logs' },
     ],
   },
 ];
