@@ -192,15 +192,29 @@ Dateiname: "${docData.name || ''}"`,
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + (isUrgent ? 1 : 3));
 
+    // Für Anträge: versuche verknüpften Antrag zu finden
+    let linkedApplicationId = null;
+    let linkedApplicationName = null;
+    if (['antrag', 'offerte'].includes(category) && matchedCustomer) {
+      const apps = await base44.asServiceRole.entities.Application.filter({ customer_id: matchedCustomer.id });
+      const openApp = apps.find(a => !['archived'].includes(a.status));
+      if (openApp) {
+        linkedApplicationId = openApp.id;
+        linkedApplicationName = `${openApp.insurer || ''} – ${openApp.sparte || openApp.insurance_type || ''}`.trim();
+      }
+    }
+
     await base44.asServiceRole.entities.Task.create({
       title: taskTitle,
       description: `Automatisch erstellt bei Dokumenten-Upload.\nKategorie: ${category}\nKonfidenz: ${Math.round(confidence * 100)}%\n${classification?.summary || ''}`,
       customer_id: matchedCustomer?.id || null,
       customer_name: resolvedCustomerName || null,
+      application_id: linkedApplicationId,
+      application_name: linkedApplicationName,
       status: 'open',
       priority: isUrgent ? 'urgent' : confidence < 0.7 ? 'high' : 'medium',
       due_date: dueDate.toISOString().split('T')[0],
-      task_type: category === 'gesundheitsdeklaration' ? 'health_declaration' : 'general',
+      task_type: category === 'gesundheitsdeklaration' ? 'health_declaration' : category === 'antrag' ? 'onboarding' : 'general',
       notes: JSON.stringify({
         document_id: documentId,
         category,
@@ -209,6 +223,25 @@ Dateiname: "${docData.name || ''}"`,
         confidence,
       }),
     });
+
+    // Bei Kündigung: automatisch Verkaufschance erstellen
+    if (category === 'kuendigung' && matchedCustomer) {
+      const contracts = await base44.asServiceRole.entities.Contract.filter({ customer_id: matchedCustomer.id });
+      const activeContract = contracts.find(c => c.status === 'active');
+      if (activeContract) {
+        await base44.asServiceRole.entities.Verkaufschance.create({
+          customer_id: matchedCustomer.id,
+          customer_name: resolvedCustomerName,
+          organization_id: matchedCustomer.organization_id,
+          sparte: activeContract.sparte || activeContract.insurance_type,
+          status: 'neu',
+          linked_contract_id: activeContract.id,
+          title: `Kündigung — Ersatz suchen (${resolvedCustomerName})`,
+          estimated_value: activeContract.premium_yearly || 0,
+          notes: `Automatisch aus Kündigung erstellt via Dokument-Upload.`,
+        });
+      }
+    }
 
     // ── STEP 6: Log ───────────────────────────────────────────────────────
     await base44.asServiceRole.entities.SystemLog.create({

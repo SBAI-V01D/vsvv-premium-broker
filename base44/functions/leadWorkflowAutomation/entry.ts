@@ -93,13 +93,33 @@ Deno.serve(async (req) => {
     if (taskTitle) {
       await base44.asServiceRole.entities.Task.create({
         title: taskTitle,
+        customer_name: `${lead.first_name || ''} ${lead.last_name || lead.name || ''}`.trim() || null,
         status: 'open',
         priority: taskPriority,
-        related_entity_type: 'Lead',
-        related_entity_id: lead.id,
+        task_type: 'follow_up',
+        assigned_to: lead.advisor_id ? null : null,
         notes: `Automatisch erstellt. Lead-Status: ${lead.status} | Score: ${score} | Tage seit Kontakt: ${daysSinceContact}`,
       });
       results.tasksCreated++;
+    }
+
+    // Qualifizierter Lead > 14 Tage ohne Verkaufschance → Verkaufschance erstellen
+    if (lead.status === 'qualified' && daysSinceContact >= 14 && lead.organization_id) {
+      const existingVs = await base44.asServiceRole.entities.Verkaufschance.filter({ customer_id: lead.customer_id || '' });
+      const hasOpenVs = existingVs.some(v => !['gewonnen', 'verloren'].includes(v.status));
+      if (!hasOpenVs && lead.customer_id) {
+        await base44.asServiceRole.entities.Verkaufschance.create({
+          customer_id: lead.customer_id,
+          customer_name: `${lead.first_name || ''} ${lead.last_name || ''}`.trim(),
+          organization_id: lead.organization_id,
+          sparte: 'various',
+          status: 'neu',
+          title: `Lead-Konvertierung — ${lead.first_name || ''} ${lead.last_name || ''}`.trim(),
+          notes: `Automatisch aus qualifiziertem Lead erstellt (Score: ${score}).`,
+          assigned_broker: null,
+        });
+        results.tasksCreated++;
+      }
     }
   }
 

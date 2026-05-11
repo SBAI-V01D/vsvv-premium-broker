@@ -78,7 +78,7 @@
     },
     "premium_benchmark": {
       "type": "number",
-      "description": "Durchschnittsspr\u00e4mie \u00e4hnlicher Policies"
+      "description": "Durchschnittspr\u00e4mie \u00e4hnlicher Policies"
     },
     "start_date": {
       "type": "string",
@@ -130,6 +130,19 @@
       ],
       "default": "active",
       "description": "Status (stabilisierte Liste)"
+    },
+    "process_status": {
+      "type": "string",
+      "enum": [
+        "neu",
+        "pruefung_offen",
+        "kunde_kontaktieren",
+        "verlaengerung_vorbereiten",
+        "beratung_erfolgt",
+        "erledigt"
+      ],
+      "default": "neu",
+      "description": "Operativer Prozess-Status f\u00fcr Vertragsabl\u00e4ufe"
     },
     "custom_status": {
       "type": "string",
@@ -206,7 +219,7 @@
         "lost"
       ],
       "default": "early",
-      "description": "Sales Pipeline Stage: early (180-120d) \u2192 contact (120-60d) \u2192 offer \u2192 negotiation \u2192 renewed|lost"
+      "description": "Sales Pipeline Stage"
     },
     "renewal_stage_updated": {
       "type": "string",
@@ -265,29 +278,24 @@
         "lost"
       ],
       "default": "identified",
-      "description": "Upsell Pipeline Stage: identified \u2192 contact \u2192 offer \u2192 negotiation \u2192 won|lost"
+      "description": "Upsell Pipeline Stage"
     },
     "upsell_stage_updated": {
       "type": "string",
-      "format": "date-time",
-      "description": "Wann wurde die Upsell-Stage zuletzt aktualisiert"
+      "format": "date-time"
     },
     "upsell_identified_reason": {
-      "type": "string",
-      "description": "Grund f\u00fcr Upsell-Erkennung (z.B. high_pricing, product_gap, renewal_approaching)"
+      "type": "string"
     },
     "upsell_potential_value": {
-      "type": "number",
-      "description": "Gesch\u00e4tzter Upsell-Wert (CHF/Jahr)"
+      "type": "number"
     },
     "upsell_potential_percent": {
-      "type": "number",
-      "description": "Potenzial in Prozent (z.B. 25% mehr Pr\u00e4mie)"
+      "type": "number"
     },
     "upsell_offer_created": {
       "type": "boolean",
-      "default": false,
-      "description": "Upsell-Angebot wurde erstellt"
+      "default": false
     },
     "upsell_offer_status": {
       "type": "string",
@@ -298,27 +306,22 @@
         "accepted",
         "rejected"
       ],
-      "default": "none",
-      "description": "Status des Upsell-Angebots"
+      "default": "none"
     },
     "upsell_offer_date": {
       "type": "string",
-      "format": "date",
-      "description": "Upsell-Angebot erstellt am"
+      "format": "date"
     },
     "upsell_offer_value": {
-      "type": "number",
-      "description": "Angebotener zus\u00e4tzlicher Betrag (CHF/Jahr)"
+      "type": "number"
     },
     "upsell_accepted_date": {
       "type": "string",
-      "format": "date",
-      "description": "Upsell-Annahmedatum"
+      "format": "date"
     },
     "upsell_last_activity": {
       "type": "string",
-      "format": "date-time",
-      "description": "Letzte Aktivit\u00e4t im Upsell-Prozess"
+      "format": "date-time"
     },
     "pricing_status": {
       "type": "string",
@@ -327,12 +330,20 @@
         "high",
         "optimized"
       ],
-      "default": "normal",
-      "description": "Preisstatus: normal (OK), high (zu teuer), optimized (optimiert)"
+      "default": "normal"
     },
     "pricing_suggestion_id": {
+      "type": "string"
+    },
+    "last_review_date": {
       "type": "string",
-      "description": "Verkn. Preisoptimierungs-Vorschlag"
+      "format": "date",
+      "description": "Datum der letzten Policenpr\u00fcfung/Beratung"
+    },
+    "next_review_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Datum der n\u00e4chsten geplanten Pr\u00fcfung"
     },
     "notes": {
       "type": "string",
@@ -340,21 +351,17 @@
     },
     "archived": {
       "type": "boolean",
-      "default": false,
-      "description": "SOFT DELETE: Vertrag ist archiviert"
+      "default": false
     },
     "archived_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "SOFT DELETE: Archivierungsdatum"
+      "format": "date-time"
     },
     "archived_by": {
-      "type": "string",
-      "description": "SOFT DELETE: E-Mail des Archivierenden"
+      "type": "string"
     },
     "archived_reason": {
-      "type": "string",
-      "description": "SOFT DELETE: Grund f\u00fcr Archivierung"
+      "type": "string"
     }
   },
   "required": [
