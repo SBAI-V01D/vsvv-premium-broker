@@ -35,19 +35,25 @@ Extrahieren Sie alle Kundendaten und Vertragsinformationen aus diesem Dokument.
 KRITISCH – ROLLEN MÜSSEN STRENG GETRENNT WERDEN:
 
 **VERSICHERUNGSNEHMER (policy_holder_name)**
-= Name in "Ihre Adresse" / "Versicherungsnehmer" GANZ OBEN
+= MUSS auf Seite 1 oben unter "Frau / Herr ... Strasse PLZ Stadt" stehen
+= ODER: Name in "Ihre Adresse" / "Versicherungsnehmer"
 = Der Vertragspartner / Zahler
-= Beispiel: "Samanta Albertin, Musterstrasse 42"
+= Beispiel: "Samanta Albertin, Mühlesteigstrasse 30, 4125 Riehen"
+
+**WICHTIG:** GANZ OBEN auf dem Dokument ZUERST nach Adressblock suchen!
+Die Adresse ist IMMER am Anfang (z.B. "Frau Samanta Albertin ...")
 
 **VERSICHERTE PERSON (first_name, last_name)**
-= Name in "Versicherte Person" / "Versicherte Personen"
+= Name in "Versicherte Person" / "Versicherte Personen" 
+= ODER: In Info-Box rechts oben "Versicherte Person: Joana Albertin"
 = Die Person auf der Police (kann Kind sein!)
-= Beispiel: "Kyllian Adolf Albertin"
+= Beispiel: "Joana Albertin" oder "Kyllian Adolf Albertin"
 
 **WICHTIG:**
-- Diese KÖNNEN unterschiedlich sein
-- Baby/Familienmitglieder NICHT im "Versicherungsnehmer"-Feld
-- Nur echte Personen extrahieren (keine "Baby" Placeholder)
+- Diese KÖNNEN unterschiedlich sein (z.B. Eltern als Versicherungsnehmer, Kind als Versicherte Person)
+- ZUERST Adressblock (Versicherungsnehmer) extrahieren
+- DANN Info-Box oder "Versicherte Person" extrahieren
+- Nur echte Personen (keine "Baby" Placeholder)
 
 PERSONENDATEN:
 - policy_holder_name: VERSICHERUNGSNEHMER (Vertragspartner)
@@ -125,6 +131,7 @@ Rückgabe EXAKT als JSON:
         response_json_schema: {
           type: 'object',
           properties: {
+            policy_holder_name: { type: ['string', 'null'] },
             first_name: { type: ['string', 'null'] },
             last_name: { type: ['string', 'null'] },
             birthdate: { type: ['string', 'null'] },
@@ -207,6 +214,7 @@ Rückgabe EXAKT als JSON:
     return Response.json({
       success: true,
       extractedData: {
+        policy_holder_name: (extractedData.policy_holder_name || '').trim() || null,
         first_name: firstName,
         last_name: lastName,
         birthdate: birthdate,
@@ -243,6 +251,7 @@ Rückgabe EXAKT als JSON:
     return Response.json({
       success: true,
       extractedData: {
+        policy_holder_name: null,
         first_name: null,
         last_name: null,
         birthdate: null,
