@@ -32,12 +32,16 @@ Deno.serve(async (req) => {
 
 Extrahieren Sie alle Kundendaten und Vertragsinformationen aus diesem Dokument.
 
-PERSONENDATEN (Versicherte Person — wichtig, nicht Versicherungsnehmer!):
-- first_name: Vorname der VERSICHERTEN PERSON
+WICHTIG - ROLLEN UNTERSCHEIDEN:
+- "Versicherungsnehmer" oder "Ihre Adresse" = DER KUNDE (Hauptkontakt)
+- "Versicherte Person" = Die VERSICHERTE PERSON (kann das Kind sein!)
+
+PERSONENDATEN (Versicherte Person):
+- first_name: Vorname der VERSICHERTEN PERSON (wichtig: NOT der Versicherungsnehmer!)
 - last_name: Nachname der VERSICHERTEN PERSON
-- birthdate: Geburtsdatum (YYYY-MM-DD)
+- birthdate: Geburtsdatum der VERSICHERTEN PERSON (YYYY-MM-DD)
 - gender: Geschlecht (M/W/X oder leer)
-- policy_holder_name: Name des Versicherungsnehmers (Cache, nicht für Matching)
+- policy_holder_name: Name des VERSICHERUNGSNEHMERS/HAUPTKUNDEN (z.B. Samanta Albertin)
 
 ADRESSDATEN:
 - street: Straßenname und Nummer (z.B. "Musterstrasse 42")

@@ -131,7 +131,12 @@ Deno.serve(async (req) => {
     }
 
     // ── POTENTIAL FAMILY MEMBER: Same last name + address but different first name OR birthdate ──
+    // ALSO: Check if extracted person is a CHILD (under 18) → must have parent with same address
     let potentialFamilyMatches = [];
+    
+    // Check if extracted person is a minor
+    const isMinor = birthdate ? new Date().getFullYear() - new Date(birthdate).getFullYear() < 18 : false;
+    
     for (const customer of customers) {
       const custLastName = (customer.last_name || '').trim().toLowerCase();
       const custStreet = (customer.street || '').trim().toLowerCase();
@@ -144,7 +149,7 @@ Deno.serve(async (req) => {
       const sameLastName = custLastName === lastName;
       
       if (sameAddress && sameLastName) {
-        // BUT: different first name OR different birthdate
+        // BUT: different first name OR different birthdate (family member pattern)
         const differentFirstName = custFirstName !== firstName;
         const differentBirthdate = custBirthdate !== birthdate && birthdate !== null;
         
@@ -153,7 +158,7 @@ Deno.serve(async (req) => {
             customer_id: customer.id,
             customer,
             reason: differentFirstName ? 'different_first_name' : 'different_birthdate',
-            confidence: 75
+            confidence: isMinor ? 95 : 75  // Higher confidence if child
           });
         }
       }
