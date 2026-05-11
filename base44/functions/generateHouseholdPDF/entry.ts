@@ -1,19 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 import { jsPDF } from 'npm:jspdf@4.0.0';
 
-// Helper: Sanitize text for UTF-8 in PDF
-const sanitizeText = (text) => {
-  if (!text) return '';
-  return String(text)
-    .replace(/\u00c4/g, 'Ä')
-    .replace(/\u00d6/g, 'Ö')
-    .replace(/\u00dc/g, 'Ü')
-    .replace(/\u00e4/g, 'ä')
-    .replace(/\u00f6/g, 'ö')
-    .replace(/\u00fc/g, 'ü')
-    .replace(/\u00df/g, 'ß');
-};
-
 // Helper: Format date
 const formatDate = (dateStr) => {
   if (!dateStr) return '–';
@@ -57,97 +44,82 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { customer_id } = await req.json();
 
-    if (!customer_id) {
-      return Response.json({ error: 'Missing customer_id' }, { status: 400 });
-    }
-
     // Fetch data
-    const [customer, allCustomers, contracts, verkaufschancen, tasks] = await Promise.all([
-      base44.entities.Customer.filter({ id: customer_id }).then(res => res[0]),
-      base44.entities.Customer.list(null, 1000),
+    const [allCustomers, contracts, verkaufschancen, tasks] = await Promise.all([
+      base44.entities.Customer.list(null, 500),
       base44.entities.Contract.list(null, 1000),
-      base44.entities.Verkaufschance.filter({ customer_id }),
-      base44.entities.Task.list(null, 1000)
+      base44.entities.Verkaufschance.list(null, 500),
+      base44.entities.Task.list(null, 500),
     ]);
 
-    if (!customer) {
-      return Response.json({ error: 'Customer not found' }, { status: 404 });
-    }
+    const customer = allCustomers.find(c => c.id === customer_id);
+    if (!customer) return Response.json({ error: 'Customer not found' }, { status: 404 });
 
-    // Get household members (primary + family)
+    // Get household
     const primaryCustomerId = customer.primary_customer_id || customer.id;
-    const householdMembers = allCustomers.filter(c =>
-      c.primary_customer_id === primaryCustomerId || c.id === primaryCustomerId
-    ).sort((a, b) => (b.id === primaryCustomerId ? 1 : -1)); // Primary first
+    const householdMembers = [customer, ...allCustomers.filter(c => c.primary_customer_id === primaryCustomerId && c.id !== customer.id)];
+    const customerIds = householdMembers.map(m => m.id);
 
-    // Get contracts and tasks for household
-    const householdCustomerIds = householdMembers.map(m => m.id);
-    const householdContracts = contracts.filter(c => householdCustomerIds.includes(c.customer_id));
-    const householdTasks = tasks.filter(t =>
-      householdCustomerIds.includes(t.customer_id) &&
-      ['open', 'in_progress'].includes(t.status)
-    );
+    const householdContracts = contracts.filter(c => customerIds.includes(c.customer_id));
+    const householdTasks = tasks.filter(t => customerIds.includes(t.customer_id) && t.status !== 'completed');
 
-    // Create PDF in LANDSCAPE format (UTF-8 compatible)
+    // Create PDF in LANDSCAPE
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'A4' });
+    doc.setFont('helvetica');
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
+    const margin = 18;
     let yPos = margin;
 
     // ===== PAGE 1: HOUSEHOLD OVERVIEW =====
 
     // Title
-    doc.setFontSize(24);
+    doc.setFontSize(26);
     doc.setFont('helvetica', 'bold');
-    doc.text(sanitizeText('Haushaltsübersicht'), margin, yPos);
-    yPos += 12;
+    doc.setTextColor(33, 105, 180);
+    doc.text('Haushaltsübersicht', margin, yPos);
+    doc.setTextColor(0, 0, 0);
+    yPos += 14;
 
     // Divider
     doc.setDrawColor(100, 150, 200);
-    doc.setLineWidth(0.5);
+    doc.setLineWidth(1);
     doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 8;
+    yPos += 10;
 
-    // Primary contact + address section
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
-
-    const contactBoxHeight = 40;
-    doc.setFillColor(240, 245, 250);
+    // Primary contact box
+    const contactBoxHeight = 38;
+    doc.setFillColor(235, 245, 255);
     doc.setDrawColor(100, 150, 200);
-    doc.setLineWidth(0.3);
+    doc.setLineWidth(0.8);
     doc.rect(margin, yPos, pageWidth - 2 * margin, contactBoxHeight, 'FD');
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
+    doc.setFontSize(14);
     doc.setTextColor(33, 33, 33);
-    doc.text(sanitizeText(`${customer.first_name} ${customer.last_name}`), margin + 5, yPos + 8);
+    doc.text(`${customer.first_name} ${customer.last_name}`, margin + 6, yPos + 8);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(80, 80, 80);
+    doc.setFontSize(10);
+    doc.setTextColor(70, 70, 70);
     const addressLines = [
-      customer.street ? sanitizeText(`${customer.street}`) : '',
-      `${customer.zip_code} ${sanitizeText(customer.city || '')}`,
+      customer.street || '',
+      `${customer.zip_code} ${customer.city || ''}`,
       customer.email || '',
       customer.phone || ''
     ].filter(l => l);
 
     let addressY = yPos + 16;
     addressLines.forEach(line => {
-      doc.text(line, margin + 5, addressY);
+      doc.text(line, margin + 6, addressY);
       addressY += 5;
     });
 
-    yPos += contactBoxHeight + 10;
+    yPos += contactBoxHeight + 12;
 
     // Summary stats
     const activeContracts = householdContracts.filter(c => c.status === 'active').length;
@@ -160,71 +132,81 @@ Deno.serve(async (req) => {
     }).length;
 
     const stats = [
-      { label: sanitizeText('Familienmitglieder'), value: householdMembers.length },
-      { label: sanitizeText('Aktive Verträge'), value: activeContracts },
-      { label: sanitizeText('Gesellschaften'), value: insurers },
-      { label: sanitizeText('Jahresprämie gesamt'), value: formatCurrency(totalPremium) },
-      { label: sanitizeText('Offene Reviews'), value: openReviews },
-      { label: sanitizeText('Abläufe (180d)'), value: expiringCount }
+      { label: 'Familienmitglieder', value: householdMembers.length },
+      { label: 'Aktive Verträge', value: activeContracts },
+      { label: 'Gesellschaften', value: insurers },
+      { label: 'Jahresprämie gesamt', value: formatCurrency(totalPremium) },
+      { label: 'Offene Reviews', value: openReviews },
+      { label: 'Abläufe (180d)', value: expiringCount }
     ];
 
-    doc.setFontSize(8);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(50, 50, 50);
+    doc.setTextColor(60, 60, 60);
     const statColWidth = (pageWidth - 2 * margin) / 3;
 
     stats.forEach((stat, idx) => {
       const row = Math.floor(idx / 3);
       const col = idx % 3;
       const x = margin + col * statColWidth;
-      const y = yPos + row * 13;
+      const y = yPos + row * 15;
 
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.text(stat.label, x + 3, y);
+      doc.setFontSize(9);
+      doc.text(stat.label, x + 4, y);
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      doc.text(String(stat.value), x + 3, y + 6);
-      doc.setTextColor(50, 50, 50);
+      doc.setFontSize(11);
+      doc.setTextColor(33, 105, 180);
+      doc.text(String(stat.value), x + 4, y + 7);
+      doc.setTextColor(60, 60, 60);
     });
 
-    yPos += 32;
+    yPos += 36;
     doc.setDrawColor(100, 150, 200);
-    doc.setLineWidth(0.5);
+    doc.setLineWidth(1);
     doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 10;
+    yPos += 12;
 
-    // ===== FAMILY MEMBER SECTIONS =====
+    // ===== HOUSEHOLD MEMBERS & CONTRACTS =====
 
     householdMembers.forEach((member, memberIdx) => {
       const memberContracts = householdContracts.filter(c => c.customer_id === member.id);
       
       // Check if we need a new page
-      const estimatedHeight = 50 + memberContracts.length * 8;
+      const estimatedHeight = 55 + memberContracts.length * 8;
       if (yPos + estimatedHeight > pageHeight - margin) {
         doc.addPage();
         yPos = margin;
       }
 
-      // Member header box
-      const headerColor = memberIdx === 0 ? [66, 139, 202] : [100, 150, 180]; // Different colors
+      // Member header
+      const headerColors = [
+        [33, 105, 180],
+        [52, 152, 219],
+        [155, 89, 182],
+        [46, 125, 50]
+      ];
+      const headerColor = headerColors[memberIdx % headerColors.length];
+      
       doc.setFillColor(...headerColor);
-      doc.setTextColor(255, 255, 255);
-      doc.rect(margin, yPos, pageWidth - 2 * margin, 10, 'F');
+      doc.setDrawColor(...headerColor);
+      doc.setLineWidth(0.8);
+      doc.rect(margin, yPos, pageWidth - 2 * margin, 12, 'FD');
 
+      doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
+      doc.setFontSize(12);
       const roleLabel = member.id === customer.id ? '(Hauptkontakt)' : `(${member.family_role === 'spouse' ? 'Ehepartner/in' : member.family_role === 'child' ? 'Kind' : 'Familienmitglied'})`;
-      doc.text(`${member.first_name} ${member.last_name} ${roleLabel}`, margin + 5, yPos + 6.5);
+      doc.text(`${member.first_name} ${member.last_name} ${roleLabel}`, margin + 6, yPos + 8);
       doc.setTextColor(0, 0, 0);
 
-      yPos += 12;
+      yPos += 16;
 
       // Member info
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
+      doc.setFontSize(10);
+      doc.setTextColor(70, 70, 70);
       const infoLines = [
         member.birthdate ? `Geb.: ${formatDate(member.birthdate)}` : '',
         `Verträge: ${memberContracts.length}`,
@@ -232,14 +214,13 @@ Deno.serve(async (req) => {
       ].filter(l => l);
 
       infoLines.forEach((line, idx) => {
-        doc.text(line, margin + 5, yPos + idx * 5);
+        doc.text(line, margin + 6, yPos + idx * 5.5);
       });
 
-      yPos += infoLines.length * 5 + 5;
+      yPos += infoLines.length * 5.5 + 8;
 
-      // Contracts table header
+      // Contracts table
       if (memberContracts.length > 0) {
-        const tableTop = yPos;
         const colWidths = {
           sparte: 35,
           insurer: 45,
@@ -248,9 +229,11 @@ Deno.serve(async (req) => {
           premium: 30
         };
 
-        doc.setFillColor(230, 230, 230);
+        // Table header
+        doc.setFillColor(...headerColor);
+        doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
+        doc.setFontSize(9);
 
         const headers = [
           { label: 'Sparte', width: colWidths.sparte },
@@ -262,58 +245,60 @@ Deno.serve(async (req) => {
 
         let xPos = margin;
         headers.forEach(h => {
-          doc.rect(xPos, yPos, h.width, 7, 'F');
-          doc.text(h.label, xPos + 2, yPos + 5);
+          doc.setLineWidth(0.3);
+          doc.rect(xPos, yPos, h.width, 8, 'F');
+          doc.text(h.label, xPos + 2, yPos + 5.5);
           xPos += h.width;
         });
 
-        yPos += 8;
+        yPos += 9;
 
         // Contract rows
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
+        doc.setFontSize(9);
+        doc.setTextColor(0, 0, 0);
 
         memberContracts.forEach(contract => {
           const statusColor = getStatusColor(contract);
           xPos = margin;
 
-          // Row background color based on status
+          // Row background
           doc.setFillColor(...statusColor.bg);
-          doc.rect(xPos, yPos, pageWidth - 2 * margin, 6, 'F');
+          doc.setLineWidth(0.2);
+          doc.rect(xPos, yPos, pageWidth - 2 * margin, 7.5, 'F');
 
           doc.setTextColor(...statusColor.text);
 
           // Sparte
-          doc.text(contract.sparte || contract.insurance_type || '–', xPos + 2, yPos + 4.5);
+          doc.text(contract.sparte || contract.insurance_type || '–', xPos + 2, yPos + 5);
           xPos += colWidths.sparte;
 
           // Insurer
-          doc.text(contract.insurer || '–', xPos + 2, yPos + 4.5);
+          doc.text(contract.insurer || '–', xPos + 2, yPos + 5);
           xPos += colWidths.insurer;
 
           // Policy
-          doc.text(contract.policy_number || '–', xPos + 2, yPos + 4.5);
+          doc.text(contract.policy_number || '–', xPos + 2, yPos + 5);
           xPos += colWidths.policy;
 
           // Expiry
           if (contract.end_date) {
             const days = getDaysUntilExpiry(contract.end_date);
             const expiryText = days === null ? formatDate(contract.end_date) : `${formatDate(contract.end_date)} (${days}d)`;
-            doc.text(expiryText, xPos + 2, yPos + 4.5);
+            doc.text(expiryText, xPos + 2, yPos + 5);
           } else {
-            doc.text('–', xPos + 2, yPos + 4.5);
+            doc.text('–', xPos + 2, yPos + 5);
           }
           xPos += colWidths.expiry;
 
           // Premium
-          doc.text(formatCurrency(contract.premium_yearly), xPos + 2, yPos + 4.5);
+          doc.text(formatCurrency(contract.premium_yearly), xPos + 2, yPos + 5);
 
-          doc.setTextColor(0, 0, 0);
-          yPos += 7;
+          yPos += 8;
         });
       }
 
-      yPos += 8;
+      yPos += 12;
     });
 
     // ===== FINAL PAGE: OPPORTUNITIES & REVIEWS =====
@@ -323,95 +308,92 @@ Deno.serve(async (req) => {
       yPos = margin;
     }
 
-    doc.setDrawColor(200, 200, 200);
-    doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 8;
-
     doc.setDrawColor(100, 150, 200);
-    doc.setLineWidth(0.5);
+    doc.setLineWidth(1);
     doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 8;
+    yPos += 12;
 
-    doc.setFontSize(13);
+    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(33, 105, 180);
-    doc.text(sanitizeText('Beratungspotential & Abläufe'), margin, yPos);
-    yPos += 10;
+    doc.text('Beratungspotential & Abläufe', margin, yPos);
+    yPos += 11;
 
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
 
     // Open opportunities
-    const openOpportunities = verkaufschancen.filter(v => !['gewonnen', 'verloren'].includes(v.status));
+    const openOpportunities = verkaufschancen.filter(v => v.customer_id === customer.id && !['gewonnen', 'verloren'].includes(v.status));
     if (openOpportunities.length > 0) {
       doc.setFont('helvetica', 'bold');
-      doc.text(sanitizeText('Offene Verkaufschancen:'), margin, yPos);
-      yPos += 6;
+      doc.text('Offene Verkaufschancen:', margin, yPos);
+      yPos += 7;
 
       doc.setFont('helvetica', 'normal');
       openOpportunities.slice(0, 5).forEach(opp => {
-        doc.text(sanitizeText(`• ${opp.title} (${opp.sparte || '–'})`), margin + 5, yPos);
-        yPos += 5;
+        doc.text(`• ${opp.title} (${opp.sparte || '–'})`, margin + 5, yPos);
+        yPos += 5.5;
       });
 
-      yPos += 3;
+      yPos += 4;
     }
 
     // Open reviews
     if (householdTasks.length > 0) {
       doc.setFont('helvetica', 'bold');
-      doc.text(sanitizeText('Offene Aufgaben:'), margin, yPos);
-      yPos += 6;
+      doc.text('Offene Aufgaben:', margin, yPos);
+      yPos += 7;
 
       doc.setFont('helvetica', 'normal');
       householdTasks.slice(0, 5).forEach(task => {
-        const priorityEmoji = task.priority === 'urgent' ? '[!]' : task.priority === 'high' ? '[!]' : '[i]';
-        doc.text(sanitizeText(`${priorityEmoji} ${task.title}`), margin + 5, yPos);
-        yPos += 5;
+        doc.text(`• ${task.title}`, margin + 5, yPos);
+        yPos += 5.5;
       });
 
-      yPos += 3;
+      yPos += 4;
     }
 
     // Status legend
     yPos += 8;
     doc.setDrawColor(100, 150, 200);
-    doc.setLineWidth(0.5);
+    doc.setLineWidth(1);
     doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 8;
+    yPos += 10;
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
+    doc.setFontSize(11);
     doc.setTextColor(33, 105, 180);
-    doc.text(sanitizeText('Status-Farbcodierung:'), margin, yPos);
-    yPos += 7;
+    doc.text('Status-Farbcodierung:', margin, yPos);
+    yPos += 8;
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(9);
+    doc.setTextColor(60, 60, 60);
 
     const legend = [
-      { color: [200, 230, 201], label: sanitizeText('GRÜN: stabil – keine Massnahmen nötig') },
-      { color: [255, 235, 130], label: sanitizeText('ORANGE: Warnung – Ablauf in < 90 Tagen') },
-      { color: [255, 179, 71], label: sanitizeText('ORANGE-ROT: kritisch – Ablauf in < 30 Tagen') },
-      { color: [255, 205, 210], label: sanitizeText('ROT: überfällig – sofort handeln') }
+      { color: [200, 230, 201], label: 'GRÜN: stabil – keine Massnahmen nötig' },
+      { color: [255, 235, 130], label: 'ORANGE: Warnung – Ablauf in < 90 Tagen' },
+      { color: [255, 179, 71], label: 'ORANGE-ROT: kritisch – Ablauf in < 30 Tagen' },
+      { color: [255, 205, 210], label: 'ROT: überfällig – sofort handeln' }
     ];
 
     legend.forEach(item => {
       doc.setFillColor(...item.color);
-      doc.setDrawColor(...item.color);
-      doc.rect(margin + 5, yPos - 2, 5, 5, 'FD');
-      doc.text(item.label, margin + 12, yPos);
-      yPos += 6;
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.2);
+      doc.rect(margin + 5, yPos - 2.5, 6, 6, 'FD');
+      doc.text(item.label, margin + 13, yPos);
+      yPos += 7;
     });
 
     // Footer
-    yPos += 8;
-    doc.setFontSize(7);
+    doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
     doc.setFont('helvetica', 'normal');
-    doc.text(sanitizeText(`Erstellt: ${new Date().toLocaleDateString('de-CH', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`), margin, pageHeight - 5);
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('de-CH') + ', ' + now.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+    doc.text(`Erstellt: ${dateStr}`, margin, pageHeight - 6);
 
     // Export PDF as binary
     const pdfBytes = doc.output('arraybuffer');
