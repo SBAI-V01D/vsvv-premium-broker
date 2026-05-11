@@ -227,6 +227,10 @@ Deno.serve(async (req) => {
       doc.setFontSize(11);
       doc.setTextColor(255, 255, 255);
       doc.text(`${member.first_name || ''} ${member.last_name || ''} ${roleLabel}`, margin + 4, yPos + 9);
+      
+      // Farbe zurücksetzen NACH Header
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
 
       yPos += 16;
@@ -294,6 +298,8 @@ Deno.serve(async (req) => {
           doc.setFillColor(...status.bg);
           doc.rect(margin, yPos, pageWidth - 2 * margin, 7.5, 'F');
 
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
           doc.setTextColor(...status.text);
 
           // Sparte
@@ -316,6 +322,8 @@ Deno.serve(async (req) => {
           // Jahresprämie
           doc.text(formatCurrency(contract.premium_yearly).substring(0, 12), margin + colWidths.sparte + colWidths.insurer + colWidths.policy + colWidths.expiry + 2, yPos + 5);
 
+          // Farbe zurücksetzen für nächste Zeile
+          doc.setTextColor(0, 0, 0);
           yPos += 8;
         });
 
