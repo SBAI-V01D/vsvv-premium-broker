@@ -365,12 +365,20 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       // CRITICAL: Check if extracted person is the POLICY HOLDER (Versicherungsnehmer)
       // If policy_holder_name matches a customer → that customer is the Hauptkontakt
       let policyHolderCustomer = null;
+      let isChildOfPolicyHolder = false;
+      
       if (d.policy_holder_name) {
         const phName = d.policy_holder_name.trim().toLowerCase();
         policyHolderCustomer = customers.find(c => {
           const fullName = `${c.first_name} ${c.last_name}`.trim().toLowerCase();
           return fullName === phName;
         });
+        
+        // Check if versicherte Person is DIFFERENT from Versicherungsnehmer
+        const insuredName = `${d.first_name} ${d.last_name}`.trim().toLowerCase();
+        if (policyHolderCustomer && insuredName !== phName) {
+          isChildOfPolicyHolder = true;
+        }
       }
 
       // Call automatic customer matching for VERSICHERTE PERSON (extracted first_name/last_name)
@@ -386,6 +394,29 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         }
       } catch (matchErr) {
         console.warn('[PolicyUploadWizard] Matching error (non-fatal):', matchErr.message);
+      }
+
+      // AUTO-SKIP TO STEP 3 if policy holder found and child detected
+      if (isChildOfPolicyHolder && policyHolderCustomer) {
+        setSelectedCustomer(policyHolderCustomer);
+        setCustomerMode('policy_holder_main');
+        setNewCustomerData({
+          first_name: (d.first_name || '').trim(),
+          last_name: (d.last_name || '').trim(),
+          birthdate: d.birthdate || '',
+          email: policyHolderCustomer.email || '', // Inherit from policy holder
+          phone: (d.phone || '').trim(),
+          mobile: (d.mobile || '').trim(),
+          street: (d.street || '').trim(),
+          city: (d.city || '').trim(),
+          zip_code: (d.zip_code || '').trim(),
+          canton: (d.canton || '').trim(),
+          family_role: d.role === 'Kind' ? 'child' : d.role === 'Ehepartner' ? 'spouse' : 'other'
+        });
+        setContractList([baseContract, ...additionalContracts]);
+        setActiveContractIdx(0);
+        setStep(3);
+        return;
       }
 
       // Build contracts from extracted data
