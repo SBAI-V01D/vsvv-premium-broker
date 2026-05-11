@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
   ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink, AlertCircle,
-  Megaphone, Mail, Zap, Target, ShieldCheck, BarChart3, User, Briefcase
+  Megaphone, Mail, Zap, Target, ShieldCheck, BarChart3, User, Briefcase, TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -57,6 +57,7 @@ const navGroups = [
     label: 'Akquisition',
     items: [
       { label: 'Lead Pipeline',       icon: Target,    path: '/leads' },
+      { label: 'Verkaufschancen',     icon: TrendingUp, path: '/verkaufschancen' },
       { label: 'Coverage & Upselling',icon: ShieldCheck,path: '/coverage-intelligence' },
       { label: 'Aufgaben',            icon: CheckSquare, path: '/aufgaben' },
     ],

@@ -1,0 +1,157 @@
+{
+  "name": "Verkaufschance",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Bezeichnung der Verkaufschance / Ausschreibung"
+    },
+    "customer_id": {
+      "type": "string",
+      "description": "Kunden-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Kundenname (Cache)"
+    },
+    "organization_id": {
+      "type": "string",
+      "description": "Organisations-ID"
+    },
+    "advisor_id": {
+      "type": "string",
+      "description": "Berater-ID"
+    },
+    "assigned_broker": {
+      "type": "string",
+      "description": "Zust\u00e4ndiger Broker (E-Mail)"
+    },
+    "linked_contract_id": {
+      "type": "string",
+      "description": "Optionaler verkn\u00fcpfter Vertrag (bei Verl\u00e4ngerung/Mutation)"
+    },
+    "contact_person": {
+      "type": "string",
+      "description": "Ansprechperson beim Kunden (optional)"
+    },
+    "sparte": {
+      "type": "string",
+      "description": "Versicherungssparte"
+    },
+    "insurance_type": {
+      "type": "string",
+      "description": "Versicherungsart"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "neu",
+        "in_ausschreibung",
+        "offerten_erhalten",
+        "beratung_erfolgt",
+        "kunde_entscheidet",
+        "gewonnen",
+        "verloren",
+        "wiedervorlage"
+      ],
+      "default": "neu",
+      "description": "Status der Verkaufschance"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "default": "medium",
+      "description": "Priorit\u00e4t"
+    },
+    "estimated_value": {
+      "type": "number",
+      "description": "Gesch\u00e4tzter Jahrespr\u00e4mien-Wert (CHF)"
+    },
+    "expected_close_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Erwartetes Abschlussdatum"
+    },
+    "start_date_requested": {
+      "type": "string",
+      "format": "date",
+      "description": "Gew\u00fcnschtes Versicherungsbeginn-Datum"
+    },
+    "selected_insurer": {
+      "type": "string",
+      "description": "Vom Kunden gew\u00e4hlte Gesellschaft (nach Entscheid)"
+    },
+    "won_contract_id": {
+      "type": "string",
+      "description": "Erstellter Vertrags-ID (nach Gewinn)"
+    },
+    "lost_reason": {
+      "type": "string",
+      "description": "Verlustgrund"
+    },
+    "wiedervorlage_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Wiedervorlagedatum"
+    },
+    "gesellschaften": {
+      "type": "array",
+      "description": "Angefragte Gesellschaften mit Offerten",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "gesellschaft": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "angefragt",
+              "offerte_erhalten",
+              "abgelehnt",
+              "favorit",
+              "ausgewaehlt"
+            ]
+          },
+          "praemie_yearly": {
+            "type": "number"
+          },
+          "deckung": {
+            "type": "string"
+          },
+          "dokument_url": {
+            "type": "string"
+          },
+          "dokument_name": {
+            "type": "string"
+          },
+          "antwort_datum": {
+            "type": "string"
+          },
+          "ist_favorit": {
+            "type": "boolean"
+          },
+          "bemerkung": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notizen / Kundenbed\u00fcrfnis"
+    }
+  },
+  "required": [
+    "customer_id",
+    "sparte",
+    "status"
+  ]
+}

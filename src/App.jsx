@@ -34,6 +34,7 @@ import CoverageIntelligence from './pages/CoverageIntelligence'
 import AdminLogs from './pages/AdminLogs'
 import Partners from './pages/Partners'
 import PartnerDetail from './pages/PartnerDetail'
+import Verkaufschancen from './pages/Verkaufschancen'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -117,6 +118,7 @@ const AuthenticatedApp = () => {
         <Route path="/admin-logs" element={<AdminLogs />} />
         <Route path="/partner" element={<Partners />} />
         <Route path="/partner/:id" element={<PartnerDetail />} />
+        <Route path="/verkaufschancen" element={<Verkaufschancen />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

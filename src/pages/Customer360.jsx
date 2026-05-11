@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { getSparteLabel } from '@/lib/insuranceSparten'
 import { base44 } from '@/api/base44Client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,12 +13,34 @@ import {
   CheckCircle2, Clock, AlertCircle, Download, MessageSquare 
 } from 'lucide-react'
 import NewOfferDialog from '@/components/customers/NewOfferDialog'
+import VerkaufschanceStatusBadge from '@/components/verkaufschance/VerkaufschanceStatusBadge'
+import VerkaufschanceForm from '@/components/verkaufschance/VerkaufschanceForm'
+import VerkaufschanceDetail from '@/components/verkaufschance/VerkaufschanceDetail'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 export default function Customer360() {
   const { customerId } = useParams()
   const navigate = useNavigate()
   const [contractFilter, setContractFilter] = useState('active')
   const [showOfferDialog, setShowOfferDialog] = useState(false)
+  const [showVsForm, setShowVsForm] = useState(false)
+  const [selectedVsId, setSelectedVsId] = useState(null)
+  const queryClient = useQueryClient()
+
+  const { data: verkaufschancen = [] } = useQuery({
+    queryKey: ['verkaufschancen', customerId],
+    queryFn: () => base44.entities.Verkaufschance.filter({ customer_id: customerId }),
+  })
+
+  const createVsMutation = useMutation({
+    mutationFn: (data) => base44.entities.Verkaufschance.create(data),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['verkaufschancen', customerId] })
+      setShowVsForm(false)
+      setSelectedVsId(result.id)
+    },
+  })
 
   // Data fetching
   const { data: customer, isLoading: customerLoading } = useQuery({
@@ -88,8 +111,9 @@ export default function Customer360() {
       renewalsSoon,
       openApplications: applications.filter(a => a.status !== 'approved' && a.status !== 'rejected').length,
       openTasks: tasks.filter(t => t.status === 'open' || t.status === 'in_progress').length,
+      openVs: verkaufschancen.filter(v => !['gewonnen', 'verloren'].includes(v.status)).length,
     }
-  }, [contracts, applications, tasks])
+  }, [contracts, applications, tasks, verkaufschancen])
 
   const filteredContracts = useMemo(() => {
     return contracts.filter(c => {
@@ -129,8 +153,8 @@ export default function Customer360() {
 
         {/* QUICK ACTIONS */}
         <div className="flex gap-2 flex-wrap sm:flex-col">
-          <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={() => setShowOfferDialog(true)}>
-            <Plus className="w-4 h-4 mr-1" /> Angebot
+          <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={() => setShowVsForm(true)}>
+            <Plus className="w-4 h-4 mr-1" /> Verkaufschance
           </Button>
           <Button size="sm" variant="outline">
             <MessageSquare className="w-4 h-4 mr-1" /> Kontakt
@@ -217,7 +241,7 @@ export default function Customer360() {
       <Tabs defaultValue="contracts" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="contracts">📜 Verträge ({filteredContracts.length})</TabsTrigger>
-          <TabsTrigger value="applications">📋 Anträge ({metrics.openApplications})</TabsTrigger>
+          <TabsTrigger value="verkaufschancen">🎯 Chancen ({metrics.openVs})</TabsTrigger>
           <TabsTrigger value="tasks">✓ Aufgaben ({metrics.openTasks})</TabsTrigger>
           <TabsTrigger value="documents">📎 Dokumente ({documents.length})</TabsTrigger>
         </TabsList>
@@ -314,34 +338,60 @@ export default function Customer360() {
           )}
         </TabsContent>
 
-        {/* APPLICATIONS */}
-        <TabsContent value="applications" className="space-y-3">
-          {applications.length === 0 ? (
+        {/* VERKAUFSCHANCEN */}
+        <TabsContent value="verkaufschancen" className="space-y-3">
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-muted-foreground">{verkaufschancen.length} Verkaufschance(n)</p>
+            <Button size="sm" onClick={() => setShowVsForm(true)} className="gap-1.5">
+              <Plus className="w-3.5 h-3.5" /> Neue Chance
+            </Button>
+          </div>
+          {verkaufschancen.length === 0 ? (
             <Card>
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground text-center">Keine Anträge</p>
+              <CardContent className="pt-8 pb-8 text-center">
+                <p className="text-sm text-muted-foreground">Noch keine Verkaufschancen erfasst</p>
+                <Button size="sm" variant="outline" className="mt-3" onClick={() => setShowVsForm(true)}>
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Erste Chance erfassen
+                </Button>
               </CardContent>
             </Card>
           ) : (
-            applications.map(app => (
-              <Card key={app.id} className="border-l-4 border-l-cyan-500">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-bold text-slate-900">{app.product || app.sparte}</p>
-                      <p className="text-xs text-muted-foreground">{app.insurer}</p>
+            verkaufschancen.map(vs => {
+              const gesellschaften = vs.gesellschaften || []
+              const isSelected = selectedVsId === vs.id
+              return (
+                <Card key={vs.id}
+                  className={`border-l-4 cursor-pointer transition-all hover:shadow-md ${
+                    vs.status === 'gewonnen' ? 'border-l-green-500' :
+                    vs.status === 'verloren' ? 'border-l-red-400' :
+                    'border-l-primary'
+                  }`}
+                  onClick={() => setSelectedVsId(vs.id)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm">{vs.title || getSparteLabel(vs.sparte)}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{getSparteLabel(vs.sparte)}</p>
+                        {gesellschaften.length > 0 && (
+                          <div className="flex gap-1 mt-1.5 flex-wrap">
+                            {gesellschaften.slice(0, 4).map(g => (
+                              <span key={g.id} className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200 font-medium">
+                                {g.gesellschaft}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {vs.estimated_value && (
+                          <p className="text-xs text-emerald-700 font-semibold mt-1.5">CHF {vs.estimated_value.toLocaleString('de-CH')}/J.</p>
+                        )}
+                      </div>
+                      <VerkaufschanceStatusBadge status={vs.status} size="xs" />
                     </div>
-                    <Badge className={
-                      app.status === 'approved' ? 'bg-green-100 text-green-700' :
-                      app.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                      'bg-yellow-100 text-yellow-700'
-                    }>
-                      {app.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+                  </CardContent>
+                </Card>
+              )
+            })
           )}
         </TabsContent>
 
@@ -415,13 +465,50 @@ export default function Customer360() {
         </TabsContent>
       </Tabs>
 
-      {/* NEW OFFER DIALOG */}
+      {/* NEW OFFER DIALOG (legacy, kept for compatibility) */}
       {customer && (
         <NewOfferDialog
           open={showOfferDialog}
           onOpenChange={setShowOfferDialog}
           customer={customer}
         />
+      )}
+
+      {/* NEUE VERKAUFSCHANCE */}
+      <Dialog open={showVsForm} onOpenChange={setShowVsForm}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Neue Verkaufschance</DialogTitle>
+          </DialogHeader>
+          {customer && (
+            <VerkaufschanceForm
+              customer={customer}
+              onSave={(data) => createVsMutation.mutate(data)}
+              onCancel={() => setShowVsForm(false)}
+              saving={createVsMutation.isPending}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* VERKAUFSCHANCE DETAIL */}
+      {selectedVsId && (
+        <Dialog open={!!selectedVsId} onOpenChange={(o) => { if (!o) setSelectedVsId(null) }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle className="sr-only">Verkaufschance</DialogTitle></DialogHeader>
+            {(() => {
+              const vs = verkaufschancen.find(v => v.id === selectedVsId)
+              return vs && customer ? (
+                <VerkaufschanceDetail
+                  verkaufschance={vs}
+                  customer={customer}
+                  onClose={() => setSelectedVsId(null)}
+                  onUpdated={() => queryClient.invalidateQueries({ queryKey: ['verkaufschancen', customerId] })}
+                />
+              ) : null
+            })()}
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* AI RECOMMENDATIONS */}
