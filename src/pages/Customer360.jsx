@@ -16,6 +16,7 @@ import NewOfferDialog from '@/components/customers/NewOfferDialog'
 import VerkaufschanceStatusBadge from '@/components/verkaufschance/VerkaufschanceStatusBadge'
 import VerkaufschanceForm from '@/components/verkaufschance/VerkaufschanceForm'
 import VerkaufschanceDetail from '@/components/verkaufschance/VerkaufschanceDetail'
+import CrossSellingPanel from '@/components/verkaufschance/CrossSellingPanel'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
@@ -239,9 +240,10 @@ export default function Customer360() {
 
       {/* TABS: VERTRÄGE, ANTRÄGE, AUFGABEN, AKTIVITÄTEN */}
       <Tabs defaultValue="contracts" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="contracts">📜 Verträge ({filteredContracts.length})</TabsTrigger>
           <TabsTrigger value="verkaufschancen">🎯 Chancen ({metrics.openVs})</TabsTrigger>
+          <TabsTrigger value="crossselling">💡 Cross-Selling</TabsTrigger>
           <TabsTrigger value="tasks">✓ Aufgaben ({metrics.openTasks})</TabsTrigger>
           <TabsTrigger value="documents">📎 Dokumente ({documents.length})</TabsTrigger>
         </TabsList>
@@ -461,6 +463,21 @@ export default function Customer360() {
               })}
             </div>
           )}
+        </TabsContent>
+
+        {/* CROSS-SELLING */}
+        <TabsContent value="crossselling" className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold">Cross-Selling & Beratungspotenziale</p>
+              <p className="text-xs text-muted-foreground">Automatisch erkannte Lücken, Optimierungen und Beratungsbedarf</p>
+            </div>
+          </div>
+          <CrossSellingPanel
+            customer={customer}
+            contracts={contracts}
+            verkaufschancen={verkaufschancen}
+          />
         </TabsContent>
 
         {/* TASKS */}
