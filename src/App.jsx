@@ -36,6 +36,7 @@ import Partners from './pages/Partners'
 import PartnerDetail from './pages/PartnerDetail'
 import Verkaufschancen from './pages/Verkaufschancen'
 import Vertragsablaeufe from './pages/Vertragsablaeufe'
+import AdminTeamAccess from './pages/AdminTeamAccess'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -121,6 +122,7 @@ const AuthenticatedApp = () => {
         <Route path="/partner/:id" element={<PartnerDetail />} />
         <Route path="/verkaufschancen" element={<Verkaufschancen />} />
         <Route path="/vertragsablaeufe" element={<Vertragsablaeufe />} />
+        <Route path="/admin/team-zugriffsrechte" element={<AdminTeamAccess />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
