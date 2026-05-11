@@ -451,152 +451,223 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     setSaving(true)
     setError(null)
 
-    const insuredFirstName = newCustomerData.first_name?.trim()
-    const insuredLastName = newCustomerData.last_name?.trim()
-    const insuredBirthdate = newCustomerData.birthdate
+    try {
+      const insuredFirstName = newCustomerData.first_name?.trim()
+      const insuredLastName = newCustomerData.last_name?.trim()
+      const insuredBirthdate = newCustomerData.birthdate
 
-    let customerId, customerName, orgId, insuredPersonId
+      let customerId, customerName, orgId, insuredPersonId
 
-    // ── OPTION 1: Bestehende Familienstruktur verwenden ──
-    if (customerMode === 'existing_structure') {
-      if (!selectedCustomer) {
-        setError('Bitte einen Kunden auswählen')
-        setSaving(false)
-        return
+      // ── OPTION 1: Bestehende Familienstruktur verwenden ──
+      if (customerMode === 'existing_structure') {
+        if (!selectedCustomer || !selectedCustomer.id) {
+          setError('Bitte einen gültigen Kunden auswählen')
+          setSaving(false)
+          return
+        }
+        customerId = selectedCustomer.id
+        customerName = `${selectedCustomer.first_name || ''} ${selectedCustomer.last_name || ''}`.trim()
+        orgId = selectedCustomer.organization_id
+        insuredPersonId = customerId
+        
+        if (!orgId) {
+          setError('Kunde hat keine Organisation zugewiesen')
+          setSaving(false)
+          return
+        }
       }
-      customerId = selectedCustomer.id
-      customerName = `${selectedCustomer.first_name} ${selectedCustomer.last_name}`
-      orgId = selectedCustomer.organization_id
-      insuredPersonId = customerId  // Vertrag gehört Hauptkontakt
-    }
 
-    // ── OPTION 2: Versicherungsnehmer als Hauptkontakt ──
-    else if (customerMode === 'policy_holder_main') {
-      if (!selectedCustomer) {
-        setError('Bitte den Versicherungsnehmer auswählen oder erstellen')
-        setSaving(false)
-        return
+      // ── OPTION 2: Versicherungsnehmer als Hauptkontakt ──
+      else if (customerMode === 'policy_holder_main') {
+        if (!selectedCustomer || !selectedCustomer.id) {
+          setError('Bitte den Versicherungsnehmer auswählen oder erstellen')
+          setSaving(false)
+          return
+        }
+        customerId = selectedCustomer.id
+        customerName = `${selectedCustomer.first_name || ''} ${selectedCustomer.last_name || ''}`.trim()
+        orgId = selectedCustomer.organization_id
+
+        if (!orgId) {
+          setError('Kunde hat keine Organisation zugewiesen')
+          setSaving(false)
+          return
+        }
+
+        // Versicherte Person als Familienmitglied erstellen?
+        if (insuredFirstName && insuredLastName && `${insuredFirstName} ${insuredLastName}` !== customerName) {
+          const emailValue = newCustomerData.email?.trim()
+            ? newCustomerData.email.trim()
+            : `${insuredFirstName.toLowerCase().replace(/\s+/g, '.')}.${insuredLastName.toLowerCase().replace(/\s+/g, '.')}.${Date.now()}@import.local`
+
+          try {
+            const familyMember = await base44.entities.Customer.create({
+              first_name: insuredFirstName,
+              last_name: insuredLastName,
+              email: emailValue,
+              phone: newCustomerData.phone?.trim() || undefined,
+              birthdate: insuredBirthdate || undefined,
+              street: selectedCustomer.street || undefined,
+              city: selectedCustomer.city || undefined,
+              zip_code: selectedCustomer.zip_code || undefined,
+              canton: selectedCustomer.canton || undefined,
+              organization_id: orgId,
+              status: 'active',
+              customer_type: 'private',
+              is_family_member: true,
+              primary_customer_id: customerId,
+              family_role: 'child'
+            })
+            insuredPersonId = familyMember.id
+          } catch (familyErr) {
+            console.error('[FamilyMember] Erstellung fehlgeschlagen:', familyErr)
+            // Fallback: Vertrag wird dem Hauptkontakt zugeordnet
+            insuredPersonId = customerId
+          }
+        } else {
+          insuredPersonId = customerId
+        }
       }
-      customerId = selectedCustomer.id  // Hauptkontakt
-      customerName = `${selectedCustomer.first_name} ${selectedCustomer.last_name}`
-      orgId = selectedCustomer.organization_id
 
-      // Falls versicherte Person unterschiedlich: als Familienmitglied erstellen
-      if (insuredFirstName && insuredLastName && `${insuredFirstName} ${insuredLastName}` !== customerName) {
+      // ── OPTION 3: Unabhängiger Kunde ──
+      else if (customerMode === 'independent' || customerMode === 'new') {
+        if (!insuredFirstName || !insuredLastName) {
+          setError('Vorname und Nachname sind erforderlich')
+          setSaving(false)
+          return
+        }
+
         const emailValue = newCustomerData.email?.trim()
           ? newCustomerData.email.trim()
-          : `${insuredFirstName.toLowerCase()}.${insuredLastName.toLowerCase()}.${Date.now()}@import.local`
+          : `${insuredFirstName.toLowerCase().replace(/\s+/g, '.')}.${insuredLastName.toLowerCase().replace(/\s+/g, '.')}.${Date.now()}@import.local`
 
-        const familyMember = await base44.entities.Customer.create({
-          first_name: insuredFirstName,
-          last_name: insuredLastName,
-          email: emailValue,
-          phone: newCustomerData.phone || undefined,
-          birthdate: insuredBirthdate || undefined,
-          street: selectedCustomer.street,
-          city: selectedCustomer.city,
-          zip_code: selectedCustomer.zip_code,
-          canton: selectedCustomer.canton,
-          organization_id: orgId,
-          status: 'active',
-          customer_type: 'private',
-          is_family_member: true,
-          primary_customer_id: customerId,
-          family_role: 'child'
-        })
-        insuredPersonId = familyMember.id
-      } else {
-        insuredPersonId = customerId
+        try {
+          const created = await base44.entities.Customer.create({
+            first_name: insuredFirstName,
+            last_name: insuredLastName,
+            email: emailValue,
+            phone: newCustomerData.phone?.trim() || undefined,
+            birthdate: insuredBirthdate || undefined,
+            street: newCustomerData.street?.trim() || undefined,
+            city: newCustomerData.city?.trim() || undefined,
+            zip_code: newCustomerData.zip_code?.trim() || undefined,
+            canton: newCustomerData.canton?.trim() || undefined,
+            organization_id: organizations[0]?.id || '',
+            status: 'active',
+            customer_type: 'private',
+          })
+          customerId = created.id
+          customerName = `${insuredFirstName} ${insuredLastName}`
+          orgId = created.organization_id || organizations[0]?.id || ''
+          insuredPersonId = created.id
+
+          if (!orgId) {
+            setError('Konnte Organisation nicht zuweisen')
+            setSaving(false)
+            return
+          }
+        } catch (createErr) {
+          console.error('[Customer] Erstellung fehlgeschlagen:', createErr)
+          setError(`Kundenerstellung fehlgeschlagen: ${createErr.message || 'Unbekannter Fehler'}`)
+          setSaving(false)
+          return
+        }
       }
-    }
 
-    // ── OPTION 3: Unabhängiger Kunde ──
-    else if (customerMode === 'independent' || customerMode === 'new') {
-      if (!insuredFirstName || !insuredLastName) {
-        setError('Vorname und Nachname sind erforderlich')
+      // Validierung
+      if (!customerId || !insuredPersonId) {
+        setError('Kritischer Fehler: Kunde/Versicherte Person konnte nicht bestimmt werden')
         setSaving(false)
         return
       }
-      const emailValue = newCustomerData.email?.trim()
-        ? newCustomerData.email.trim()
-        : `${insuredFirstName.toLowerCase()}.${insuredLastName.toLowerCase()}.${Date.now()}@import.local`
 
-      const created = await base44.entities.Customer.create({
-        first_name: insuredFirstName,
-        last_name: insuredLastName,
-        email: emailValue,
-        phone: newCustomerData.phone || undefined,
-        birthdate: insuredBirthdate || undefined,
-        street: newCustomerData.street || undefined,
-        city: newCustomerData.city || undefined,
-        zip_code: newCustomerData.zip_code || undefined,
-        canton: newCustomerData.canton || undefined,
-        organization_id: organizations[0]?.id || '',
-        status: 'active',
-        customer_type: 'private',
-      })
-      customerId = created.id
-      customerName = `${insuredFirstName} ${insuredLastName}`
-      orgId = created.organization_id || organizations[0]?.id || ''
-      insuredPersonId = created.id
-    }
+      if (!contract?.insurer) {
+        setError('Versicherungsgesellschaft ist erforderlich')
+        setSaving(false)
+        return
+      }
 
-    if (!customerId) {
-      setError('Kunde konnte nicht erstellt werden')
+      if (!orgId) {
+        setError('Organisation konnte nicht bestimmt werden')
+        setSaving(false)
+        return
+      }
+
+      // Verträge erstellen
+      let firstContract = null
+      for (let i = 0; i < contractList.length; i++) {
+        const c = contractList[i]
+        if (!c.insurer) continue
+
+        try {
+          const created = await base44.entities.Contract.create({
+            customer_id: insuredPersonId,
+            customer_name: insuredFirstName && insuredLastName ? `${insuredFirstName} ${insuredLastName}` : customerName,
+            primary_customer_id: customerId,
+            is_family_member: insuredPersonId !== customerId,
+            organization_id: orgId,
+            advisor_id: selectedCustomer?.advisor_id || undefined,
+            insurer: c.insurer,
+            policy_number: c.policy_number?.trim() || undefined,
+            insurance_type: c.sparte || undefined,
+            sparte: c.sparte || undefined,
+            sparte_data: c.sparte_data && Object.keys(c.sparte_data).length > 0 ? c.sparte_data : undefined,
+            product: c.product?.trim() || undefined,
+            premium_monthly: c.premium_monthly ? Number(c.premium_monthly) : undefined,
+            premium_yearly: c.premium_yearly ? Number(c.premium_yearly) : undefined,
+            start_date: c.start_date || undefined,
+            end_date: c.end_date || undefined,
+            cancellation_deadline: c.cancellation_deadline || undefined,
+            status: 'active',
+            policy_document_url: i === 0 && fileUrl ? fileUrl : undefined,
+            notes: c.notes?.trim() || undefined,
+          })
+          if (i === 0) firstContract = created
+        } catch (contractErr) {
+          console.error(`[Contract ${i}] Erstellung fehlgeschlagen:`, contractErr)
+          if (i === 0) {
+            setError(`Vertragserstellung fehlgeschlagen: ${contractErr.message || 'Unbekannter Fehler'}`)
+            setSaving(false)
+            return
+          }
+          // Fehler bei Zusatzversicherungen nicht kritisch → weitermachen
+        }
+      }
+
+      if (!firstContract) {
+        setError('Mindestens ein Vertrag muss erstellt werden')
+        setSaving(false)
+        return
+      }
+
+      // Dokument verknüpfen
+      if (fileUrl && firstContract?.id) {
+        try {
+          await base44.entities.Document.create({
+            name: fileName,
+            file_url: fileUrl,
+            customer_id: insuredPersonId,
+            customer_name: insuredFirstName && insuredLastName ? `${insuredFirstName} ${insuredLastName}` : customerName,
+            category: 'contract',
+            doc_type: 'anlage',
+            classification_status: 'klassifiziert',
+            linked_contract_id: firstContract.id,
+          })
+        } catch (docErr) {
+          console.warn('[Document] Verknüpfung fehlgeschlagen:', docErr)
+          // Nicht kritisch
+        }
+      }
+
       setSaving(false)
-      return
-    }
-    if (!contract.insurer) {
-      setError('Versicherungsgesellschaft ist erforderlich')
+      setStep(4)
+      onContractCreated?.(firstContract)
+
+    } catch (err) {
+      console.error('[handleSave] Unerwarteter Fehler:', err)
+      setError(`Fehler: ${err.message || 'Unbekannter Fehler beim Speichern'}`)
       setSaving(false)
-      return
     }
-
-    let firstContract = null
-    for (let i = 0; i < contractList.length; i++) {
-      const c = contractList[i]
-      if (!c.insurer) continue
-      const created = await base44.entities.Contract.create({
-        customer_id: insuredPersonId,  // Versicherte Person (kann Kind sein)
-        customer_name: insuredFirstName && insuredLastName ? `${insuredFirstName} ${insuredLastName}` : customerName,
-        primary_customer_id: customerId,  // Hauptkontakt (Versicherungsnehmer)
-        is_family_member: insuredPersonId !== customerId,
-        organization_id: orgId,
-        advisor_id: selectedCustomer?.advisor_id || undefined,
-        insurer: c.insurer,
-        policy_number: c.policy_number || undefined,
-        insurance_type: c.sparte || undefined,
-        sparte: c.sparte || undefined,
-        sparte_data: c.sparte_data && Object.keys(c.sparte_data).length > 0 ? c.sparte_data : undefined,
-        product: c.product || undefined,
-        premium_monthly: c.premium_monthly ? Number(c.premium_monthly) : undefined,
-        premium_yearly: c.premium_yearly ? Number(c.premium_yearly) : undefined,
-        start_date: c.start_date || undefined,
-        end_date: c.end_date || undefined,
-        cancellation_deadline: c.cancellation_deadline || undefined,
-        status: 'active',
-        policy_document_url: i === 0 && fileUrl ? fileUrl : undefined,
-        notes: c.notes || undefined,
-      })
-      if (i === 0) firstContract = created
-    }
-
-    if (fileUrl && firstContract) {
-      await base44.entities.Document.create({
-        name: fileName,
-        file_url: fileUrl,
-        customer_id: insuredPersonId,
-        customer_name: insuredFirstName && insuredLastName ? `${insuredFirstName} ${insuredLastName}` : customerName,
-        category: 'contract',
-        doc_type: 'anlage',
-        classification_status: 'klassifiziert',
-        linked_contract_id: firstContract.id,
-      })
-    }
-
-    setSaving(false)
-    setStep(4)
-    onContractCreated?.(firstContract)
   }
 
   const handleClose = () => {
