@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,31 +7,54 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   Upload, Loader2, CheckCircle2, AlertTriangle, User, UserPlus,
-  FileText, Search, X, ChevronRight, Edit2
+  FileText, Search, X, ChevronRight, MapPin
 } from 'lucide-react'
 import { base44 } from '@/api/base44Client'
-// matchCustomers helper (inline fuzzy matching)
-const matchCustomers = (matchData, customers) => {
-  const candidates = customers
-    .map(c => {
-      let score = 0;
-      const hay = [c.first_name, c.last_name, c.company_name, c.email].filter(Boolean).join(' ').toLowerCase();
-      if (matchData.first_name && hay.includes(matchData.first_name.toLowerCase())) score += 30;
-      if (matchData.last_name && hay.includes(matchData.last_name.toLowerCase())) score += 30;
-      if (matchData.email && c.email && c.email.toLowerCase() === matchData.email.toLowerCase()) score += 40;
-      return { customer: c, score };
-    })
-    .filter(x => x.score > 0)
-    .sort((a, b) => b.score - a.score);
-  return { candidates };
-};
+import { lookupPostalCode, fixOcrPostalCode } from '@/lib/swissPostalCodes'
 import { ALL_SPARTEN, getFieldsForSparte, FRANCHISE_OPTIONS } from '@/lib/insuranceSparten'
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 const grouped = ALL_SPARTEN.reduce((acc, s) => {
   if (!acc[s.group]) acc[s.group] = []
   acc[s.group].push(s)
   return acc
 }, {})
+
+const matchCustomers = (matchData, customers) => {
+  const candidates = customers
+    .map(c => {
+      let score = 0
+      if (matchData.first_name && c.first_name?.toLowerCase() === matchData.first_name.toLowerCase()) score += 35
+      if (matchData.last_name && c.last_name?.toLowerCase() === matchData.last_name.toLowerCase()) score += 35
+      if (matchData.email && c.email && c.email.toLowerCase() === matchData.email.toLowerCase()) score += 40
+      if (matchData.birthdate && c.birthdate === matchData.birthdate) score += 20
+      if (matchData.zip_code && c.zip_code === matchData.zip_code) score += 10
+      return { customer: c, score }
+    })
+    .filter(x => x.score >= 35)
+    .sort((a, b) => b.score - a.score)
+  return candidates
+}
+
+function mapInsuranceType(type) {
+  if (!type) return ''
+  const t = type.toLowerCase()
+  if (t.includes('kvg') || t.includes('kranken')) return 'kvg'
+  if (t.includes('vvg') || t.includes('zusatz')) return 'vvg_zusatz'
+  if (t.includes('3a')) return 'leben_3a'
+  if (t.includes('3b') || t.includes('leben')) return 'leben_3b'
+  if (t.includes('motorfahrzeug') || t.includes('auto')) return 'motorfahrzeug'
+  if (t.includes('hausrat')) return 'hausrat'
+  if (t.includes('haftpflicht') && t.includes('betrieb')) return 'betriebshaftpflicht'
+  if (t.includes('haftpflicht')) return 'haftpflicht_privat'
+  if (t.includes('unfall')) return 'unfall_privat'
+  if (t.includes('rechtsschutz')) return 'rechtsschutz_privat'
+  if (t.includes('bvg') || t.includes('pensionskasse')) return 'bvg'
+  if (t.includes('uvg')) return 'uvg'
+  if (t.includes('ktg') || t.includes('krankentaggeld')) return 'ktg'
+  if (t.includes('gebäude')) return 'gebaude_privat'
+  return ''
+}
 
 // ── Step indicator ────────────────────────────────────────────────────────────
 function StepBadge({ n, label, active, done }) {
@@ -57,11 +80,9 @@ function CustomerSearch({ customers, onSelect }) {
     <div className="space-y-2">
       <div className="relative">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-        <Input
-          value={q} onChange={e => setQ(e.target.value)}
+        <Input value={q} onChange={e => setQ(e.target.value)}
           placeholder="Name, Firma oder E-Mail (min. 2 Zeichen)"
-          className="pl-8 h-9 text-sm" autoFocus
-        />
+          className="pl-8 h-9 text-sm" autoFocus />
       </div>
       {q.length >= 2 && results.length === 0 && (
         <p className="text-xs text-muted-foreground px-1">Kein Treffer</p>
@@ -82,12 +103,34 @@ function CustomerSearch({ customers, onSelect }) {
   )
 }
 
-// ── New customer mini-form ────────────────────────────────────────────────────
+// ── New customer mini-form WITH PLZ auto-lookup ───────────────────────────────
 function NewCustomerForm({ data, onChange }) {
+  const [plzSuggestions, setPlzSuggestions] = useState(null)
   const set = (k, v) => onChange({ ...data, [k]: v })
+
+  const handlePlzChange = (raw) => {
+    set('zip_code', raw)
+    const plz = fixOcrPostalCode(raw.replace(/\D/g, ''))
+    if (plz.length !== 4) return
+    const result = lookupPostalCode(plz)
+    if (!result) return
+    if (!Array.isArray(result)) {
+      onChange({ ...data, zip_code: plz, city: result.ort, canton: result.kanton })
+      setPlzSuggestions(null)
+    } else if (result.length > 1) {
+      set('zip_code', plz)
+      setPlzSuggestions(result)
+    }
+  }
+
+  const selectSuggestion = (s) => {
+    onChange({ ...data, city: s.ort, canton: s.kanton })
+    setPlzSuggestions(null)
+  }
+
   return (
     <div className="space-y-3 p-3 border rounded-lg bg-muted/20">
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Neuer Kunde erfassen</p>
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Neuen Kunden erfassen</p>
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label className="text-xs">Vorname *</Label>
@@ -98,6 +141,10 @@ function NewCustomerForm({ data, onChange }) {
           <Input value={data.last_name || ''} onChange={e => set('last_name', e.target.value)} className="mt-1 h-8 text-sm" />
         </div>
         <div>
+          <Label className="text-xs">Geburtsdatum</Label>
+          <Input type="date" value={data.birthdate || ''} onChange={e => set('birthdate', e.target.value)} className="mt-1 h-8 text-sm" />
+        </div>
+        <div>
           <Label className="text-xs">E-Mail</Label>
           <Input type="email" value={data.email || ''} onChange={e => set('email', e.target.value)} className="mt-1 h-8 text-sm" />
         </div>
@@ -105,22 +152,73 @@ function NewCustomerForm({ data, onChange }) {
           <Label className="text-xs">Telefon</Label>
           <Input value={data.phone || ''} onChange={e => set('phone', e.target.value)} className="mt-1 h-8 text-sm" />
         </div>
-        <div>
-          <Label className="text-xs">Geburtsdatum</Label>
-          <Input type="date" value={data.birthdate || ''} onChange={e => set('birthdate', e.target.value)} className="mt-1 h-8 text-sm" />
-        </div>
         <div className="col-span-2">
-          <Label className="text-xs">Strasse</Label>
+          <Label className="text-xs">Strasse + Hausnummer</Label>
           <Input value={data.street || ''} onChange={e => set('street', e.target.value)} className="mt-1 h-8 text-sm" />
         </div>
         <div>
-          <Label className="text-xs">PLZ</Label>
-          <Input value={data.zip_code || ''} onChange={e => set('zip_code', e.target.value)} className="mt-1 h-8 text-sm" maxLength={4} />
+          <Label className="text-xs flex items-center gap-1">
+            PLZ <MapPin className="w-3 h-3 text-primary" />
+          </Label>
+          <Input
+            value={data.zip_code || ''}
+            onChange={e => handlePlzChange(e.target.value)}
+            className="mt-1 h-8 text-sm"
+            maxLength={4}
+            placeholder="4-stellig"
+          />
+          {plzSuggestions && (
+            <div className="mt-1 border rounded-md bg-background shadow-sm z-10">
+              {plzSuggestions.map((s, i) => (
+                <button key={i} type="button" onClick={() => selectSuggestion(s)}
+                  className="w-full text-left px-3 py-1.5 text-xs hover:bg-primary/5 border-b last:border-0">
+                  {s.ort} ({s.kanton})
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div>
           <Label className="text-xs">Ort</Label>
-          <Input value={data.city || ''} onChange={e => set('city', e.target.value)} className="mt-1 h-8 text-sm" />
+          <Input value={data.city || ''} onChange={e => set('city', e.target.value)} className="mt-1 h-8 text-sm"
+            placeholder={data.zip_code?.length === 4 ? 'Wird automatisch gefüllt' : ''} />
         </div>
+        {data.canton && (
+          <div className="col-span-2 flex items-center gap-1.5 text-xs text-primary">
+            <MapPin className="w-3 h-3" /> Kanton: <strong>{data.canton}</strong>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── KI Extraction Summary ─────────────────────────────────────────────────────
+function ExtractionSummary({ data }) {
+  const fields = [
+    { label: 'Versicherungsnehmer', value: [data.first_name, data.last_name].filter(Boolean).join(' ') || data.policy_holder_name },
+    { label: 'Geburtsdatum', value: data.birthdate },
+    { label: 'Adresse', value: [data.street, [data.zip_code, data.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') },
+    { label: 'Versicherung', value: data.insurer || data.provider },
+    { label: 'Policen-Nr.', value: data.policy_number },
+    { label: 'Produkt', value: data.product },
+    { label: 'Jahresprämie', value: data.premium_yearly ? `CHF ${data.premium_yearly.toLocaleString('de-CH')}` : null },
+  ].filter(f => f.value)
+
+  if (!fields.length) return null
+
+  return (
+    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-1.5">
+      <p className="text-xs font-semibold text-blue-700 flex items-center gap-1.5">
+        <CheckCircle2 className="w-3.5 h-3.5" /> KI-Extraktion erfolgreich
+      </p>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+        {fields.map(f => (
+          <div key={f.label} className="flex gap-1 text-xs">
+            <span className="text-blue-500 font-medium shrink-0">{f.label}:</span>
+            <span className="text-blue-800 truncate">{f.value}</span>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -128,41 +226,48 @@ function NewCustomerForm({ data, onChange }) {
 
 // ── Main Wizard ───────────────────────────────────────────────────────────────
 export default function PolicyUploadWizard({ open, onClose, customers = [], organizations = [], onContractCreated }) {
-  const [step, setStep] = useState(1) // 1=upload, 2=customer, 3=contract, 4=done
+  const [step, setStep] = useState(1)
   const [uploading, setUploading] = useState(false)
   const [extracting, setExtracting] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [extractedRaw, setExtractedRaw] = useState(null)
 
-  // Uploaded file
   const [fileUrl, setFileUrl] = useState(null)
   const [fileName, setFileName] = useState('')
 
-  // Extracted contract data — supports multiple contracts (z.B. Grundversicherung + Zusatzversicherungen)
-  const [contracts, setContracts] = useState([{
+  const [contractList, setContractList] = useState([{
     insurer: '', policy_number: '', sparte: '', product: '',
     premium_monthly: '', premium_yearly: '', start_date: '', end_date: '',
     cancellation_deadline: '', status: 'active', notes: '', sparte_data: {}
   }])
   const [activeContractIdx, setActiveContractIdx] = useState(0)
-  const contract = contracts[activeContractIdx] || contracts[0]
+  const contract = contractList[activeContractIdx] || contractList[0]
 
-  // Customer state
-  const [customerMode, setCustomerMode] = useState('search') // 'search' | 'new' | 'matched'
+  const [customerMode, setCustomerMode] = useState('search')
   const [selectedCustomer, setSelectedCustomer] = useState(null)
   const [matchCandidates, setMatchCandidates] = useState([])
   const [newCustomerData, setNewCustomerData] = useState({})
 
-  const setC = (k, v) => setContracts(prev => prev.map((c, i) => i === activeContractIdx ? { ...c, [k]: v } : c))
-  const setSparteData = (k, v) => setContracts(prev => prev.map((c, i) => i === activeContractIdx ? { ...c, sparte_data: { ...c.sparte_data, [k]: v } } : c))
+  const setC = (k, v) => setContractList(prev => prev.map((c, i) => i === activeContractIdx ? { ...c, [k]: v } : c))
+  const setSparteData = (k, v) => setContractList(prev => prev.map((c, i) => i === activeContractIdx ? { ...c, sparte_data: { ...c.sparte_data, [k]: v } } : c))
+
   const addContract = () => {
-    setContracts(prev => [...prev, { insurer: contract.insurer, policy_number: '', sparte: '', product: '', premium_monthly: '', premium_yearly: '', start_date: contract.start_date, end_date: contract.end_date, cancellation_deadline: contract.cancellation_deadline, status: 'active', notes: '', sparte_data: {} }])
-    setActiveContractIdx(contracts.length)
+    setContractList(prev => [...prev, {
+      insurer: contract.insurer, policy_number: '', sparte: '', product: '',
+      premium_monthly: '', premium_yearly: '',
+      start_date: contract.start_date, end_date: contract.end_date,
+      cancellation_deadline: contract.cancellation_deadline,
+      status: 'active', notes: '', sparte_data: {}
+    }])
+    setActiveContractIdx(contractList.length)
   }
+
   const removeContract = (idx) => {
-    setContracts(prev => prev.filter((_, i) => i !== idx))
+    setContractList(prev => prev.filter((_, i) => i !== idx))
     setActiveContractIdx(Math.max(0, activeContractIdx - 1))
   }
+
   const sparteFields = getFieldsForSparte(contract.sparte)
   const franchiseOptions = FRANCHISE_OPTIONS[contract.sparte_data?.age_group] || FRANCHISE_OPTIONS.default
 
@@ -180,16 +285,21 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     setUploading(false)
     setExtracting(true)
 
-    // Extract data via extractPolicyData (comprehensive customer + contract extraction)
     const res = await base44.functions.invoke('extractPolicyData', { file_url, file_name: file.name })
     setExtracting(false)
 
     if (res.data?.success && res.data?.extractedData) {
       const d = res.data.extractedData
+      setExtractedRaw(d)
+
+      // Build contracts from extracted data
+      const sparteKey = mapInsuranceType(d.insurance_type) || d.insurance_type || ''
+      const sparteData = d.sparte_data || {}
+
       const baseContract = {
-        insurer: d.provider || d.insurer || '',
+        insurer: d.insurer || d.provider || '',
         policy_number: d.policy_number || '',
-        sparte: d.insurance_type || mapInsuranceType(d.insurance_type) || '',
+        sparte: sparteKey,
         product: d.product || '',
         premium_monthly: d.premium_monthly || '',
         premium_yearly: d.premium_yearly || '',
@@ -197,50 +307,62 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         end_date: d.end_date || '',
         cancellation_deadline: d.cancellation_deadline || '',
         notes: d.notes || '',
-        sparte_data: d.sparte_data || {},
+        sparte_data: sparteData,
         status: 'active',
       }
-      // Wenn Zusatzversicherungen erkannt wurden, zusätzliche Einträge vorbereiten
+
       const additionalContracts = (d.additional_products || []).map(ap => ({
         ...baseContract,
         sparte: 'vvg_zusatz',
-        product: ap.product || ap.name || '',
+        product: ap.product || '',
         premium_monthly: ap.premium_monthly || '',
         premium_yearly: ap.premium_yearly || '',
         policy_number: ap.policy_number || baseContract.policy_number,
-        notes: ap.notes || '',
+        notes: '',
         sparte_data: {},
       }))
-      setContracts([baseContract, ...additionalContracts])
+
+      setContractList([baseContract, ...additionalContracts])
       setActiveContractIdx(0)
 
-      // Try to extract customer name from file for matching
-      const extracted = res.data.extractedData
-      const nameParts = (extracted.policy_holder_name || '').trim().split(/\s+/)
-      const matchData = {
-        first_name: extracted.first_name || nameParts[0] || '',
-        last_name: extracted.last_name || (nameParts.length > 1 ? nameParts.slice(1).join(' ') : '') || '',
-        birthdate: extracted.birthdate || '',
-        email: extracted.email || '',
-        phone: extracted.phone || '',
-        street: extracted.street || '',
-        city: extracted.city || '',
-        zip_code: extracted.zip_code || '',
-        canton: extracted.canton || '',
+      // Customer matching
+      const customerFields = {
+        first_name: d.first_name || '',
+        last_name: d.last_name || '',
+        birthdate: d.birthdate || '',
+        email: d.email || '',
+        phone: d.phone || '',
+        street: d.street || '',
+        city: d.city || '',
+        zip_code: d.zip_code || '',
+        canton: d.canton || '',
       }
-      if (matchData.first_name || matchData.last_name) {
-        const { candidates } = matchCustomers(matchData, customers)
+
+      if (customerFields.first_name || customerFields.last_name) {
+        const candidates = matchCustomers(customerFields, customers)
         setMatchCandidates(candidates)
-        if (candidates.length > 0 && candidates[0].score >= 80) {
+
+        if (candidates.length > 0 && candidates[0].score >= 90) {
+          // Very high confidence → auto-select and skip to step 3
           setSelectedCustomer(candidates[0].customer)
           setCustomerMode('matched')
+          setNewCustomerData(customerFields)
+          setStep(3)
+          return
+        } else if (candidates.length > 0 && candidates[0].score >= 50) {
+          setSelectedCustomer(candidates[0].customer)
+          setCustomerMode('matched')
+          setNewCustomerData(customerFields)
         } else {
-          // Pre-fill new customer form with KI-extracted data so user just confirms
-          setNewCustomerData(matchData)
-          if (!candidates.length) setCustomerMode('new')
+          // No good match → pre-fill new customer form
+          setNewCustomerData(customerFields)
+          setCustomerMode('new')
         }
+      } else {
+        setNewCustomerData(customerFields)
       }
     }
+
     setStep(2)
   }
 
@@ -253,7 +375,6 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     let customerName = selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : ''
     let orgId = selectedCustomer?.organization_id || organizations[0]?.id || ''
 
-    // Create new customer if needed — email is optional, generate placeholder if missing
     if (!customerId && customerMode === 'new') {
       const nc = newCustomerData
       if (!nc.first_name || !nc.last_name) {
@@ -261,10 +382,10 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         setSaving(false)
         return
       }
-      // Email is required by entity — generate unique placeholder if not available
-      const emailValue = nc.email && nc.email.trim()
+      const emailValue = nc.email?.trim()
         ? nc.email.trim()
         : `${nc.first_name.toLowerCase()}.${nc.last_name.toLowerCase()}.${Date.now()}@import.local`
+
       const created = await base44.entities.Customer.create({
         first_name: nc.first_name,
         last_name: nc.last_name,
@@ -295,10 +416,9 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       return
     }
 
-    // Create all contracts (Grundversicherung + alle Zusatzversicherungen)
     let firstContract = null
-    for (let i = 0; i < contracts.length; i++) {
-      const c = contracts[i]
+    for (let i = 0; i < contractList.length; i++) {
+      const c = contractList[i]
       if (!c.insurer) continue
       const created = await base44.entities.Contract.create({
         customer_id: customerId,
@@ -324,7 +444,6 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       if (i === 0) firstContract = created
     }
 
-    // Save document reference linked to first contract — category 'police' (not 'contract')
     if (fileUrl && firstContract) {
       await base44.entities.Document.create({
         name: fileName,
@@ -344,8 +463,8 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
   }
 
   const handleClose = () => {
-    setStep(1); setFileUrl(null); setFileName(''); setError(null)
-    setContracts([{ insurer: '', policy_number: '', sparte: '', product: '', premium_monthly: '', premium_yearly: '', start_date: '', end_date: '', cancellation_deadline: '', status: 'active', notes: '', sparte_data: {} }])
+    setStep(1); setFileUrl(null); setFileName(''); setError(null); setExtractedRaw(null)
+    setContractList([{ insurer: '', policy_number: '', sparte: '', product: '', premium_monthly: '', premium_yearly: '', start_date: '', end_date: '', cancellation_deadline: '', status: 'active', notes: '', sparte_data: {} }])
     setActiveContractIdx(0)
     setSelectedCustomer(null); setCustomerMode('search'); setMatchCandidates([]); setNewCustomerData({})
     onClose()
@@ -385,7 +504,9 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
               <div className="text-center space-y-3">
                 <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
                 <p className="font-semibold">{uploading ? 'Datei wird hochgeladen...' : 'KI analysiert Police...'}</p>
-                <p className="text-sm text-muted-foreground">{uploading ? '' : 'Versicherungsdaten werden automatisch extrahiert'}</p>
+                <p className="text-sm text-muted-foreground">
+                  {uploading ? '' : 'Name, Adresse, Vertragsdaten werden automatisch erkannt'}
+                </p>
               </div>
             ) : (
               <>
@@ -394,7 +515,9 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
                 </div>
                 <div className="text-center">
                   <p className="font-semibold text-lg">Police hochladen</p>
-                  <p className="text-sm text-muted-foreground mt-1">PDF oder Bild der Police – KI extrahiert die Daten automatisch</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    KI erkennt automatisch: Name, Vorname, Geburtsdatum, Adresse, PLZ/Ort, Vertragsdaten
+                  </p>
                 </div>
                 <Label htmlFor="policy-upload" className="cursor-pointer">
                   <div className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors flex items-center gap-2">
@@ -411,15 +534,16 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         {/* ── STEP 2: Customer ── */}
         {step === 2 && (
           <div className="space-y-4 py-2">
+            {extractedRaw && <ExtractionSummary data={extractedRaw} />}
+
             <p className="text-sm text-muted-foreground">Wem gehört diese Police?</p>
 
             {/* Auto-matched candidates */}
             {matchCandidates.length > 0 && customerMode !== 'new' && (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase">KI-Vorschläge ({matchCandidates.length})</p>
-                {matchCandidates.map(({ customer: c, score }) => (
-                  <button
-                    key={c.id} type="button"
+                {matchCandidates.slice(0, 3).map(({ customer: c, score }) => (
+                  <button key={c.id} type="button"
                     onClick={() => { setSelectedCustomer(c); setCustomerMode('matched') }}
                     className={`w-full flex items-center gap-3 p-3 rounded-lg border-2 text-left transition-colors ${selectedCustomer?.id === c.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}
                   >
@@ -428,7 +552,9 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm">{c.first_name} {c.last_name}</p>
-                      <p className="text-xs text-muted-foreground">{c.email || ''}{c.birthdate ? ` · Geb. ${c.birthdate}` : ''}{c.city ? ` · ${c.city}` : ''}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {c.email || ''}{c.birthdate ? ` · Geb. ${c.birthdate}` : ''}{c.city ? ` · ${c.city}` : ''}
+                      </p>
                     </div>
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${score >= 80 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>{score}%</span>
                     {selectedCustomer?.id === c.id && <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />}
@@ -452,7 +578,6 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
               </div>
             )}
 
-            {/* Search mode */}
             {(customerMode === 'search' || (!selectedCustomer && customerMode !== 'new')) && (
               <div className="space-y-2">
                 {matchCandidates.length === 0 && <p className="text-xs text-muted-foreground">Kein automatischer Treffer — bitte manuell suchen:</p>}
@@ -460,7 +585,6 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
               </div>
             )}
 
-            {/* New customer toggle */}
             {customerMode !== 'new' && (
               <button type="button" onClick={() => { setCustomerMode('new'); setSelectedCustomer(null) }}
                 className="flex items-center gap-2 text-sm text-primary hover:underline">
@@ -468,7 +592,6 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
               </button>
             )}
 
-            {/* New customer form — pre-filled from KI extraction */}
             {customerMode === 'new' && (
               <>
                 {(newCustomerData.first_name || newCustomerData.last_name) && (
@@ -487,8 +610,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
 
             <div className="flex justify-between pt-2">
               <Button variant="outline" onClick={() => setStep(1)}>Zurück</Button>
-              <Button onClick={() => setStep(3)}
-                disabled={!selectedCustomer && customerMode !== 'new'}>
+              <Button onClick={() => setStep(3)} disabled={!selectedCustomer && customerMode !== 'new'}>
                 Weiter <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
@@ -507,14 +629,13 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
 
             {/* Multi-contract tabs */}
             <div className="flex items-center gap-2 flex-wrap">
-              {contracts.map((c, i) => (
-                <button key={i} type="button"
-                  onClick={() => setActiveContractIdx(i)}
+              {contractList.map((c, i) => (
+                <button key={i} type="button" onClick={() => setActiveContractIdx(i)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${activeContractIdx === i ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-border hover:border-primary/40'}`}
                 >
                   {i === 0 ? '📋 Grundversicherung' : `➕ Zusatz ${i}`}
                   {c.product && <span className="opacity-70 truncate max-w-[80px]">– {c.product}</span>}
-                  {contracts.length > 1 && i > 0 && (
+                  {contractList.length > 1 && i > 0 && (
                     <span onClick={e => { e.stopPropagation(); removeContract(i) }} className="ml-1 text-red-400 hover:text-red-600">✕</span>
                   )}
                 </button>
@@ -532,7 +653,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
               </div>
               <div>
                 <Label className="text-xs">Versicherungssparte</Label>
-                <Select value={contract.sparte} onValueChange={v => setContracts(prev => prev.map((c, i) => i === activeContractIdx ? { ...c, sparte: v, insurance_type: v, sparte_data: {} } : c))}>
+                <Select value={contract.sparte} onValueChange={v => setContractList(prev => prev.map((c, i) => i === activeContractIdx ? { ...c, sparte: v, insurance_type: v, sparte_data: {} } : c))}>
                   <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Wählen..." /></SelectTrigger>
                   <SelectContent>
                     {Object.entries(grouped).map(([group, items]) => (
@@ -550,12 +671,9 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
               </div>
               <div className="col-span-2">
                 <Label className="text-xs font-semibold text-primary">Produkt / Tarif</Label>
-                <Input
-                  value={contract.product}
-                  onChange={e => setC('product', e.target.value)}
-                  placeholder="z.B. COMPACT, HMO 1500, Vollkasko SB500, NATURA, TELEMED..."
-                  className="mt-1 h-8 text-sm border-primary/30 focus:border-primary"
-                />
+                <Input value={contract.product} onChange={e => setC('product', e.target.value)}
+                  placeholder="z.B. COMPACT, HMO 1500, Vollkasko SB500..."
+                  className="mt-1 h-8 text-sm border-primary/30" />
               </div>
               <div>
                 <Label className="text-xs">Monatsprämie (CHF)</Label>
@@ -579,7 +697,6 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
               </div>
             </div>
 
-            {/* Sparte-specific fields */}
             {sparteFields.length > 0 && (
               <div className="p-3 bg-muted/30 rounded-lg border space-y-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase">Spartenspezifische Angaben</p>
@@ -614,7 +731,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
             <div className="flex justify-between pt-2">
               <Button variant="outline" onClick={() => setStep(2)}>Zurück</Button>
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Speichern...</> : `✓ ${contracts.length > 1 ? `${contracts.length} Verträge` : 'Vertrag'} erstellen`}
+                {saving ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Speichern...</> : `✓ ${contractList.length > 1 ? `${contractList.length} Verträge` : 'Vertrag'} erstellen`}
               </Button>
             </div>
           </div>
@@ -627,7 +744,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
             <div>
               <p className="text-xl font-bold text-green-700">Vertrag erfasst!</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Police wurde hochgeladen und der Vertrag wurde beim Kunden erfasst.
+                Police hochgeladen und {contractList.length > 1 ? `${contractList.length} Verträge` : 'Vertrag'} beim Kunden erfasst.
               </p>
             </div>
             <Button onClick={handleClose}>Schliessen</Button>
@@ -636,25 +753,4 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       </DialogContent>
     </Dialog>
   )
-}
-
-// ── Helper: map KI insurance_type to sparte value ─────────────────────────────
-function mapInsuranceType(type) {
-  if (!type) return ''
-  const t = type.toLowerCase()
-  if (t.includes('kvg') || t.includes('kranken')) return 'kvg'
-  if (t.includes('vvg') || t.includes('zusatz')) return 'vvg_zusatz'
-  if (t.includes('3a') || t.includes('säule 3a')) return 'leben_3a'
-  if (t.includes('leben') || t.includes('3b')) return 'leben_3b'
-  if (t.includes('motorfahrzeug') || t.includes('auto')) return 'motorfahrzeug'
-  if (t.includes('hausrat')) return 'hausrat'
-  if (t.includes('haftpflicht') && t.includes('betrieb')) return 'betriebshaftpflicht'
-  if (t.includes('haftpflicht')) return 'haftpflicht_privat'
-  if (t.includes('unfall')) return 'unfall_privat'
-  if (t.includes('rechtsschutz')) return 'rechtsschutz_privat'
-  if (t.includes('bvg') || t.includes('pensionskasse')) return 'bvg'
-  if (t.includes('uvg')) return 'uvg'
-  if (t.includes('ktg') || t.includes('krankentaggeld')) return 'ktg'
-  if (t.includes('gebäude')) return 'gebaude_privat'
-  return ''
 }
