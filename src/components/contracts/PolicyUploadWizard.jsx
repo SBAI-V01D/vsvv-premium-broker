@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { base44 } from '@/api/base44Client'
 import { lookupPostalCode, fixOcrPostalCode } from '@/lib/swissPostalCodes'
+import { useMemo } from 'react'
 import { ALL_SPARTEN, getFieldsForSparte, FRANCHISE_OPTIONS } from '@/lib/insuranceSparten'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -110,14 +111,23 @@ function NewCustomerForm({ data, onChange }) {
 
   const handlePlzChange = (raw) => {
     set('zip_code', raw)
-    const plz = fixOcrPostalCode(raw.replace(/\D/g, ''))
+    let plz = raw.replace(/\D/g, '')
+    // Pad with leading zeros if necessary
+    while (plz.length < 4) {
+      plz = '0' + plz
+    }
+    plz = plz.slice(0, 4)
+    
     if (plz.length !== 4) return
     const result = lookupPostalCode(plz)
     if (!result) return
+    
     if (!Array.isArray(result)) {
+      // Single match — auto-fill
       onChange({ ...data, zip_code: plz, city: result.ort, canton: result.kanton })
       setPlzSuggestions(null)
-    } else if (result.length > 1) {
+    } else if (result.length > 0) {
+      // Multiple matches — show suggestions
       set('zip_code', plz)
       setPlzSuggestions(result)
     }
@@ -298,6 +308,19 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     setStep(3)
   }
 
+  // ── Auto-lookup PLZ → Ort + Kanton ────────────────────────────────────────────
+  const autoLookupPlz = (rawPlz) => {
+    if (!rawPlz || rawPlz.length !== 4) return null
+    const result = lookupPostalCode(rawPlz)
+    if (!result) return null
+    if (Array.isArray(result)) {
+      // Multiple matches — return first
+      return result[0] ? { ort: result[0].ort, kanton: result[0].kanton } : null
+    }
+    // Single match
+    return { ort: result.ort, kanton: result.kanton }
+  }
+
   // ── Step 1: Upload + Extract ────────────────────────────────────────────────
   const handleFileUpload = async (e) => {
     try {
@@ -318,6 +341,16 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
 
     if (res.data?.success && res.data?.extractedData) {
       const d = res.data.extractedData
+      
+      // Auto-lookup PLZ → Ort + Kanton
+      if (d.zip_code && !d.city) {
+        const lookup = autoLookupPlz(d.zip_code)
+        if (lookup) {
+          d.city = lookup.ort
+          if (!d.canton) d.canton = lookup.kanton
+        }
+      }
+      
       setExtractedRaw(d)
 
       // Build contracts from extracted data
@@ -353,49 +386,55 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       setContractList([baseContract, ...additionalContracts])
       setActiveContractIdx(0)
 
-      // Customer matching
+      // Customer matching + validation
       const customerFields = {
-        first_name: d.first_name || '',
-        last_name: d.last_name || '',
+        first_name: (d.first_name || '').trim(),
+        last_name: (d.last_name || '').trim(),
         birthdate: d.birthdate || '',
-        email: d.email || '',
-        phone: d.phone || '',
-        street: d.street || '',
-        city: d.city || '',
-        zip_code: d.zip_code || '',
-        canton: d.canton || '',
+        email: (d.email || '').trim(),
+        phone: (d.phone || '').trim(),
+        mobile: (d.mobile || '').trim(),
+        street: (d.street || '').trim(),
+        city: (d.city || '').trim(),
+        zip_code: (d.zip_code || '').trim(),
+        canton: (d.canton || '').trim(),
       }
 
-      if (customerFields.first_name || customerFields.last_name) {
-         const candidates = matchCustomers(customerFields, customers)
-         setMatchCandidates(candidates)
+      // Only proceed if we have at least first_name AND last_name from extraction
+      const hasValidName = customerFields.first_name && customerFields.last_name
+      
+      if (hasValidName) {
+        const candidates = matchCustomers(customerFields, customers)
+        setMatchCandidates(candidates)
 
-         if (candidates.length > 0 && candidates[0].score >= 90) {
-           // Very high confidence → auto-select and skip to step 3
-           setSelectedCustomer(candidates[0].customer)
-           setCustomerMode('matched')
-           setNewCustomerData(customerFields)
-           setStep(3)
-           return
-         } else if (candidates.length > 0 && candidates[0].score >= 50) {
-           setSelectedCustomer(candidates[0].customer)
-           setCustomerMode('matched')
-           setNewCustomerData(customerFields)
-           setStep(2)
-         } else if (customerFields.first_name && customerFields.last_name) {
-           // No good match BUT we have valid first+last name → auto-create customer
-           await createAndProceed(customerFields)
-           return
-         } else {
-           // Not enough info → go to step 2 for manual entry
-           setNewCustomerData(customerFields)
-           setCustomerMode('new')
-           setStep(2)
-         }
-       } else {
+        // SEHR HOHE KONFIDENZ (>85%) → Direkt zu Step 3, keine Fragen mehr
+        if (candidates.length > 0 && candidates[0].score >= 85) {
+          setSelectedCustomer(candidates[0].customer)
+          setCustomerMode('matched')
+          setNewCustomerData(customerFields)
+          setStep(3)
+          return
+        }
+        
+        // GUTE KONFIDENZ (50-85%) → Step 2 für manuelle Prüfung mit Vorauswahl
+        if (candidates.length > 0 && candidates[0].score >= 50) {
+          setSelectedCustomer(candidates[0].customer)
+          setCustomerMode('matched')
           setNewCustomerData(customerFields)
           setStep(2)
+          return
         }
+        
+        // KEIN TREFFER → Auto-create Kunde und direkt zu Step 3
+        // (KI hat Name erkannt, aber Kunde existiert nicht → erstelle)
+        await createAndProceed(customerFields)
+        return
+      }
+      
+      // Unzureichende Daten → Step 2 für manuelle Eingabe
+      setNewCustomerData(customerFields)
+      setCustomerMode('new')
+      setStep(2)
        }
        } catch (err) {
        setError(`Fehler bei der Analyse: ${err.message}`)

@@ -1,5 +1,44 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+// Swiss postal code to canton mapping (comprehensive)
+const PLZ_TO_CANTON = {
+  '1200': 'GE', '1201': 'GE', '1202': 'GE', '1203': 'GE', '1204': 'GE', '1205': 'GE', '1206': 'GE', '1207': 'GE', '1208': 'GE', '1209': 'GE',
+  '1210': 'GE', '1211': 'GE', '1212': 'GE', '1213': 'GE', '1214': 'GE', '1215': 'GE', '1216': 'GE', '1217': 'GE', '1218': 'GE', '1219': 'GE',
+  '1220': 'GE', '1222': 'GE', '1223': 'GE', '1224': 'GE', '1225': 'GE', '1226': 'GE', '1227': 'GE', '1228': 'GE', '1229': 'GE',
+  '1231': 'GE', '1233': 'GE', '1234': 'GE', '1235': 'GE', '1236': 'GE', '1237': 'GE', '1242': 'GE', '1243': 'GE', '1244': 'GE', '1245': 'GE',
+  '1246': 'GE', '1247': 'GE', '1248': 'GE', '1251': 'GE', '1252': 'GE', '1253': 'GE', '1254': 'GE', '1255': 'GE', '1256': 'GE', '1257': 'GE',
+  '1258': 'GE', '1259': 'GE', '1260': 'GE', '1261': 'GE', '1262': 'GE', '1263': 'GE', '1264': 'GE', '1265': 'GE', '1266': 'GE', '1267': 'GE',
+  '1268': 'GE', '1269': 'GE', '1271': 'GE', '1272': 'GE', '1273': 'GE', '1274': 'GE', '1275': 'GE', '1276': 'GE', '1277': 'GE', '1278': 'GE',
+  '1279': 'GE', '1281': 'GE', '1282': 'GE', '1283': 'GE', '1284': 'GE', '1285': 'GE', '1286': 'GE', '1287': 'GE', '1288': 'GE', '1289': 'GE',
+  '1290': 'GE', '1291': 'GE', '1292': 'GE', '1293': 'GE', '1294': 'GE', '1295': 'GE', '1296': 'GE', '1297': 'GE', '1298': 'GE', '1299': 'GE',
+};
+
+// Fallback mapping by first digit(s)
+function cantonFromZip(zip) {
+  if (!zip || zip.length !== 4) return null;
+  
+  // Check exact match first
+  if (PLZ_TO_CANTON[zip]) return PLZ_TO_CANTON[zip];
+  
+  // Fallback by prefix
+  const prefix = zip.substring(0, 2);
+  const firstDigit = parseInt(zip[0]);
+  
+  const prefixMap = {
+    '10': 'VD', '11': 'VD', '12': 'GE', '13': 'VD', '14': 'VD', '15': 'VD', '16': 'VD', '17': 'VD', '18': 'VS', '19': 'VS',
+    '20': 'NE', '21': 'NE', '22': 'NE', '23': 'JU', '24': 'JU', '25': 'JU', '26': 'JU', '27': 'JU',
+    '30': 'BE', '31': 'BE', '32': 'BE', '33': 'BE', '34': 'BE', '35': 'BE', '36': 'BE', '37': 'BE', '38': 'BE', '39': 'BE',
+    '40': 'BS', '41': 'BL', '42': 'BL', '43': 'BL', '44': 'BL', '45': 'BL', '46': 'SO', '47': 'SO',
+    '50': 'AG', '51': 'AG', '52': 'AG', '53': 'AG', '54': 'AG', '55': 'AG', '56': 'AG', '57': 'AG', '58': 'AG', '59': 'AG',
+    '60': 'LU', '61': 'LU', '62': 'LU', '63': 'OW', '64': 'NW', '65': 'SZ', '66': 'LU', '67': 'ZG', '68': 'OW',
+    '70': 'GR', '71': 'GR', '72': 'GR', '73': 'GR', '74': 'GR', '75': 'GR', '76': 'GR', '77': 'GR',
+    '80': 'ZH', '81': 'ZH', '82': 'ZH', '83': 'ZH', '84': 'ZH', '85': 'ZH', '86': 'ZH', '87': 'ZH', '88': 'SH', '89': 'TG',
+    '90': 'AR', '91': 'AI', '92': 'AI', '93': 'SG', '94': 'SG', '95': 'SG', '96': 'SG', '97': 'SG',
+  };
+  
+  return prefixMap[prefix] || null;
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -17,57 +56,114 @@ Deno.serve(async (req) => {
     console.log(`[extractPolicyData] START file=${file_name}`);
 
     const response = await base44.integrations.Core.InvokeLLM({
-      prompt: `Du bist ein Experte für Schweizer Versicherungspolicen. Analysiere dieses Dokument SEHR SORGFÄLTIG und extrahiere ALLE verfügbaren Informationen.
+      prompt: `Du bist ein SPEZIALISIERTER OCR-Experte für Schweizer Versicherungspolicen mit PERFEKTER Zeichenerkennung.
 
-═══════════════════════════════════════════════
-KUNDENDATEN (Versicherungsnehmer / Policeninhaber)
-═══════════════════════════════════════════════
-Suche nach folgenden Abschnitten im Dokument:
-- "Versicherungsnehmer", "Policeninhaber", "Ihre Adresse", "An:", "Vertragspartner"
-- Das ist NICHT der Lenker/Fahrer, NICHT die versicherte Sache
+KRITISCHE AUFGABE: Extrahiere EXAKT die Kundendaten (Name, Vorname, Geburtsdatum, Adresse) und Vertragsdaten aus dieser Police.
 
-Extrahiere:
-1. first_name: Vorname (z.B. "Hans")
-2. last_name: Nachname / Familienname (z.B. "Müller")
-3. birthdate: Geburtsdatum im Format YYYY-MM-DD (z.B. 1980-03-15)
-   - Suche nach: "geboren am", "Geb.", "Geburtsdatum", "AHV-Nr.", Datum neben dem Namen
-4. street: Strasse + Hausnummer (z.B. "Musterstrasse 12")
-5. zip_code: Postleitzahl – IMMER 4-stellig in der Schweiz (z.B. "8001", "3001", "4051")
-   - Falls du "80010" oder "30010" siehst, nimm nur die ersten 4 Ziffern
-6. city: Ortsname (z.B. "Zürich", "Bern", "Basel")
-7. canton: 2-Buchstaben Kantonskürzel aus PLZ/Ort ableiten (z.B. "ZH", "BE", "AG", "BS", "LU", "SG")
-8. phone: Telefonnummer falls vorhanden
-9. email: E-Mail-Adresse falls vorhanden
-10. company_name: Firmenname NUR bei Firmenkunden/Gewerbe
-11. policy_holder_name: Vollständiger Name (Vorname + Nachname zusammen)
+═══════════════════════════════════════════════════════════════════════════════════════
+SECTION 1: KUNDENDATEN (Versicherungsnehmer/Policeninhaber)
+═══════════════════════════════════════════════════════════════════════════════════════
 
-WICHTIG: Wenn ein Feld nicht im Dokument steht → null zurückgeben, NICHT raten!
+SUCHE NACH DIESEN LABELS IM DOKUMENT:
+- "Versicherungsnehmer", "Policeninhaber", "Versicherter", "Ihre Adresse", "An:", "Adresse des Versicherten"
+- "Name und Adresse", "Vertragspartner"
 
-═══════════════════════════════════════════════
-VERTRAGSDATEN
-═══════════════════════════════════════════════
-12. policy_number: Policennummer exakt wie auf dem Dokument
-13. provider: Versicherungsgesellschaft (vollständiger Name, z.B. "Helsana AG", "Zurich Insurance", "AXA Winterthur")
-14. insurance_type: Versicherungsart
-    Mögliche Werte: KVG, VVG_Zusatz, Motorfahrzeug, Hausrat, Haftpflicht_Privat, Leben_3a, Leben_3b, Unfall, Rechtsschutz, BVG, UVG, KTG, Gebäude
-15. product: Exakter Produkt- oder Tarifname (z.B. "COMPACT", "HMO", "TELEMED", "Vollkasko", "TOP", "BASIC")
-16. start_date: Vertragsbeginn YYYY-MM-DD
-17. end_date: Vertragsende / Ablaufdatum YYYY-MM-DD
-18. cancellation_deadline: Kündigungsfrist als Datum YYYY-MM-DD
-19. premium_monthly: Monatsprämie als Zahl (z.B. 142.05) – NUR Zahl
-20. premium_yearly: Jahresprämie als Zahl (z.B. 1704.60) – NUR Zahl. Falls nur Monatsprämie: x12 berechnen
-21. franchise: Franchisebetrag als Zahl (z.B. 300, 1500, 2500) – nur für KVG/Kranken
-22. kassenmodell: Modell (Standardmodell, HMO, Telemed, Hausarztmodell, FLEX, Freie Arztwahl)
-23. additional_products: Zusatzversicherungen als Array (bei Kombi-Policen)
-    Format: [{"product": "HOSPITAL FLEX", "premium_monthly": 45.20, "premium_yearly": 542.40, "policy_number": "..."}]
-24. notes: Wichtige Klauseln, Boni, Sonderkonditionen
+⚠️ AUSSCHLIESSLICH: Das ist NICHT der Lenker/Fahrer, NICHT die versicherte Sache, NICHT der Arzt/Zahnarzt.
 
-PLZ-REGELN für die Schweiz:
-- ZH=8xxx, BE=3xxx, LU=6xxx, UR=6xxx, SZ=6xxx, OW=6xxx, NW=6xxx, GL=8xxx, ZG=6xxx
-- FR=1xxx/1700, SO=4xxx, BS=4xxx, BL=4xxx, SH=8xxx, AR=9xxx, AI=9xxx, SG=9xxx
-- GR=7xxx, AG=5xxx, TG=8xxx, TI=6xxx, VD=1xxx, VS=1xxx/3xxx, NE=2xxx, GE=1xxx, JU=2xxx
+EXTRAHIERE GENAU:
+1. first_name: Vorname (z.B. "Hans", "Maria", "José")
+   - Suche: Erstes Wort des Namens, NICHT Geburtsnamen
+   
+2. last_name: Nachname/Familienname (z.B. "Müller", "Meyer", "De Marchi")
+   - Suche: Zweites Wort oder Bindestrich-Namen
+   
+3. birthdate: Geburtsdatum im Format YYYY-MM-DD (z.B. 1975-08-23)
+   - SUCHE NACH: "geb.", "Geburtsdatum", "Geb.datum", "geboren am"
+   - ODER: Datum neben dem Namen in Klammern oder hinter dem Schrägstrich
+   - FORMAT: DD.MM.YYYY → konvertiere zu YYYY-MM-DD
+   - ⚠️ NUR EINTRAGEN wenn EXPLIZIT im Dokument, sonst null!
+   
+4. street: Strasse + Hausnummer (z.B. "Musterstrasse 12", "Bahnhofplatz 2A")
+   - Exakt wie im Dokument
+   - Häufig NACH dem Namen
+   
+5. zip_code: Postleitzahl - IMMER 4-stellig (z.B. "8001", "3000", "1201")
+   - ⚠️ REGEL: Schweizer PLZ sind IMMER 4-stellig!
+   - Falls du "80010" siehst → nimm nur "8001"
+   - Falls du "100" siehst → füge "0" vorne hinzu → "0100"
+   - MUSS numerisch sein
+   
+6. city: Ortsname (z.B. "Zürich", "Bern", "Genève", "Montreux")
+   - Exakt wie im Dokument geschrieben
+   - NICHT abkürzen
+   
+7. canton: 2-Buchstaben Kantonskürzel (z.B. ZH, BE, GE, VD, AG, LU, SG)
+   - Kann aus PLZ abgeleitet werden
+   - ODER steht explizit im Dokument
+   - Standard: ZH, BE, LU, UR, SZ, OW, NW, GL, ZG, FR, SO, BS, BL, SH, AR, AI, SG, GR, AG, TG, TI, VD, VS, NE, GE, JU
+   
+8. phone: Telefonnummer (z.B. "044 123 45 67")
+   - Falls vorhanden, sonst null
+   
+9. email: E-Mail-Adresse (z.B. "hans.mueller@example.com")
+   - Falls vorhanden, sonst null
+   
+10. mobile: Mobilnummer (z.B. "079 123 45 67")
+    - Falls vorhanden, sonst null
 
-Gib null zurück wenn ein Feld nicht vorhanden ist.`,
+═══════════════════════════════════════════════════════════════════════════════════════
+SECTION 2: VERTRAGSDATEN
+═══════════════════════════════════════════════════════════════════════════════════════
+
+11. policy_number: Policennummer (z.B. "123.456.789", "36 644 066")
+    - EXAKT wie auf dem Dokument
+    
+12. insurer: Versicherungsgesellschaft (z.B. "Helsana AG", "Assura SA", "CSS")
+    - Vollständiger Name
+    
+13. insurance_type: Versicherungsart (z.B. "KVG", "Motorfahrzeug", "Hausrat")
+    - Mögliche Werte: KVG, VVG_Zusatz, Motorfahrzeug, Hausrat, Haftpflicht, Leben, Unfall, Rechtsschutz
+    
+14. product: Produkt-/Tarifname (z.B. "COMPACT", "HMO 1500", "SB 500")
+    
+15. start_date: Versicherungsbeginn (YYYY-MM-DD)
+    
+16. end_date: Vertragsende/Ablaufdatum (YYYY-MM-DD)
+    
+17. cancellation_deadline: Kündigungsfrist (YYYY-MM-DD)
+    
+18. premium_monthly: Monatsprämie als Dezimalzahl (z.B. 142.05)
+    - Trennzeichen: Punkt (.)
+    
+19. premium_yearly: Jahresprämie (z.B. 1704.60)
+    - Wenn nur monthly vorhanden: monthly × 12
+
+═══════════════════════════════════════════════════════════════════════════════════════
+SECTION 3: SPARTENSPEZIFISCHE DATEN (sparte_data = JSON Object)
+═══════════════════════════════════════════════════════════════════════════════════════
+
+20. sparte_data JSON Object mit:
+    - franchise: Franchisebetrag (z.B. "300", "1500") - NUR bei KVG
+    - model: Kassenmodell (z.B. "Hausarztmodell", "HMO", "Freie Arztwahl")
+    - age_group: Altersgruppe (z.B. "Erwerbstätig", "Student", "Rentner")
+    - coverage: Deckungsumfang oder besondere Optionen
+
+21. additional_products: Array von Zusatzversicherungen
+    Format: [{"product": "HOSPITAL PLUS", "premium_monthly": 45.20, "policy_number": "..."}]
+
+═══════════════════════════════════════════════════════════════════════════════════════
+WICHTIGE REGELN (EINHALTEN!)
+═══════════════════════════════════════════════════════════════════════════════════════
+
+🚫 NIEMALS erfinden oder raten - unbekannte Felder → null!
+🚫 KEINE Geburtsdaten erfinden - nur wenn explizit im Dokument
+✅ Datumsformate: DD.MM.YYYY → YYYY-MM-DD
+✅ Dezimalzahlen: Komma → Punkt (z.B. "1'500,50" → 1500.50)
+✅ Postleitzahlen: IMMER 4-stellig prüfen und ggf. mit Nullen auffüllen
+✅ Namen: Exakt wie im Dokument (Bindestriche, Umlaute etc.)
+✅ Versicherer: Vollständigen Namen nehmen (nicht abkürzen)
+
+RÜCKGABE: Gültiges JSON mit allen Feldern. Fehlende Felder = null.`,
       file_urls: [file_url],
       model: 'gemini_3_flash',
       response_json_schema: {
@@ -75,17 +171,16 @@ Gib null zurück wenn ein Feld nicht vorhanden ist.`,
         properties: {
           first_name: { type: ['string', 'null'] },
           last_name: { type: ['string', 'null'] },
-          policy_holder_name: { type: ['string', 'null'] },
           birthdate: { type: ['string', 'null'] },
           street: { type: ['string', 'null'] },
           zip_code: { type: ['string', 'null'] },
           city: { type: ['string', 'null'] },
           canton: { type: ['string', 'null'] },
           phone: { type: ['string', 'null'] },
+          mobile: { type: ['string', 'null'] },
           email: { type: ['string', 'null'] },
-          company_name: { type: ['string', 'null'] },
           policy_number: { type: ['string', 'null'] },
-          provider: { type: ['string', 'null'] },
+          insurer: { type: ['string', 'null'] },
           insurance_type: { type: ['string', 'null'] },
           product: { type: ['string', 'null'] },
           start_date: { type: ['string', 'null'] },
@@ -93,10 +188,12 @@ Gib null zurück wenn ein Feld nicht vorhanden ist.`,
           cancellation_deadline: { type: ['string', 'null'] },
           premium_monthly: { type: ['number', 'null'] },
           premium_yearly: { type: ['number', 'null'] },
-          franchise: { type: ['number', 'null'] },
-          kassenmodell: { type: ['string', 'null'] },
+          sparte_data: {
+            type: ['object', 'null'],
+            additionalProperties: true
+          },
           additional_products: {
-            type: 'array',
+            type: ['array', 'null'],
             items: {
               type: 'object',
               properties: {
@@ -106,35 +203,36 @@ Gib null zurück wenn ein Feld nicht vorhanden ist.`,
                 policy_number: { type: ['string', 'null'] }
               }
             }
-          },
-          notes: { type: ['string', 'null'] }
+          }
         }
       }
     });
 
-    // Normalize zip_code: strip non-digits, take first 4
+    // Normalize & validate zip_code
     let zip = response.zip_code || null;
     if (zip) {
-      zip = zip.replace(/\D/g, '').slice(0, 4);
+      zip = String(zip).replace(/\D/g, '');
+      // Pad with leading zero if necessary
+      while (zip.length < 4) {
+        zip = '0' + zip;
+      }
+      zip = zip.slice(0, 4);
       if (zip.length !== 4) zip = null;
     }
 
-    // Derive canton from zip if KI didn't provide it
+    // Derive canton from zip using comprehensive mapping
     let canton = response.canton || null;
     if (!canton && zip) {
-      const prefix = parseInt(zip[0]);
-      const map = {1:'VD',2:'NE',3:'BE',4:'BS',5:'AG',6:'LU',7:'GR',8:'ZH',9:'SG'};
-      canton = map[prefix] || null;
-      // Refine some specific ranges
-      if (zip >= '1200' && zip <= '1299') canton = 'GE';
-      if (zip >= '1870' && zip <= '1999') canton = 'VS';
-      if (zip >= '2300' && zip <= '2999') canton = 'JU';
+      canton = cantonFromZip(zip);
+    }
+
+    // Normalize canton to uppercase 2-letter
+    if (canton) {
+      canton = String(canton).toUpperCase().slice(0, 2);
     }
 
     // Build sparte_data
-    const sparteData = {};
-    if (response.franchise) sparteData.franchise = String(response.franchise);
-    if (response.kassenmodell) sparteData.model = response.kassenmodell;
+    const sparteData = response.sparte_data || {};
 
     // If only monthly premium given, calculate yearly
     let premiumMonthly = response.premium_monthly || null;
@@ -143,25 +241,23 @@ Gib null zurück wenn ein Feld nicht vorhanden ist.`,
       premiumYearly = Math.round(premiumMonthly * 12 * 100) / 100;
     }
 
-    console.log(`[extractPolicyData] OK: provider=${response.provider} name=${response.first_name} ${response.last_name} zip=${zip} city=${response.city} canton=${canton}`);
+    console.log(`[extractPolicyData] OK: insurer=${response.insurer} name=${response.first_name} ${response.last_name} zip=${zip} city=${response.city} canton=${canton}`);
 
     return Response.json({
       success: true,
       extractedData: {
         first_name: response.first_name || null,
         last_name: response.last_name || null,
-        policy_holder_name: response.policy_holder_name || null,
         birthdate: response.birthdate || null,
         street: response.street || null,
         zip_code: zip,
         city: response.city || null,
         canton: canton,
         phone: response.phone || null,
+        mobile: response.mobile || null,
         email: response.email || null,
-        company_name: response.company_name || null,
         policy_number: response.policy_number || null,
-        provider: response.provider || null,
-        insurer: response.provider || null,
+        insurer: response.insurer || null,
         insurance_type: response.insurance_type || null,
         product: response.product || null,
         start_date: response.start_date || null,
@@ -171,7 +267,7 @@ Gib null zurück wenn ein Feld nicht vorhanden ist.`,
         premium_yearly: premiumYearly,
         sparte_data: Object.keys(sparteData).length > 0 ? sparteData : null,
         additional_products: response.additional_products || [],
-        notes: response.notes || null,
+        notes: null,
       }
     });
   } catch (error) {
