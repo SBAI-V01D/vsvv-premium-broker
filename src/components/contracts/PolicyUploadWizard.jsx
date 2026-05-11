@@ -424,41 +424,45 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         canton: (d.canton || '').trim(),
       }
 
-      // Use automatic matching result from LLM
-      if (matchingResult.decision.action === 'link_existing') {
-        // Automatisch zu bestehendem Kunden verknüpft
-        setSelectedCustomer(matchingResult.decision.matched_customer)
+      // Use automatic matching result
+      const decision = matchingResult.decision;
+
+      if (decision.action === 'link_existing') {
+        // EXACT MATCH: gleicher Vorname + Nachname + Geburtsdatum
+        setSelectedCustomer(decision.matched_customer)
         setCustomerMode('matched')
         setNewCustomerData(customerFields)
         setStep(3)
         return
-      } else if (matchingResult.decision.action === 'link_family') {
-        // Automatisch als Familienmitglied erkannt
-        setSelectedCustomer(matchingResult.decision.matched_customer)
-        setCustomerMode('family')
+      } else if (decision.action === 'create_family_member') {
+        // FAMILY MEMBER: gleicher Nachname + Adresse ABER anderer Vorname/Geburtsdatum
+        // → Familienmitglied vorbereiten
+        setSelectedCustomer(decision.matched_customer)
+        setCustomerMode('family_member')
         setNewCustomerData({
           ...customerFields,
-          primary_customer_id: matchingResult.decision.primary_customer_id,
-          family_role: matchingResult.decision.family_role
+          primary_customer_id: decision.primary_customer_id,
+          family_role: decision.family_role,
+          is_family_member: true
         })
-        setStep(3)
+        setStep(2)  // Step 2 to confirm family member creation
         return
-      } else if (matchingResult.decision.action === 'ask_confirmation' && matchingResult.all_matches.length > 0) {
-        // Mehrere Kandidaten → Step 2 mit Vorschlägen
+      } else if (decision.action === 'ask_confirmation') {
+        // PARTIAL MATCH: E-Mail oder Telefon
         setMatchCandidates(
           matchingResult.all_matches.map(m => ({
             customer: m,
             score: m.score
           }))
         )
-        setSelectedCustomer(matchingResult.decision.matched_customer)
-        setCustomerMode('matched')
+        setSelectedCustomer(decision.matched_customer)
+        setCustomerMode('partial')
         setNewCustomerData(customerFields)
         setStep(2)
         return
       }
 
-      // Default: Unzureichende Daten oder kein Treffer → Step 2 für manuelle Eingabe
+      // NO MATCH: neuer Kunde
       setNewCustomerData(customerFields)
       setCustomerMode('new')
       setStep(2)
@@ -477,7 +481,47 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     let customerName = selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : ''
     let orgId = selectedCustomer?.organization_id || organizations[0]?.id || ''
 
-    if (!customerId && customerMode === 'new') {
+    // FAMILY MEMBER: Create as family member, not as independent customer
+    if (customerMode === 'family_member' && newCustomerData.is_family_member) {
+      const nc = newCustomerData
+      if (!nc.first_name || !nc.last_name) {
+        setError('Vorname und Nachname sind erforderlich')
+        setSaving(false)
+        return
+      }
+      if (!customerId) {
+        setError('Hauptkontakt ist erforderlich')
+        setSaving(false)
+        return
+      }
+
+      const emailValue = nc.email?.trim()
+        ? nc.email.trim()
+        : `${nc.first_name.toLowerCase()}.${nc.last_name.toLowerCase()}.${Date.now()}@import.local`
+
+      const created = await base44.entities.Customer.create({
+        first_name: nc.first_name,
+        last_name: nc.last_name,
+        email: emailValue,
+        phone: nc.phone || undefined,
+        birthdate: nc.birthdate || undefined,
+        street: selectedCustomer.street || nc.street || undefined,
+        city: selectedCustomer.city || nc.city || undefined,
+        zip_code: selectedCustomer.zip_code || nc.zip_code || undefined,
+        canton: selectedCustomer.canton || nc.canton || undefined,
+        organization_id: orgId,
+        status: 'active',
+        customer_type: 'private',
+        is_family_member: true,
+        primary_customer_id: customerId,
+        family_role: nc.family_role || 'other'
+      })
+      customerId = created.id
+      customerName = `${nc.first_name} ${nc.last_name}`
+      orgId = created.organization_id || orgId
+    }
+    // NEW CUSTOMER: Create as independent customer
+    else if (!customerId && customerMode === 'new') {
       const nc = newCustomerData
       if (!nc.first_name || !nc.last_name) {
         setError('Vorname und Nachname sind erforderlich')
@@ -634,9 +678,55 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         )}
 
         {/* ── STEP 2: Customer ── */}
-        {step === 2 && (
-          <div className="space-y-4 py-2">
-            {extractedRaw && <ExtractionSummary data={extractedRaw} />}
+         {step === 2 && (
+           <div className="space-y-4 py-2">
+             {extractedRaw && <ExtractionSummary data={extractedRaw} />}
+
+             {/* FAMILY MEMBER DETECTION UI */}
+             {customerMode === 'family_member' && selectedCustomer && (
+               <div className="p-4 bg-blue-50 border-2 border-blue-300 rounded-lg space-y-3">
+                 <p className="text-sm font-bold text-blue-900">👨‍👩‍👧 Familienmitglied erkannt</p>
+                 <div className="grid grid-cols-2 gap-3 text-xs">
+                   <div className="bg-white p-2 rounded border border-blue-100">
+                     <p className="text-muted-foreground font-semibold">Hauptkontakt</p>
+                     <p className="font-bold text-sm mt-1">{selectedCustomer.first_name} {selectedCustomer.last_name}</p>
+                     <p className="text-[10px] text-muted-foreground mt-0.5">{selectedCustomer.birthdate || '–'}</p>
+                   </div>
+                   <div className="bg-white p-2 rounded border border-blue-100">
+                     <p className="text-muted-foreground font-semibold">Neue Person</p>
+                     <p className="font-bold text-sm mt-1">{newCustomerData.first_name || '?'} {newCustomerData.last_name || '?'}</p>
+                     <p className="text-[10px] text-muted-foreground mt-0.5">{newCustomerData.birthdate || 'kein Geburtsdatum'}</p>
+                   </div>
+                   <div className="col-span-2 bg-blue-100/50 p-2 rounded text-xs">
+                     <p>📍 Gemeinsame Adresse: {selectedCustomer.street || '–'}, {selectedCustomer.zip_code || '–'} {selectedCustomer.city || '–'}</p>
+                   </div>
+                 </div>
+                 <div className="space-y-2">
+                   <p className="text-xs font-semibold text-blue-800">Familienmitglied als:</p>
+                   <div className="flex gap-2 flex-wrap">
+                     {[
+                       { value: 'spouse', label: '👰 Ehepartner/in' },
+                       { value: 'child', label: '👧 Kind' },
+                       { value: 'parent', label: '👴 Elternteil' },
+                       { value: 'other', label: '👥 Sonstiges' }
+                     ].map(opt => (
+                       <button
+                         key={opt.value}
+                         type="button"
+                         onClick={() => setNewCustomerData(p => ({ ...p, family_role: opt.value }))}
+                         className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                           newCustomerData.family_role === opt.value
+                             ? 'bg-blue-600 text-white border-blue-600'
+                             : 'bg-white border-blue-200 text-blue-800 hover:border-blue-400'
+                         }`}
+                       >
+                         {opt.label}
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+               </div>
+             )}
 
             <p className="text-sm text-muted-foreground">Wem gehört diese Police?</p>
 
