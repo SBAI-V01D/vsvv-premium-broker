@@ -75,7 +75,8 @@ const addFooter = (doc, pageWidth, pageHeight) => {
   doc.setFontSize(8);
   doc.setTextColor(150, 150, 150);
   doc.text(`Erstellt: ${dateStr} ${timeStr}`, 20, pageHeight - 8);
-  doc.text(`Seite ${doc.getPageCount()}`, pageWidth - 30, pageHeight - 8);
+  const pageNum = doc.internal.pages.length - 1;
+  doc.text(`Seite ${pageNum}`, pageWidth - 30, pageHeight - 8);
 };
 
 Deno.serve(async (req) => {
