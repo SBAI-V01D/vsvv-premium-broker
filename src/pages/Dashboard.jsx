@@ -149,6 +149,7 @@ export default function Dashboard() {
           contracts={contracts}
           activeLeads={activeLeads}
           verkaufschancen={openVerkaufschancen}
+          tasks={tasks}
           onTaskClick={handleTaskClick}
           onTaskComplete={handleTaskComplete}
         />

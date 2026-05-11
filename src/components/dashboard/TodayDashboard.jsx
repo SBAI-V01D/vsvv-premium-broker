@@ -16,6 +16,7 @@ import {
   ChevronRight, Circle, CheckCircle2, Zap
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import BestandsmanagementPanel from './BestandsmanagementPanel'
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 const daysUntil = (d) => d ? Math.ceil((new Date(d) - new Date()) / 86400000) : null
@@ -155,7 +156,7 @@ function Section({ title, icon: Icon, iconColor, count, urgentCount, children, c
 }
 
 // ── MAIN ─────────────────────────────────────────────────────────────────────
-export default function TodayDashboard({ openTasks, expiringContracts, contracts = [], activeLeads, verkaufschancen, onTaskClick, onTaskComplete }) {
+export default function TodayDashboard({ openTasks, expiringContracts, contracts = [], activeLeads, verkaufschancen, tasks = [], onTaskClick, onTaskComplete }) {
   const navigate = useNavigate()
   const today = new Date()
 
@@ -198,22 +199,6 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
     [verkaufschancen]
   )
 
-  // Kündigungstermine nächste 180 Tage
-  const kuendigungsTermine = useMemo(() => contracts
-    .filter(c => c.cancellation_deadline && c.status === 'active')
-    .map(c => ({ ...c, _days: Math.ceil((new Date(c.cancellation_deadline) - today) / 86400000) }))
-    .filter(c => c._days >= -7 && c._days <= 180)
-    .sort((a, b) => a._days - b._days),
-    [contracts]
-  )
-
-  // Vertragsabläufe nächste 90 Tage (alle, nicht nur 30)
-  const criticalExpiring = useMemo(() => expiringContracts
-    .sort((a, b) => (daysUntil(a.end_date) ?? 999) - (daysUntil(b.end_date) ?? 999))
-    .slice(0, 8),
-    [expiringContracts]
-  )
-
   // Hot Leads
   const hotLeads = useMemo(() => activeLeads
     .filter(l => l.status === 'qualified' || (l.lead_score || 0) >= 60)
@@ -223,9 +208,7 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
   )
 
   const overdueCount = urgentTasks.filter(t => daysUntil(t.due_date) !== null && daysUntil(t.due_date) <= 0).length
-  const totalUrgent = overdueCount + wiedervorlagen.length +
-    criticalExpiring.filter(c => { const d = daysUntil(c.end_date); return d !== null && d <= 14 }).length +
-    kuendigungsTermine.filter(c => c._days <= 30).length
+  const totalUrgent = overdueCount + wiedervorlagen.length
 
   return (
     <div className="space-y-3">
@@ -267,6 +250,13 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
           </div>
         </div>
       )}
+
+      {/* ── Vertragsabläufe / Bestandsmanagement ────────────────────────── */}
+      <BestandsmanagementPanel
+        contracts={contracts}
+        tasks={openTasks}
+        verkaufschancen={verkaufschancen}
+      />
 
       {/* ── Dringende Aufgaben ───────────────────────────────────────────── */}
       <Section
@@ -322,100 +312,7 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
         </Section>
       )}
 
-      {/* ── Kündigungstermine ───────────────────────────────────────────── */}
-      {kuendigungsTermine.length > 0 && (
-        <Section
-          title="Kündigungstermine — nächste 180 Tage"
-          icon={CalendarClock}
-          iconColor="bg-red-100 text-red-600"
-          count={kuendigungsTermine.length}
-          urgentCount={kuendigungsTermine.filter(c => c._days <= 30).length}
-          cta={
-            <button onClick={() => navigate('/vertraege')} className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
-              <ArrowRight className="w-3 h-3" /> Alle Verträge
-            </button>
-          }
-        >
-          <div className="space-y-2">
-            {kuendigungsTermine.map(c => {
-              const days = c._days
-              const style = urgencyStyle(days)
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => navigate('/vertraege')}
-                  className={cn('w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left hover:shadow-sm transition-all', style.bg, style.border)}
-                >
-                  <div className={cn('w-12 h-10 rounded-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-black text-sm',
-                    days <= 0 ? 'bg-red-600' : days <= 7 ? 'bg-red-500' : days <= 30 ? 'bg-orange-500' : 'bg-amber-500'
-                  )}>
-                    <span className="leading-none">{Math.abs(days)}</span>
-                    <span className="text-[8px] font-bold">{days <= 0 ? 'ÜBER' : 'Tage'}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{c.customer_name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{c.insurer}{c.product ? ` · ${c.product}` : ''}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      Kündigungsfrist: {new Date(c.cancellation_deadline).toLocaleDateString('de-CH')}
-                    </p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className={cn('text-xs font-bold', days <= 7 ? 'text-red-600' : days <= 30 ? 'text-orange-600' : 'text-primary')}>
-                      {days <= 0 ? '⚡ SOFORT' : days <= 7 ? '⚡ DRINGEND' : days <= 30 ? 'Bald kündigen' : '→ Beobachten'}
-                    </p>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </Section>
-      )}
 
-      {/* ── Vertragsabläufe ─────────────────────────────────────────────── */}
-      {criticalExpiring.length > 0 && (
-        <Section
-          title="Verträge ablaufend — nächste 90 Tage"
-          icon={RefreshCw}
-          iconColor="bg-orange-100 text-orange-600"
-          count={criticalExpiring.length}
-          urgentCount={criticalExpiring.filter(c => { const d = daysUntil(c.end_date); return d !== null && d <= 14 }).length}
-          cta={
-            <button onClick={() => navigate('/vertraege')} className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
-              <ArrowRight className="w-3 h-3" /> Alle Verträge
-            </button>
-          }
-        >
-          <div className="space-y-2">
-            {criticalExpiring.map(c => {
-              const days = daysUntil(c.end_date)
-              const style = urgencyStyle(days)
-              const target = c.customer_id ? `/kunden/${c.customer_id}/360` : '/vertraege'
-              return (
-                <button
-                  key={c.id}
-                  onClick={() => navigate(target)}
-                  className={cn('w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left hover:shadow-sm transition-all', style.bg, style.border)}
-                >
-                  <div className={cn('w-12 h-10 rounded-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-black text-sm',
-                    days <= 0 ? 'bg-red-600' : days <= 14 ? 'bg-orange-500' : days <= 30 ? 'bg-amber-500' : 'bg-slate-400'
-                  )}>
-                    <span className="leading-none">{Math.abs(days ?? 0)}</span>
-                    <span className="text-[8px] font-bold">Tage</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{c.customer_name || '–'}</p>
-                    <p className="text-xs text-muted-foreground truncate">{c.insurer} · {c.sparte || c.insurance_type || '–'}</p>
-                    <p className="text-[10px] text-muted-foreground">Ablauf: {new Date(c.end_date).toLocaleDateString('de-CH')}</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-xs font-bold text-primary">→ Verlängerung</p>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </Section>
-      )}
 
       {/* ── Heiße Leads ─────────────────────────────────────────────────── */}
       {hotLeads.length > 0 && (
@@ -454,7 +351,7 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
       )}
 
       {/* Alle erledigt State */}
-      {totalUrgent === 0 && openTasks.length === 0 && actionableVs.length === 0 && criticalExpiring.length === 0 && (
+      {totalUrgent === 0 && openTasks.length === 0 && actionableVs.length === 0 && expiringContracts.length === 0 && (
         <div className="py-12 text-center rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/30">
           <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-emerald-400" />
           <p className="text-lg font-bold text-emerald-700">Alles unter Kontrolle!</p>
