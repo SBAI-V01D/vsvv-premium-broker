@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
   ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink, AlertCircle,
-  Target, User, Briefcase, TrendingUp, RefreshCw
+  Target, User, Briefcase, TrendingUp, RefreshCw, Lock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -86,6 +86,7 @@ const navGroups = [
     items: [
       { label: 'Provisionen',        icon: Wallet,    path: '/provisionen-courtagen' },
       { label: 'Berater & Partner',  icon: Briefcase, path: '/berater-organisation' },
+      { label: 'Team & Zugriffsrechte', icon: Lock,   path: '/admin/team-zugriffsrechte', adminOnly: true },
       { label: 'System',             icon: AlertCircle, path: '/admin-logs' },
     ],
   },
@@ -100,6 +101,8 @@ export default function Sidebar({ onNavigate }) {
   useEffect(() => {
     base44.auth.me().then(u => setCurrentUser(u)).catch(() => {});
   }, []);
+
+  const isAdmin = currentUser?.role === 'admin';
 
   const role = resolveRole(currentUser);
   const roleLabel = ROLE_LABELS[role] || '';
@@ -147,7 +150,9 @@ export default function Sidebar({ onNavigate }) {
 
             {/* Nav items */}
             <div className={cn('space-y-0.5', collapsed ? 'px-2' : 'px-3')}>
-              {group.items.map((item) => {
+              {group.items
+                .filter(item => !item.adminOnly || isAdmin)
+                .map((item) => {
                 const isActive =
                   location.pathname === item.path ||
                   (item.path !== '/' && location.pathname.startsWith(item.path));
