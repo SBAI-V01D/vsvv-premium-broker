@@ -436,24 +436,22 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         return
       } else if (decision.action === 'link_family_member_to_primary') {
         // EXACT MATCH BUT: Person is already a family member
-        // → Load primary contact, assign contract to family member
-        const primaryCustomer = decision.matched_customer
-        const familyMember = customers.find(c => c.id === decision.customer_id)
+        // → Show the recognized person, let user manually select primary contact
+        const familyMember = decision.matched_customer
         
-        setSelectedCustomer(primaryCustomer)  // Primary contact (e.g., Samanta)
-        setCustomerMode('family_member_existing')
+        setSelectedCustomer(null)  // NO auto-fill: user must select primary contact manually
+        setCustomerMode('family_member_manual')
         setNewCustomerData({
-          first_name: familyMember?.first_name || customerFields.first_name,
-          last_name: familyMember?.last_name || customerFields.last_name,
-          birthdate: familyMember?.birthdate || customerFields.birthdate,
-          email: familyMember?.email || customerFields.email,
-          phone: familyMember?.phone || customerFields.phone,
-          mobile: familyMember?.mobile || customerFields.mobile,
-          street: familyMember?.street || customerFields.street,
-          city: familyMember?.city || customerFields.city,
-          zip_code: familyMember?.zip_code || customerFields.zip_code,
-          canton: familyMember?.canton || customerFields.canton,
-          primary_customer_id: decision.primary_customer_id,
+          first_name: familyMember.first_name,
+          last_name: familyMember.last_name,
+          birthdate: familyMember.birthdate,
+          email: familyMember.email,
+          phone: familyMember.phone,
+          mobile: familyMember.mobile,
+          street: familyMember.street,
+          city: familyMember.city,
+          zip_code: familyMember.zip_code,
+          canton: familyMember.canton,
           actual_customer_id: decision.customer_id,
           family_role: decision.family_role,
           is_family_member: true
@@ -507,11 +505,17 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     let customerName = selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : ''
     let orgId = selectedCustomer?.organization_id || organizations[0]?.id || ''
 
-    // EXISTING FAMILY MEMBER: Use the recognized family member, not the primary contact
-    if (customerMode === 'family_member_existing' && newCustomerData.actual_customer_id) {
+    // FAMILY MEMBER (MANUAL or EXISTING): Use the recognized family member + manuell selected primary
+    if ((customerMode === 'family_member_manual' || customerMode === 'family_member_existing') && newCustomerData.actual_customer_id) {
       customerId = newCustomerData.actual_customer_id
       customerName = `${newCustomerData.first_name} ${newCustomerData.last_name}`
-      // orgId stays from primary contact
+      // selectedCustomer is the manually chosen primary contact
+      if (!selectedCustomer) {
+        setError('Bitte den Hauptkontakt auswählen')
+        setSaving(false)
+        return
+      }
+      newCustomerData.primary_customer_id = selectedCustomer.id
     }
     // NEW FAMILY MEMBER: Create as family member, not as independent customer
     else if (customerMode === 'family_member' && newCustomerData.is_family_member) {
@@ -714,7 +718,24 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
            <div className="space-y-4 py-2">
              {extractedRaw && <ExtractionSummary data={extractedRaw} />}
 
-             {/* EXISTING FAMILY MEMBER UI */}
+             {/* FAMILY MEMBER — MANUAL PRIMARY SELECTION */}
+             {customerMode === 'family_member_manual' && (
+               <div className="p-4 bg-violet-50 border-2 border-violet-300 rounded-lg space-y-3">
+                 <p className="text-sm font-bold text-violet-900">👶 Versicherte Person: {newCustomerData.first_name} {newCustomerData.last_name}</p>
+                 <div className="bg-violet-100/50 p-3 rounded text-xs text-violet-800">
+                   <p className="font-semibold mb-2">Bitte den Hauptkontakt auswählen:</p>
+                   <p className="text-[10px]">Ein Kind kann kein Hauptkontakt sein. Wähle den Elternteil oder Vormund.</p>
+                 </div>
+                 {selectedCustomer && (
+                   <div className="bg-white p-2 rounded border border-violet-200">
+                     <p className="text-muted-foreground font-semibold text-xs">✓ Hauptkontakt ausgewählt:</p>
+                     <p className="font-bold text-sm mt-1">{selectedCustomer.first_name} {selectedCustomer.last_name}</p>
+                   </div>
+                 )}
+               </div>
+             )}
+
+             {/* EXISTING FAMILY MEMBER UI (old, kept for backwards compatibility) */}
              {customerMode === 'family_member_existing' && selectedCustomer && (
                <div className="p-4 bg-emerald-50 border-2 border-emerald-300 rounded-lg space-y-3">
                  <p className="text-sm font-bold text-emerald-900">✓ Bestehendes Familienmitglied erkannt</p>
