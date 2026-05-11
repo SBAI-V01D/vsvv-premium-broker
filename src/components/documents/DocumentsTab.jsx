@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Upload, FileText, Trash2, ExternalLink, Tag, Eye, EyeOff } from 'lucide-react';
+import { Upload, FileText, Trash2, ExternalLink, Tag, Eye, EyeOff, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,6 +38,8 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
   const [form, setForm] = useState({ name: '', category: 'police', linked_contract_id: '', linked_claim_id: '', notes: '', visible_in_portal: true });
   const [file, setFile] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [editingDoc, setEditingDoc] = useState(null);
+  const [editForm, setEditForm] = useState({});
 
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ['documents', customerId],
@@ -49,6 +51,26 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
     mutationFn: (id) => base44.entities.Document.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['documents', customerId] }),
   });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Document.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents', customerId] });
+      setEditingDoc(null);
+    },
+  });
+
+  const openEdit = (doc) => {
+    setEditingDoc(doc);
+    setEditForm({
+      name: doc.name || '',
+      category: doc.category || 'sonstiges',
+      linked_contract_id: doc.linked_contract_id || '',
+      linked_claim_id: doc.linked_claim_id || '',
+      notes: doc.notes || '',
+      visible_in_portal: doc.visible_in_portal !== false,
+    });
+  };
 
   const applyFile = (f) => {
     if (!f) return;
@@ -91,7 +113,8 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
 
   const linkedContractName = (id) => {
     const c = contracts.find(c => c.id === id);
-    return c ? `${c.insurance_type} – ${c.provider}` : id;
+    if (!c) return id;
+    return [c.insurer, c.policy_number].filter(Boolean).join(' · ') || c.insurance_type || id;
   };
   const linkedClaimName = (id) => {
     const c = claims.find(c => c.id === id);
@@ -169,6 +192,9 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
                       <ExternalLink className="w-4 h-4" />
                     </Button>
                   </a>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(doc)}>
+                    <Pencil className="w-4 h-4" />
+                  </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"
                     onClick={() => deleteMutation.mutate(doc.id)}>
                     <Trash2 className="w-4 h-4" />
@@ -179,6 +205,78 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
           ))}
         </div>
       )}
+
+      {/* Bearbeiten-Dialog */}
+      <Dialog open={!!editingDoc} onOpenChange={(open) => { if (!open) setEditingDoc(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Dokument bearbeiten</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Name</Label>
+              <input
+                value={editForm.name || ''}
+                onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm mt-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+            <div>
+              <Label>Kategorie</Label>
+              <Select value={editForm.category} onValueChange={v => setEditForm(p => ({ ...p, category: v }))}>
+                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            {contracts.length > 0 && (
+              <div>
+                <Label>Vertrag zuordnen</Label>
+                <Select
+                  value={editForm.linked_contract_id || 'none'}
+                  onValueChange={v => setEditForm(p => ({ ...p, linked_contract_id: v === 'none' ? '' : v }))}
+                >
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Kein Vertrag" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">– Kein Vertrag –</SelectItem>
+                    {contracts.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.insurer || c.insurance_type || c.id}
+                        {c.policy_number ? ` · ${c.policy_number}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div>
+              <Label>Bemerkungen</Label>
+              <Textarea value={editForm.notes || ''} onChange={e => setEditForm(p => ({ ...p, notes: e.target.value }))} rows={2} className="mt-1" />
+            </div>
+            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+              <input
+                type="checkbox"
+                id="edit_visible_in_portal"
+                checked={!!editForm.visible_in_portal}
+                onChange={e => setEditForm(p => ({ ...p, visible_in_portal: e.target.checked }))}
+                className="w-4 h-4 cursor-pointer"
+              />
+              <label htmlFor="edit_visible_in_portal" className="text-sm cursor-pointer flex items-center gap-1.5">
+                {editForm.visible_in_portal ? <Eye className="w-4 h-4 text-primary" /> : <EyeOff className="w-4 h-4 text-muted-foreground" />}
+                Im Kundenportal sichtbar
+              </label>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditingDoc(null)}>Abbrechen</Button>
+              <Button
+                onClick={() => updateMutation.mutate({ id: editingDoc.id, data: editForm })}
+                disabled={updateMutation.isPending}
+              >
+                {updateMutation.isPending ? 'Speichern...' : 'Speichern'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showUpload} onOpenChange={setShowUpload}>
         <DialogContent className="max-w-md">
