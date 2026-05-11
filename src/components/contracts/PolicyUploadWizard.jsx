@@ -437,12 +437,24 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       } else if (decision.action === 'link_family_member_to_primary') {
         // EXACT MATCH BUT: Person is already a family member
         // → Load primary contact, assign contract to family member
-        setSelectedCustomer(decision.matched_customer)  // Primary contact shown
+        const primaryCustomer = decision.matched_customer
+        const familyMember = customers.find(c => c.id === decision.customer_id)
+        
+        setSelectedCustomer(primaryCustomer)  // Primary contact (e.g., Samanta)
         setCustomerMode('family_member_existing')
         setNewCustomerData({
-          ...customerFields,
+          first_name: familyMember?.first_name || customerFields.first_name,
+          last_name: familyMember?.last_name || customerFields.last_name,
+          birthdate: familyMember?.birthdate || customerFields.birthdate,
+          email: familyMember?.email || customerFields.email,
+          phone: familyMember?.phone || customerFields.phone,
+          mobile: familyMember?.mobile || customerFields.mobile,
+          street: familyMember?.street || customerFields.street,
+          city: familyMember?.city || customerFields.city,
+          zip_code: familyMember?.zip_code || customerFields.zip_code,
+          canton: familyMember?.canton || customerFields.canton,
           primary_customer_id: decision.primary_customer_id,
-          actual_customer_id: decision.customer_id,  // The recognized person (family member)
+          actual_customer_id: decision.customer_id,
           family_role: decision.family_role,
           is_family_member: true
         })
