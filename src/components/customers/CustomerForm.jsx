@@ -139,38 +139,39 @@ const COUNTRIES = [
 
 export default function CustomerForm({ customer, primaryCustomers = [], onSave, onCancel, saving }) {
    const [form, setForm] = useState(() => {
-      if (!customer) {
-         return {
-            first_name: '',
-            last_name: '',
-            email: '',
-            phone: '',
-            mobile: '',
-            street: '',
-            zip_code: '',
-            city: '',
-            canton: '',
-            birthdate: '',
-            ahv_number: '',
-            profession: '',
-            civil_status: 'single',
-            nationality: 'CH',
-            drivers_license_date: '',
-            risk_profile: 'medium',
-            customer_type: 'private',
-            status: 'active',
-            mandate_status: 'active',
-            association_membership: 'none',
-            permit_type: 'none',
-            is_family_member: false,
-            primary_customer_id: '',
-            family_role: 'primary',
-            notes: '',
-            assigned_broker: '',
-            organization_id: '',
-            advisor_id: '',
-         }
-      }
+       if (!customer) {
+          return {
+             first_name: '',
+             last_name: '',
+             email: '',
+             phone: '',
+             mobile: '',
+             street: '',
+             zip_code: '',
+             city: '',
+             canton: '',
+             birthdate: '',
+             ahv_number: '',
+             profession: '',
+             civil_status: 'single',
+             nationality: 'CH',
+             drivers_license_date: '',
+             bank_account: '',
+             risk_profile: 'medium',
+             customer_type: 'private',
+             status: 'active',
+             mandate_status: 'active',
+             association_membership: 'none',
+             permit_type: 'none',
+             is_family_member: false,
+             primary_customer_id: '',
+             family_role: 'primary',
+             notes: '',
+             assigned_broker: '',
+             organization_id: '',
+             advisor_id: '',
+          }
+       }
       // Normalize all fields: replace null/undefined with '' or defaults
       const n = (v) => v == null ? '' : v
       return {
@@ -188,6 +189,7 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
          ahv_number: n(customer.ahv_number),
          profession: n(customer.profession),
          drivers_license_date: n(customer.drivers_license_date),
+         bank_account: n(customer.bank_account),
          notes: n(customer.notes),
          assigned_broker: n(customer.assigned_broker),
          organization_id: n(customer.organization_id),
@@ -225,6 +227,7 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
          ahv_number: n(customer.ahv_number),
          profession: n(customer.profession),
          drivers_license_date: n(customer.drivers_license_date),
+         bank_account: n(customer.bank_account),
          notes: n(customer.notes),
          assigned_broker: n(customer.assigned_broker),
          organization_id: n(customer.organization_id),
@@ -422,6 +425,11 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
           <Label>AHV-Nummer</Label>
           <Input value={form.ahv_number} onChange={e => set('ahv_number', e.target.value)} placeholder="756.1234.5678.90" className="mt-1" />
         </div>
+      </div>
+
+      <div>
+        <Label>Bank- oder Postkontoverbindung</Label>
+        <Input value={form.bank_account} onChange={e => set('bank_account', e.target.value)} placeholder="IBAN oder Kontonummer" className="mt-1" />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
