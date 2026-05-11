@@ -271,6 +271,33 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
   const sparteFields = getFieldsForSparte(contract.sparte)
   const franchiseOptions = FRANCHISE_OPTIONS[contract.sparte_data?.age_group] || FRANCHISE_OPTIONS.default
 
+  // ── Auto-create customer and skip to step 3 ────────────────────────────────
+  const createAndProceed = async (customerData) => {
+    const orgId = organizations[0]?.id || ''
+    const emailValue = customerData.email?.trim()
+      ? customerData.email.trim()
+      : `${customerData.first_name.toLowerCase()}.${customerData.last_name.toLowerCase()}.${Date.now()}@import.local`
+    
+    const created = await base44.entities.Customer.create({
+      first_name: customerData.first_name,
+      last_name: customerData.last_name,
+      email: emailValue,
+      phone: customerData.phone || undefined,
+      birthdate: customerData.birthdate || undefined,
+      street: customerData.street || undefined,
+      city: customerData.city || undefined,
+      zip_code: customerData.zip_code || undefined,
+      canton: customerData.canton || undefined,
+      organization_id: orgId,
+      status: 'active',
+      customer_type: 'private',
+    })
+    setSelectedCustomer(created)
+    setCustomerMode('matched')
+    setNewCustomerData(customerData)
+    setStep(3)
+  }
+
   // ── Step 1: Upload + Extract ────────────────────────────────────────────────
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0]
@@ -339,34 +366,39 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       }
 
       if (customerFields.first_name || customerFields.last_name) {
-        const candidates = matchCustomers(customerFields, customers)
-        setMatchCandidates(candidates)
+         const candidates = matchCustomers(customerFields, customers)
+         setMatchCandidates(candidates)
 
-        if (candidates.length > 0 && candidates[0].score >= 90) {
-          // Very high confidence → auto-select and skip to step 3
-          setSelectedCustomer(candidates[0].customer)
-          setCustomerMode('matched')
+         if (candidates.length > 0 && candidates[0].score >= 90) {
+           // Very high confidence → auto-select and skip to step 3
+           setSelectedCustomer(candidates[0].customer)
+           setCustomerMode('matched')
+           setNewCustomerData(customerFields)
+           setStep(3)
+           return
+         } else if (candidates.length > 0 && candidates[0].score >= 50) {
+           setSelectedCustomer(candidates[0].customer)
+           setCustomerMode('matched')
+           setNewCustomerData(customerFields)
+           setStep(2)
+         } else if (customerFields.first_name && customerFields.last_name) {
+           // No good match BUT we have valid first+last name → auto-create customer
+           createAndProceed(customerFields)
+           return
+         } else {
+           // Not enough info → go to step 2 for manual entry
+           setNewCustomerData(customerFields)
+           setCustomerMode('new')
+           setStep(2)
+         }
+       } else {
           setNewCustomerData(customerFields)
-          setStep(3)
-          return
-        } else if (candidates.length > 0 && candidates[0].score >= 50) {
-          setSelectedCustomer(candidates[0].customer)
-          setCustomerMode('matched')
-          setNewCustomerData(customerFields)
-        } else {
-          // No good match → pre-fill new customer form
-          setNewCustomerData(customerFields)
-          setCustomerMode('new')
+          setStep(2)
         }
-      } else {
-        setNewCustomerData(customerFields)
-      }
-    }
+       }
+       }
 
-    setStep(2)
-  }
-
-  // ── Step 3: Save ─────────────────────────────────────────────────────────────
+       // ── Step 3: Save ─────────────────────────────────────────────────────────────
   const handleSave = async () => {
     setSaving(true)
     setError(null)
