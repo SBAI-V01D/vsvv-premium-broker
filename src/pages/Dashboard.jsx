@@ -2,7 +2,7 @@
  * Dashboard — Fokussiertes Tages-Cockpit
  * Nur: Was bringt heute Umsatz?
  */
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { base44 } from '@/api/base44Client'
@@ -15,11 +15,9 @@ import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 
 import TodayDashboard from '@/components/dashboard/TodayDashboard'
-import RawDataDiagnostic from '@/components/admin/RawDataDiagnostic'
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState('today')
   const [selectedTask, setSelectedTask] = useState(null)
   const [formData, setFormData] = useState({ title: '', status: '', notes: '', due_date: '' })
   const queryClient = useQueryClient()
@@ -136,49 +134,24 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Tab Navigation — nur 2 Tabs */}
-        <div className="flex gap-1">
-          {[
-            { id: 'today', label: '⚡ Heute', badge: urgentCount > 0 ? urgentCount : null },
-            { id: 'diagnose', label: '⚙️ Diagnose', badge: null },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
-                activeTab === tab.id
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              )}
-            >
-              {tab.label}
-              {tab.badge != null && (
-                <span className={cn('text-xs px-1.5 py-0.5 rounded-full font-bold',
-                  activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-red-100 text-red-700'
-                )}>
-                  {tab.badge}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        {urgentCount > 0 && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
+            <span className="text-xs font-bold text-red-700">⚡ {urgentCount} dringende Aktion(en) — sofort handeln</span>
+          </div>
+        )}
       </div>
 
-      {/* ── Tab Content ──────────────────────────────────────────────────── */}
+      {/* ── Dashboard Content ────────────────────────────────────────────── */}
       <div className="pt-5">
-        {activeTab === 'today' && (
-          <TodayDashboard
-            openTasks={openTasks}
-            expiringContracts={expiringContracts}
-            contracts={contracts}
-            activeLeads={activeLeads}
-            verkaufschancen={openVerkaufschancen}
-            onTaskClick={handleTaskClick}
-            onTaskComplete={handleTaskComplete}
-          />
-        )}
-        {activeTab === 'diagnose' && <RawDataDiagnostic />}
+        <TodayDashboard
+          openTasks={openTasks}
+          expiringContracts={expiringContracts}
+          contracts={contracts}
+          activeLeads={activeLeads}
+          verkaufschancen={openVerkaufschancen}
+          onTaskClick={handleTaskClick}
+          onTaskComplete={handleTaskComplete}
+        />
       </div>
 
       {/* ── Task Edit Dialog ──────────────────────────────────────────────── */}
