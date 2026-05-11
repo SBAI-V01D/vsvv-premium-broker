@@ -1,407 +1,389 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-import { jsPDF } from 'npm:jspdf@4.0.0';
+import jsPDF from 'npm:jspdf@4.0.0';
+
+// Helper: Format date
+const formatDate = (dateStr) => {
+  if (!dateStr) return '–';
+  try {
+    return new Date(dateStr).toLocaleDateString('de-CH', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  } catch {
+    return '–';
+  }
+};
+
+// Helper: Get days until expiration
+const getDaysUntilExpiry = (endDate) => {
+  if (!endDate) return null;
+  const today = new Date();
+  const end = new Date(endDate);
+  return Math.floor((end - today) / (1000 * 60 * 60 * 24));
+};
+
+// Helper: Get status color for contract
+const getStatusColor = (contract) => {
+  const days = getDaysUntilExpiry(contract.end_date);
+  if (days === null) return { bg: [200, 230, 201], text: [27, 94, 32], label: 'unbegrenzt' }; // green
+  if (days < 0) return { bg: [255, 205, 210], text: [179, 0, 0], label: 'abgelaufen' }; // red
+  if (days <= 30) return { bg: [255, 179, 71], text: [230, 126, 34], label: 'kritisch' }; // orange-red
+  if (days <= 90) return { bg: [255, 235, 130], text: [240, 175, 0], label: 'warnung' }; // orange
+  return { bg: [200, 230, 201], text: [27, 94, 32], label: 'stabil' }; // green
+};
+
+// Helper: Format currency
+const formatCurrency = (value) => {
+  if (!value) return '–';
+  return new Intl.NumberFormat('de-CH', {
+    style: 'currency',
+    currency: 'CHF',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value);
+};
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-    
+
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { customer_id } = await req.json();
+
     if (!customer_id) {
-      return Response.json({ error: 'customer_id required' }, { status: 400 });
+      return Response.json({ error: 'Missing customer_id' }, { status: 400 });
     }
 
     // Fetch data
-    const [customer, familyMembers, allContracts, tasks, opportunities] = await Promise.all([
-      base44.entities.Customer.filter({ id: customer_id }).then(r => r[0]),
-      base44.entities.Customer.filter({ primary_customer_id: customer_id, is_family_member: true }),
-      base44.entities.Contract.filter({ customer_id }),
-      base44.entities.Task.filter({ customer_id }),
-      base44.entities.Verkaufschance.filter({ customer_id })
+    const [customer, allCustomers, contracts, verkaufschancen, tasks] = await Promise.all([
+      base44.entities.Customer.filter({ id: customer_id }).then(res => res[0]),
+      base44.entities.Customer.list(null, 1000),
+      base44.entities.Contract.list(null, 1000),
+      base44.entities.Verkaufschance.filter({ customer_id }),
+      base44.entities.Task.list(null, 1000)
     ]);
 
     if (!customer) {
       return Response.json({ error: 'Customer not found' }, { status: 404 });
     }
 
-    // Get family member contracts
-    const familyContractPromises = familyMembers.map(fm => 
-      base44.entities.Contract.filter({ customer_id: fm.id })
+    // Get household members (primary + family)
+    const primaryCustomerId = customer.primary_customer_id || customer.id;
+    const householdMembers = allCustomers.filter(c =>
+      c.primary_customer_id === primaryCustomerId || c.id === primaryCustomerId
+    ).sort((a, b) => (b.id === primaryCustomerId ? 1 : -1)); // Primary first
+
+    // Get contracts and tasks for household
+    const householdCustomerIds = householdMembers.map(m => m.id);
+    const householdContracts = contracts.filter(c => householdCustomerIds.includes(c.customer_id));
+    const householdTasks = tasks.filter(t =>
+      householdCustomerIds.includes(t.customer_id) &&
+      ['open', 'in_progress'].includes(t.status)
     );
-    const familyContractResults = await Promise.all(familyContractPromises);
-    const allFamilyContracts = familyContractResults.flat();
-    const contracts = [...allContracts, ...allFamilyContracts];
 
-    // Create PDF (Portrait) with UTF-8 support
-    const doc = new jsPDF({ 
-      orientation: 'portrait', 
-      unit: 'mm', 
-      format: 'a4',
-      compress: false 
-    });
-    
-    doc.setFont('helvetica');
-    let yPos = 15;
-    const pageHeight = doc.internal.pageSize.getHeight();
+    // Create PDF in LANDSCAPE format
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'A4' });
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
-    const contentWidth = pageWidth - 2 * margin;
+    let yPos = margin;
 
-    // Helpers
-    const addNewPage = () => {
-      doc.addPage();
-      yPos = margin;
-    };
-
-    const checkPageBreak = (needed = 15) => {
-      if (yPos + needed > pageHeight - margin) {
-        addNewPage();
-      }
-    };
-
-    const addSection = (title) => {
-      checkPageBreak(10);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text(String(title).normalize('NFC'), margin, yPos);
-      yPos += 8;
-      doc.setDrawColor(31, 41, 55);
-      doc.line(margin, yPos - 2, pageWidth - margin, yPos - 2);
-      yPos += 4;
-    };
-
-    const addField = (label, value) => {
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text(String(label).normalize('NFC'), margin, yPos);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(value || '—').normalize('NFC'), margin + 50, yPos);
-      yPos += 5;
-    };
-
-    // === PAGE 1: DECKBLATT ===
-    // Header Background
-    doc.setFillColor(31, 41, 55);
-    doc.rect(0, 0, pageWidth, 60, 'F');
+    // ===== PAGE 1: HOUSEHOLD OVERVIEW =====
 
     // Title
-    doc.setFontSize(28);
+    doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(255, 255, 255);
-    doc.text('Haushaltsübersicht'.normalize('NFC'), margin, 25);
+    doc.text('Haushaltsübersicht', margin, yPos);
+    yPos += 12;
 
-    // Date
-    doc.setFontSize(10);
+    // Divider
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 8;
+
+    // Primary contact + address section
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(200, 200, 200);
-    doc.text(new Date().toLocaleDateString('de-CH', { year: 'numeric', month: 'long', day: 'numeric' }), margin, 40);
 
-    // Reset colors
-    doc.setTextColor(0, 0, 0);
-    yPos = 75;
+    const contactBoxHeight = 35;
+    doc.setFillColor(245, 245, 245);
+    doc.rect(margin, yPos, pageWidth - 2 * margin, contactBoxHeight, 'F');
 
-    // Primary Customer
-    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text('Hauptkontakt'.normalize('NFC'), margin, yPos);
-    yPos += 7;
+    doc.setFontSize(12);
+    doc.text(`${customer.first_name} ${customer.last_name}`, margin + 5, yPos + 8);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    const addressLines = [
+      customer.street ? `${customer.street}` : '',
+      `${customer.zip_code} ${customer.city}`,
+      customer.email || '',
+      customer.phone || ''
+    ].filter(l => l);
+
+    let addressY = yPos + 15;
+    addressLines.forEach(line => {
+      doc.text(line, margin + 5, addressY);
+      addressY += 5;
+    });
+
+    yPos += contactBoxHeight + 8;
+
+    // Summary stats
+    const activeContracts = householdContracts.filter(c => c.status === 'active').length;
+    const insurers = new Set(householdContracts.map(c => c.insurer)).size;
+    const totalPremium = householdContracts.reduce((sum, c) => sum + (c.premium_yearly || 0), 0);
+    const openReviews = householdTasks.filter(t => t.task_type === 'consultation').length;
+    const expiringCount = householdContracts.filter(c => {
+      const days = getDaysUntilExpiry(c.end_date);
+      return days !== null && days >= 0 && days <= 180;
+    }).length;
+
+    const stats = [
+      { label: 'Familienmitglieder', value: householdMembers.length },
+      { label: 'Aktive Verträge', value: activeContracts },
+      { label: 'Gesellschaften', value: insurers },
+      { label: 'Jahresprämie gesamt', value: formatCurrency(totalPremium) },
+      { label: 'Offene Reviews', value: openReviews },
+      { label: 'Abläufe (180d)', value: expiringCount }
+    ];
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    const statColWidth = (pageWidth - 2 * margin) / 3;
+
+    stats.forEach((stat, idx) => {
+      const row = Math.floor(idx / 3);
+      const col = idx % 3;
+      const x = margin + col * statColWidth;
+      const y = yPos + row * 12;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text(stat.label, x + 2, y);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(String(stat.value), x + 2, y + 6);
+    });
+
+    yPos += 30;
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 8;
+
+    // ===== FAMILY MEMBER SECTIONS =====
+
+    householdMembers.forEach((member, memberIdx) => {
+      const memberContracts = householdContracts.filter(c => c.customer_id === member.id);
+      
+      // Check if we need a new page
+      const estimatedHeight = 50 + memberContracts.length * 8;
+      if (yPos + estimatedHeight > pageHeight - margin) {
+        doc.addPage();
+        yPos = margin;
+      }
+
+      // Member header box
+      const headerColor = memberIdx === 0 ? [66, 139, 202] : [100, 150, 180]; // Different colors
+      doc.setFillColor(...headerColor);
+      doc.setTextColor(255, 255, 255);
+      doc.rect(margin, yPos, pageWidth - 2 * margin, 10, 'F');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      const roleLabel = member.id === customer.id ? '(Hauptkontakt)' : `(${member.family_role === 'spouse' ? 'Ehepartner/in' : member.family_role === 'child' ? 'Kind' : 'Familienmitglied'})`;
+      doc.text(`${member.first_name} ${member.last_name} ${roleLabel}`, margin + 5, yPos + 6.5);
+      doc.setTextColor(0, 0, 0);
+
+      yPos += 12;
+
+      // Member info
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      const infoLines = [
+        member.birthdate ? `Geb.: ${formatDate(member.birthdate)}` : '',
+        `Verträge: ${memberContracts.length}`,
+        `Jahresprämie: ${formatCurrency(memberContracts.reduce((sum, c) => sum + (c.premium_yearly || 0), 0))}`
+      ].filter(l => l);
+
+      infoLines.forEach((line, idx) => {
+        doc.text(line, margin + 5, yPos + idx * 5);
+      });
+
+      yPos += infoLines.length * 5 + 5;
+
+      // Contracts table header
+      if (memberContracts.length > 0) {
+        const tableTop = yPos;
+        const colWidths = {
+          sparte: 35,
+          insurer: 45,
+          policy: 35,
+          expiry: 30,
+          premium: 30
+        };
+
+        doc.setFillColor(230, 230, 230);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+
+        const headers = [
+          { label: 'Sparte', width: colWidths.sparte },
+          { label: 'Gesellschaft', width: colWidths.insurer },
+          { label: 'Police', width: colWidths.policy },
+          { label: 'Ablauf', width: colWidths.expiry },
+          { label: 'Jahresprämie', width: colWidths.premium }
+        ];
+
+        let xPos = margin;
+        headers.forEach(h => {
+          doc.rect(xPos, yPos, h.width, 7, 'F');
+          doc.text(h.label, xPos + 2, yPos + 5);
+          xPos += h.width;
+        });
+
+        yPos += 8;
+
+        // Contract rows
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+
+        memberContracts.forEach(contract => {
+          const statusColor = getStatusColor(contract);
+          xPos = margin;
+
+          // Row background color based on status
+          doc.setFillColor(...statusColor.bg);
+          doc.rect(xPos, yPos, pageWidth - 2 * margin, 6, 'F');
+
+          doc.setTextColor(...statusColor.text);
+
+          // Sparte
+          doc.text(contract.sparte || contract.insurance_type || '–', xPos + 2, yPos + 4.5);
+          xPos += colWidths.sparte;
+
+          // Insurer
+          doc.text(contract.insurer || '–', xPos + 2, yPos + 4.5);
+          xPos += colWidths.insurer;
+
+          // Policy
+          doc.text(contract.policy_number || '–', xPos + 2, yPos + 4.5);
+          xPos += colWidths.policy;
+
+          // Expiry
+          if (contract.end_date) {
+            const days = getDaysUntilExpiry(contract.end_date);
+            const expiryText = days === null ? formatDate(contract.end_date) : `${formatDate(contract.end_date)} (${days}d)`;
+            doc.text(expiryText, xPos + 2, yPos + 4.5);
+          } else {
+            doc.text('–', xPos + 2, yPos + 4.5);
+          }
+          xPos += colWidths.expiry;
+
+          // Premium
+          doc.text(formatCurrency(contract.premium_yearly), xPos + 2, yPos + 4.5);
+
+          doc.setTextColor(0, 0, 0);
+          yPos += 7;
+        });
+      }
+
+      yPos += 8;
+    });
+
+    // ===== FINAL PAGE: OPPORTUNITIES & REVIEWS =====
+
+    if (yPos > pageHeight - 80) {
+      doc.addPage();
+      yPos = margin;
+    }
+
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 8;
 
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text(`${customer.first_name || ''} ${customer.last_name || ''}`.normalize('NFC'), margin, yPos);
-    yPos += 8;
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    if (customer.birthdate) {
-      doc.text(`Geburtsdatum: ${customer.birthdate}`, margin, yPos);
-      yPos += 6;
-    }
-    if (customer.street) {
-      doc.text(`${customer.street}`.normalize('NFC'), margin, yPos);
-      yPos += 5;
-    }
-    if (customer.zip_code || customer.city) {
-      doc.text(`${customer.zip_code || ''} ${customer.city || ''}`.normalize('NFC'), margin, yPos);
-      yPos += 5;
-    }
-
+    doc.text('Beratungspotential & Abläufe', margin, yPos);
     yPos += 10;
 
-    // Stats
-    const totalPremium = contracts.reduce((s, c) => s + (c.premium_yearly || 0), 0);
-    const stats = [
-      ['👨‍👩‍👧‍👦 Familienmitglieder', (familyMembers.length + 1).toString()],
-      ['📋 Aktive Verträge', contracts.filter(c => c.status === 'active').length.toString()],
-      ['🏢 Gesellschaften', new Set(contracts.map(c => c.insurer)).size.toString()],
-      ['💰 Jahresprämie', `CHF ${totalPremium.toLocaleString('de-CH')}`]
-    ];
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
 
-    doc.setFontSize(10);
+    // Open opportunities
+    const openOpportunities = verkaufschancen.filter(v => !['gewonnen', 'verloren'].includes(v.status));
+    if (openOpportunities.length > 0) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Offene Verkaufschancen:', margin, yPos);
+      yPos += 6;
+
+      doc.setFont('helvetica', 'normal');
+      openOpportunities.slice(0, 5).forEach(opp => {
+        doc.text(`• ${opp.title} (${opp.sparte || '–'})`, margin + 5, yPos);
+        yPos += 5;
+      });
+
+      yPos += 3;
+    }
+
+    // Open reviews
+    if (householdTasks.length > 0) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Offene Aufgaben:', margin, yPos);
+      yPos += 6;
+
+      doc.setFont('helvetica', 'normal');
+      householdTasks.slice(0, 5).forEach(task => {
+        const priority = task.priority === 'urgent' ? '🔴' : task.priority === 'high' ? '🟠' : '🟡';
+        doc.text(`${priority} ${task.title}`, margin + 5, yPos);
+        yPos += 5;
+      });
+
+      yPos += 3;
+    }
+
+    // Status legend
+    yPos += 5;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 8;
+
     doc.setFont('helvetica', 'bold');
-    doc.text('Haushalts-Kennzahlen:'.normalize('NFC'), margin, yPos);
-    yPos += 7;
+    doc.setFontSize(9);
+    doc.text('Status-Legende:', margin, yPos);
+    yPos += 6;
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    stats.forEach(([label, value]) => {
-      doc.text(`${label}`, margin, yPos);
-      doc.setFont('helvetica', 'bold');
-      doc.text(value, margin + 70, yPos);
-      doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+
+    const legend = [
+      { color: [200, 230, 201], label: 'GRÜN: Stabil – keine Massnahmen nötig' },
+      { color: [255, 235, 130], label: 'ORANGE: Warnung – Ablauf in < 90 Tagen' },
+      { color: [255, 179, 71], label: 'ORANGE-ROT: Kritisch – Ablauf in < 30 Tagen' },
+      { color: [255, 205, 210], label: 'ROT: Überfällig – sofort handeln' }
+    ];
+
+    legend.forEach(item => {
+      doc.setFillColor(...item.color);
+      doc.rect(margin + 5, yPos - 2, 4, 4, 'F');
+      doc.text(item.label, margin + 11, yPos);
       yPos += 6;
     });
 
-    // === PAGE 2: FAMILIENMITGLIEDER ===
-    addNewPage();
-    addSection('👨‍👩‍👧‍👦 Familienmitglieder');
-
-    // Hauptkontakt
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Hauptkontakt'.normalize('NFC'), margin, yPos);
-    yPos += 5;
-
-    addField('Name', `${customer.first_name || ''} ${customer.last_name || ''}`);
-    addField('Rolle', 'Hauptkontakt');
-    addField('Geburtsdatum', customer.birthdate || '—');
-    addField('E-Mail', customer.email || '—');
-    addField('Telefon', customer.phone || customer.mobile || '—');
-    
-    yPos += 3;
-
-    // Family Members
-    if (familyMembers.length > 0) {
-      familyMembers.forEach((m, idx) => {
-        checkPageBreak(15);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Mitglied ${idx + 1}`.normalize('NFC'), margin, yPos);
-        yPos += 5;
-
-        const roleLabel = m.family_role === 'spouse' ? 'Ehepartner/in' : m.family_role === 'child' ? 'Kind' : m.family_role === 'parent' ? 'Elternteil' : 'Mitglied';
-        addField('Name', `${m.first_name || ''} ${m.last_name || ''}`);
-        addField('Rolle', roleLabel);
-        addField('Geburtsdatum', m.birthdate || '—');
-        
-        yPos += 2;
-      });
-    }
-
-    // === PAGE 3+: VERTRÄGE NACH SPARTEN ===
-    if (contracts.length > 0) {
-      addNewPage();
-      addSection('📋 Vertragsübersicht');
-
-      // Group by sparte
-      const bySparte = {};
-      contracts.forEach(c => {
-        const sparte = c.sparte || c.insurance_type || 'Sonstige';
-        if (!bySparte[sparte]) bySparte[sparte] = [];
-        bySparte[sparte].push(c);
-      });
-
-      // Gesamtprämie
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.setFillColor(240, 240, 240);
-      doc.rect(margin, yPos - 3, contentWidth, 8, 'F');
-      doc.text('Gesamtprämie (jährlich):', margin + 2, yPos + 2);
-      doc.text(`CHF ${totalPremium.toLocaleString('de-CH')}`, margin + 70, yPos + 2);
-      yPos += 10;
-
-      Object.entries(bySparte).forEach(([sparteKey, sparteContracts]) => {
-        checkPageBreak(12);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(31, 41, 55);
-        doc.text(`${sparteKey} (${sparteContracts.length})`.normalize('NFC'), margin, yPos);
-        doc.setTextColor(0, 0, 0);
-        yPos += 6;
-
-        sparteContracts.forEach(c => {
-          checkPageBreak(8);
-          doc.setFontSize(9);
-          doc.setFont('helvetica', 'normal');
-
-          const personName = c.customer_id === customer.id 
-            ? customer.first_name 
-            : familyMembers.find(m => m.id === c.customer_id)?.first_name || '—';
-
-          // Company
-          doc.setFont('helvetica', 'bold');
-          doc.text(String(c.insurer || '—').normalize('NFC'), margin + 3, yPos);
-          yPos += 4;
-
-          // Details
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8);
-          const details = [
-            c.policy_number ? `Police: ${c.policy_number}` : '',
-            `Person: ${personName}`,
-            c.end_date ? `Ablauf: ${new Date(c.end_date).toLocaleDateString('de-CH')}` : 'Ablauf: —'
-          ].filter(Boolean).join(' | ');
-          doc.text(details, margin + 3, yPos);
-          yPos += 4;
-
-          // Premium
-          if (c.premium_yearly) {
-            doc.text(`Prämie: CHF ${c.premium_yearly.toLocaleString('de-CH')}/a`, margin + 3, yPos);
-            yPos += 3;
-          }
-
-          // Status
-          const days = c.end_date ? Math.ceil((new Date(c.end_date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
-          let statusLabel = '✓ Stabil';
-          if (days !== null) {
-            if (days < 0) statusLabel = '✗ Überfällig';
-            else if (days <= 30) statusLabel = '⚠ Ablauf < 30 Tage';
-            else if (days <= 90) statusLabel = '⏰ Ablauf < 90 Tage';
-          }
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(8);
-          doc.setTextColor(statusLabel.includes('✗') ? 220 : statusLabel.includes('⚠') ? 180 : 34, 180, 34);
-          doc.text(statusLabel, margin + 3, yPos);
-          doc.setTextColor(0, 0, 0);
-          yPos += 4;
-
-          yPos += 1;
-        });
-
-        yPos += 2;
-      });
-    }
-
-    // === PAGE: VERTRAGSABLÄUFE & REVIEWS ===
-    const expiringContracts = contracts
-      .filter(c => c.end_date && Math.ceil((new Date(c.end_date) - new Date()) / (1000 * 60 * 60 * 24)) <= 180)
-      .sort((a, b) => new Date(a.end_date) - new Date(b.end_date))
-      .slice(0, 10);
-    
-    const openReviewTasks = tasks
-      .filter(t => t.task_type === 'consultation' && t.status !== 'completed')
-      .slice(0, 5);
-
-    if (expiringContracts.length > 0 || openReviewTasks.length > 0) {
-      addNewPage();
-      addSection('⏰ Vertragsabläufe & Beratungsbedarf');
-
-      if (expiringContracts.length > 0) {
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Nächste Ablaufdaten:'.normalize('NFC'), margin, yPos);
-        yPos += 6;
-
-        expiringContracts.forEach(c => {
-          checkPageBreak(6);
-          const days = Math.ceil((new Date(c.end_date) - new Date()) / (1000 * 60 * 60 * 24));
-          const urgency = days < 0 ? '✗ Überfällig' : days <= 30 ? '⚠ Dringend' : '⏰ Geplant';
-          
-          doc.setFontSize(9);
-          doc.setFont('helvetica', 'normal');
-          doc.text(String(c.insurer || '—').normalize('NFC'), margin + 3, yPos);
-          doc.setFont('helvetica', 'bold');
-          doc.text(new Date(c.end_date).toLocaleDateString('de-CH'), margin + 70, yPos);
-          doc.text(urgency, margin + 100, yPos);
-          doc.setFont('helvetica', 'normal');
-          yPos += 5;
-        });
-      }
-
-      if (openReviewTasks.length > 0) {
-        yPos += 3;
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Offene Beratungen:'.normalize('NFC'), margin, yPos);
-        yPos += 6;
-
-        openReviewTasks.forEach(t => {
-          checkPageBreak(5);
-          doc.setFontSize(9);
-          doc.setFont('helvetica', 'normal');
-          doc.text(String(t.title || '—').normalize('NFC'), margin + 3, yPos, { maxWidth: contentWidth - 6 });
-          yPos += 5;
-        });
-      }
-    }
-
-    // === PAGE: VERKAUFSCHANCEN ===
-    const openOpp = opportunities
-      .filter(o => !['gewonnen', 'verloren'].includes(o.status))
-      .slice(0, 8);
-
-    if (openOpp.length > 0) {
-      addNewPage();
-      addSection('💡 Verkaufschancen & Beratungspotential');
-
-      openOpp.forEach(o => {
-        checkPageBreak(10);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        doc.text(String(o.title || '—').normalize('NFC'), margin, yPos);
-        yPos += 4;
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.text(`Sparte: ${o.sparte || '—'} | Status: ${o.status || '—'}`, margin + 2, yPos);
-        yPos += 3;
-
-        if (o.estimated_value) {
-          doc.text(`Geschätztes Volumen: CHF ${o.estimated_value.toLocaleString('de-CH')}`, margin + 2, yPos);
-          yPos += 3;
-        }
-
-        if (o.expected_close_date) {
-          doc.text(`Geplanter Abschluss: ${new Date(o.expected_close_date).toLocaleDateString('de-CH')}`, margin + 2, yPos);
-          yPos += 3;
-        }
-
-        yPos += 2;
-      });
-    }
-
-    // === PAGE: OFFENE AUFGABEN ===
-    const openTasks = tasks.filter(t => t.status !== 'completed').slice(0, 12);
-
-    if (openTasks.length > 0) {
-      addNewPage();
-      addSection('📝 Offene Aufgaben & Punkte');
-
-      openTasks.forEach(t => {
-        checkPageBreak(7);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        doc.text(String(t.title || '—').normalize('NFC'), margin, yPos);
-        yPos += 4;
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        const priorityLabel = t.priority === 'urgent' ? '🔴 Dringend' : t.priority === 'high' ? '🟠 Hoch' : '🟡 Normal';
-        const dueDate = t.due_date ? `Fällig: ${new Date(t.due_date).toLocaleDateString('de-CH')}` : '';
-        doc.text(`Priorität: ${priorityLabel}${dueDate ? ` | ${dueDate}` : ''}`, margin + 2, yPos);
-        yPos += 3;
-
-        yPos += 1;
-      });
-    }
-
-    // Generate PDF
+    // Export PDF as binary
     const pdfBytes = doc.output('arraybuffer');
 
     return new Response(pdfBytes, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="Haushaltsübersicht_${customer.last_name}_${new Date().toISOString().split('T')[0]}.pdf"`
+        'Content-Disposition': `attachment; filename=Haushaltsübersicht_${customer.last_name}_${new Date().toISOString().split('T')[0]}.pdf`
       }
     });
-
   } catch (error) {
-    console.error('Error:', error);
+    console.error('PDF Generation Error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
