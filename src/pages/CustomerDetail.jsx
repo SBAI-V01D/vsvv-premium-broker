@@ -8,6 +8,9 @@ import ActivityTimeline from '../components/customers/ActivityTimeline'
 import AutoAISummary from '../components/customers/AutoAISummary'
 import FamilyOverviewPanel from '../components/customers/FamilyOverviewPanel'
 import HouseholdContractsCockpit from '../components/customers/HouseholdContractsCockpit'
+import HouseholdSummaryStats from '../components/customers/HouseholdSummaryStats'
+import FamilyMemberCard from '../components/customers/FamilyMemberCard'
+import HouseholdActionStrip from '../components/customers/HouseholdActionStrip'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -23,7 +26,8 @@ import { getSparteLabel } from '@/lib/insuranceSparten'
 import StatusBadge from '@/components/status/StatusBadge'
 import PortalActivationPanel from '@/components/customers/PortalActivationPanel'
 import AddFamilyMemberDialog from '@/components/customers/AddFamilyMemberDialog'
-import { Download } from 'lucide-react'
+import { Download, FileText } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 
 export default function CustomerDetail() {
    const { id } = useParams()
@@ -242,63 +246,87 @@ export default function CustomerDetail() {
         </TabsList>
 
         <TabsContent value="dashboard">
-          <div className="space-y-4">
-            {/* PDF Export */}
-            <div className="flex justify-end">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => downloadPDFMutation.mutate()}
-                disabled={downloadPDFMutation.isPending}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                {downloadPDFMutation.isPending ? 'PDF wird erstellt...' : 'Haushaltsübersicht PDF'}
-              </Button>
-            </div>
+          <div className="space-y-5">
+            {/* KPI Summary */}
+            <HouseholdSummaryStats 
+              familyMembers={familyMembers.filter(m => m.id !== id)}
+              contracts={relatedContracts}
+              opportunities={verkaufschancen}
+              tasks={custTasks}
+            />
 
-            {/* Kundenakte verdichtet */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              {/* Linke Spalte: Familie */}
-              <div className="lg:col-span-1">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">👨‍👩‍👧‍👦 Familie / Haushalt</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <FamilyOverviewPanel 
-                      primaryCustomer={customer}
-                      familyMembers={familyMembers.filter(m => m.id !== id)}
-                      contracts={relatedContracts}
+            {/* Quick Actions */}
+            <HouseholdActionStrip 
+              onDownloadPDF={() => downloadPDFMutation.mutate()}
+              isDownloading={downloadPDFMutation.isPending}
+              onNewOpportunity={() => {/* TODO: open new opportunity dialog */}}
+              onNewFamilyMember={() => {/* TODO: open add family member dialog */}}
+              onReview={() => {/* TODO: start review workflow */}}
+            />
+
+            {/* Family Members Grid */}
+            {familyMembers.filter(m => m.id !== id).length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold mb-3">👨‍👩‍👧‍👦 Haushalt ({familyMembers.length} Personen)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Primary Customer Card */}
+                  <Card className="p-4 border-l-4 border-l-primary bg-primary/5">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h4 className="font-semibold text-sm">{customer.first_name} {customer.last_name}</h4>
+                        <p className="text-xs text-muted-foreground">Hauptkontakt</p>
+                      </div>
+                      <Badge variant="outline" className="bg-green-100 text-green-700 border-0 text-xs">
+                        ✓ Aktiv
+                      </Badge>
+                    </div>
+                    {customer.birthdate && (
+                      <p className="text-xs text-muted-foreground mb-2">
+                        <strong>Geb.:</strong> {customer.birthdate}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-3">
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>{relatedContracts.filter(c => c.customer_id === customer.id).length} Verträge</span>
+                    </div>
+                  </Card>
+
+                  {/* Family Members */}
+                  {familyMembers.filter(m => m.id !== id).map(member => (
+                    <FamilyMemberCard 
+                      key={member.id}
+                      member={member}
+                      memberContracts={relatedContracts.filter(c => c.customer_id === member.id)}
+                      onEdit={() => {/* TODO: open member detail */}}
                     />
-                  </CardContent>
-                </Card>
+                  ))}
+                </div>
               </div>
+            )}
 
-              {/* Rechte Spalten: Verträge + Rest */}
-              <div className="lg:col-span-2 space-y-4">
-                {/* Vertrags-Cockpit */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">📋 Haushalts-Verträge (Ampel-Übersicht)</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <HouseholdContractsCockpit 
-                      contracts={relatedContracts}
-                      familyMembers={familyMembers.filter(m => m.id !== id)}
-                    />
-                  </CardContent>
-                </Card>
+            {/* Contract Overview */}
+            {relatedContracts.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">📋 Verträge (Ampel-Übersicht)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <HouseholdContractsCockpit 
+                    contracts={relatedContracts}
+                    familyMembers={familyMembers.filter(m => m.id !== id)}
+                  />
+                </CardContent>
+              </Card>
+            )}
 
-                {/* Dashboard Summary */}
-                <AutoAISummary 
-                  customer={customer}
-                  contracts={relatedContracts}
-                  applications={relatedApplications}
-                  documents={relatedDocuments}
-                  tasks={custTasks}
-                />
-              </div>
-            </div>
+            {/* AI Summary */}
+            <AutoAISummary 
+              customer={customer}
+              contracts={relatedContracts}
+              applications={relatedApplications}
+              documents={relatedDocuments}
+              tasks={custTasks}
+            />
           </div>
         </TabsContent>
 
