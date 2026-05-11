@@ -849,11 +849,25 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
                {customerMode === 'policy_holder_main' && (
                  <div className="ml-7 space-y-2 text-xs border-t border-amber-200 pt-2">
                    <p className="text-amber-800">Suche Versicherungsnehmer: <span className="font-bold">{extractedRaw?.policy_holder_name}</span></p>
-                   <CustomerSearch customers={customers} onSelect={c => { setSelectedCustomer(c); setNewCustomerData(prev => ({...prev, is_family_member: true})) }} />
+                   <CustomerSearch customers={customers} onSelect={c => { setSelectedCustomer(c) }} />
                    {!selectedCustomer && (
                      <button
                        type="button"
-                       onClick={() => { setCustomerMode('new'); setNewCustomerData({first_name: extractedRaw?.policy_holder_name?.split(' ')[0] || '', last_name: extractedRaw?.policy_holder_name?.split(' ').slice(1).join(' ') || ''}) }}
+                       onClick={() => { 
+                         setCustomerMode('new')
+                         setNewCustomerData({
+                           first_name: (extractedRaw?.first_name || '').trim(),
+                           last_name: (extractedRaw?.last_name || '').trim(),
+                           birthdate: extractedRaw?.birthdate || '',
+                           email: (extractedRaw?.email || '').trim(),
+                           phone: (extractedRaw?.phone || '').trim(),
+                           mobile: (extractedRaw?.mobile || '').trim(),
+                           street: (extractedRaw?.street || '').trim(),
+                           city: (extractedRaw?.city || '').trim(),
+                           zip_code: (extractedRaw?.zip_code || '').trim(),
+                           canton: (extractedRaw?.canton || '').trim(),
+                         })
+                       }}
                        className="flex items-center gap-2 text-xs text-primary hover:underline font-medium"
                      >
                        <UserPlus className="w-3 h-3" /> Neuen Kunden erstellen
