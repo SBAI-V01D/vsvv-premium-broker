@@ -362,6 +362,20 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     
     setExtractedRaw(d)
 
+      // Call automatic customer matching
+      let matchingResult = { decision: { action: 'new_customer' }, all_matches: [] };
+      try {
+        const matchRes = await base44.functions.invoke('matchCustomerAndFamily', {
+          extractedData: d,
+          organization_id: organizations[0]?.id || ''
+        });
+        if (matchRes?.data?.success) {
+          matchingResult = matchRes.data;
+        }
+      } catch (matchErr) {
+        console.warn('[PolicyUploadWizard] Matching error (non-fatal):', matchErr.message);
+      }
+
       // Build contracts from extracted data
       const sparteKey = mapInsuranceType(d.insurance_type) || d.insurance_type || ''
       const sparteData = d.sparte_data || {}
@@ -376,6 +390,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         start_date: d.start_date || '',
         end_date: d.end_date || '',
         cancellation_deadline: d.cancellation_deadline || '',
+        renewal_date: d.renewal_date || '',
         notes: d.notes || '',
         sparte_data: sparteData,
         status: 'active',
@@ -409,38 +424,41 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         canton: (d.canton || '').trim(),
       }
 
-      // Only proceed if we have at least first_name AND last_name from extraction
-      const hasValidName = customerFields.first_name && customerFields.last_name
-
-      if (hasValidName) {
-        const candidates = matchCustomers(customerFields, customers)
-        setMatchCandidates(candidates)
-
-        // SEHR HOHE KONFIDENZ (>85%) → Direkt zu Step 3, keine Fragen mehr
-        if (candidates.length > 0 && candidates[0].score >= 85) {
-          setSelectedCustomer(candidates[0].customer)
-          setCustomerMode('matched')
-          setNewCustomerData(customerFields)
-          setStep(3)
-          return
-        }
-
-        // GUTE KONFIDENZ (50-85%) → Step 2 für manuelle Prüfung mit Vorauswahl
-        if (candidates.length > 0 && candidates[0].score >= 50) {
-          setSelectedCustomer(candidates[0].customer)
-          setCustomerMode('matched')
-          setNewCustomerData(customerFields)
-          setStep(2)
-          return
-        }
-
-        // KEIN TREFFER → Auto-create Kunde und direkt zu Step 3
-        // (KI hat Name erkannt, aber Kunde existiert nicht → erstelle)
-        await createAndProceed(customerFields)
+      // Use automatic matching result from LLM
+      if (matchingResult.decision.action === 'link_existing') {
+        // Automatisch zu bestehendem Kunden verknüpft
+        setSelectedCustomer(matchingResult.decision.matched_customer)
+        setCustomerMode('matched')
+        setNewCustomerData(customerFields)
+        setStep(3)
+        return
+      } else if (matchingResult.decision.action === 'link_family') {
+        // Automatisch als Familienmitglied erkannt
+        setSelectedCustomer(matchingResult.decision.matched_customer)
+        setCustomerMode('family')
+        setNewCustomerData({
+          ...customerFields,
+          primary_customer_id: matchingResult.decision.primary_customer_id,
+          family_role: matchingResult.decision.family_role
+        })
+        setStep(3)
+        return
+      } else if (matchingResult.decision.action === 'ask_confirmation' && matchingResult.all_matches.length > 0) {
+        // Mehrere Kandidaten → Step 2 mit Vorschlägen
+        setMatchCandidates(
+          matchingResult.all_matches.map(m => ({
+            customer: m,
+            score: m.score
+          }))
+        )
+        setSelectedCustomer(matchingResult.decision.matched_customer)
+        setCustomerMode('matched')
+        setNewCustomerData(customerFields)
+        setStep(2)
         return
       }
 
-      // Unzureichende Daten → Step 2 für manuelle Eingabe
+      // Default: Unzureichende Daten oder kein Treffer → Step 2 für manuelle Eingabe
       setNewCustomerData(customerFields)
       setCustomerMode('new')
       setStep(2)

@@ -25,57 +25,113 @@ Deno.serve(async (req) => {
     let extractedData = {};
     
     try {
-      // MINIMAL Schema für Vertex AI Kompatibilität
+      // OPTIMIZED for Swiss insurance documents
       const response = await base44.integrations.Core.InvokeLLM({
         model: 'automatic',
-        prompt: `Extract customer and insurance data from this document. Return ONLY a JSON object.
+        prompt: `Sie sind ein Experte für Schweizer Versicherungspolicen.
 
-EXTRACT:
-- first_name: First name (empty string if not found)
-- last_name: Last name (empty string if not found)
-- birthdate: Birth date YYYY-MM-DD (empty string if not found)
-- street: Street address (empty string if not found)
-- zip_code: Postal code 4 digits (empty string if not found)
-- city: City name (empty string if not found)
-- phone: Phone (empty string if not found)
-- email: Email (empty string if not found)
-- policy_number: Policy number (empty string if not found)
-- insurer: Insurance company (empty string if not found)
-- insurance_type: Insurance type (empty string if not found)
-- product: Product name (empty string if not found)
-- start_date: Start date YYYY-MM-DD (empty string if not found)
-- end_date: End date YYYY-MM-DD (empty string if not found)
-- premium_monthly: Monthly premium number (0 if not found)
-- premium_yearly: Yearly premium number (0 if not found)
+Extrahieren Sie alle Kundendaten und Vertragsinformationen aus diesem Dokument.
 
-RULES:
-- Return empty string "" for missing fields, NOT null
-- Use empty string "" for strings, 0 for numbers
-- Dates must be YYYY-MM-DD format or empty string
-- Do NOT invent data
-- Do NOT make assumptions`,
+PERSONENDATEN (Versicherungsnehmer/Versicherte Person):
+- first_name: Vorname
+- last_name: Nachname  
+- birthdate: Geburtsdatum (YYYY-MM-DD)
+- gender: Geschlecht (M/W/X oder leer)
+- role: Rolle des Versicherten (Versicherungsnehmer, Ehepartner, Kind, sonstige Person)
+
+ADRESSDATEN:
+- street: Straßenname und Nummer (z.B. "Musterstrasse 42")
+- zip_code: Postleitzahl (4-stellig)
+- city: Ortschaft
+- country: Land (CH oder leer)
+
+KONTAKTDATEN:
+- phone: Telefonnummer (mit oder ohne Ländercode)
+- mobile: Mobilnummer (mit oder ohne Ländercode)
+- email: E-Mail-Adresse
+
+VERSICHERUNGSDATEN:
+- insurer: Versicherungsgesellschaft (z.B. "Allianz", "CSS", "Generali")
+- policy_number: Policen-Nummer
+- insurance_type: Versicherungsart (z.B. "Krankenversicherung", "Haftpflicht", "Motorfahrzeug")
+- product: Produkt/Tarif (z.B. "HMO Basic", "Comfort", "Standard")
+- start_date: Versicherungsbeginn (YYYY-MM-DD)
+- end_date: Vertragsablauf/Vertragsende (YYYY-MM-DD)
+- renewal_date: Nächster Erneuerungstermin falls vorhanden (YYYY-MM-DD)
+- premium_monthly: Monatsprämie (nur Zahl, kein CHF)
+- premium_yearly: Jahresprämie (nur Zahl, kein CHF)
+- payment_frequency: Zahlungsintervall (monatlich, jährlich, etc.)
+
+ERKENNUNGSREGELN FÜR SCHWEIZER POLICEN:
+1. Achte auf typische Schweizer Formatierung (CHF, 4-stellige PLZ)
+2. "Versicherungsnehmer" = Hauptkunde
+3. "versicherte Person" kann anders sein als Versicherungsnehmer
+4. Mehrere Personen? → Nur Hauptperson extrahieren
+5. Adresse kann mehrzeilig sein → zusammenfassen
+6. OCR Fehler (z.B. "O" statt "0") korrigieren
+7. Sonderzeichen (ä, ö, ü) korrekt verarbeiten
+8. Leerzeichen trimmen
+
+AUSGABE:
+- Rückgabe ein vollständiges JSON-Objekt
+- Leere Werte als null (nicht als leerer String)
+- Daten verfügbar? → Feld mit echtem Wert füllen
+- Daten nicht verfügbar? → null setzen
+- KEINE Erfindung von Daten
+- KEINE Annahmen wenn nicht eindeutig
+
+Rückgabe EXAKT als JSON:
+{
+  "first_name": "...",
+  "last_name": "...",
+  "birthdate": "YYYY-MM-DD" oder null,
+  "gender": "M" oder "W" oder null,
+  "role": "Versicherungsnehmer" oder "Ehepartner" oder "Kind" oder null,
+  "street": "...",
+  "zip_code": "1234" oder null,
+  "city": "...",
+  "country": "CH" oder null,
+  "phone": "...",
+  "mobile": "...",
+  "email": "...",
+  "insurer": "...",
+  "policy_number": "...",
+  "insurance_type": "...",
+  "product": "...",
+  "start_date": "YYYY-MM-DD" oder null,
+  "end_date": "YYYY-MM-DD" oder null,
+  "renewal_date": "YYYY-MM-DD" oder null,
+  "premium_monthly": 100.50 oder null,
+  "premium_yearly": 1200.00 oder null,
+  "payment_frequency": "monatlich" oder "jährlich" oder null
+}`,
         file_urls: [file_url],
         response_json_schema: {
           type: 'object',
           properties: {
-            first_name: { type: 'string' },
-            last_name: { type: 'string' },
-            birthdate: { type: 'string' },
-            street: { type: 'string' },
-            zip_code: { type: 'string' },
-            city: { type: 'string' },
-            phone: { type: 'string' },
-            email: { type: 'string' },
-            policy_number: { type: 'string' },
-            insurer: { type: 'string' },
-            insurance_type: { type: 'string' },
-            product: { type: 'string' },
-            start_date: { type: 'string' },
-            end_date: { type: 'string' },
-            premium_monthly: { type: 'number' },
-            premium_yearly: { type: 'number' }
-          },
-          required: ['first_name', 'last_name', 'zip_code', 'city', 'insurer', 'policy_number']
+            first_name: { type: ['string', 'null'] },
+            last_name: { type: ['string', 'null'] },
+            birthdate: { type: ['string', 'null'] },
+            gender: { type: ['string', 'null'] },
+            role: { type: ['string', 'null'] },
+            street: { type: ['string', 'null'] },
+            zip_code: { type: ['string', 'null'] },
+            city: { type: ['string', 'null'] },
+            country: { type: ['string', 'null'] },
+            phone: { type: ['string', 'null'] },
+            mobile: { type: ['string', 'null'] },
+            email: { type: ['string', 'null'] },
+            insurer: { type: ['string', 'null'] },
+            policy_number: { type: ['string', 'null'] },
+            insurance_type: { type: ['string', 'null'] },
+            product: { type: ['string', 'null'] },
+            start_date: { type: ['string', 'null'] },
+            end_date: { type: ['string', 'null'] },
+            renewal_date: { type: ['string', 'null'] },
+            premium_monthly: { type: ['number', 'null'] },
+            premium_yearly: { type: ['number', 'null'] },
+            payment_frequency: { type: ['string', 'null'] }
+          }
         }
       });
 
@@ -85,14 +141,15 @@ RULES:
     } catch (llmErr) {
       const msg = llmErr instanceof Error ? llmErr.message : String(llmErr);
       console.warn(`[extractPolicyData] LLM extraction warning: ${msg}`);
-      // Continue with empty data, don't fail
-      extractedData = {};
     }
 
     // Normalize and clean data
     const firstName = (extractedData.first_name || '').trim() || null;
     const lastName = (extractedData.last_name || '').trim() || null;
     const birthdate = (extractedData.birthdate || '').trim() || null;
+    const gender = (extractedData.gender || '').trim() || null;
+    const role = (extractedData.role || '').trim() || null;
+    
     const street = (extractedData.street || '').trim() || null;
     let zipCode = (extractedData.zip_code || '').trim() || null;
     let city = (extractedData.city || '').trim() || null;
@@ -105,19 +162,22 @@ RULES:
       zipCode = zipCode.slice(0, 4);
       if (zipCode.length !== 4) zipCode = null;
       
-      // Auto-derive canton from zip
       if (!canton && zipCode) canton = cantonFromZip(zipCode);
     }
 
     const phone = (extractedData.phone || '').trim() || null;
+    const mobile = (extractedData.mobile || '').trim() || null;
     const email = (extractedData.email || '').trim() || null;
-    const policyNumber = (extractedData.policy_number || '').trim() || null;
+    
     const insurer = (extractedData.insurer || '').trim() || null;
+    const policyNumber = (extractedData.policy_number || '').trim() || null;
     const insuranceType = (extractedData.insurance_type || '').trim() || null;
     const product = (extractedData.product || '').trim() || null;
+    
     const startDate = (extractedData.start_date || '').trim() || null;
     const endDate = (extractedData.end_date || '').trim() || null;
-
+    const renewalDate = (extractedData.renewal_date || '').trim() || null;
+    
     let premiumMonthly = Number(extractedData.premium_monthly) || null;
     let premiumYearly = Number(extractedData.premium_yearly) || null;
 
@@ -126,7 +186,7 @@ RULES:
       premiumYearly = Math.round(premiumMonthly * 12 * 100) / 100;
     }
 
-    console.log(`[extractPolicyData] SUCCESS: insurer=${insurer}, name=${firstName} ${lastName}, zip=${zipCode}, city=${city}`);
+    console.log(`[extractPolicyData] SUCCESS: insurer=${insurer}, name=${firstName} ${lastName}, zip=${zipCode}, role=${role}`);
 
     return Response.json({
       success: true,
@@ -134,20 +194,25 @@ RULES:
         first_name: firstName,
         last_name: lastName,
         birthdate: birthdate,
+        gender: gender,
+        role: role,
         street: street,
         zip_code: zipCode,
         city: city,
         canton: canton,
         phone: phone,
+        mobile: mobile,
         email: email,
-        policy_number: policyNumber,
         insurer: insurer,
+        policy_number: policyNumber,
         insurance_type: insuranceType,
         product: product,
         start_date: startDate,
         end_date: endDate,
+        renewal_date: renewalDate,
         premium_monthly: premiumMonthly,
         premium_yearly: premiumYearly,
+        payment_frequency: extractedData.payment_frequency || null,
         sparte_data: {},
         additional_products: [],
         notes: null
@@ -165,20 +230,25 @@ RULES:
         first_name: null,
         last_name: null,
         birthdate: null,
+        gender: null,
+        role: null,
         street: null,
         zip_code: null,
         city: null,
         canton: null,
         phone: null,
+        mobile: null,
         email: null,
-        policy_number: null,
         insurer: null,
+        policy_number: null,
         insurance_type: null,
         product: null,
         start_date: null,
         end_date: null,
+        renewal_date: null,
         premium_monthly: null,
         premium_yearly: null,
+        payment_frequency: null,
         sparte_data: {},
         additional_products: [],
         notes: `Datei konnte nicht vollständig analysiert werden. Bitte manuell überprüfen.`
