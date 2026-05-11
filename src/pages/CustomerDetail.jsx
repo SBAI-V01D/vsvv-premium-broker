@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Link, useParams, useNavigate } from 'react-router-dom'
+import { useRef } from 'react'
+import html2pdf from 'html2pdf.js'
 import { useAccessControl } from '@/hooks/useAccessControl'
 import { ArrowLeft, Plus, Edit, Mail, Phone, MapPin, LayoutDashboard, ExternalLink, MoreHorizontal } from 'lucide-react'
 import AiInsightsPanel from '../components/customers/AiInsightsPanel'
@@ -33,10 +35,12 @@ import AddFamilyMemberDialog from '@/components/customers/AddFamilyMemberDialog'
 import AdvisorAssignmentPanel from '@/components/advisors/AdvisorAssignmentPanel'
 import { Download, FileText } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { HouseholdPrintExport } from '@/components/customers/HouseholdPrintExport'
 
 export default function CustomerDetail() {
    const { id } = useParams()
    const navigate = useNavigate()
+   const exportRef = useRef(null)
    const { checkCustomerAccess, isAdmin } = useAccessControl()
    const [showEdit, setShowEdit] = useState(false)
    const [editingContract, setEditingContract] = useState(null)
@@ -118,24 +122,40 @@ export default function CustomerDetail() {
   const downloadPDFMutation = useMutation({
     mutationFn: async () => {
       if (!customer?.id) throw new Error('Kunde nicht geladen');
-      const response = await base44.functions.invoke('generateHouseholdPDF', { customer_id: customer.id });
-      return response;
+      if (!exportRef.current) throw new Error('Export-Container nicht gefunden');
+      
+      // Debug: prüfen ob Inhalt vorhanden ist
+      console.log('PDF Export Container:', {
+        hasRef: !!exportRef.current,
+        innerHTML: exportRef.current?.innerHTML?.length || 0,
+        textContent: exportRef.current?.textContent?.length || 0,
+      });
+
+      const element = exportRef.current;
+      const opt = {
+        margin: 10,
+        filename: `Haushaltsübersicht_${customer.last_name}_${new Date().toISOString().split('T')[0]}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
+      };
+
+      return new Promise((resolve, reject) => {
+        html2pdf().set(opt).from(element).save().then(() => {
+          console.log('PDF erfolgreich erstellt');
+          resolve({ success: true });
+        }).catch(err => {
+          console.error('html2pdf Fehler:', err);
+          reject(err);
+        });
+      });
     },
-    onSuccess: (response) => {
-      try {
-        const blob = new Blob([response.data], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Haushaltsübersicht_${customer?.last_name}_${new Date().toISOString().split('T')[0]}.pdf`;
-        a.click();
-        window.URL.revokeObjectURL(url);
-      } catch (error) {
-        console.error('PDF-Download Fehler:', error);
-      }
+    onSuccess: () => {
+      console.log('PDF-Download erfolgreich');
     },
     onError: (error) => {
       console.error('PDF-Generierung fehlgeschlagen:', error);
+      alert(`PDF-Fehler: ${error.message}`);
     }
   })
 
@@ -273,6 +293,17 @@ export default function CustomerDetail() {
             <div className="text-sm"><span className="text-muted-foreground">Status:</span> {label(STATUS_LABELS, customer.status)}</div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* HIDDEN EXPORT CONTAINER – Nur für PDF */}
+      <div style={{ display: 'none' }}>
+        <HouseholdPrintExport 
+          ref={exportRef}
+          customer={customer}
+          familyMembers={familyMembers}
+          contracts={relatedContracts}
+          advisors={allAdvisors}
+        />
       </div>
 
       <Tabs defaultValue="dashboard">
