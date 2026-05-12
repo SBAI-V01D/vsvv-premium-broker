@@ -179,14 +179,29 @@ Antworte AUSSCHLIESSLICH mit JSON.`,
         }
       }
     } else {
-      // Kein Hauptkontakt gefunden – neue Kundenerkennung vorbereiten
-      insights.suggestedFamilyMember = {
-        first_name: extractedData.policy_holder_first_name || '',
-        last_name: extractedData.policy_holder_last_name || '',
-        birthdate: extractedData.birthdate || null,
-        family_role: 'primary',
-      };
-      insights.matchConfidence = 10; // Zeigt "Neuer Kunde erkannt"
+      // Kein Hauptkontakt gefunden – neuer Hauptkunde vorbereiten
+      if (extractedData.policy_holder_first_name && extractedData.policy_holder_last_name) {
+        insights.suggestedPrimaryCustomer = {
+          first_name: extractedData.policy_holder_first_name,
+          last_name: extractedData.policy_holder_last_name,
+          birthdate: extractedData.birthdate || null,
+        };
+
+        // Wenn versicherte Person != Versicherungsnehmer → neues Familienmitglied
+        if (
+          extractedData.insured_first_name &&
+          extractedData.insured_last_name &&
+          (extractedData.insured_first_name.toLowerCase() !== extractedData.policy_holder_first_name.toLowerCase() ||
+            extractedData.insured_last_name.toLowerCase() !== extractedData.policy_holder_last_name.toLowerCase())
+        ) {
+          insights.suggestedFamilyMember = {
+            first_name: extractedData.insured_first_name,
+            last_name: extractedData.insured_last_name,
+            birthdate: extractedData.insured_birthdate || null,
+          };
+        }
+      }
+      insights.matchConfidence = 15; // Zeigt "Neuer Kunde erkannt"
     }
 
     return Response.json({

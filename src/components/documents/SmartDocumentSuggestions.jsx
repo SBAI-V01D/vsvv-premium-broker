@@ -10,11 +10,17 @@ import { cn } from '@/lib/utils'
 export default function SmartDocumentSuggestions({ document, insights, onSuccess, onEdit }) {
   const queryClient = useQueryClient()
   const [acceptedActions, setAcceptedActions] = useState({})
-  const [showNewFamilyForm, setShowNewFamilyForm] = useState(false)
-  const [newFamilyData, setNewFamilyData] = useState({
+  const [showPrimaryForm, setShowPrimaryForm] = useState(false)
+  const [showFamilyForm, setShowFamilyForm] = useState(false)
+  const [primaryData, setPrimaryData] = useState({
+    first_name: insights.suggestedPrimaryCustomer?.first_name || '',
+    last_name: insights.suggestedPrimaryCustomer?.last_name || '',
+    email: '',
+    birthdate: insights.suggestedPrimaryCustomer?.birthdate || '',
+  })
+  const [familyData, setFamilyData] = useState({
     first_name: insights.suggestedFamilyMember?.first_name || '',
     last_name: insights.suggestedFamilyMember?.last_name || '',
-    email: '',
     birthdate: insights.suggestedFamilyMember?.birthdate || '',
   })
 
@@ -38,58 +44,58 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
 
   const handleApplyAll = async () => {
     try {
-      let customerId = insights.matchedPrimaryCustomer?.id
+      const user = await base44.auth.me()
+      let primaryCustomerId = insights.matchedPrimaryCustomer?.id
+      let customerId = primaryCustomerId
 
-      // 1. Neuen Hauptkunden erstellen (falls keine Familie gefunden)
-      if (!insights.matchedPrimaryCustomer && insights.suggestedFamilyMember?.family_role === 'primary' && acceptedActions.createPrimaryCustomer) {
-        const user = await base44.auth.me()
-        const primaryRes = await base44.entities.Customer.create({
-          first_name: newFamilyData.first_name,
-          last_name: newFamilyData.last_name,
-          email: newFamilyData.email || `${newFamilyData.first_name.toLowerCase()}.${newFamilyData.last_name.toLowerCase()}@placeholder.local`,
-          birthdate: newFamilyData.birthdate,
+      // 1. NEUEN HAUPTKUNDEN ERSTELLEN (falls nicht gefunden)
+      if (!primaryCustomerId && insights.suggestedPrimaryCustomer && acceptedActions.createPrimary) {
+        const newPrimary = await base44.entities.Customer.create({
+          first_name: primaryData.first_name,
+          last_name: primaryData.last_name,
+          email: primaryData.email || `noemail@${user.organization_id}.local`,
+          birthdate: primaryData.birthdate || null,
           organization_id: user.organization_id,
           is_family_member: false,
           family_role: 'primary',
         })
-        customerId = primaryRes.id
+        primaryCustomerId = newPrimary.id
+        customerId = primaryCustomerId
       }
 
-      // 2. Familienmitglied erstellen (falls vorgeschlagen + akzeptiert)
-      if (insights.suggestedFamilyMember && acceptedActions.createFamily && insights.suggestedFamilyMember.family_role !== 'primary') {
-        const familyRes = await createFamilyMutation.mutateAsync({
-          first_name: newFamilyData.first_name,
-          last_name: newFamilyData.last_name,
-          birthdate: newFamilyData.birthdate,
-          primary_customer_id: customerId || insights.matchedPrimaryCustomer.id,
-          family_role: newFamilyData.birthdate ? 'child' : 'spouse',
+      // 2. FAMILIENMITGLIED ERSTELLEN (falls akzeptiert)
+      if (insights.suggestedFamilyMember && acceptedActions.createFamily && primaryCustomerId) {
+        const newFamily = await createFamilyMutation.mutateAsync({
+          first_name: familyData.first_name,
+          last_name: familyData.last_name,
+          birthdate: familyData.birthdate,
+          primary_customer_id: primaryCustomerId,
+          family_role: familyData.birthdate ? 'child' : 'spouse',
         })
-        customerId = familyRes.data.id
+        customerId = newFamily.data.id
       }
 
-      // 3. Vertrag erstellen (falls Vorschlag + akzeptiert)
-      if (insights.suggestedContract && acceptedActions.createContract) {
-        const primaryCustomer = insights.matchedPrimaryCustomer
+      // 3. VERTRAG ERSTELLEN (falls akzeptiert)
+      if (insights.suggestedContract && acceptedActions.createContract && customerId) {
+        const primaryCustomer = insights.matchedPrimaryCustomer || { organization_id: user.organization_id, advisor_id: user.id }
         const contractData = {
           ...insights.suggestedContract,
           customer_id: customerId,
-          organization_id: primaryCustomer?.organization_id,
-          advisor_id: primaryCustomer?.advisor_id,
+          primary_customer_id: primaryCustomerId,
+          organization_id: primaryCustomer.organization_id,
+          advisor_id: primaryCustomer.advisor_id,
           status: 'pending',
           process_status: 'neu',
         }
         await createContractMutation.mutateAsync(contractData)
       }
 
-      // 4. Dokument aktualisieren
+      // 4. DOKUMENT AKTUALISIEREN
       const updates = {
         customer_id: customerId,
-        primary_customer_id: insights.matchedPrimaryCustomer?.id || customerId,
+        primary_customer_id: primaryCustomerId,
         processing_stage: 'customer_mapped',
         classification_status: 'klassifiziert',
-      }
-      if (insights.suggestedContract && acceptedActions.createContract) {
-        updates.linked_contract_id = insights.suggestedContract.id
       }
       await updateDocMutation.mutateAsync(updates)
 
@@ -140,53 +146,56 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
         </Card>
       )}
 
-      {/* Neuer Hauptkunde */}
-      {!insights.matchedPrimaryCustomer && insights.suggestedFamilyMember?.family_role === 'primary' && (
-        <Card className="p-4 border-l-4 border-l-amber-500">
+      {/* STUFE 1: Neuer Hauptkunde */}
+      {!insights.matchedPrimaryCustomer && insights.suggestedPrimaryCustomer && (
+        <Card className="p-4 border-l-4 border-l-red-500 bg-red-50">
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
-              checked={acceptedActions.createPrimaryCustomer || false}
+              checked={acceptedActions.createPrimary || false}
               onChange={(e) => {
-                setAcceptedActions(prev => ({ ...prev, createPrimaryCustomer: e.target.checked }))
-                if (e.target.checked) setShowNewFamilyForm(true)
+                setAcceptedActions(prev => ({ ...prev, createPrimary: e.target.checked }))
+                setShowPrimaryForm(e.target.checked)
               }}
               className="mt-1"
             />
             <div className="flex-1">
-              <p className="font-semibold">Neuer Kunde</p>
+              <p className="font-semibold flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                🔴 Neuer Hauptkontakt (Versicherungsnehmer)
+              </p>
               <p className="text-sm text-muted-foreground mt-1">
-                {insights.suggestedFamilyMember.first_name} {insights.suggestedFamilyMember.last_name}
+                {insights.suggestedPrimaryCustomer.first_name} {insights.suggestedPrimaryCustomer.last_name}
               </p>
             </div>
           </label>
 
-          {showNewFamilyForm && acceptedActions.createPrimaryCustomer && (
-            <div className="mt-3 p-3 bg-muted/40 rounded space-y-2">
+          {showPrimaryForm && acceptedActions.createPrimary && (
+            <div className="mt-3 p-3 bg-white rounded border border-red-200 space-y-2">
               <Input
                 placeholder="Vorname"
-                value={newFamilyData.first_name}
-                onChange={(e) => setNewFamilyData(prev => ({ ...prev, first_name: e.target.value }))}
+                value={primaryData.first_name}
+                onChange={(e) => setPrimaryData(prev => ({ ...prev, first_name: e.target.value }))}
                 className="text-sm"
               />
               <Input
                 placeholder="Nachname"
-                value={newFamilyData.last_name}
-                onChange={(e) => setNewFamilyData(prev => ({ ...prev, last_name: e.target.value }))}
+                value={primaryData.last_name}
+                onChange={(e) => setPrimaryData(prev => ({ ...prev, last_name: e.target.value }))}
                 className="text-sm"
               />
               <Input
                 type="email"
                 placeholder="E-Mail (optional)"
-                value={newFamilyData.email}
-                onChange={(e) => setNewFamilyData(prev => ({ ...prev, email: e.target.value }))}
+                value={primaryData.email}
+                onChange={(e) => setPrimaryData(prev => ({ ...prev, email: e.target.value }))}
                 className="text-sm"
               />
               <Input
                 type="date"
                 placeholder="Geburtsdatum"
-                value={newFamilyData.birthdate}
-                onChange={(e) => setNewFamilyData(prev => ({ ...prev, birthdate: e.target.value }))}
+                value={primaryData.birthdate}
+                onChange={(e) => setPrimaryData(prev => ({ ...prev, birthdate: e.target.value }))}
                 className="text-sm"
               />
             </div>
@@ -194,47 +203,49 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
         </Card>
       )}
 
-      {/* Vorschlag 2: Neues Familienmitglied */}
-      {insights.suggestedFamilyMember && (
-        <Card className="p-4 border-l-4 border-l-amber-500">
+      {/* STUFE 2: Neues Familienmitglied (nur wenn Hauptkontakt existiert oder erstellt wird) */}
+      {insights.suggestedFamilyMember && (insights.matchedPrimaryCustomer || acceptedActions.createPrimary) && (
+        <Card className="p-4 border-l-4 border-l-amber-500 bg-amber-50">
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
               checked={acceptedActions.createFamily || false}
               onChange={(e) => {
                 setAcceptedActions(prev => ({ ...prev, createFamily: e.target.checked }))
-                if (e.target.checked) setShowNewFamilyForm(true)
+                setShowFamilyForm(e.target.checked)
               }}
               className="mt-1"
             />
             <div className="flex-1">
-              <p className="font-semibold">Neues Familienmitglied hinzufügen</p>
+              <p className="font-semibold flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                🟡 Neues Familienmitglied
+              </p>
               <p className="text-sm text-muted-foreground mt-1">
-                {insights.insuredName}
-                {insights.insuredBirthdate && ` (geb. ${insights.insuredBirthdate})`}
+                {insights.suggestedFamilyMember.first_name} {insights.suggestedFamilyMember.last_name}
               </p>
             </div>
           </label>
 
-          {showNewFamilyForm && acceptedActions.createFamily && (
-            <div className="mt-3 p-3 bg-muted/40 rounded space-y-2">
+          {showFamilyForm && acceptedActions.createFamily && (
+            <div className="mt-3 p-3 bg-white rounded border border-amber-200 space-y-2">
               <Input
                 placeholder="Vorname"
-                value={newFamilyData.first_name}
-                onChange={(e) => setNewFamilyData(prev => ({ ...prev, first_name: e.target.value }))}
+                value={familyData.first_name}
+                onChange={(e) => setFamilyData(prev => ({ ...prev, first_name: e.target.value }))}
                 className="text-sm"
               />
               <Input
                 placeholder="Nachname"
-                value={newFamilyData.last_name}
-                onChange={(e) => setNewFamilyData(prev => ({ ...prev, last_name: e.target.value }))}
+                value={familyData.last_name}
+                onChange={(e) => setFamilyData(prev => ({ ...prev, last_name: e.target.value }))}
                 className="text-sm"
               />
               <Input
                 type="date"
                 placeholder="Geburtsdatum"
-                value={newFamilyData.birthdate}
-                onChange={(e) => setNewFamilyData(prev => ({ ...prev, birthdate: e.target.value }))}
+                value={familyData.birthdate}
+                onChange={(e) => setFamilyData(prev => ({ ...prev, birthdate: e.target.value }))}
                 className="text-sm"
               />
             </div>
