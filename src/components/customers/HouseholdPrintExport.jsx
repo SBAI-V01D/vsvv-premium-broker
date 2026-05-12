@@ -1,8 +1,16 @@
 import React, { useMemo } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 
 export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers, contracts, advisors }, ref) => {
+  // Group contracts by customer - must be called before early returns
+  const contractsByCustomer = useMemo(() => {
+    const grouped = {}
+    contracts?.forEach(c => {
+      if (!grouped[c.customer_id]) grouped[c.customer_id] = []
+      grouped[c.customer_id].push(c)
+    })
+    return grouped
+  }, [contracts])
+
   if (!customer) return null
 
   const formatDate = (dateStr) => {
@@ -25,13 +33,13 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
     return Math.floor((end - today) / (1000 * 60 * 60 * 24))
   }
 
-  const getStatusColor = (contract) => {
+  const getStatusBadge = (contract) => {
     const days = getDaysUntilExpiry(contract.end_date)
-    if (days === null) return { bg: '#4CAF50', text: '#fff', label: '✓ Aktiv' }
-    if (days < 0) return { bg: '#F44336', text: '#fff', label: '✗ Überfällig' }
-    if (days <= 30) return { bg: '#E91E63', text: '#fff', label: '⚠ Kritisch' }
-    if (days <= 90) return { bg: '#FF9800', text: '#fff', label: '! Ablauf' }
-    return { bg: '#4CAF50', text: '#fff', label: '✓ Aktiv' }
+    if (days === null) return { bg: '#10B981', text: '#fff', label: 'Aktiv', border: 'none' }
+    if (days < 0) return { bg: '#EF4444', text: '#fff', label: 'Überfällig', border: 'none' }
+    if (days <= 30) return { bg: '#DC2626', text: '#fff', label: 'Kritisch', border: 'none' }
+    if (days <= 90) return { bg: '#F59E0B', text: '#fff', label: 'Ablauf', border: 'none' }
+    return { bg: '#10B981', text: '#fff', label: 'Aktiv', border: 'none' }
   }
 
   const formatCurrency = (value) => {
@@ -72,231 +80,456 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
     return spartenMap[normalized] || sparte
   }
 
-  // DEBUG: Logging
-  console.log('HouseholdPrintExport rendering:', {
-    customer: customer?.id,
-    familyMembers: familyMembers?.length,
-    contracts: contracts?.length,
-  })
+  const getFamilyRoleLabel = (role) => {
+    const roleMap = {
+      'spouse': 'Ehepartner/in',
+      'child': 'Kind',
+      'parent': 'Elternteil',
+      'primary': 'Hauptkontakt',
+      'other': 'Familienm.'
+    }
+    return roleMap[role] || role || 'Familienm.'
+  }
+
+  const mainCustomerContracts = contractsByCustomer[customer.id] || []
+  const totalYearlyPremium = contracts?.reduce((sum, c) => sum + (c.premium_yearly || 0), 0) || 0
+  const expiringCount = contracts?.filter(c => {
+    const days = getDaysUntilExpiry(c.end_date)
+    return days !== null && days >= 0 && days <= 180
+  }).length || 0
 
   return (
-    <div ref={ref} style={{ padding: '20px', background: '#fff', fontFamily: 'Arial, sans-serif' }}>
-      {/* HEADER */}
-      <div style={{ 
-        background: '#2169B4', 
-        color: '#fff', 
-        padding: '20px', 
-        marginBottom: '20px',
-        borderRadius: '8px'
-      }}>
-        <h1 style={{ margin: '0 0 5px 0', fontSize: '28px', fontWeight: 'bold' }}>
-          Haushaltsübersicht
-        </h1>
-        <p style={{ margin: '0', fontSize: '14px', opacity: 0.9 }}>
-          {customer.first_name} {customer.last_name}
-        </p>
-      </div>
-
-      {/* MAIN CONTACT */}
-      <div style={{ marginBottom: '20px' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '10px', borderBottom: '2px solid #2169B4', paddingBottom: '5px' }}>
-          Hauptkontakt
-        </h2>
-        <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
-          <p><strong>{customer.first_name} {customer.last_name}</strong></p>
-          {customer.street && <p>{customer.street}</p>}
-          {(customer.zip_code || customer.city) && <p>{customer.zip_code} {customer.city}</p>}
-          {customer.phone && <p>Telefon: {customer.phone}</p>}
-          {customer.email && <p>Email: {customer.email}</p>}
+    <div 
+      ref={ref} 
+      style={{ 
+        padding: '40px', 
+        background: '#fff', 
+        fontFamily: '"Segoe UI", "Helvetica Neue", sans-serif',
+        lineHeight: '1.6',
+        color: '#333'
+      }}
+    >
+      {/* ===== HEADER ===== */}
+      <div style={{ marginBottom: '40px', paddingBottom: '20px', borderBottom: '2px solid #E5E7EB' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+          <div>
+            <div style={{ 
+              fontSize: '28px', 
+              fontWeight: '700', 
+              color: '#1F2937',
+              marginBottom: '5px'
+            }}>
+              Familienübersicht
+            </div>
+            <div style={{ fontSize: '12px', color: '#6B7280' }}>
+              Persönliche Versicherungsübersicht
+            </div>
+          </div>
+          <div style={{ textAlign: 'right', fontSize: '11px', color: '#6B7280' }}>
+            <div>Erstellt: {formatDate(new Date())}</div>
+            {advisors && advisors.length > 0 && (
+              <div style={{ marginTop: '5px' }}>
+                Berater: <strong>{advisors[0].firstname} {advisors[0].lastname}</strong>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* KPI CARDS */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(4, 1fr)', 
-        gap: '15px', 
-        marginBottom: '20px' 
-      }}>
+      {/* ===== ABSCHNITT 1: HAUPTKONTAKT ===== */}
+      <div style={{ marginBottom: '40px' }}>
         <div style={{ 
-          background: '#f0f5fa', 
-          padding: '15px', 
-          borderRadius: '6px', 
-          border: '1px solid #c8dcf0',
-          textAlign: 'center'
+          background: '#F3F4F6',
+          padding: '24px',
+          borderRadius: '8px',
+          borderLeft: '4px solid #2169B4'
         }}>
-          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#2169B4', margin: '0 0 5px 0' }}>
-            {familyMembers?.length || 0}
-          </p>
-          <p style={{ fontSize: '12px', color: '#666', margin: '0' }}>Familienmitglieder</p>
-        </div>
-        <div style={{ 
-          background: '#f0f5fa', 
-          padding: '15px', 
-          borderRadius: '6px', 
-          border: '1px solid #c8dcf0',
-          textAlign: 'center'
-        }}>
-          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#2169B4', margin: '0 0 5px 0' }}>
-            {contracts?.filter(c => c.status === 'active').length || 0}
-          </p>
-          <p style={{ fontSize: '12px', color: '#666', margin: '0' }}>Aktive Verträge</p>
-        </div>
-        <div style={{ 
-          background: '#f0f5fa', 
-          padding: '15px', 
-          borderRadius: '6px', 
-          border: '1px solid #c8dcf0',
-          textAlign: 'center'
-        }}>
-          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#2169B4', margin: '0 0 5px 0' }}>
-            {formatCurrency(contracts?.reduce((sum, c) => sum + (c.premium_yearly || 0), 0))}
-          </p>
-          <p style={{ fontSize: '12px', color: '#666', margin: '0' }}>Jahresprämie</p>
-        </div>
-        <div style={{ 
-          background: '#f0f5fa', 
-          padding: '15px', 
-          borderRadius: '6px', 
-          border: '1px solid #c8dcf0',
-          textAlign: 'center'
-        }}>
-          <p style={{ fontSize: '24px', fontWeight: 'bold', color: '#2169B4', margin: '0 0 5px 0' }}>
-            {contracts?.filter(c => {
-              const days = getDaysUntilExpiry(c.end_date)
-              return days !== null && days >= 0 && days <= 180
-            }).length || 0}
-          </p>
-          <p style={{ fontSize: '12px', color: '#666', margin: '0' }}>Abläufe (180d)</p>
-        </div>
-      </div>
-
-      {/* FAMILY MEMBERS WITH CONTRACTS */}
-      {familyMembers && familyMembers.length > 0 && (
-        <div style={{ marginBottom: '20px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '15px', borderBottom: '2px solid #2169B4', paddingBottom: '5px' }}>
-            Haushalt & Verträge
-          </h2>
-
-          {familyMembers.map((member, idx) => {
-            const memberContracts = contracts?.filter(c => c.customer_id === member.id) || []
-            return (
-              <div key={member.id} style={{ marginBottom: '20px' }}>
-                <div style={{ 
-                  background: idx % 2 === 0 ? '#2169B4' : '#3489D1', 
-                  color: '#fff', 
-                  padding: '12px 15px', 
-                  borderRadius: '4px',
-                  marginBottom: '10px'
-                }}>
-                  <p style={{ margin: '0', fontWeight: 'bold', fontSize: '14px' }}>
-                    {member.first_name} {member.last_name} 
-                    {member.id === customer.id ? ' (Hauptkontakt)' : ` (${member.family_role || 'Familienmitglied'})`}
-                  </p>
+          <div style={{ 
+            fontSize: '14px',
+            fontWeight: '600',
+            color: '#1F2937',
+            marginBottom: '16px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>
+            Hauptkontakt
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div>
+              <div style={{ fontSize: '20px', fontWeight: '700', color: '#1F2937', marginBottom: '12px' }}>
+                {customer.first_name} {customer.last_name}
+              </div>
+              {customer.street && (
+                <div style={{ fontSize: '13px', color: '#374151', marginBottom: '4px' }}>
+                  {customer.street}
                 </div>
+              )}
+              {(customer.zip_code || customer.city) && (
+                <div style={{ fontSize: '13px', color: '#374151', marginBottom: '12px' }}>
+                  {customer.zip_code} {customer.city}
+                </div>
+              )}
+            </div>
+            
+            <div>
+              {customer.phone && (
+                <div style={{ fontSize: '13px', color: '#374151', marginBottom: '6px' }}>
+                  <strong>Telefon:</strong> {customer.phone}
+                </div>
+              )}
+              {customer.email && (
+                <div style={{ fontSize: '13px', color: '#374151', marginBottom: '6px' }}>
+                  <strong>E-Mail:</strong> {customer.email}
+                </div>
+              )}
+              {customer.birthdate && (
+                <div style={{ fontSize: '13px', color: '#374151', marginBottom: '6px' }}>
+                  <strong>Geburtsdatum:</strong> {formatDate(customer.birthdate)}
+                </div>
+              )}
+              {customer.id && (
+                <div style={{ fontSize: '13px', color: '#6B7280' }}>
+                  <strong>Kundennummer:</strong> {customer.id}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
-                {member.birthdate && (
-                  <p style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
-                    <strong>Geb.:</strong> {formatDate(member.birthdate)}
-                  </p>
-                )}
+      {/* ===== ABSCHNITT 2: FAMILIENMITGLIEDER ===== */}
+      {familyMembers && familyMembers.length > 0 && (
+        <div style={{ marginBottom: '40px' }}>
+          <div style={{ 
+            fontSize: '14px',
+            fontWeight: '600',
+            color: '#1F2937',
+            marginBottom: '16px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            paddingBottom: '12px',
+            borderBottom: '2px solid #E5E7EB'
+          }}>
+            Familienmitglieder
+          </div>
+          
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {familyMembers.map((member) => (
+              <div 
+                key={member.id}
+                style={{ 
+                  padding: '16px',
+                  background: '#F9FAFB',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '6px'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937', marginBottom: '4px' }}>
+                      {member.first_name} {member.last_name}
+                    </div>
+                    {member.birthdate && (
+                      <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                        geb. {formatDate(member.birthdate)}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ 
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    background: '#E0E7FF',
+                    color: '#4F46E5',
+                    padding: '4px 10px',
+                    borderRadius: '4px'
+                  }}>
+                    {getFamilyRoleLabel(member.family_role)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-                {memberContracts.length > 0 ? (
-                   <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse', marginBottom: '15px' }}>
-                     <thead>
-                       <tr style={{ background: '#f5f5f5', borderBottom: '2px solid #2169B4' }}>
-                         <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #ddd' }}>Versicherer</th>
-                         <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #ddd' }}>Sparte</th>
-                         <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #ddd' }}>Policen-Nr</th>
-                         <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #ddd' }}>Produkt</th>
-                         <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #ddd' }}>Beginn</th>
-                         <th style={{ padding: '8px', textAlign: 'left', fontWeight: 'bold', borderRight: '1px solid #ddd' }}>Ende</th>
-                         <th style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', borderRight: '1px solid #ddd' }}>Jahresprämie</th>
-                         <th style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold' }}>Status</th>
-                       </tr>
-                     </thead>
-                     <tbody>
-                       {memberContracts.map((contract) => {
-                         const status = getStatusColor(contract)
-                         return (
-                           <tr key={contract.id} style={{ 
-                             borderBottom: '1px solid #ddd',
-                             height: 'auto'
-                           }}>
-                             <td style={{ padding: '8px', borderRight: '1px solid #ddd' }}>{contract.insurer || '–'}</td>
-                             <td style={{ padding: '8px', borderRight: '1px solid #ddd' }}>{getSparteLabel(contract.sparte || contract.insurance_type)}</td>
-                             <td style={{ padding: '8px', borderRight: '1px solid #ddd', fontFamily: 'monospace' }}>{contract.policy_number || '–'}</td>
-                             <td style={{ padding: '8px', borderRight: '1px solid #ddd' }}>{contract.product || '–'}</td>
-                             <td style={{ padding: '8px', borderRight: '1px solid #ddd' }}>{contract.start_date ? formatDate(contract.start_date) : '–'}</td>
-                             <td style={{ padding: '8px', borderRight: '1px solid #ddd' }}>
-                               {contract.end_date ? (
-                                 <>
-                                   {formatDate(contract.end_date)}
-                                   {(() => {
-                                     const days = getDaysUntilExpiry(contract.end_date)
-                                     return days !== null ? ` (${days}d)` : ''
-                                   })()}
-                                 </>
-                               ) : '–'}
-                             </td>
-                             <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', borderRight: '1px solid #ddd' }}>
-                               {formatCurrency(contract.premium_yearly)}
-                             </td>
-                             <td style={{ 
-                               padding: '8px', 
-                               textAlign: 'center',
-                               background: status.bg,
-                               color: status.text,
-                               fontWeight: 'bold',
-                               fontSize: '11px'
-                             }}>
-                               {status.label}
-                             </td>
-                           </tr>
-                         )
-                       })}
-                     </tbody>
-                   </table>
-                 ) : (
-                   <p style={{ fontSize: '12px', color: '#999', fontStyle: 'italic' }}>Keine Verträge</p>
-                 )}
+      {/* ===== ABSCHNITT 3: VERTRAGSÜBERSICHT ===== */}
+      {contracts && contracts.length > 0 && (
+        <div style={{ marginBottom: '40px' }}>
+          <div style={{ 
+            fontSize: '14px',
+            fontWeight: '600',
+            color: '#1F2937',
+            marginBottom: '20px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            paddingBottom: '12px',
+            borderBottom: '2px solid #E5E7EB'
+          }}>
+            Versicherungsverträge
+          </div>
+
+          {/* Hauptkontakt Verträge */}
+          {mainCustomerContracts.length > 0 && (
+            <div style={{ marginBottom: '32px' }}>
+              <div style={{ 
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#2169B4',
+                marginBottom: '12px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                {customer.first_name} {customer.last_name}
+              </div>
+              
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #D1D5DB', background: '#F9FAFB' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Versicherer</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sparte</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Produkt</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Ablauf</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'right', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Jahresprämie</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'center', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mainCustomerContracts.map((contract, idx) => {
+                    const status = getStatusBadge(contract)
+                    return (
+                      <tr 
+                        key={contract.id}
+                        style={{ 
+                          borderBottom: '1px solid #E5E7EB',
+                          background: idx % 2 === 0 ? '#fff' : '#F9FAFB'
+                        }}
+                      >
+                        <td style={{ padding: '14px 10px', fontSize: '12px', color: '#1F2937' }}>
+                          {contract.insurer || '–'}
+                        </td>
+                        <td style={{ padding: '14px 10px', fontSize: '12px', color: '#374151' }}>
+                          {getSparteLabel(contract.sparte || contract.insurance_type)}
+                        </td>
+                        <td style={{ padding: '14px 10px', fontSize: '12px', color: '#374151' }}>
+                          {contract.product || '–'}
+                        </td>
+                        <td style={{ padding: '14px 10px', fontSize: '12px', color: '#374151', textAlign: 'center' }}>
+                          {contract.end_date ? (
+                            <div>
+                              {formatDate(contract.end_date)}
+                              {(() => {
+                                const days = getDaysUntilExpiry(contract.end_date)
+                                return days !== null ? <div style={{ fontSize: '10px', color: '#6B7280' }}>({days}d)</div> : null
+                              })()}
+                            </div>
+                          ) : '–'}
+                        </td>
+                        <td style={{ padding: '14px 10px', fontSize: '12px', fontWeight: '600', color: '#1F2937', textAlign: 'right' }}>
+                          {formatCurrency(contract.premium_yearly)}
+                        </td>
+                        <td style={{ padding: '14px 10px', textAlign: 'center' }}>
+                          <div style={{
+                            display: 'inline-block',
+                            background: status.bg,
+                            color: status.text,
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: '600'
+                          }}>
+                            {status.label}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Familienmitglieder Verträge */}
+          {familyMembers && familyMembers.map((member) => {
+            const memberContracts = contractsByCustomer[member.id] || []
+            if (memberContracts.length === 0) return null
+            
+            return (
+              <div key={member.id} style={{ marginBottom: '24px' }}>
+                <div style={{ 
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: '#2169B4',
+                  marginBottom: '12px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  {member.first_name} {member.last_name}
+                </div>
+                
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid #D1D5DB', background: '#F9FAFB' }}>
+                      <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Versicherer</th>
+                      <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sparte</th>
+                      <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Produkt</th>
+                      <th style={{ padding: '12px 10px', textAlign: 'center', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Ablauf</th>
+                      <th style={{ padding: '12px 10px', textAlign: 'right', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Jahresprämie</th>
+                      <th style={{ padding: '12px 10px', textAlign: 'center', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {memberContracts.map((contract, idx) => {
+                      const status = getStatusBadge(contract)
+                      return (
+                        <tr 
+                          key={contract.id}
+                          style={{ 
+                            borderBottom: '1px solid #E5E7EB',
+                            background: idx % 2 === 0 ? '#fff' : '#F9FAFB'
+                          }}
+                        >
+                          <td style={{ padding: '14px 10px', fontSize: '12px', color: '#1F2937' }}>
+                            {contract.insurer || '–'}
+                          </td>
+                          <td style={{ padding: '14px 10px', fontSize: '12px', color: '#374151' }}>
+                            {getSparteLabel(contract.sparte || contract.insurance_type)}
+                          </td>
+                          <td style={{ padding: '14px 10px', fontSize: '12px', color: '#374151' }}>
+                            {contract.product || '–'}
+                          </td>
+                          <td style={{ padding: '14px 10px', fontSize: '12px', color: '#374151', textAlign: 'center' }}>
+                            {contract.end_date ? (
+                              <div>
+                                {formatDate(contract.end_date)}
+                                {(() => {
+                                  const days = getDaysUntilExpiry(contract.end_date)
+                                  return days !== null ? <div style={{ fontSize: '10px', color: '#6B7280' }}>({days}d)</div> : null
+                                })()}
+                              </div>
+                            ) : '–'}
+                          </td>
+                          <td style={{ padding: '14px 10px', fontSize: '12px', fontWeight: '600', color: '#1F2937', textAlign: 'right' }}>
+                            {formatCurrency(contract.premium_yearly)}
+                          </td>
+                          <td style={{ padding: '14px 10px', textAlign: 'center' }}>
+                            <div style={{
+                              display: 'inline-block',
+                              background: status.bg,
+                              color: status.text,
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              fontSize: '10px',
+                              fontWeight: '600'
+                            }}>
+                              {status.label}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
             )
           })}
         </div>
       )}
 
-      {/* LEGEND */}
-      <div style={{ 
-        marginTop: '30px', 
-        paddingTop: '20px', 
-        borderTop: '2px solid #2169B4',
-        fontSize: '12px'
-      }}>
-        <p style={{ fontWeight: 'bold', marginBottom: '10px' }}>Status-Farbcodierung:</p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <div>
-            <span style={{ display: 'inline-block', width: '20px', height: '20px', background: '#4CAF50', marginRight: '8px', borderRadius: '3px' }}></span>
-            Aktiv
+      {/* ===== ABSCHNITT 4: STATISTIK (AM ENDE) ===== */}
+      {contracts && contracts.length > 0 && (
+        <div style={{ 
+          marginTop: '40px',
+          paddingTop: '20px',
+          borderTop: '2px solid #E5E7EB'
+        }}>
+          <div style={{ 
+            fontSize: '12px',
+            fontWeight: '600',
+            color: '#1F2937',
+            marginBottom: '16px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>
+            Zusammenfassung
           </div>
-          <div>
-            <span style={{ display: 'inline-block', width: '20px', height: '20px', background: '#FF9800', marginRight: '8px', borderRadius: '3px' }}></span>
-            Ablauf (90d)
-          </div>
-          <div>
-            <span style={{ display: 'inline-block', width: '20px', height: '20px', background: '#E91E63', marginRight: '8px', borderRadius: '3px' }}></span>
-            Kritisch (30d)
-          </div>
-          <div>
-            <span style={{ display: 'inline-block', width: '20px', height: '20px', background: '#F44336', marginRight: '8px', borderRadius: '3px' }}></span>
-            Überfällig
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+            <div style={{ 
+              padding: '16px',
+              background: '#F3F4F6',
+              borderRadius: '6px',
+              borderLeft: '3px solid #2169B4'
+            }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#1F2937', marginBottom: '4px' }}>
+                {contracts.filter(c => c.status === 'active').length}
+              </div>
+              <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Aktive Verträge
+              </div>
+            </div>
+            
+            <div style={{ 
+              padding: '16px',
+              background: '#F3F4F6',
+              borderRadius: '6px',
+              borderLeft: '3px solid #2169B4'
+            }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#1F2937', marginBottom: '4px' }}>
+                {formatCurrency(totalYearlyPremium)}
+              </div>
+              <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Jahresprämie
+              </div>
+            </div>
+            
+            <div style={{ 
+              padding: '16px',
+              background: '#F3F4F6',
+              borderRadius: '6px',
+              borderLeft: '3px solid #2169B4'
+            }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#1F2937', marginBottom: '4px' }}>
+                {familyMembers ? familyMembers.length + 1 : 1}
+              </div>
+              <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Personen
+              </div>
+            </div>
+            
+            <div style={{ 
+              padding: '16px',
+              background: '#F3F4F6',
+              borderRadius: '6px',
+              borderLeft: '3px solid #F59E0B'
+            }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#1F2937', marginBottom: '4px' }}>
+                {expiringCount}
+              </div>
+              <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Abläufe (180d)
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      <p style={{ fontSize: '10px', color: '#999', marginTop: '20px', textAlign: 'center' }}>
-        Erstellt: {new Date().toLocaleDateString('de-CH')} {new Date().toLocaleTimeString('de-CH')}
-      </p>
+      {/* ===== FOOTER ===== */}
+      <div style={{
+        marginTop: '40px',
+        paddingTop: '20px',
+        borderTop: '1px solid #E5E7EB',
+        fontSize: '10px',
+        color: '#9CA3AF',
+        textAlign: 'center'
+      }}>
+        <p style={{ margin: '0' }}>
+          Dieses Dokument ist eine Zusammenfassung Ihrer Versicherungsverträge und dient zu Informationszwecken.
+        </p>
+        <p style={{ margin: '8px 0 0 0' }}>
+          © 2026 • Erstellt am {formatDate(new Date())}
+        </p>
+      </div>
     </div>
   )
 })
