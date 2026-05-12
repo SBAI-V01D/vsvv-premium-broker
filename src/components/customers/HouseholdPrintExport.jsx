@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react'
 
 export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers, contracts, advisors }, ref) => {
-  // Group contracts by customer - must be called before early returns
+  // ALL HOOKS MUST BE CALLED UNCONDITIONALLY - before any early returns
+  // Group contracts by customer
   const contractsByCustomer = useMemo(() => {
     const grouped = {}
     contracts?.forEach(c => {
@@ -11,7 +12,42 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
     return grouped
   }, [contracts])
 
+  // Sortiere Familienmitglieder: Hauptkontakt zuerst, dann nach Geburtsdatum
+  const sortedFamilyMembers = useMemo(() => {
+    if (!familyMembers || familyMembers.length === 0) return []
+    
+    // Trenne Hauptkontakt und andere
+    const nonPrimary = familyMembers.filter(m => m.family_role !== 'primary')
+    
+    // Sortiere nach Geburtsdatum (älteste zuerst)
+    nonPrimary.sort((a, b) => {
+      if (!a.birthdate || !b.birthdate) return 0
+      return new Date(a.birthdate) - new Date(b.birthdate)
+    })
+    
+    return nonPrimary
+  }, [familyMembers])
+
+  // Dedupliziere Verträge: speichere nur das erste Vorkommen
+  const deduplicatedContracts = useMemo(() => {
+    if (!contracts) return []
+    const seen = new Set()
+    return contracts.filter(c => {
+      if (seen.has(c.id)) return false
+      seen.add(c.id)
+      return true
+    })
+  }, [contracts])
+
+  // Early return after all hooks
   if (!customer) return null
+
+  // Funktion zum Extrahieren des Familiennamens
+  const getFamilyName = () => {
+    if (!customer) return ''
+    if (customer.last_name) return customer.last_name
+    return ''
+  }
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '–'
@@ -34,6 +70,13 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
   }
 
   const getStatusBadge = (contract) => {
+    // Nicht-aktive Verträge
+    if (contract.status === 'pending') return { bg: '#F59E0B', text: '#fff', label: 'In Prüfung', border: 'none' }
+    if (contract.status === 'cancelled') return { bg: '#9CA3AF', text: '#fff', label: 'Gekündigt', border: 'none' }
+    if (contract.status === 'expired') return { bg: '#9CA3AF', text: '#fff', label: 'Abgelaufen', border: 'none' }
+    if (contract.status !== 'active') return { bg: '#9CA3AF', text: '#fff', label: 'Nicht aktiv', border: 'none' }
+    
+    // Aktive Verträge
     const days = getDaysUntilExpiry(contract.end_date)
     if (days === null) return { bg: '#10B981', text: '#fff', label: 'Aktiv', border: 'none' }
     if (days < 0) return { bg: '#EF4444', text: '#fff', label: 'Überfällig', border: 'none' }
@@ -92,8 +135,8 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
   }
 
   const mainCustomerContracts = contractsByCustomer[customer.id] || []
-  const totalYearlyPremium = contracts?.reduce((sum, c) => sum + (c.premium_yearly || 0), 0) || 0
-  const expiringCount = contracts?.filter(c => {
+  const totalYearlyPremium = deduplicatedContracts?.reduce((sum, c) => sum + (c.premium_yearly || 0), 0) || 0
+  const expiringCount = deduplicatedContracts?.filter(c => {
     const days = getDaysUntilExpiry(c.end_date)
     return days !== null && days >= 0 && days <= 180
   }).length || 0
@@ -144,7 +187,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
               color: '#1F2937',
               marginBottom: '5px'
             }}>
-              Familienübersicht
+              Familienübersicht – {getFamilyName()}
             </div>
             <div style={{ fontSize: '12px', color: '#6B7280' }}>
               Persönliche Versicherungsübersicht
@@ -152,8 +195,13 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
           </div>
           <div style={{ textAlign: 'right', fontSize: '11px', color: '#6B7280' }}>
             <div>Erstellt: {formatDate(new Date())}</div>
+            {customer.id && (
+              <div style={{ marginTop: '4px' }}>
+                Kundennummer: <strong>{customer.id}</strong>
+              </div>
+            )}
             {advisors && advisors.length > 0 && (
-              <div style={{ marginTop: '5px' }}>
+              <div style={{ marginTop: '4px' }}>
                 Berater: <strong>{advisors[0].firstname} {advisors[0].lastname}</strong>
               </div>
             )}
@@ -224,7 +272,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
       </div>
 
       {/* ===== ABSCHNITT 2: FAMILIENMITGLIEDER ===== */}
-      {familyMembers && familyMembers.length > 0 && (
+      {sortedFamilyMembers && sortedFamilyMembers.length > 0 && (
         <div style={{ marginBottom: '40px', pageBreakInside: 'avoid' }}>
           <div style={{ 
             fontSize: '14px',
@@ -240,7 +288,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
           </div>
           
           <div style={{ display: 'grid', gap: '12px' }}>
-            {familyMembers.map((member) => (
+            {sortedFamilyMembers.map((member) => (
               <div 
                 key={member.id}
                 style={{ 
@@ -280,8 +328,8 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
       )}
 
       {/* ===== ABSCHNITT 3: VERTRAGSÜBERSICHT ===== */}
-      {contracts && contracts.length > 0 && (
-        <div style={{ marginBottom: '40px', pageBreakAfter: 'auto' }}>
+      {deduplicatedContracts && deduplicatedContracts.length > 0 && (
+        <div style={{ marginBottom: '40px', pageBreakAfter: 'auto', pageBreakInside: 'avoid' }}>
           <div style={{ 
             fontSize: '14px',
             fontWeight: '600',
@@ -290,7 +338,8 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
             textTransform: 'uppercase',
             letterSpacing: '0.5px',
             paddingBottom: '12px',
-            borderBottom: '2px solid #E5E7EB'
+            borderBottom: '2px solid #E5E7EB',
+            pageBreakAfter: 'avoid'
           }}>
             Versicherungsverträge
           </div>
@@ -304,7 +353,8 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
                 color: '#2169B4',
                 marginBottom: '12px',
                 textTransform: 'uppercase',
-                letterSpacing: '0.5px'
+                letterSpacing: '0.5px',
+                pageBreakAfter: 'avoid'
               }}>
                 {customer.first_name} {customer.last_name}
               </div>
@@ -376,7 +426,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
           )}
 
           {/* Familienmitglieder Verträge */}
-          {familyMembers && familyMembers.map((member) => {
+          {sortedFamilyMembers && sortedFamilyMembers.map((member) => {
             const memberContracts = contractsByCustomer[member.id] || []
             if (memberContracts.length === 0) return null
             
@@ -388,7 +438,8 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
                   color: '#2169B4',
                   marginBottom: '12px',
                   textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
+                  letterSpacing: '0.5px',
+                  pageBreakAfter: 'avoid'
                 }}>
                   {member.first_name} {member.last_name}
                 </div>
@@ -463,7 +514,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
       )}
 
       {/* ===== ABSCHNITT 4: STATISTIK (AM ENDE) ===== */}
-      {contracts && contracts.length > 0 && (
+      {deduplicatedContracts && deduplicatedContracts.length > 0 && (
         <div style={{ 
           marginTop: '40px',
           paddingTop: '20px',
@@ -491,7 +542,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
               pageBreakInside: 'avoid'
             }}>
               <div style={{ fontSize: '18px', fontWeight: '700', color: '#1F2937', marginBottom: '4px' }}>
-                {contracts.filter(c => c.status === 'active').length}
+                {deduplicatedContracts.filter(c => c.status === 'active').length}
               </div>
               <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Aktive Verträge
@@ -521,7 +572,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
               pageBreakInside: 'avoid'
             }}>
               <div style={{ fontSize: '18px', fontWeight: '700', color: '#1F2937', marginBottom: '4px' }}>
-                {familyMembers ? familyMembers.length + 1 : 1}
+                {(sortedFamilyMembers?.length || 0) + 1}
               </div>
               <div style={{ fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Personen
