@@ -266,9 +266,6 @@ export default function Customers() {
                           </p>
                         )}
                         <p className="text-xs text-muted-foreground">{customer.email} • {customer.city || '–'}</p>
-                        {customer.bank_account && (
-                          <p className="text-xs text-muted-foreground font-mono">🏦 {customer.bank_account}</p>
-                        )}
                       </Link>
                     </div>
 

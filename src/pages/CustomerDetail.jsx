@@ -5,7 +5,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useRef } from 'react'
 import html2pdf from 'html2pdf.js'
 import { useAccessControl } from '@/hooks/useAccessControl'
-import { ArrowLeft, Plus, Edit, Mail, Phone, MapPin, LayoutDashboard, ExternalLink, MoreHorizontal } from 'lucide-react'
+import { ArrowLeft, Plus, Edit, Mail, Phone, MapPin, LayoutDashboard, ExternalLink, MoreHorizontal, Landmark } from 'lucide-react'
 import AiInsightsPanel from '../components/customers/AiInsightsPanel'
 import ActivityTimeline from '../components/customers/ActivityTimeline'
 import AutoAISummary from '../components/customers/AutoAISummary'
@@ -293,6 +293,19 @@ export default function CustomerDetail() {
             <div className="text-sm"><span className="text-muted-foreground">Status:</span> {label(STATUS_LABELS, customer.status)}</div>
           </CardContent>
         </Card>
+        {customer.bank_account && (
+          <Card>
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <Landmark className="w-4 h-4 text-muted-foreground" />
+                <div>
+                  <div className="text-muted-foreground text-xs">Bank- oder Postkontoverbindung</div>
+                  <div className="font-mono text-sm font-semibold">{customer.bank_account}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* HIDDEN EXPORT CONTAINER – Nur für PDF */}
