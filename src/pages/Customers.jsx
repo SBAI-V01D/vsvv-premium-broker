@@ -265,10 +265,10 @@ export default function Customers() {
                             Kontakt: {customer.contact_person_firstname} {customer.contact_person_lastname}
                           </p>
                         )}
-                        <p className="text-xs text-muted-foreground">
-                          {customer.email} • {customer.city || '–'}
-                          {customer.bank_account && <> • <span className="font-mono text-[11px]">{customer.bank_account}</span></>}
-                        </p>
+                        <p className="text-xs text-muted-foreground">{customer.email} • {customer.city || '–'}</p>
+                        {customer.bank_account && (
+                          <p className="text-xs text-muted-foreground font-mono">🏦 {customer.bank_account}</p>
+                        )}
                       </Link>
                     </div>
 
