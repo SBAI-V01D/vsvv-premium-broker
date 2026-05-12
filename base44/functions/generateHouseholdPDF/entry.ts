@@ -108,12 +108,17 @@ Deno.serve(async (req) => {
     const allCustomers = await base44.asServiceRole.entities.Customer.list(null, 500);
     const allContracts = await base44.asServiceRole.entities.Contract.list(null, 1000);
     
+    // Hole ALLE Familienmitglieder: Hauptkontakt + alle mit der gleichen primary_customer_id
+    const primaryCustomer = allCustomers.find(c => c.id === primaryCustomerId);
     const familyMembers = allCustomers.filter(c => 
       c.primary_customer_id === primaryCustomerId || c.id === primaryCustomerId
     );
     
-    // Fallback: Wenn keine Familienmitglieder gefunden, nur dieser Kunde
-    const customers = familyMembers.length > 0 ? familyMembers : [customer];
+    // Stelle sicher, dass der Hauptkontakt immer dabei ist
+    const customers = [
+      primaryCustomer,
+      ...familyMembers.filter(c => c.id !== primaryCustomerId)
+    ].filter(Boolean);
     const contracts = allContracts || [];
     const customerIds = customers.map(m => m.id);
     const householdContracts = contracts.filter(c => customerIds.includes(c.customer_id));
