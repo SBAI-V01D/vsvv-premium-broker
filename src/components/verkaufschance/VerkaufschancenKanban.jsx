@@ -14,6 +14,7 @@ const COLUMNS = [
   { key: 'offerten_erhalten',label: 'Offerten erhalten',color: 'border-t-violet-500', headerColor: 'bg-violet-50' },
   { key: 'beratung_erfolgt', label: 'Beratung',         color: 'border-t-amber-500',  headerColor: 'bg-amber-50' },
   { key: 'kunde_entscheidet',label: 'Kunde entscheidet',color: 'border-t-orange-500', headerColor: 'bg-orange-50' },
+  { key: 'wiedervorlage',    label: 'Wiedervorlage',    color: 'border-t-orange-400', headerColor: 'bg-orange-50' },
   { key: 'gewonnen',         label: 'Gewonnen ✓',       color: 'border-t-green-500',  headerColor: 'bg-green-50' },
   { key: 'verloren',         label: 'Verloren',         color: 'border-t-red-400',    headerColor: 'bg-red-50' },
 ]
