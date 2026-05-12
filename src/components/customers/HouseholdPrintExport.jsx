@@ -98,19 +98,44 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
     return days !== null && days >= 0 && days <= 180
   }).length || 0
 
+  // Print CSS für saubere Seitenumbrüche
+  const printStyles = `
+    @media print {
+      * {
+        widows: 3;
+        orphans: 3;
+      }
+      
+      body {
+        margin: 0;
+        padding: 0;
+        background: white;
+      }
+      
+      html {
+        margin: 0;
+        padding: 0;
+      }
+    }
+  `
+
   return (
-    <div 
-      ref={ref} 
-      style={{ 
-        padding: '40px', 
-        background: '#fff', 
-        fontFamily: '"Segoe UI", "Helvetica Neue", sans-serif',
-        lineHeight: '1.6',
-        color: '#333'
-      }}
-    >
+    <>
+      <style>{printStyles}</style>
+      <div 
+        ref={ref} 
+        style={{ 
+          padding: '40px', 
+          background: '#fff', 
+          fontFamily: '"Segoe UI", "Helvetica Neue", sans-serif',
+          lineHeight: '1.6',
+          color: '#333',
+          maxWidth: '210mm',
+          margin: '0 auto'
+        }}
+      >
       {/* ===== HEADER ===== */}
-      <div style={{ marginBottom: '40px', paddingBottom: '20px', borderBottom: '2px solid #E5E7EB' }}>
+      <div style={{ marginBottom: '40px', paddingBottom: '20px', borderBottom: '2px solid #E5E7EB', pageBreakAfter: 'avoid' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
           <div>
             <div style={{ 
@@ -137,7 +162,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
       </div>
 
       {/* ===== ABSCHNITT 1: HAUPTKONTAKT ===== */}
-      <div style={{ marginBottom: '40px' }}>
+      <div style={{ marginBottom: '40px', pageBreakInside: 'avoid' }}>
         <div style={{ 
           background: '#F3F4F6',
           padding: '24px',
@@ -200,7 +225,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
 
       {/* ===== ABSCHNITT 2: FAMILIENMITGLIEDER ===== */}
       {familyMembers && familyMembers.length > 0 && (
-        <div style={{ marginBottom: '40px' }}>
+        <div style={{ marginBottom: '40px', pageBreakInside: 'avoid' }}>
           <div style={{ 
             fontSize: '14px',
             fontWeight: '600',
@@ -222,7 +247,8 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
                   padding: '16px',
                   background: '#F9FAFB',
                   border: '1px solid #E5E7EB',
-                  borderRadius: '6px'
+                  borderRadius: '6px',
+                  pageBreakInside: 'avoid'
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -255,7 +281,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
 
       {/* ===== ABSCHNITT 3: VERTRAGSÜBERSICHT ===== */}
       {contracts && contracts.length > 0 && (
-        <div style={{ marginBottom: '40px' }}>
+        <div style={{ marginBottom: '40px', pageBreakAfter: 'auto' }}>
           <div style={{ 
             fontSize: '14px',
             fontWeight: '600',
@@ -271,7 +297,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
 
           {/* Hauptkontakt Verträge */}
           {mainCustomerContracts.length > 0 && (
-            <div style={{ marginBottom: '32px' }}>
+            <div style={{ marginBottom: '32px', pageBreakInside: 'avoid' }}>
               <div style={{ 
                 fontSize: '12px',
                 fontWeight: '600',
@@ -283,7 +309,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
                 {customer.first_name} {customer.last_name}
               </div>
               
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', pageBreakInside: 'avoid' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #D1D5DB', background: '#F9FAFB' }}>
                     <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Versicherer</th>
@@ -355,7 +381,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
             if (memberContracts.length === 0) return null
             
             return (
-              <div key={member.id} style={{ marginBottom: '24px' }}>
+              <div key={member.id} style={{ marginBottom: '24px', pageBreakInside: 'avoid' }}>
                 <div style={{ 
                   fontSize: '12px',
                   fontWeight: '600',
@@ -367,7 +393,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
                   {member.first_name} {member.last_name}
                 </div>
                 
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', pageBreakInside: 'avoid' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid #D1D5DB', background: '#F9FAFB' }}>
                       <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: '11px', fontWeight: '600', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Versicherer</th>
@@ -441,7 +467,9 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
         <div style={{ 
           marginTop: '40px',
           paddingTop: '20px',
-          borderTop: '2px solid #E5E7EB'
+          borderTop: '2px solid #E5E7EB',
+          pageBreakInside: 'avoid',
+          pageBreakBefore: 'auto'
         }}>
           <div style={{ 
             fontSize: '12px',
@@ -459,7 +487,8 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
               padding: '16px',
               background: '#F3F4F6',
               borderRadius: '6px',
-              borderLeft: '3px solid #2169B4'
+              borderLeft: '3px solid #2169B4',
+              pageBreakInside: 'avoid'
             }}>
               <div style={{ fontSize: '18px', fontWeight: '700', color: '#1F2937', marginBottom: '4px' }}>
                 {contracts.filter(c => c.status === 'active').length}
@@ -473,7 +502,8 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
               padding: '16px',
               background: '#F3F4F6',
               borderRadius: '6px',
-              borderLeft: '3px solid #2169B4'
+              borderLeft: '3px solid #2169B4',
+              pageBreakInside: 'avoid'
             }}>
               <div style={{ fontSize: '18px', fontWeight: '700', color: '#1F2937', marginBottom: '4px' }}>
                 {formatCurrency(totalYearlyPremium)}
@@ -487,7 +517,8 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
               padding: '16px',
               background: '#F3F4F6',
               borderRadius: '6px',
-              borderLeft: '3px solid #2169B4'
+              borderLeft: '3px solid #2169B4',
+              pageBreakInside: 'avoid'
             }}>
               <div style={{ fontSize: '18px', fontWeight: '700', color: '#1F2937', marginBottom: '4px' }}>
                 {familyMembers ? familyMembers.length + 1 : 1}
@@ -501,7 +532,8 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
               padding: '16px',
               background: '#F3F4F6',
               borderRadius: '6px',
-              borderLeft: '3px solid #F59E0B'
+              borderLeft: '3px solid #F59E0B',
+              pageBreakInside: 'avoid'
             }}>
               <div style={{ fontSize: '18px', fontWeight: '700', color: '#1F2937', marginBottom: '4px' }}>
                 {expiringCount}
@@ -521,7 +553,8 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
         borderTop: '1px solid #E5E7EB',
         fontSize: '10px',
         color: '#9CA3AF',
-        textAlign: 'center'
+        textAlign: 'center',
+        pageBreakInside: 'avoid'
       }}>
         <p style={{ margin: '0' }}>
           Dieses Dokument ist eine Zusammenfassung Ihrer Versicherungsverträge und dient zu Informationszwecken.
@@ -530,7 +563,8 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
           © 2026 • Erstellt am {formatDate(new Date())}
         </p>
       </div>
-    </div>
+      </div>
+    </>
   )
 })
 
