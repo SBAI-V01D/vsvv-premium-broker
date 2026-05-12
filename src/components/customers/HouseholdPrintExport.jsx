@@ -195,9 +195,9 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
           </div>
           <div style={{ textAlign: 'right', fontSize: '11px', color: '#6B7280' }}>
             <div>Erstellt: {formatDate(new Date())}</div>
-            {customer.id && (
+            {customer.customer_number && (
               <div style={{ marginTop: '4px' }}>
-                Kundennummer: <strong>{customer.id}</strong>
+                Kundennummer: <strong>{customer.customer_number}</strong>
               </div>
             )}
             {advisors && advisors.length > 0 && (
@@ -261,9 +261,9 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
                   <strong>Geburtsdatum:</strong> {formatDate(customer.birthdate)}
                 </div>
               )}
-              {customer.id && (
+              {customer.customer_number && (
                 <div style={{ fontSize: '13px', color: '#6B7280' }}>
-                  <strong>Kundennummer:</strong> {customer.id}
+                  <strong>Kundennummer:</strong> {customer.customer_number}
                 </div>
               )}
             </div>
@@ -303,6 +303,7 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
                   <div>
                     <div style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937', marginBottom: '4px' }}>
                       {member.first_name} {member.last_name}
+                      {member.customer_number && <span style={{ fontSize: '11px', fontWeight: '400', marginLeft: '8px', color: '#6B7280' }}>({member.customer_number})</span>}
                     </div>
                     {member.birthdate && (
                       <div style={{ fontSize: '12px', color: '#6B7280' }}>

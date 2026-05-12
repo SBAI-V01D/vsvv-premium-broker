@@ -121,13 +121,28 @@ export default function Customers() {
 
   const getFamilyMembers = (primaryId) => customers.filter(c => c.primary_customer_id === primaryId)
 
-  const handleSave = (data) => {
+  const handleSave = async (data) => {
     if (editing) {
       updateMutation.mutate({ id: editing.id, data })
     } else {
       // Auto-assign organization_id if not set (required field)
       const orgId = data.organization_id || organizations[0]?.id || ''
-      createMutation.mutate({ ...data, organization_id: orgId })
+      
+      // Auto-generate customer_number if not set
+      let customerData = { ...data, organization_id: orgId }
+      if (!customerData.customer_number) {
+        try {
+          const result = await base44.functions.invoke('generateCustomerNumber', {})
+          if (result?.data?.customer_number) {
+            customerData.customer_number = result.data.customer_number
+          }
+        } catch (error) {
+          console.error('Error generating customer number:', error)
+          // Fallback: continue without auto-generated number
+        }
+      }
+      
+      createMutation.mutate(customerData)
     }
   }
 
@@ -135,9 +150,9 @@ export default function Customers() {
 
   const handleExport = () => {
     if (filtered.length === 0) return
-    const headers = ['ID', 'Vorname', 'Nachname', 'Email', 'Telefon', 'Stadt', 'Kanton', 'Status']
+    const headers = ['Kundennummer', 'Vorname', 'Nachname', 'Email', 'Telefon', 'Stadt', 'Kanton', 'Status']
     const rows = filtered.map(c => [
-      c.id,
+      c.customer_number || '',
       c.first_name,
       c.last_name,
       c.email,
@@ -212,7 +227,7 @@ export default function Customers() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Name, E-Mail, Stadt, Beruf... (Fuzzy-Suche)"
+            placeholder="Name, E-Mail, Stadt, Beruf, Kundennummer... (Fuzzy-Suche)"
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9"
@@ -255,11 +270,18 @@ export default function Customers() {
                         </button>
                       )}
                       <Link to={`/kunden/${customer.id}`} className="flex-1 min-w-0 hover:text-primary group">
-                        <p className="font-bold text-base group-hover:text-primary">
-                          {customer.customer_type === 'business'
-                            ? (customer.company_name || `${customer.last_name} ${customer.first_name}`)
-                            : `${customer.last_name} ${customer.first_name}`}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-base group-hover:text-primary">
+                            {customer.customer_type === 'business'
+                              ? (customer.company_name || `${customer.last_name} ${customer.first_name}`)
+                              : `${customer.last_name} ${customer.first_name}`}
+                          </p>
+                          {customer.customer_number && (
+                            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded font-mono font-medium">
+                              {customer.customer_number}
+                            </span>
+                          )}
+                        </div>
                         {customer.customer_type === 'business' && (customer.contact_person_firstname || customer.contact_person_lastname) && (
                           <p className="text-xs text-muted-foreground">
                             Kontakt: {customer.contact_person_firstname} {customer.contact_person_lastname}
@@ -330,7 +352,14 @@ export default function Customers() {
                           }`}
                         >
                           <Link to={`/kunden/${member.id}`} className="flex-1 min-w-0 hover:text-primary group">
-                            <p className="font-medium text-sm group-hover:text-primary">{member.last_name} {member.first_name}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm group-hover:text-primary">{member.last_name} {member.first_name}</p>
+                              {member.customer_number && (
+                                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-mono font-medium">
+                                  {member.customer_number}
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-muted-foreground">
                               {label(FAMILY_ROLE_LABELS, member.family_role)} • {member.email}
                             </p>

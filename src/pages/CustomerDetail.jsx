@@ -231,7 +231,14 @@ export default function CustomerDetail() {
             {customer.company_name ? customer.company_name[0] : `${customer.first_name?.[0] || ''}${customer.last_name?.[0] || ''}`}
           </div>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</h1>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</h1>
+              {customer.customer_number && (
+                <span className="text-lg bg-primary/10 text-primary px-3 py-1 rounded-lg font-mono font-bold">
+                  {customer.customer_number}
+                </span>
+              )}
+            </div>
             {customer.company_name && (customer.contact_person_firstname || customer.contact_person_lastname) && (
               <p className="text-sm text-muted-foreground">Kontakt: {customer.contact_person_firstname} {customer.contact_person_lastname}</p>
             )}

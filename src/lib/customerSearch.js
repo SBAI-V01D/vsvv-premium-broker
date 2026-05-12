@@ -44,6 +44,7 @@ function scoreCustomer(customer, tokens) {
     customer.profession,
     customer.notes,
     customer.family_role,
+    customer.customer_number,
   ].map(normalize)
 
   const fullText = fields.join(' ')
@@ -56,8 +57,10 @@ function scoreCustomer(customer, tokens) {
     let tokenScore = 0
 
     for (const syn of synonyms) {
-      // Exact match in any field
+      // Exact match in any field (especially important for customer_number)
       if (fields.some(f => f === syn)) { tokenScore = Math.max(tokenScore, 100); break }
+      // Customer number exact match (e.g., "K-500")
+      if (customer.customer_number && customer.customer_number.toLowerCase() === syn) { tokenScore = Math.max(tokenScore, 100); break }
       // Starts with
       if (fields.some(f => f.startsWith(syn))) { tokenScore = Math.max(tokenScore, 80) }
       // Contains (substring)

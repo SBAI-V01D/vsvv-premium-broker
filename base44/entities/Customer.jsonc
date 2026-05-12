@@ -2,6 +2,10 @@
   "name": "Customer",
   "type": "object",
   "properties": {
+    "customer_number": {
+      "type": "string",
+      "description": "Eindeutige sichtbare Kundennummer (z.B. K-500, K-501, ...)"
+    },
     "first_name": {
       "type": "string",
       "description": "Vorname"
