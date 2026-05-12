@@ -78,6 +78,7 @@ const navGroups = [
     items: [
       { label: 'Kunden',    icon: Users,    path: '/kunden' },
       { label: 'Verträge',  icon: Shield,   path: '/vertraege' },
+      { label: 'Anträge',   icon: FileText, path: '/antraege' },
       { label: 'Dokumente', icon: FileText, path: '/dokumente' },
     ],
   },
