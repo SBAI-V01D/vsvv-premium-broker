@@ -164,9 +164,10 @@ Deno.serve(async (req) => {
       }
     }
 
+    // CRITICAL: Family member detection has PRIORITY over partial matches (email/phone)
     // If we found potential family members → ask to create new family member
     if (potentialFamilyMatches.length > 0) {
-      console.log(`[matchCustomerAndFamily] FAMILY MEMBER PATTERN detected: ${potentialFamilyMatches.length} potential household(s)`);
+      console.log(`[matchCustomerAndFamily] FAMILY MEMBER PATTERN detected: ${potentialFamilyMatches.length} potential household(s) - IGNORING partial matches`);
       
       return Response.json({
         success: true,
@@ -178,7 +179,7 @@ Deno.serve(async (req) => {
           family_role: extractedData.role === 'Ehepartner' ? 'spouse' : 
                        extractedData.role === 'Kind' ? 'child' :
                        extractedData.role === 'Parent' ? 'parent' : 'other',
-          confidence: 75,
+          confidence: isMinor ? 95 : 75,
           matched_customer: potentialFamilyMatches[0].customer,
           matched_customers: potentialFamilyMatches.map(m => m.customer),
           reasons: ['same_last_name', 'same_address', 'different_first_name_or_birthdate'],
