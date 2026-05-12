@@ -109,22 +109,43 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
 
   const isLoading = createFamilyMutation.isPending || createContractMutation.isPending || updateDocMutation.isPending
 
+  // Bestimme höchste Konfidenz aus allen Phasen
+  const highestConfidence = Math.max(
+    insights.familyConfidence || 0,
+    insights.personConfidence || 0,
+    insights.contractConfidence || 0
+  );
+
+  // Bestimme Erkennungs-Label
+  let detectionLabel = 'Analyse läuft...';
+  if (insights.detectionPhase === 'family_via_address' || insights.detectionPhase === 'family_via_lastname') {
+    detectionLabel = 'Familie erkannt';
+  } else if (insights.detectionPhase === 'person_in_family_found') {
+    detectionLabel = 'Person in Familie gefunden';
+  } else if (insights.detectionPhase === 'new_family_member_suggested') {
+    detectionLabel = 'Neues Familienmitglied erkannt';
+  } else if (insights.detectionPhase === 'new_contract_detected') {
+    detectionLabel = 'Neuer Vertrag erkannt';
+  } else if (insights.detectionPhase === 'new_primary_customer_last_resort') {
+    detectionLabel = 'Neuer Kunde (keine Familie gefunden)';
+  }
+
   return (
     <div className="space-y-4">
       {/* Konfidenz-Badge */}
       <div className={cn(
         'p-3 rounded-lg flex items-center gap-2',
-        insights.matchConfidence >= 90
+        highestConfidence >= 85
           ? 'bg-green-50 text-green-800 border border-green-200'
           : 'bg-amber-50 text-amber-800 border border-amber-200'
       )}>
-        {insights.matchConfidence >= 90 ? (
+        {highestConfidence >= 85 ? (
           <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
         ) : (
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
         )}
         <span className="text-sm font-medium">
-          {insights.matchConfidence}% Konfidenz – {insights.matchedPrimaryCustomer ? 'Hauptkontakt gefunden' : 'Neuer Kunde'}
+          {Math.round(highestConfidence)}% – {detectionLabel}
         </span>
       </div>
 
@@ -279,7 +300,7 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
         </Card>
       )}
 
-      {/* Vorschlag 3: Vertrag erstellen */}
+      {/* Vorschlag 4: Vertrag erstellen */}
       {insights.suggestedContract && (
         <Card className="p-4 border-l-4 border-l-emerald-500">
           <label className="flex items-start gap-3 cursor-pointer">
@@ -295,8 +316,8 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
                 Vertrag erstellen
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                {insights.insurer} · {insights.insuranceType}
-                {insights.premiumYearly && ` · CHF ${insights.premiumYearly.toLocaleString('de-CH')}/Jahr`}
+                {insights.suggestedContract.insurer} · {insights.suggestedContract.insurance_type}
+                {insights.suggestedContract.premium_yearly && ` · CHF ${insights.suggestedContract.premium_yearly.toLocaleString('de-CH')}/Jahr`}
               </p>
             </div>
           </label>
