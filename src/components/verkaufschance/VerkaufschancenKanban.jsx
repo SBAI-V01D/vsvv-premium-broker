@@ -50,7 +50,7 @@ function KanbanCard({ vs, provided, snapshot, onClick }) {
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-1.5 mb-2">
-        <p className="text-xs font-bold truncate flex-1 leading-tight">{vs.customer_name}</p>
+        <p className="text-xs font-bold break-words flex-1 leading-tight">{vs.customer_name}</p>
         <PriorityDot priority={vs.priority} />
       </div>
 
