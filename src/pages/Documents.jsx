@@ -13,6 +13,7 @@ import DocumentTypeBadge from '@/components/documents/DocumentTypeBadge'
 import DocumentTagBadge from '@/components/documents/DocumentTagBadge'
 import DocumentUploadDialog from '@/components/documents/DocumentUploadDialog'
 import DocumentReviewPanel from '@/components/documents/DocumentReviewPanel'
+import SmartDocumentUpload from '@/components/documents/SmartDocumentUpload'
 
 const TABS = [
   { key: 'all', label: 'Alle' },
@@ -43,6 +44,7 @@ export default function Documents() {
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState('all')
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [smartUploadOpen, setSmartUploadOpen] = useState(false)
   const [reviewDoc, setReviewDoc] = useState(null)
 
   const { data: documents = [], isLoading } = useQuery({
@@ -161,9 +163,14 @@ export default function Documents() {
           <h1 className="text-3xl font-bold">Dokumente ({documents.length})</h1>
           <p className="text-muted-foreground mt-1">Intelligente Klassifizierung & automatische Antragserfassung</p>
         </div>
-        <Button onClick={() => setUploadOpen(true)} className="gap-2">
-          <Plus className="w-4 h-4" /> Dokument hochladen
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setSmartUploadOpen(true)} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+            <Plus className="w-4 h-4" /> Smart Upload
+          </Button>
+          <Button onClick={() => setUploadOpen(true)} variant="outline" className="gap-2">
+            <Plus className="w-4 h-4" /> Standard Upload
+          </Button>
+        </div>
       </div>
 
       {/* KPI strip */}
@@ -378,6 +385,12 @@ export default function Documents() {
       <DocumentUploadDialog
         open={uploadOpen}
         onOpenChange={setUploadOpen}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['documents'] })}
+      />
+
+      <SmartDocumentUpload
+        open={smartUploadOpen}
+        onOpenChange={setSmartUploadOpen}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['documents'] })}
       />
     </div>
