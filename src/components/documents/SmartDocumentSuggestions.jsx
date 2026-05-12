@@ -10,8 +10,8 @@ import { cn } from '@/lib/utils'
 export default function SmartDocumentSuggestions({ document, insights, onSuccess, onEdit }) {
   const queryClient = useQueryClient()
   const [acceptedActions, setAcceptedActions] = useState({})
-  const [showPrimaryForm, setShowPrimaryForm] = useState(false)
-  const [showFamilyForm, setShowFamilyForm] = useState(false)
+  const [personType, setPersonType] = useState(null) // 'new_primary' | 'family_member'
+  const [selectedPrimaryId, setSelectedPrimaryId] = useState(null)
   const [primaryData, setPrimaryData] = useState({
     first_name: insights.suggestedPrimaryCustomer?.first_name || '',
     last_name: insights.suggestedPrimaryCustomer?.last_name || '',
@@ -48,8 +48,8 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
       let primaryCustomerId = insights.matchedPrimaryCustomer?.id
       let customerId = primaryCustomerId
 
-      // 1. NEUEN HAUPTKUNDEN ERSTELLEN (falls nicht gefunden)
-      if (!primaryCustomerId && insights.suggestedPrimaryCustomer && acceptedActions.createPrimary) {
+      // 1. NEUEN HAUPTKUNDEN ERSTELLEN (falls gewählt)
+      if (personType === 'new_primary' && insights.suggestedPrimaryCustomer) {
         const newPrimary = await base44.entities.Customer.create({
           first_name: primaryData.first_name,
           last_name: primaryData.last_name,
@@ -63,8 +63,9 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
         customerId = primaryCustomerId
       }
 
-      // 2. FAMILIENMITGLIED ERSTELLEN (falls akzeptiert)
-      if (insights.suggestedFamilyMember && acceptedActions.createFamily && primaryCustomerId) {
+      // 2. FAMILIENMITGLIED ERSTELLEN (falls gewählt + Hauptkontakt vorhanden)
+      if (personType === 'family_member' && insights.suggestedFamilyMember && selectedPrimaryId) {
+        primaryCustomerId = selectedPrimaryId
         const newFamily = await createFamilyMutation.mutateAsync({
           first_name: familyData.first_name,
           last_name: familyData.last_name,
@@ -146,89 +147,114 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
         </Card>
       )}
 
-      {/* STUFE 1: Neuer Hauptkunde */}
-      {!insights.matchedPrimaryCustomer && insights.suggestedPrimaryCustomer && (
-        <Card className="p-4 border-l-4 border-l-red-500 bg-red-50">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={acceptedActions.createPrimary || false}
-              onChange={(e) => {
-                setAcceptedActions(prev => ({ ...prev, createPrimary: e.target.checked }))
-                setShowPrimaryForm(e.target.checked)
-              }}
-              className="mt-1"
-            />
-            <div className="flex-1">
-              <p className="font-semibold flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                🔴 Neuer Hauptkontakt (Versicherungsnehmer)
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {insights.suggestedPrimaryCustomer.first_name} {insights.suggestedPrimaryCustomer.last_name}
-              </p>
-            </div>
-          </label>
+      {/* Entscheidungsfrage: Neuer Hauptkontakt ODER Familienmitglied? */}
+      {(insights.suggestedPrimaryCustomer || insights.suggestedFamilyMember) && (
+        <Card className="p-4 border-l-4 border-l-blue-500 bg-blue-50">
+          <p className="font-semibold mb-3">❓ Person hinzufügen als:</p>
+          
+          <div className="space-y-3">
+            {/* Option 1: Neuer Hauptkontakt */}
+            {insights.suggestedPrimaryCustomer && (
+              <label className="flex items-start gap-3 cursor-pointer p-3 rounded border border-blue-200 hover:bg-blue-100 transition">
+                <input
+                  type="radio"
+                  name="person_type"
+                  value="new_primary"
+                  checked={personType === 'new_primary'}
+                  onChange={() => {
+                    setPersonType('new_primary')
+                    setSelectedPrimaryId(null)
+                  }}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <p className="font-semibold">🔴 Neuer Hauptkontakt</p>
+                  <p className="text-xs text-muted-foreground">
+                    {insights.suggestedPrimaryCustomer.first_name} {insights.suggestedPrimaryCustomer.last_name}
+                  </p>
+                </div>
+              </label>
+            )}
 
-          {showPrimaryForm && acceptedActions.createPrimary && (
-            <div className="mt-3 p-3 bg-white rounded border border-red-200 space-y-2">
-              <Input
-                placeholder="Vorname"
-                value={primaryData.first_name}
-                onChange={(e) => setPrimaryData(prev => ({ ...prev, first_name: e.target.value }))}
-                className="text-sm"
-              />
-              <Input
-                placeholder="Nachname"
-                value={primaryData.last_name}
-                onChange={(e) => setPrimaryData(prev => ({ ...prev, last_name: e.target.value }))}
-                className="text-sm"
-              />
-              <Input
-                type="email"
-                placeholder="E-Mail (optional)"
-                value={primaryData.email}
-                onChange={(e) => setPrimaryData(prev => ({ ...prev, email: e.target.value }))}
-                className="text-sm"
-              />
-              <Input
-                type="date"
-                placeholder="Geburtsdatum"
-                value={primaryData.birthdate}
-                onChange={(e) => setPrimaryData(prev => ({ ...prev, birthdate: e.target.value }))}
-                className="text-sm"
-              />
-            </div>
-          )}
+            {/* Option 2: Familienmitglied zu bestehendem Hauptkontakt */}
+            {insights.suggestedFamilyMember && (
+              <label className="flex items-start gap-3 cursor-pointer p-3 rounded border border-blue-200 hover:bg-blue-100 transition">
+                <input
+                  type="radio"
+                  name="person_type"
+                  value="family_member"
+                  checked={personType === 'family_member'}
+                  onChange={() => setPersonType('family_member')}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <p className="font-semibold">🟡 Familienmitglied hinzufügen</p>
+                  <p className="text-xs text-muted-foreground">
+                    {insights.suggestedFamilyMember.first_name} {insights.suggestedFamilyMember.last_name}
+                  </p>
+                </div>
+              </label>
+            )}
+          </div>
         </Card>
       )}
 
-      {/* STUFE 2: Neues Familienmitglied (nur wenn Hauptkontakt existiert oder erstellt wird) */}
-      {insights.suggestedFamilyMember && (insights.matchedPrimaryCustomer || acceptedActions.createPrimary) && (
-        <Card className="p-4 border-l-4 border-l-amber-500 bg-amber-50">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={acceptedActions.createFamily || false}
-              onChange={(e) => {
-                setAcceptedActions(prev => ({ ...prev, createFamily: e.target.checked }))
-                setShowFamilyForm(e.target.checked)
-              }}
-              className="mt-1"
+      {/* OPTION 1: Neuer Hauptkontakt – Formular */}
+      {personType === 'new_primary' && insights.suggestedPrimaryCustomer && (
+        <Card className="p-4 border-l-4 border-l-red-500 bg-red-50">
+          <p className="font-semibold mb-3">🔴 Neuer Hauptkontakt Daten</p>
+          <div className="space-y-2">
+            <Input
+              placeholder="Vorname"
+              value={primaryData.first_name}
+              onChange={(e) => setPrimaryData(prev => ({ ...prev, first_name: e.target.value }))}
+              className="text-sm"
             />
-            <div className="flex-1">
-              <p className="font-semibold flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                🟡 Neues Familienmitglied
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {insights.suggestedFamilyMember.first_name} {insights.suggestedFamilyMember.last_name}
-              </p>
-            </div>
-          </label>
+            <Input
+              placeholder="Nachname"
+              value={primaryData.last_name}
+              onChange={(e) => setPrimaryData(prev => ({ ...prev, last_name: e.target.value }))}
+              className="text-sm"
+            />
+            <Input
+              type="email"
+              placeholder="E-Mail (optional)"
+              value={primaryData.email}
+              onChange={(e) => setPrimaryData(prev => ({ ...prev, email: e.target.value }))}
+              className="text-sm"
+            />
+            <Input
+              type="date"
+              placeholder="Geburtsdatum"
+              value={primaryData.birthdate}
+              onChange={(e) => setPrimaryData(prev => ({ ...prev, birthdate: e.target.value }))}
+              className="text-sm"
+            />
+          </div>
+        </Card>
+      )}
 
-          {showFamilyForm && acceptedActions.createFamily && (
-            <div className="mt-3 p-3 bg-white rounded border border-amber-200 space-y-2">
+      {/* OPTION 2: Familienmitglied – Hauptkontakt wählen + Formular */}
+      {personType === 'family_member' && insights.suggestedFamilyMember && (
+        <Card className="p-4 border-l-4 border-l-amber-500 bg-amber-50">
+          <p className="font-semibold mb-3">🟡 Zu welchem Hauptkontakt hinzufügen?</p>
+          
+          <select
+            value={selectedPrimaryId || ''}
+            onChange={(e) => setSelectedPrimaryId(e.target.value)}
+            className="w-full mb-4 p-2 border rounded text-sm"
+          >
+            <option value="">-- Hauptkontakt auswählen --</option>
+            {insights.availablePrimaryCustomers?.map(customer => (
+              <option key={customer.id} value={customer.id}>
+                {customer.first_name} {customer.last_name} ({customer.customer_number})
+              </option>
+            ))}
+          </select>
+
+          {selectedPrimaryId && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground mb-2">Familienmitglied Daten:</p>
               <Input
                 placeholder="Vorname"
                 value={familyData.first_name}

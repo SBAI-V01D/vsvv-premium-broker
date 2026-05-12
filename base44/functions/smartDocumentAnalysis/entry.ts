@@ -179,7 +179,7 @@ Antworte AUSSCHLIESSLICH mit JSON.`,
         }
       }
     } else {
-      // Kein Hauptkontakt gefunden – neuer Hauptkunde vorbereiten
+      // Kein Hauptkontakt gefunden – Angebot für neuen Hauptkunden ODER Familienmitglied zu Bestehendem
       if (extractedData.policy_holder_first_name && extractedData.policy_holder_last_name) {
         insights.suggestedPrimaryCustomer = {
           first_name: extractedData.policy_holder_first_name,
@@ -187,7 +187,7 @@ Antworte AUSSCHLIESSLICH mit JSON.`,
           birthdate: extractedData.birthdate || null,
         };
 
-        // Wenn versicherte Person != Versicherungsnehmer → neues Familienmitglied
+        // Wenn versicherte Person != Versicherungsnehmer → Option: neues Familienmitglied
         if (
           extractedData.insured_first_name &&
           extractedData.insured_last_name &&
@@ -201,6 +201,16 @@ Antworte AUSSCHLIESSLICH mit JSON.`,
           };
         }
       }
+      
+      // Verfügbare Hauptkontakte für Auswahl bereitstellen (für Familienmitglied-Option)
+      const primaryCustomers = allCustomers.filter(c => !c.is_family_member);
+      insights.availablePrimaryCustomers = primaryCustomers.map(c => ({
+        id: c.id,
+        first_name: c.first_name,
+        last_name: c.last_name,
+        customer_number: c.customer_number,
+      }));
+      
       insights.matchConfidence = 15; // Zeigt "Neuer Kunde erkannt"
     }
 
