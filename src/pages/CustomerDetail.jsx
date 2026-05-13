@@ -159,16 +159,27 @@ export default function CustomerDetail() {
     }
   })
 
-  // If customer is a family member, show primary customer's ID too
-  const primaryCustomerId = customer?.primary_customer_id || customer?.id
-  const familyMembers = (Array.isArray(allCustomers) ? allCustomers : []).filter(c => 
-    c.primary_customer_id === primaryCustomerId || c.id === primaryCustomerId
-  )
+  // Echter Hauptkontakt: immer stabil, unabhängig davon wer geöffnet ist
+  const primaryCustomerId = customer?.is_family_member
+    ? customer?.primary_customer_id
+    : customer?.id
+  const primaryCustomer = (Array.isArray(allCustomers) ? allCustomers : []).find(c => c.id === primaryCustomerId) || customer
 
-  // Wenn Familienmitglied: nur eigene Verträge. Wenn Hauptkontakt: alle Verträge des Haushalts.
+  // Alle Haushaltsmitglieder: Hauptkontakt + alle seine Familienmitglieder
+  const householdMembers = (Array.isArray(allCustomers) ? allCustomers : []).filter(c =>
+    c.id === primaryCustomerId || c.primary_customer_id === primaryCustomerId
+  )
+  // familyMembers bleibt kompatibel (wird in bestehenden Komponenten genutzt)
+  const familyMembers = householdMembers
+
+  // Alle Verträge des gesamten Haushalts (für PDF & Hauptkontakt-Ansicht)
+  const householdCustomerIds = householdMembers.map(m => m.id).filter(Boolean)
+  const allHouseholdContracts = contracts.filter(c => householdCustomerIds.includes(c.customer_id))
+
+  // Für Tab-Ansicht: Familienmitglied sieht nur eigene Verträge; Hauptkontakt sieht alle
   const customerIds = customer?.is_family_member
     ? [customer?.id].filter(Boolean)
-    : [customer?.id, ...familyMembers.map(m => m.id)].filter(Boolean)
+    : householdCustomerIds
   const relatedContracts = contracts.filter(c => customerIds.includes(c.customer_id))
   const relatedApplications = applications.filter(a => customerIds.includes(a.customer_id))
   const relatedMessages = (Array.isArray(allCustomers) ? allCustomers : []).filter(c => customerIds.includes(c.id)).flatMap(c => c.messages || [])
@@ -321,9 +332,9 @@ export default function CustomerDetail() {
       <div style={{ display: 'none' }}>
         <HouseholdPrintExport 
           ref={exportRef}
-          customer={customer}
-          familyMembers={familyMembers}
-          contracts={relatedContracts}
+          customer={primaryCustomer}
+          familyMembers={householdMembers.filter(m => m.id !== primaryCustomerId)}
+          contracts={allHouseholdContracts}
           advisors={allAdvisors}
         />
       </div>
