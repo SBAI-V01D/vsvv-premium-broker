@@ -168,6 +168,9 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
     const primary = (insights.availablePrimaryCustomers || []).find(c => c.id === primaryId)
       || insights.matchedPrimaryCustomer
 
+    const orgId = primary?.organization_id || user.organization_id
+    const advisorId = primary?.advisor_id || null
+
     const res = await createFamilyMut.mutateAsync({
       first_name: personData.first_name,
       last_name: personData.last_name,
@@ -178,8 +181,6 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
     })
 
     const newMemberId = res.data?.id || res.data?.customer?.id
-    const orgId = primary?.organization_id || user.organization_id
-    const advisorId = primary?.advisor_id || null
 
     setCreatedCustomerId(newMemberId)
     setStep(2) // Weiter zum Vertragsschritt
