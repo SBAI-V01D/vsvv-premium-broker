@@ -172,15 +172,14 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
     const advisorId = primary?.advisor_id || null
 
     const res = await createFamilyMut.mutateAsync({
-      first_name: personData.first_name,
-      last_name: personData.last_name,
+      primaryCustomerId: primaryId,
+      primaryCustomerName: primary ? `${primary.first_name} ${primary.last_name}` : '',
+      firstName: personData.first_name,
       birthdate: personData.birthdate || null,
-      family_role: personData.family_role || 'other',
-      primary_customer_id: primaryId,
-      organization_id: orgId,
+      familyRole: personData.family_role || 'other',
     })
 
-    const newMemberId = res.data?.id || res.data?.customer?.id
+    const newMemberId = res.data?.familyMemberId || res.data?.familyMember?.id
 
     setCreatedCustomerId(newMemberId)
     setStep(2) // Weiter zum Vertragsschritt
