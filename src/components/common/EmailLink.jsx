@@ -9,6 +9,8 @@ export default function EmailLink({ email, className = '', subject = '', body = 
     href += `${sep}body=${encodeURIComponent(body)}`
   }
   
+  console.log('EmailLink Debug:', { email, href })
+  
   return (
     <a href={href} className={`text-primary hover:underline ${className}`}>
       {email}
