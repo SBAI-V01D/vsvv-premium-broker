@@ -279,17 +279,7 @@ export default function CustomerDetail() {
             {customer.email && (
               <div className="flex items-center gap-2 text-sm">
                 <Mail className="w-4 h-4 text-muted-foreground" />
-                <EmailLink 
-                  email={customer.email}
-                  subject="Kundenportal Zugang"
-                  body={`Sehr geehrte Damen und Herren,
-
-            Ihr Zugang zum Kundenportal wurde aktiviert.
-
-            Bitte verwenden Sie Ihr initiales Passwort und ändern Sie dieses beim ersten Login.
-
-            Freundliche Grüsse`}
-                />
+                <EmailLink email={customer.email} />
               </div>
             )}
             {customer.phone && <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-muted-foreground" /> {customer.phone}</div>}
