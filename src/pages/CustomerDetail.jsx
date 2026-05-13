@@ -165,8 +165,10 @@ export default function CustomerDetail() {
     c.primary_customer_id === primaryCustomerId || c.id === primaryCustomerId
   )
 
-  // Include both the customer and primary customer ID (important if viewing a family member)
-  const customerIds = [customer?.id, primaryCustomerId].filter(Boolean).concat(familyMembers.map(m => m.id))
+  // Wenn Familienmitglied: nur eigene Verträge. Wenn Hauptkontakt: alle Verträge des Haushalts.
+  const customerIds = customer?.is_family_member
+    ? [customer?.id].filter(Boolean)
+    : [customer?.id, ...familyMembers.map(m => m.id)].filter(Boolean)
   const relatedContracts = contracts.filter(c => customerIds.includes(c.customer_id))
   const relatedApplications = applications.filter(a => customerIds.includes(a.customer_id))
   const relatedMessages = (Array.isArray(allCustomers) ? allCustomers : []).filter(c => customerIds.includes(c.id)).flatMap(c => c.messages || [])
