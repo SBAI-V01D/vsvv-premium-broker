@@ -176,15 +176,26 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
     const orgId = primary?.organization_id || user.organization_id
     const advisorId = primary?.advisor_id || null
 
-    const res = await createFamilyMut.mutateAsync({
-      primaryCustomerId: primaryId,
-      primaryCustomerName: primary ? `${primary.first_name} ${primary.last_name}` : '',
-      firstName: personData.first_name,
-      birthdate: personData.birthdate || null,
-      familyRole: personData.family_role || 'other',
-    })
+    let res
+    try {
+      res = await createFamilyMut.mutateAsync({
+        primaryCustomerId: primaryId,
+        primaryCustomerName: primary ? `${primary.first_name} ${primary.last_name}` : '',
+        firstName: personData.first_name,
+        birthdate: personData.birthdate || null,
+        familyRole: personData.family_role || 'other',
+      })
+    } catch (err) {
+      const msg = err?.response?.data?.error || err?.message || 'Fehler beim Anlegen'
+      alert(`Fehler: ${msg}`)
+      return
+    }
 
     const newMemberId = res.data?.familyMemberId || res.data?.familyMember?.id
+    if (!newMemberId) {
+      alert('Fehler: Kein Familienmitglied erstellt. Bitte prüfen Sie die Eingaben.')
+      return
+    }
 
     setCreatedCustomerId(newMemberId)
     setStep(2) // Weiter zum Vertragsschritt
