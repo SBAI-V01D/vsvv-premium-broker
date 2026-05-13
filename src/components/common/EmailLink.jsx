@@ -1,8 +1,8 @@
 export default function EmailLink({ email, className = '', subject = '', body = '' }) {
   if (!email) return null
   
-  // Build mailto link with encoded subject and body
-  let href = `mailto:${encodeURIComponent(email)}`
+  // Build mailto link — email must NOT be encoded, only subject and body
+  let href = `mailto:${email}`
   if (subject) href += `?subject=${encodeURIComponent(subject)}`
   if (body) {
     const sep = subject ? '&' : '?'
