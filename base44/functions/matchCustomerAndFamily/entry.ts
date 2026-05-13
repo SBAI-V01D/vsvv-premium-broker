@@ -20,8 +20,8 @@ Deno.serve(async (req) => {
 
     console.log(`[matchCustomerAndFamily] START: ${extractedData.first_name} ${extractedData.last_name}, DOB: ${extractedData.birthdate}`);
 
-    // Fetch all customers for matching
-    const customers = await base44.asServiceRole.entities.Customer.list(null, 1000);
+    // Fetch all customers for matching — use pagination to handle 1000+ customers
+    const customers = await base44.asServiceRole.entities.Customer.list(null, 5000);
     
     const firstName = (extractedData.first_name || '').trim().toLowerCase();
     const lastName = (extractedData.last_name || '').trim().toLowerCase();
@@ -176,9 +176,9 @@ Deno.serve(async (req) => {
           customer_id: null,
           primary_customer_id: potentialFamilyMatches[0].customer.id,
           is_family_member: true,
-          family_role: extractedData.role === 'Ehepartner' ? 'spouse' : 
+          family_role: (extractedData.role === 'Ehepartner' ? 'spouse' : 
                        extractedData.role === 'Kind' ? 'child' :
-                       extractedData.role === 'Parent' ? 'parent' : 'other',
+                       extractedData.role === 'Parent' ? 'parent' : 'other') || (isMinor ? 'child' : 'other'),
           confidence: isMinor ? 95 : 75,
           matched_customer: potentialFamilyMatches[0].customer,
           matched_customers: potentialFamilyMatches.map(m => m.customer),

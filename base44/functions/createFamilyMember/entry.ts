@@ -15,6 +15,10 @@ Deno.serve(async (req) => {
     if (!primaryCustomerId || !firstName || !familyRole) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 });
     }
+    
+    if (!lastName) {
+      return Response.json({ error: 'Last name required' }, { status: 400 });
+    }
 
     // Primärkunde laden
     const customers = await base44.entities.Customer.filter({ id: primaryCustomerId });
@@ -45,8 +49,8 @@ Deno.serve(async (req) => {
     // Nur ausgewählte Felder duplizieren
     const familyMember = {
       first_name: firstName,
-      last_name: lastName || primaryCustomer.last_name, // Eigener Nachname, fallback auf Hauptkunde
-      email: '', // Nicht automatisch übernehmen
+      last_name: lastName,
+      email: `noemail.${Date.now()}@family.local`, // Placeholder Email (obligatorisch), keine leeren E-Mails
       phone: primaryCustomer.phone, // Optional übernehmen
       mobile: primaryCustomer.mobile, // Optional übernehmen
       street: primaryCustomer.street,

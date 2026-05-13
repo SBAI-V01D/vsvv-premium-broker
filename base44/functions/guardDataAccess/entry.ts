@@ -22,19 +22,29 @@ Deno.serve(async (req) => {
       const customer = await base44.asServiceRole.entities.Customer.get(entityId);
       if (!customer) return Response.json({ allowed: false }, { status: 404 });
 
-      // Prüfe primary_advisor_id
-      if (customer.primary_advisor_id === user.id) {
+      // Prüfe primary_advisor_id (normalize: email oder ID)
+      const userIdentifier = user.id || user.email;
+      if (customer.primary_advisor_id === userIdentifier) {
         return Response.json({ allowed: true, reason: 'primary_advisor' });
       }
 
       // Prüfe assigned_advisors
-      if (customer.assigned_advisors?.includes(user.id)) {
+      if ((customer.assigned_advisors || []).includes(userIdentifier)) {
         return Response.json({ allowed: true, reason: 'assigned_advisor' });
       }
 
       // Prüfe assigned_assistants
-      if (customer.assigned_assistants?.includes(user.id)) {
+      if ((customer.assigned_assistants || []).includes(userIdentifier)) {
         return Response.json({ allowed: true, reason: 'assigned_assistant' });
+      }
+
+      // Family member access: if user has access to primary, they see family members too
+      if (customer.is_family_member && customer.primary_customer_id) {
+        const primaryCustomer = await base44.asServiceRole.entities.Customer.get(customer.primary_customer_id);
+        if (primaryCustomer && (primaryCustomer.primary_advisor_id === userIdentifier || 
+            (primaryCustomer.assigned_advisors || []).includes(userIdentifier))) {
+          return Response.json({ allowed: true, reason: 'via_primary_family' });
+        }
       }
 
       return Response.json({ allowed: false }, { status: 403 });
@@ -45,24 +55,27 @@ Deno.serve(async (req) => {
       const contract = await base44.asServiceRole.entities.Contract.get(entityId);
       if (!contract) return Response.json({ allowed: false }, { status: 404 });
 
+      const userIdentifier = user.id || user.email;
+
       // Prüfe primary_broker_id
-      if (contract.primary_broker_id === user.id) {
+      if (contract.primary_broker_id === userIdentifier) {
         return Response.json({ allowed: true, reason: 'primary_broker' });
       }
 
       // Prüfe assigned_brokers
-      if (contract.assigned_brokers?.includes(user.id)) {
+      if ((contract.assigned_brokers || []).includes(userIdentifier)) {
         return Response.json({ allowed: true, reason: 'assigned_broker' });
       }
 
       // Prüfe assigned_team
-      if (contract.assigned_team?.includes(user.id)) {
+      if ((contract.assigned_team || []).includes(userIdentifier)) {
         return Response.json({ allowed: true, reason: 'assigned_team' });
       }
 
       // Fallback: Kundenzuordnung
       const customer = await base44.asServiceRole.entities.Customer.get(contract.customer_id);
-      if (customer.primary_advisor_id === user.id || customer.assigned_advisors?.includes(user.id)) {
+      if (customer && (customer.primary_advisor_id === userIdentifier || 
+          (customer.assigned_advisors || []).includes(userIdentifier))) {
         return Response.json({ allowed: true, reason: 'via_customer' });
       }
 
@@ -74,19 +87,22 @@ Deno.serve(async (req) => {
       const doc = await base44.asServiceRole.entities.Document.get(entityId);
       if (!doc) return Response.json({ allowed: false }, { status: 404 });
 
+      const userIdentifier = user.id || user.email;
+
       // Prüfe access_advisors
-      if (doc.access_advisors?.includes(user.id)) {
+      if ((doc.access_advisors || []).includes(userIdentifier)) {
         return Response.json({ allowed: true, reason: 'in_access_list' });
       }
 
       // Prüfe access_teams
-      if (doc.access_teams?.includes(user.id)) {
+      if ((doc.access_teams || []).includes(userIdentifier)) {
         return Response.json({ allowed: true, reason: 'in_team' });
       }
 
       // Fallback: Kundenzuordnung
       const customer = await base44.asServiceRole.entities.Customer.get(doc.customer_id);
-      if (customer.primary_advisor_id === user.id || customer.assigned_advisors?.includes(user.id)) {
+      if (customer && (customer.primary_advisor_id === userIdentifier || 
+          (customer.assigned_advisors || []).includes(userIdentifier))) {
         return Response.json({ allowed: true, reason: 'via_customer' });
       }
 
