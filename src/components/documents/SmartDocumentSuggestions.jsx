@@ -129,9 +129,22 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
   // ─────────────────────────────────────────────
   const finalize = async (customerId, primaryCustomerId, orgId, advisorId) => {
     if (createContract && contractData.insurer) {
+      // Kundenname für den Vertrag ermitteln
+      const allFamilyMembers = insights.availableFamilyMembers || []
+      const memberRecord = allFamilyMembers.find(m => m.id === customerId)
+      const customerNameForContract = memberRecord
+        ? `${memberRecord.first_name} ${memberRecord.last_name}`
+        : (customerId === primaryCustomerId
+          ? (insights.matchedPrimaryCustomer
+            ? `${insights.matchedPrimaryCustomer.first_name} ${insights.matchedPrimaryCustomer.last_name}`
+            : '')
+          : `${personData.first_name} ${personData.last_name}`)
+
       await createContractMut.mutateAsync({
         customer_id: customerId,
+        customer_name: customerNameForContract,
         primary_customer_id: primaryCustomerId,
+        is_family_member: customerId !== primaryCustomerId,
         organization_id: orgId,
         advisor_id: advisorId,
         insurer: contractData.insurer,
@@ -182,6 +195,7 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
         primaryCustomerId: primaryId,
         primaryCustomerName: primary ? `${primary.first_name} ${primary.last_name}` : '',
         firstName: personData.first_name,
+        lastName: personData.last_name,
         birthdate: personData.birthdate || null,
         familyRole: personData.family_role || 'other',
       })

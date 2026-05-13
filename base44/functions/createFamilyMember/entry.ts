@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { primaryCustomerId, primaryCustomerName, firstName, familyRole, birthdate, gender } = await req.json();
+    const { primaryCustomerId, primaryCustomerName, firstName, lastName, familyRole, birthdate, gender } = await req.json();
 
     // Validierung
     if (!primaryCustomerId || !firstName || !familyRole) {
@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     // Nur ausgewählte Felder duplizieren
     const familyMember = {
       first_name: firstName,
-      last_name: primaryCustomer.last_name, // Gleicher Familienname
+      last_name: lastName || primaryCustomer.last_name, // Eigener Nachname, fallback auf Hauptkunde
       email: '', // Nicht automatisch übernehmen
       phone: primaryCustomer.phone, // Optional übernehmen
       mobile: primaryCustomer.mobile, // Optional übernehmen
