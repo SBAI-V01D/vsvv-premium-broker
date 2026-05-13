@@ -164,9 +164,14 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
     const user = await base44.auth.me()
     const primaryId = selectedPrimaryId
 
-    // Finde Hauptkontakt-Daten für Org/Advisor
-    const primary = (insights.availablePrimaryCustomers || []).find(c => c.id === primaryId)
-      || insights.matchedPrimaryCustomer
+    // Finde Hauptkontakt-Daten für Org/Advisor – lade vollständige Daten aus DB
+    let primary = insights.matchedPrimaryCustomer?.id === primaryId
+      ? insights.matchedPrimaryCustomer
+      : null
+    if (!primary?.organization_id) {
+      const results = await base44.entities.Customer.filter({ id: primaryId })
+      primary = results[0] || primary
+    }
 
     const orgId = primary?.organization_id || user.organization_id
     const advisorId = primary?.advisor_id || null
