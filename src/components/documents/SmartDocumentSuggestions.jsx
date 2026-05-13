@@ -17,7 +17,7 @@ function StepIndicator({ steps, current }) {
   return (
     <div className="flex items-center gap-1 mb-4">
       {steps.map((label, i) => (
-        <React.Fragment key={i}>
+        <div key={i} className="flex items-center gap-1">
           <div className={cn(
             'flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full',
             i < current ? 'bg-green-100 text-green-700' :
@@ -28,7 +28,7 @@ function StepIndicator({ steps, current }) {
             <span className="hidden sm:inline">{label}</span>
           </div>
           {i < steps.length - 1 && <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
-        </React.Fragment>
+        </div>
       ))}
     </div>
   )
@@ -174,6 +174,7 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
       birthdate: personData.birthdate || null,
       family_role: personData.family_role || 'other',
       primary_customer_id: primaryId,
+      organization_id: orgId,
     })
 
     const newMemberId = res.data?.id || res.data?.customer?.id
