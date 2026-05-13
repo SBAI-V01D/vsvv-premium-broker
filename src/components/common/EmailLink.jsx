@@ -1,5 +1,8 @@
 export default function EmailLink({ email, className = '', subject = '', body = '' }) {
-  if (!email) return null
+  if (!email) {
+    console.warn('EmailLink: Keine Email vorhanden')
+    return null
+  }
   
   // Build mailto link — email must NOT be encoded, only subject and body
   let href = `mailto:${email}`
@@ -9,10 +12,18 @@ export default function EmailLink({ email, className = '', subject = '', body = 
     href += `${sep}body=${encodeURIComponent(body)}`
   }
   
-  console.log('EmailLink Debug:', { email, href })
+  const handleClick = (e) => {
+    console.log('EmailLink clicked:', { email, href })
+    // mailto Links öffnen den Standard-Mail-Client
+    window.location.href = href
+  }
   
   return (
-    <a href={href} className={`text-primary hover:underline ${className}`}>
+    <a 
+      href={href} 
+      onClick={handleClick}
+      className={`text-primary hover:underline cursor-pointer ${className}`}
+    >
       {email}
     </a>
   )
