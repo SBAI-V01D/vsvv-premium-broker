@@ -1,23 +1,25 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Edit, Archive, MoreHorizontal, AlertTriangle } from 'lucide-react'
-import { formatCHF, formatDate, STATUS_META, STATUS_TRANSITIONS, checkEntryConsistency } from '@/lib/commissionEngine'
+import { formatCHF, formatDate, STATUS_META, STATUS_TRANSITIONS, checkEntryConsistency, normalizeLegacyEntry } from '@/lib/commissionEngine'
 
 const PAGE_SIZE = 50
 
 export default function CommissionTablePaginated({ entries, loading, onEdit, onArchive, onStatusChange }) {
   const [page, setPage] = useState(1)
-
   const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE))
-  const paginated  = useMemo(() => entries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [entries, page])
+  const normalized = useMemo(() => entries.map(normalizeLegacyEntry), [entries])
+  const paginated  = useMemo(() => normalized.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [normalized, page])
 
   const totals = useMemo(() => ({
-    premium:    entries.reduce((s, e) => s + (e.premium_yearly || 0), 0),
-    received:   entries.reduce((s, e) => s + (e.received_amount || 0), 0),
-    commission: entries.reduce((s, e) => s + (e.commission_amount || 0), 0),
-  }), [entries])
+    premium:         entries.reduce((s, e) => s + (e.premium_yearly || 0), 0),
+    compCourtage:    normalized.reduce((s, e) => s + (e.company_courtage_amount || 0), 0),
+    advisorCourtage: normalized.reduce((s, e) => s + (e.advisor_courtage_amount || 0), 0),
+    compProvision:   normalized.reduce((s, e) => s + (e.company_provision_amount || 0), 0),
+    advisorProvision:normalized.reduce((s, e) => s + (e.advisor_provision_amount || 0), 0),
+  }), [entries, normalized])
 
   React.useEffect(() => { setPage(1) }, [entries.length])
 
@@ -35,40 +37,59 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/40">
-                  <th className="text-left py-3 px-4 font-semibold">Datum</th>
-                  <th className="text-left py-3 px-4 font-semibold hidden md:table-cell">Gesellschaft</th>
-                  <th className="text-left py-3 px-4 font-semibold hidden lg:table-cell">Berater</th>
-                  <th className="text-left py-3 px-4 font-semibold">Kunde</th>
-                  <th className="text-left py-3 px-4 font-semibold hidden xl:table-cell">Sparte</th>
-                  <th className="text-right py-3 px-4 font-semibold hidden lg:table-cell">Jahresprämie</th>
-                  <th className="text-right py-3 px-4 font-semibold text-blue-700">Courtage erh.</th>
-                  <th className="text-right py-3 px-4 font-semibold hidden md:table-cell">Berater-%</th>
-                  <th className="text-right py-3 px-4 font-semibold text-green-700">Provision Berater</th>
-                  <th className="text-center py-3 px-4 font-semibold">Status</th>
+                  <th className="text-left py-3 px-3 font-semibold">Datum</th>
+                  <th className="text-left py-3 px-3 font-semibold hidden md:table-cell">Gesellschaft</th>
+                  <th className="text-left py-3 px-3 font-semibold hidden lg:table-cell">Berater</th>
+                  <th className="text-left py-3 px-3 font-semibold">Kunde</th>
+                  <th className="text-left py-3 px-3 font-semibold hidden xl:table-cell">Sparte</th>
+                  <th className="text-right py-3 px-3 font-semibold hidden lg:table-cell">Jahresprämie</th>
+                  {/* COURTAGE Gruppe */}
+                  <th className="text-right py-3 px-3 font-semibold text-blue-700 bg-blue-50/40 border-l border-blue-200 hidden md:table-cell">
+                    Ges.courtage
+                  </th>
+                  <th className="text-right py-3 px-3 font-semibold text-blue-600 bg-blue-50/40 hidden md:table-cell">%</th>
+                  <th className="text-right py-3 px-3 font-semibold text-blue-700 bg-blue-50/40">
+                    Beratercourtage
+                  </th>
+                  <th className="text-center py-3 px-3 font-semibold text-blue-600 bg-blue-50/40 hidden lg:table-cell">C-Status</th>
+                  {/* PROVISION Gruppe */}
+                  <th className="text-right py-3 px-3 font-semibold text-emerald-700 bg-emerald-50/40 border-l border-emerald-200 hidden xl:table-cell">
+                    Ges.provision
+                  </th>
+                  <th className="text-right py-3 px-3 font-semibold text-emerald-600 bg-emerald-50/40 hidden xl:table-cell">%</th>
+                  <th className="text-right py-3 px-3 font-semibold text-emerald-700 bg-emerald-50/40 hidden lg:table-cell">
+                    Beraterprovision
+                  </th>
+                  <th className="text-center py-3 px-3 font-semibold text-emerald-600 bg-emerald-50/40 hidden xl:table-cell">P-Status</th>
                   <th className="w-10"></th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan="11" className="text-center py-10 text-muted-foreground">Lade Daten...</td></tr>
+                  <tr><td colSpan="15" className="text-center py-10 text-muted-foreground">Lade Daten...</td></tr>
                 ) : paginated.length === 0 ? (
-                  <tr><td colSpan="11" className="text-center py-10 text-muted-foreground">Keine Einträge für diesen Zeitraum</td></tr>
+                  <tr><td colSpan="15" className="text-center py-10 text-muted-foreground">Keine Einträge</td></tr>
                 ) : paginated.map(e => {
-                  const sm           = STATUS_META[e.status] || STATUS_META.pending
-                  const allowedNext  = STATUS_TRANSITIONS[e.status] || []
-                  const warnings     = checkEntryConsistency(e)
-                  const isOverdue    = e.status === 'invoiced' && e.invoiced_date &&
-                    (Date.now() - new Date(e.invoiced_date).getTime()) / 86400000 > 60
+                  const origEntry = entries.find(x => x.id === e.id) || e
+                  const cStatus  = e.courtage_status || e.status || 'pending'
+                  const pStatus  = e.provision_status || 'pending'
+                  const cMeta    = STATUS_META[cStatus] || STATUS_META.pending
+                  const pMeta    = STATUS_META[pStatus] || STATUS_META.pending
+                  const allowedC = STATUS_TRANSITIONS[cStatus] || []
+                  const warnings = checkEntryConsistency(origEntry)
+                  const isOverdue = cStatus === 'invoiced' && (e.courtage_invoiced_date || e.invoiced_date) &&
+                    (Date.now() - new Date(e.courtage_invoiced_date || e.invoiced_date).getTime()) / 86400000 > 60
+                  const hasProvision = (e.company_provision_amount || 0) > 0
 
                   return (
                     <tr key={e.id} className={`border-b transition-colors ${warnings.length > 0 ? 'bg-amber-50/40 hover:bg-amber-50' : 'hover:bg-muted/30'}`}>
-                      <td className="py-2.5 px-4 whitespace-nowrap text-muted-foreground text-xs">
+                      <td className="py-2.5 px-3 whitespace-nowrap text-muted-foreground text-xs">
                         {formatDate(e.entry_date)}
-                        {isOverdue && <span className="ml-1 text-red-500" title="Überfällig (>60 Tage seit Einreichung)">⚠</span>}
+                        {isOverdue && <span className="ml-1 text-red-500" title="Courtage überfällig">⚠</span>}
                       </td>
-                      <td className="py-2.5 px-4 font-medium hidden md:table-cell">{e.insurer}</td>
-                      <td className="py-2.5 px-4 text-muted-foreground text-xs hidden lg:table-cell">{e.advisor_name || '–'}</td>
-                      <td className="py-2.5 px-4">
+                      <td className="py-2.5 px-3 font-medium text-xs hidden md:table-cell">{e.insurer}</td>
+                      <td className="py-2.5 px-3 text-muted-foreground text-xs hidden lg:table-cell">{e.advisor_name || '–'}</td>
+                      <td className="py-2.5 px-3">
                         <div>
                           <p className="font-medium text-xs leading-tight">{e.customer_name || '–'}</p>
                           <p className="text-xs text-muted-foreground md:hidden">{e.insurer}</p>
@@ -79,17 +100,35 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                           )}
                         </div>
                       </td>
-                      <td className="py-2.5 px-4 text-muted-foreground text-xs hidden xl:table-cell">{e.product_category || '–'}</td>
-                      <td className="text-right py-2.5 px-4 text-muted-foreground text-xs hidden lg:table-cell">{formatCHF(e.premium_yearly)}</td>
-                      <td className="text-right py-2.5 px-4 font-semibold text-blue-700 text-xs">
-                        {e.received_amount ? formatCHF(e.received_amount) : <span className="text-amber-500">Ausstehend</span>}
+                      <td className="py-2.5 px-3 text-muted-foreground text-xs hidden xl:table-cell">{e.product_category || '–'}</td>
+                      <td className="text-right py-2.5 px-3 text-muted-foreground text-xs hidden lg:table-cell">{formatCHF(e.premium_yearly)}</td>
+                      {/* COURTAGE */}
+                      <td className="text-right py-2.5 px-3 text-blue-700 text-xs bg-blue-50/20 border-l border-blue-100 hidden md:table-cell">
+                        {e.company_courtage_amount ? formatCHF(e.company_courtage_amount) : <span className="text-muted-foreground">–</span>}
                       </td>
-                      <td className="text-right py-2.5 px-4 text-muted-foreground text-xs hidden md:table-cell">
-                        {e.commission_percentage ? `${e.commission_percentage}%` : '–'}
+                      <td className="text-right py-2.5 px-3 text-muted-foreground text-xs bg-blue-50/20 hidden md:table-cell">
+                        {e.advisor_courtage_percentage ? `${e.advisor_courtage_percentage}%` : '–'}
                       </td>
-                      <td className="text-right py-2.5 px-4 font-bold text-green-600 text-xs">{formatCHF(e.commission_amount)}</td>
-                      <td className="text-center py-2.5 px-4">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${sm.color}`}>{sm.label}</span>
+                      <td className="text-right py-2.5 px-3 font-bold text-blue-600 text-xs bg-blue-50/20">
+                        {e.advisor_courtage_amount ? formatCHF(e.advisor_courtage_amount) : <span className="text-amber-500 text-xs">Ausstehend</span>}
+                      </td>
+                      <td className="text-center py-2.5 px-3 bg-blue-50/20 hidden lg:table-cell">
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${cMeta.color}`}>{cMeta.label}</span>
+                      </td>
+                      {/* PROVISION */}
+                      <td className="text-right py-2.5 px-3 text-emerald-700 text-xs bg-emerald-50/20 border-l border-emerald-100 hidden xl:table-cell">
+                        {e.company_provision_amount ? formatCHF(e.company_provision_amount) : <span className="text-muted-foreground">–</span>}
+                      </td>
+                      <td className="text-right py-2.5 px-3 text-muted-foreground text-xs bg-emerald-50/20 hidden xl:table-cell">
+                        {e.advisor_provision_percentage ? `${e.advisor_provision_percentage}%` : '–'}
+                      </td>
+                      <td className="text-right py-2.5 px-3 font-semibold text-emerald-600 text-xs bg-emerald-50/20 hidden lg:table-cell">
+                        {e.advisor_provision_amount ? formatCHF(e.advisor_provision_amount) : <span className="text-muted-foreground">–</span>}
+                      </td>
+                      <td className="text-center py-2.5 px-3 bg-emerald-50/20 hidden xl:table-cell">
+                        {hasProvision
+                          ? <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${pMeta.color}`}>{pMeta.label}</span>
+                          : <span className="text-xs text-muted-foreground">–</span>}
                       </td>
                       <td className="py-2.5 px-2">
                         <DropdownMenu>
@@ -99,22 +138,19 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onEdit(e)}>
+                            <DropdownMenuItem onClick={() => onEdit(origEntry)}>
                               <Edit className="w-4 h-4 mr-2" /> Bearbeiten
                             </DropdownMenuItem>
-                            {allowedNext.length > 0 && (
+                            {allowedC.length > 0 && (
                               <>
                                 <DropdownMenuSeparator />
-                                <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">Status wechseln</div>
-                                {allowedNext.map(s => {
-                                  const meta = STATUS_META[s]
-                                  return (
-                                    <DropdownMenuItem key={s} onClick={() => onStatusChange(e, s)}>
-                                      <span className={`w-2 h-2 rounded-full mr-2 inline-block ${meta.color.split(' ')[0]}`} />
-                                      → {meta.label}
-                                    </DropdownMenuItem>
-                                  )
-                                })}
+                                <div className="px-2 py-1 text-xs text-blue-700 font-semibold">Courtage Status</div>
+                                {allowedC.map(s => (
+                                  <DropdownMenuItem key={s} onClick={() => onStatusChange(origEntry, s, 'courtage')}>
+                                    <span className={`w-2 h-2 rounded-full mr-2 inline-block ${STATUS_META[s].color.split(' ')[0]}`} />
+                                    → {STATUS_META[s].label}
+                                  </DropdownMenuItem>
+                                ))}
                               </>
                             )}
                             {warnings.length > 0 && (
@@ -127,7 +163,7 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                             )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-amber-600"
-                              onClick={() => { if (confirm('Eintrag archivieren? Bleibt im Audit Log erhalten.')) onArchive(e) }}>
+                              onClick={() => { if (confirm('Eintrag archivieren?')) onArchive(origEntry) }}>
                               <Archive className="w-4 h-4 mr-2" /> Archivieren
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -139,14 +175,17 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
               </tbody>
               {entries.length > 0 && (
                 <tfoot>
-                  <tr className="bg-muted/40 font-semibold text-sm">
-                    <td colSpan={5} className="py-3 px-4 hidden xl:table-cell">Total ({entries.length} Einträge)</td>
-                    <td colSpan={5} className="py-3 px-4 xl:hidden">Total ({entries.length})</td>
-                    <td className="text-right py-3 px-4 text-muted-foreground hidden lg:table-cell">{formatCHF(totals.premium)}</td>
-                    <td className="text-right py-3 px-4 text-blue-700">{formatCHF(totals.received)}</td>
-                    <td className="hidden md:table-cell"></td>
-                    <td className="text-right py-3 px-4 text-green-600">{formatCHF(totals.commission)}</td>
-                    <td colSpan="2"></td>
+                  <tr className="bg-muted/40 font-semibold text-xs">
+                    <td colSpan={6} className="py-3 px-3">Total ({entries.length})</td>
+                    <td className="text-right py-3 px-3 text-blue-700 bg-blue-50/20 border-l border-blue-100 hidden md:table-cell">{formatCHF(totals.compCourtage)}</td>
+                    <td className="bg-blue-50/20 hidden md:table-cell"></td>
+                    <td className="text-right py-3 px-3 text-blue-600 font-bold bg-blue-50/20">{formatCHF(totals.advisorCourtage)}</td>
+                    <td className="bg-blue-50/20 hidden lg:table-cell"></td>
+                    <td className="text-right py-3 px-3 text-emerald-700 bg-emerald-50/20 border-l border-emerald-100 hidden xl:table-cell">{formatCHF(totals.compProvision)}</td>
+                    <td className="bg-emerald-50/20 hidden xl:table-cell"></td>
+                    <td className="text-right py-3 px-3 text-emerald-600 bg-emerald-50/20 hidden lg:table-cell">{formatCHF(totals.advisorProvision)}</td>
+                    <td className="bg-emerald-50/20 hidden xl:table-cell"></td>
+                    <td></td>
                   </tr>
                 </tfoot>
               )}

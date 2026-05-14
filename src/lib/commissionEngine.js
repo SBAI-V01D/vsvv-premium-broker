@@ -1,41 +1,109 @@
 /**
- * ZENTRALE FINANZ-ENGINE – Provisionen & Courtagen
- * ================================================
- * EINZIGE WAHRHEITSQUELLE für alle Berechnungen.
- * Wird verwendet in: Formularen, Tabellen, KPIs, BI, Exporten, Auszahlungen.
+ * ZENTRALE FINANZ-ENGINE – Courtagen & Provisionen
+ * =================================================
+ * FACHLICHE TRENNUNG:
+ *   COURTAGE  = Vergütung Gesellschaft → Firma → Berater  (KVG/VVG-Courtage)
+ *   PROVISION = Einmalige Vergütung Gesellschaft → Firma → Berater  (z.B. Abschlussprovision)
  *
- * FORMEL: Beraterprovision = Erhaltene Gesellschaftscourtage × Berateranteil%
- * Jahresprämie = nur Referenzwert, NICHT Berechnungsgrundlage.
+ * FORMELN:
+ *   Beratercourtage  = Gesellschaftscourtage  × Beratercourtage-%  / 100
+ *   Beraterprovision = Gesellschaftsprovision × Beraterprovision-% / 100
+ *
+ * RÜCKWÄRTSKOMPATIBILITÄT:
+ *   Legacy-Felder (received_amount, commission_percentage, commission_amount)
+ *   werden auf die neuen Courtage-Felder gemappt.
  */
 
 // ─── Rundungslogik ────────────────────────────────────────────────────────────
-// CHF-Rundung: kaufmännisch auf 2 Dezimalstellen (Rappen-genau)
 export function roundCHF(value) {
   return Math.round((parseFloat(value) || 0) * 100) / 100
 }
-
-// Prozent: 4 Dezimalstellen intern, Anzeige 2
 export function roundPct(value) {
   return Math.round((parseFloat(value) || 0) * 10000) / 10000
 }
 
-// ─── Kernberechnung ───────────────────────────────────────────────────────────
+// ─── Migration: Legacy → neue Felder ─────────────────────────────────────────
 /**
- * Berechnet alle Provisionsfelder aus Rohdaten.
- * Gibt immer konsistente, gerundete Werte zurück.
+ * Normalisiert einen Eintrag: liest Legacy-Felder und befüllt neue Felder,
+ * wenn die neuen leer sind. Keine bestehenden Daten werden überschrieben.
  */
-export function calcCommissionFields(data) {
-  const premiumYearly   = roundCHF(data.premium_yearly)
-  const receivedAmount  = roundCHF(data.received_amount)
-  const commissionPct   = roundPct(data.commission_percentage)
-  const commissionAmount = roundCHF((receivedAmount * commissionPct) / 100)
+export function normalizeLegacyEntry(entry) {
+  const e = { ...entry }
+  // Courtage-Migration
+  if (!e.company_courtage_amount && e.received_amount) {
+    e.company_courtage_amount = e.received_amount
+  }
+  if (!e.advisor_courtage_percentage && e.commission_percentage) {
+    e.advisor_courtage_percentage = e.commission_percentage
+  }
+  if (!e.advisor_courtage_amount && e.commission_amount) {
+    e.advisor_courtage_amount = e.commission_amount
+  }
+  if (!e.courtage_status && e.status) {
+    e.courtage_status = e.status
+  }
+  if (!e.courtage_received_date && e.received_date) {
+    e.courtage_received_date = e.received_date
+  }
+  if (!e.courtage_invoiced_date && e.invoiced_date) {
+    e.courtage_invoiced_date = e.invoiced_date
+  }
+  if (!e.courtage_earned_date && e.earned_date) {
+    e.courtage_earned_date = e.earned_date
+  }
+  if (!e.courtage_paid_date && e.paid_date) {
+    e.courtage_paid_date = e.paid_date
+  }
+  return e
+}
 
+// ─── Kernberechnungen ─────────────────────────────────────────────────────────
+/**
+ * Berechnet Courtage-Felder.
+ * Beratercourtage = Gesellschaftscourtage × Beratercourtage-% / 100
+ */
+export function calcCourtageFields(data) {
+  const companyCourtage   = roundCHF(data.company_courtage_amount)
+  const advisorCourtagePct = roundPct(data.advisor_courtage_percentage)
+  const advisorCourtage   = roundCHF((companyCourtage * advisorCourtagePct) / 100)
   return {
     ...data,
-    premium_yearly:        premiumYearly,
-    received_amount:       receivedAmount,
-    commission_percentage: commissionPct,
-    commission_amount:     commissionAmount,
+    company_courtage_amount:    companyCourtage,
+    advisor_courtage_percentage: advisorCourtagePct,
+    advisor_courtage_amount:    advisorCourtage,
+    // Legacy-Sync (Rückwärtskompatibilität)
+    received_amount:       companyCourtage,
+    commission_percentage: advisorCourtagePct,
+    commission_amount:     advisorCourtage,
+  }
+}
+
+/**
+ * Berechnet Provisions-Felder.
+ * Beraterprovision = Gesellschaftsprovision × Beraterprovision-% / 100
+ */
+export function calcProvisionFields(data) {
+  const companyProvision   = roundCHF(data.company_provision_amount)
+  const advisorProvisionPct = roundPct(data.advisor_provision_percentage)
+  const advisorProvision   = roundCHF((companyProvision * advisorProvisionPct) / 100)
+  return {
+    ...data,
+    company_provision_amount:    companyProvision,
+    advisor_provision_percentage: advisorProvisionPct,
+    advisor_provision_amount:    advisorProvision,
+  }
+}
+
+/**
+ * Berechnet ALLE Felder (Courtage + Provision).
+ * Zentrale Funktion für Speichern/Update.
+ */
+export function calcCommissionFields(data) {
+  const withCourtage  = calcCourtageFields(data)
+  const withProvision = calcProvisionFields(withCourtage)
+  return {
+    ...withProvision,
+    premium_yearly: roundCHF(data.premium_yearly),
   }
 }
 
@@ -43,67 +111,89 @@ export function calcCommissionFields(data) {
 export function formatCHF(amount) {
   return roundCHF(amount).toLocaleString('de-CH', { style: 'currency', currency: 'CHF' })
 }
-
 export function formatPct(value, decimals = 1) {
   return `${(parseFloat(value) || 0).toFixed(decimals)}%`
 }
-
 export function formatDate(dateStr) {
   if (!dateStr) return '–'
   return new Date(dateStr).toLocaleDateString('de-CH')
 }
-
 export function formatDateTime(dateStr) {
   if (!dateStr) return '–'
   return new Date(dateStr).toLocaleString('de-CH', { dateStyle: 'short', timeStyle: 'short' })
 }
 
-// ─── Aggregations-Engine ─────────────────────────────────────────────────────
+// ─── KPI-Engine ───────────────────────────────────────────────────────────────
 /**
- * Berechnet alle KPIs für einen Datensatz.
- * Identisch verwendet in KPI-Bar, BI, Exporten.
+ * Getrennte KPIs für Courtage und Provision.
  */
 export function calcKPIs(entries) {
-  const active    = entries.filter(e => !e.archived)
-  const nonCancelled = active.filter(e => e.status !== 'cancelled')
-  const cancelled = active.filter(e => e.status === 'cancelled')
-  const paid      = active.filter(e => e.status === 'paid')
-  const pending   = active.filter(e => e.status === 'pending')
-  const received  = active.filter(e => e.status === 'received' || e.status === 'earned')
-  const overdue   = active.filter(e => {
-    if (e.status !== 'invoiced') return false
-    if (!e.invoiced_date) return false
-    const days = (Date.now() - new Date(e.invoiced_date).getTime()) / 86400000
-    return days > 60
+  const normalized = entries.map(normalizeLegacyEntry)
+  const active     = normalized.filter(e => !e.archived)
+  const nonCancCourtage  = active.filter(e => (e.courtage_status || e.status) !== 'cancelled')
+  const nonCancProvision = active.filter(e => (e.provision_status || 'pending') !== 'cancelled')
+  const cancelled  = active.filter(e => (e.courtage_status || e.status) === 'cancelled')
+
+  const overdueCourtage = active.filter(e => {
+    if ((e.courtage_status || e.status) !== 'invoiced') return false
+    const date = e.courtage_invoiced_date || e.invoiced_date
+    if (!date) return false
+    return (Date.now() - new Date(date).getTime()) / 86400000 > 60
   })
 
-  const totalExpected    = roundCHF(nonCancelled.reduce((s, e) => s + (e.commission_amount || 0), 0))
-  const totalReceived    = roundCHF(active.reduce((s, e) => s + (e.received_amount || 0), 0))
-  const totalPaid        = roundCHF(paid.reduce((s, e) => s + (e.commission_amount || 0), 0))
-  const totalPending     = roundCHF(pending.reduce((s, e) => s + (e.commission_amount || 0), 0))
-  const totalCancelled   = roundCHF(cancelled.reduce((s, e) => s + (e.commission_amount || 0), 0))
-  const totalOverdue     = roundCHF(overdue.reduce((s, e) => s + (e.commission_amount || 0), 0))
-  const openAmount       = roundCHF(totalExpected - totalPaid)
-  const payoutRate       = totalExpected > 0 ? roundPct((totalPaid / totalExpected) * 100) : 0
-  const stornoRate       = (nonCancelled.length + cancelled.length) > 0
-    ? roundPct((cancelled.length / (nonCancelled.length + cancelled.length)) * 100)
-    : 0
+  // COURTAGE KPIs
+  const totalCourtageReceived = roundCHF(active.reduce((s, e) => s + (e.company_courtage_amount || 0), 0))
+  const totalAdvisorCourtage  = roundCHF(nonCancCourtage.reduce((s, e) => s + (e.advisor_courtage_amount || 0), 0))
+  const totalCourtagePaid     = roundCHF(active.filter(e => (e.courtage_status || e.status) === 'paid')
+    .reduce((s, e) => s + (e.advisor_courtage_amount || 0), 0))
+  const totalCourtagePending  = roundCHF(active.filter(e => (e.courtage_status || e.status) === 'pending')
+    .reduce((s, e) => s + (e.company_courtage_amount || 0), 0))
+  const openCourtage          = roundCHF(totalAdvisorCourtage - totalCourtagePaid)
+  const totalOverdueCourtage  = roundCHF(overdueCourtage.reduce((s, e) => s + (e.advisor_courtage_amount || 0), 0))
+
+  // PROVISION KPIs
+  const totalProvisionReceived = roundCHF(active.reduce((s, e) => s + (e.company_provision_amount || 0), 0))
+  const totalAdvisorProvision  = roundCHF(nonCancProvision.reduce((s, e) => s + (e.advisor_provision_amount || 0), 0))
+  const totalProvisionPaid     = roundCHF(active.filter(e => (e.provision_status || 'pending') === 'paid')
+    .reduce((s, e) => s + (e.advisor_provision_amount || 0), 0))
+  const openProvision          = roundCHF(totalAdvisorProvision - totalProvisionPaid)
+
+  // Storno / Gemeinsam
+  const stornoRate = (nonCancCourtage.length + cancelled.length) > 0
+    ? roundPct((cancelled.length / (nonCancCourtage.length + cancelled.length)) * 100) : 0
+  const courtagePayout = totalAdvisorCourtage > 0
+    ? roundPct((totalCourtagePaid / totalAdvisorCourtage) * 100) : 0
 
   return {
-    count:          active.length,
-    nonCancelledCount: nonCancelled.length,
+    count: active.length,
     cancelledCount: cancelled.length,
-    paidCount:      paid.length,
-    pendingCount:   pending.length,
-    overdueCount:   overdue.length,
-    totalExpected,
-    totalReceived,
-    totalPaid,
-    totalPending,
-    totalCancelled,
-    totalOverdue,
-    openAmount,
-    payoutRate,
+    nonCancelledCount: nonCancCourtage.length,
+    overdueCount: overdueCourtage.length,
+    pendingCount: active.filter(e => (e.courtage_status || e.status) === 'pending').length,
+
+    // COURTAGE
+    totalCourtageReceived,
+    totalAdvisorCourtage,
+    totalCourtagePaid,
+    totalCourtagePending,
+    openCourtage,
+    totalOverdueCourtage,
+    courtagePayout,
+
+    // PROVISION
+    totalProvisionReceived,
+    totalAdvisorProvision,
+    totalProvisionPaid,
+    openProvision,
+
+    // Legacy (für bestehende Komponenten)
+    totalExpected:  totalAdvisorCourtage,
+    totalReceived:  totalCourtageReceived,
+    totalPaid:      totalCourtagePaid,
+    totalPending:   totalCourtagePending,
+    openAmount:     openCourtage,
+    totalOverdue:   totalOverdueCourtage,
+    payoutRate:     courtagePayout,
     stornoRate,
   }
 }
@@ -112,12 +202,13 @@ export function calcKPIs(entries) {
 export function calcStornoByDimension(entries, dimensionKey, nameKey) {
   const map = {}
   entries.filter(e => !e.archived).forEach(e => {
-    const key = e[dimensionKey] || '–'
-    if (!map[key]) map[key] = { key, name: e[nameKey] || key, total: 0, cancelled: 0, commissionLost: 0 }
+    const ne = normalizeLegacyEntry(e)
+    const key = ne[dimensionKey] || '–'
+    if (!map[key]) map[key] = { key, name: ne[nameKey] || key, total: 0, cancelled: 0, commissionLost: 0 }
     map[key].total += 1
-    if (e.status === 'cancelled') {
+    if ((ne.courtage_status || ne.status) === 'cancelled') {
       map[key].cancelled += 1
-      map[key].commissionLost += e.commission_amount || 0
+      map[key].commissionLost += ne.advisor_courtage_amount || ne.commission_amount || 0
     }
   })
   return Object.values(map)
@@ -128,7 +219,8 @@ export function calcStornoByDimension(entries, dimensionKey, nameKey) {
 
 // ─── Monatstrend ─────────────────────────────────────────────────────────────
 export function calcMonthlyTrend(entries, monthsBack = 12) {
-  const active = entries.filter(e => !e.archived && e.status !== 'cancelled')
+  const normalized = entries.map(normalizeLegacyEntry)
+  const active = normalized.filter(e => !e.archived && (e.courtage_status || e.status) !== 'cancelled')
   const now = new Date()
   const months = []
   for (let i = monthsBack - 1; i >= 0; i--) {
@@ -136,56 +228,52 @@ export function calcMonthlyTrend(entries, monthsBack = 12) {
     const year  = d.getFullYear()
     const month = d.getMonth() + 1
     const label = d.toLocaleDateString('de-CH', { month: 'short', year: '2-digit' })
-    const monthEntries = active.filter(e => {
+    const me = active.filter(e => {
       if (!e.entry_date) return false
       const ed = new Date(e.entry_date)
       return ed.getFullYear() === year && (ed.getMonth() + 1) === month
     })
     months.push({
-      label,
-      year,
-      month,
-      provision: roundCHF(monthEntries.reduce((s, e) => s + (e.commission_amount || 0), 0)),
-      courtage:  roundCHF(monthEntries.reduce((s, e) => s + (e.received_amount || 0), 0)),
-      count:     monthEntries.length,
+      label, year, month,
+      courtage:          roundCHF(me.reduce((s, e) => s + (e.company_courtage_amount || 0), 0)),
+      advisorCourtage:   roundCHF(me.reduce((s, e) => s + (e.advisor_courtage_amount || 0), 0)),
+      provision:         roundCHF(me.reduce((s, e) => s + (e.company_provision_amount || 0), 0)),
+      advisorProvision:  roundCHF(me.reduce((s, e) => s + (e.advisor_provision_amount || 0), 0)),
+      count:             me.length,
     })
   }
   return months
 }
 
 // ─── Konsistenzprüfung ────────────────────────────────────────────────────────
-/**
- * Prüft einen Eintrag auf Dateninkonsistenzen.
- * Gibt Array von Warnungen zurück (leer = konsistent).
- */
 export function checkEntryConsistency(entry) {
+  const e = normalizeLegacyEntry(entry)
   const warnings = []
-  const calc = calcCommissionFields(entry)
 
-  // Berechnungsabweichung (> 0.02 CHF = Fehler)
-  if (Math.abs((entry.commission_amount || 0) - calc.commission_amount) > 0.02) {
-    warnings.push(`Provisionsberechnung inkonsistent: gespeichert ${formatCHF(entry.commission_amount)} ≠ berechnet ${formatCHF(calc.commission_amount)}`)
+  // Courtage-Berechnung prüfen
+  if ((e.company_courtage_amount || 0) > 0 && (e.advisor_courtage_percentage || 0) > 0) {
+    const expected = roundCHF((e.company_courtage_amount * e.advisor_courtage_percentage) / 100)
+    if (Math.abs((e.advisor_courtage_amount || 0) - expected) > 0.02) {
+      warnings.push(`Beratercourtage inkonsistent: gespeichert ${formatCHF(e.advisor_courtage_amount)} ≠ berechnet ${formatCHF(expected)}`)
+    }
   }
 
-  // Courtage grösser als Jahresprämie
-  if ((entry.received_amount || 0) > (entry.premium_yearly || 0) && (entry.premium_yearly || 0) > 0) {
-    warnings.push(`Erhaltene Courtage (${formatCHF(entry.received_amount)}) > Jahresprämie (${formatCHF(entry.premium_yearly)})`)
+  // Provision-Berechnung prüfen
+  if ((e.company_provision_amount || 0) > 0 && (e.advisor_provision_percentage || 0) > 0) {
+    const expected = roundCHF((e.company_provision_amount * e.advisor_provision_percentage) / 100)
+    if (Math.abs((e.advisor_provision_amount || 0) - expected) > 0.02) {
+      warnings.push(`Beraterprovision inkonsistent: gespeichert ${formatCHF(e.advisor_provision_amount)} ≠ berechnet ${formatCHF(expected)}`)
+    }
   }
 
-  // Provision > 100% der Courtage
-  if ((entry.commission_percentage || 0) > 100) {
-    warnings.push(`Berateranteil > 100% (${formatPct(entry.commission_percentage)})`)
+  if ((e.advisor_courtage_percentage || 0) > 100) {
+    warnings.push(`Beratercourtage-% > 100 (${formatPct(e.advisor_courtage_percentage)})`)
   }
-
-  // Paid aber kein paid_date
-  if (entry.status === 'paid' && !entry.paid_date) {
-    warnings.push('Status "Ausbezahlt" ohne Auszahlungsdatum')
+  if ((e.advisor_provision_percentage || 0) > 100) {
+    warnings.push(`Beraterprovision-% > 100 (${formatPct(e.advisor_provision_percentage)})`)
   }
-
-  // received_amount fehlt aber Status > invoiced
-  const advancedStatuses = ['received', 'earned', 'paid']
-  if (advancedStatuses.includes(entry.status) && !(entry.received_amount > 0)) {
-    warnings.push('Keine erhaltene Courtage für fortgeschrittenen Status')
+  if ((e.courtage_status || e.status) === 'paid' && !(e.courtage_paid_date || e.paid_date)) {
+    warnings.push('Courtage "Ausbezahlt" ohne Auszahlungsdatum')
   }
 
   return warnings
@@ -214,14 +302,23 @@ export function canTransitionTo(current, next) {
   return (STATUS_TRANSITIONS[current] || []).includes(next)
 }
 
-export function getStatusDates(newStatus) {
-  const updates = { status: newStatus }
+export function getStatusDates(newStatus, type = 'courtage') {
   const today = new Date().toISOString().split('T')[0]
-  if (newStatus === 'invoiced') updates.invoiced_date = today
-  if (newStatus === 'received') updates.received_date = today
-  if (newStatus === 'earned')   updates.earned_date   = today
-  if (newStatus === 'paid')     { updates.paid_date = today; updates.is_paid = true }
-  return updates
+  if (type === 'courtage') {
+    const updates = { courtage_status: newStatus, status: newStatus }
+    if (newStatus === 'invoiced') { updates.courtage_invoiced_date = today; updates.invoiced_date = today }
+    if (newStatus === 'received') { updates.courtage_received_date = today; updates.received_date = today }
+    if (newStatus === 'earned')   { updates.courtage_earned_date   = today; updates.earned_date   = today }
+    if (newStatus === 'paid')     { updates.courtage_paid_date = today; updates.paid_date = today; updates.is_paid = true }
+    return updates
+  } else {
+    const updates = { provision_status: newStatus }
+    if (newStatus === 'invoiced') updates.provision_invoiced_date = today
+    if (newStatus === 'received') updates.provision_received_date = today
+    if (newStatus === 'earned')   updates.provision_earned_date   = today
+    if (newStatus === 'paid')     updates.provision_paid_date     = today
+    return updates
+  }
 }
 
 // ─── Validierung ─────────────────────────────────────────────────────────────
@@ -234,16 +331,31 @@ export function validateCommissionForm(data) {
   if (!data.customer_name)    errors.customer_name    = 'Pflichtfeld'
   if (!data.product_category) errors.product_category = 'Pflichtfeld'
 
-  const premium  = parseFloat(data.premium_yearly) || 0
-  const received = parseFloat(data.received_amount) || 0
-  const pct      = parseFloat(data.commission_percentage) || 0
+  const premium = parseFloat(data.premium_yearly) || 0
+  if (premium <= 0) errors.premium_yearly = 'Muss > 0 sein'
 
-  if (premium <= 0)   errors.premium_yearly       = 'Muss > 0 sein'
-  if (received <= 0)  errors.received_amount       = 'Pflichtfeld – Berechnungsgrundlage'
-  if (pct <= 0)       errors.commission_percentage = 'Muss > 0 sein'
-  if (pct > 100)      errors.commission_percentage = 'Maximal 100%'
-  if (received > 0 && premium > 0 && received > premium) {
-    errors.received_amount = 'Erhaltene Courtage grösser als Jahresprämie – bitte prüfen'
+  // Mindestens Courtage ODER Provision muss angegeben sein
+  const hasCourtage  = (parseFloat(data.company_courtage_amount) || 0) > 0
+  const hasProvision = (parseFloat(data.company_provision_amount) || 0) > 0
+
+  if (!hasCourtage && !hasProvision) {
+    errors.company_courtage_amount = 'Mindestens Courtage oder Provision muss angegeben werden'
+  }
+
+  if (hasCourtage) {
+    const pct = parseFloat(data.advisor_courtage_percentage) || 0
+    if (pct <= 0)  errors.advisor_courtage_percentage = 'Muss > 0 sein'
+    if (pct > 100) errors.advisor_courtage_percentage = 'Maximal 100%'
+    const courtage = parseFloat(data.company_courtage_amount) || 0
+    if (courtage > premium && premium > 0) {
+      errors.company_courtage_amount = 'Courtage > Jahresprämie – bitte prüfen'
+    }
+  }
+
+  if (hasProvision) {
+    const pct = parseFloat(data.advisor_provision_percentage) || 0
+    if (pct <= 0)  errors.advisor_provision_percentage = 'Muss > 0 sein'
+    if (pct > 100) errors.advisor_provision_percentage = 'Maximal 100%'
   }
 
   return errors
@@ -253,25 +365,38 @@ export function validateCommissionForm(data) {
 export function generateCSV(entries) {
   const headers = [
     'Datum', 'Gesellschaft', 'Berater', 'Kunde', 'Sparte', 'Policen-Nr.',
-    'Jahresprämie CHF', 'Courtage erhalten CHF', 'Berateranteil %',
-    'Beraterprovision CHF', 'Status', 'Eingereicht am', 'Erhalten am', 'Ausbezahlt am',
+    'Jahresprämie CHF',
+    'Gesellschaftscourtage CHF', 'Beratercourtage % ', 'Beratercourtage CHF', 'Courtage Status',
+    'Gesellschaftsprovision CHF', 'Beraterprovision %', 'Beraterprovision CHF', 'Provisions Status',
+    'Courtage eingereicht', 'Courtage erhalten', 'Courtage ausbezahlt',
+    'Provision eingereicht', 'Provision erhalten', 'Provision ausbezahlt',
   ]
-  const rows = entries.map(e => [
-    e.entry_date || '',
-    e.insurer || '',
-    e.advisor_name || '',
-    e.customer_name || '',
-    e.product_category || '',
-    e.policy_number || '',
-    roundCHF(e.premium_yearly).toFixed(2),
-    roundCHF(e.received_amount).toFixed(2),
-    roundPct(e.commission_percentage).toFixed(4),
-    roundCHF(e.commission_amount).toFixed(2),
-    STATUS_META[e.status]?.label || e.status || '',
-    e.invoiced_date || '',
-    e.received_date || '',
-    e.paid_date || '',
-  ])
+  const rows = entries.map(e => {
+    const ne = normalizeLegacyEntry(e)
+    return [
+      ne.entry_date || '',
+      ne.insurer || '',
+      ne.advisor_name || '',
+      ne.customer_name || '',
+      ne.product_category || '',
+      ne.policy_number || '',
+      roundCHF(ne.premium_yearly).toFixed(2),
+      roundCHF(ne.company_courtage_amount).toFixed(2),
+      roundPct(ne.advisor_courtage_percentage).toFixed(4),
+      roundCHF(ne.advisor_courtage_amount).toFixed(2),
+      STATUS_META[ne.courtage_status || ne.status]?.label || ne.status || '',
+      roundCHF(ne.company_provision_amount).toFixed(2),
+      roundPct(ne.advisor_provision_percentage).toFixed(4),
+      roundCHF(ne.advisor_provision_amount).toFixed(2),
+      STATUS_META[ne.provision_status || 'pending']?.label || '',
+      ne.courtage_invoiced_date || ne.invoiced_date || '',
+      ne.courtage_received_date || ne.received_date || '',
+      ne.courtage_paid_date || ne.paid_date || '',
+      ne.provision_invoiced_date || '',
+      ne.provision_received_date || '',
+      ne.provision_paid_date || '',
+    ]
+  })
   return [headers, ...rows]
     .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';'))
     .join('\n')

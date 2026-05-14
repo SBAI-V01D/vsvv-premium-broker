@@ -44,15 +44,102 @@
     },
     "premium_yearly": {
       "type": "number",
-      "description": "Jahrespr\u00e4mie (CHF)"
+      "description": "Jahrespr\u00e4mie (CHF) \u2013 Referenzwert"
     },
-    "commission_percentage": {
-      "type": "number",
-      "description": "Provisionsquote (%)"
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Vertragsbeginn"
     },
-    "commission_amount": {
+    "company_courtage_amount": {
       "type": "number",
-      "description": "Provision (CHF) - auto-berechnet"
+      "description": "COURTAGE: Gesellschaftscourtage \u2013 von Versicherung an Firma (CHF)"
+    },
+    "advisor_courtage_percentage": {
+      "type": "number",
+      "description": "COURTAGE: Beratercourtage-Anteil (%)"
+    },
+    "advisor_courtage_amount": {
+      "type": "number",
+      "description": "COURTAGE: Beratercourtage auto-berechnet (CHF) = company_courtage \u00d7 advisor_courtage_%"
+    },
+    "courtage_received_date": {
+      "type": "string",
+      "format": "date",
+      "description": "COURTAGE: Datum Courtage von Gesellschaft erhalten"
+    },
+    "courtage_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "invoiced",
+        "received",
+        "earned",
+        "paid",
+        "cancelled"
+      ],
+      "default": "pending",
+      "description": "COURTAGE: Status der Courtage-Abrechnung"
+    },
+    "courtage_invoiced_date": {
+      "type": "string",
+      "format": "date",
+      "description": "COURTAGE: Datum eingereicht"
+    },
+    "courtage_earned_date": {
+      "type": "string",
+      "format": "date",
+      "description": "COURTAGE: Datum freigegeben"
+    },
+    "courtage_paid_date": {
+      "type": "string",
+      "format": "date",
+      "description": "COURTAGE: Datum ausbezahlt"
+    },
+    "company_provision_amount": {
+      "type": "number",
+      "description": "PROVISION: Gesellschaftsprovision \u2013 von Versicherung an Firma (CHF)"
+    },
+    "advisor_provision_percentage": {
+      "type": "number",
+      "description": "PROVISION: Beraterprovision-Anteil (%)"
+    },
+    "advisor_provision_amount": {
+      "type": "number",
+      "description": "PROVISION: Beraterprovision auto-berechnet (CHF) = company_provision \u00d7 advisor_provision_%"
+    },
+    "provision_received_date": {
+      "type": "string",
+      "format": "date",
+      "description": "PROVISION: Datum Provision von Gesellschaft erhalten"
+    },
+    "provision_status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "invoiced",
+        "received",
+        "earned",
+        "paid",
+        "cancelled"
+      ],
+      "default": "pending",
+      "description": "PROVISION: Status der Provisions-Abrechnung"
+    },
+    "provision_invoiced_date": {
+      "type": "string",
+      "format": "date",
+      "description": "PROVISION: Datum eingereicht"
+    },
+    "provision_earned_date": {
+      "type": "string",
+      "format": "date",
+      "description": "PROVISION: Datum freigegeben"
+    },
+    "provision_paid_date": {
+      "type": "string",
+      "format": "date",
+      "description": "PROVISION: Datum ausbezahlt"
     },
     "status": {
       "type": "string",
@@ -65,36 +152,44 @@
         "cancelled"
       ],
       "default": "pending",
-      "description": "Status: pending\u2192invoiced\u2192received\u2192earned\u2192paid|cancelled"
+      "description": "Gesamtstatus (Legacy/R\u00fcckw\u00e4rtskompatibilit\u00e4t)"
     },
     "entry_date": {
       "type": "string",
       "format": "date",
       "description": "Buchungsdatum"
     },
-    "invoiced_date": {
-      "type": "string",
-      "format": "date",
-      "description": "Datum an Versicherer gemeldet"
+    "commission_percentage": {
+      "type": "number",
+      "description": "LEGACY: Berateranteil % (mapped zu advisor_courtage_percentage)"
+    },
+    "commission_amount": {
+      "type": "number",
+      "description": "LEGACY: Beraterprovision CHF (mapped zu advisor_courtage_amount)"
+    },
+    "received_amount": {
+      "type": "number",
+      "description": "LEGACY: Erhaltene Courtage CHF (mapped zu company_courtage_amount)"
     },
     "received_date": {
       "type": "string",
       "format": "date",
-      "description": "Datum Zahlung erhalten"
+      "description": "LEGACY: Datum erhalten"
     },
-    "received_amount": {
-      "type": "number",
-      "description": "Tats\u00e4chlich erhaltener Betrag (CHF)"
+    "invoiced_date": {
+      "type": "string",
+      "format": "date",
+      "description": "LEGACY: Datum eingereicht"
     },
     "earned_date": {
       "type": "string",
       "format": "date",
-      "description": "Datum freigegeben f\u00fcr Auszahlung"
+      "description": "LEGACY: Datum freigegeben"
     },
     "paid_date": {
       "type": "string",
       "format": "date",
-      "description": "Datum ausbezahlt"
+      "description": "LEGACY: Datum ausbezahlt"
     },
     "payout_id": {
       "type": "string",
@@ -102,17 +197,17 @@
     },
     "storno_period_months": {
       "type": "number",
-      "description": "Stornoperiode in Monaten (erbt von Policy)"
+      "description": "Stornoperiode in Monaten"
     },
     "storno_eligible_until": {
       "type": "string",
       "format": "date",
-      "description": "Commission stornierbar bis (entry_date + storno_period)"
+      "description": "Stornierbar bis"
     },
     "is_storno": {
       "type": "boolean",
       "default": false,
-      "description": "Ist eine Storno-Entry (negative)"
+      "description": "Ist eine Storno-Entry"
     },
     "storno_reference_id": {
       "type": "string",
@@ -121,7 +216,7 @@
     "is_paid": {
       "type": "boolean",
       "default": false,
-      "description": "GUARD: Wurde bereits ausbezahlt (verhindert Doppelzahlung)"
+      "description": "GUARD: Wurde bereits ausbezahlt"
     },
     "notes": {
       "type": "string",
@@ -130,24 +225,20 @@
     "archived": {
       "type": "boolean",
       "default": false,
-      "description": "SOFT DELETE: Commission ist archiviert"
+      "description": "SOFT DELETE"
     },
     "archived_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "SOFT DELETE: Archivierungsdatum"
+      "format": "date-time"
     },
     "archived_by": {
-      "type": "string",
-      "description": "SOFT DELETE: E-Mail des Archivierenden"
+      "type": "string"
     }
   },
   "required": [
-    "policy_id",
     "advisor_id",
     "organization_id",
     "insurer",
-    "premium_yearly",
-    "commission_percentage"
+    "premium_yearly"
   ]
 }
