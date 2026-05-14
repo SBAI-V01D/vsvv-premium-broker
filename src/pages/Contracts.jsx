@@ -79,16 +79,15 @@ export default function Contracts() {
   const getCustomer = (id) => customers.find(c => c.id === id)
 
   const filtered = contracts.filter(c => {
+    if (!search.trim()) return true
+    
     const customer = getCustomer(c.customer_id)
     const customerFullName = customer ? `${customer.first_name} ${customer.last_name}` : ''
     const customerCompanyName = customer?.company_name || ''
+    
+    // Include contract.customer_name as fallback if customer_id broken
     const searchStr = `${c.customer_name} ${customerFullName} ${customerCompanyName} ${c.insurer} ${c.policy_number} ${c.product || ''}`.toLowerCase()
-    
-    if (!search.trim()) return true
-    const searchLower = search.toLowerCase()
-    
-    // Direct substring match in all fields
-    return searchStr.includes(searchLower)
+    return searchStr.includes(search.toLowerCase())
   })
   const getContractDocuments = (contractId) => documents.filter(d => d.linked_contract_id === contractId)
 
