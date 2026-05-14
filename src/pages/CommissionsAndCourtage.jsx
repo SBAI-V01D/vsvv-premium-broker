@@ -54,7 +54,12 @@ export default function CommissionsAndCourtage() {
   })
 
   const { data: brokers = [] } = useQuery({
-    queryKey: ['advisors'],
+    queryKey: ['brokers'],
+    queryFn: () => base44.entities.Broker.filter({ is_active: true }),
+  })
+
+  const { data: advisors = [] } = useQuery({
+    queryKey: ['advisorsActive'],
     queryFn: () => base44.entities.Advisor.filter({ status: 'active' }),
   })
 
@@ -609,15 +614,19 @@ export default function CommissionsAndCourtage() {
                 <label className="text-sm font-semibold">Berater *</label>
                 <Select value={formData.broker_email || ''} onValueChange={v => {
                   const broker = brokers.find(b => b.email === v)
-                  const brokerName = broker ? `${broker.firstname} ${broker.lastname}` : ''
+                  const advisor = advisors.find(a => a.email === v)
+                  const brokerName = broker ? broker.name : advisor ? `${advisor.firstname} ${advisor.lastname}` : ''
                   setFormData(p => ({ ...p, broker_email: v, broker_name: brokerName }))
                 }}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Wählen..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {brokers.map(b => (
-                      <SelectItem key={b.id} value={b.email}>{b.firstname} {b.lastname}</SelectItem>
+                    {brokers.length > 0 && brokers.map(b => (
+                      <SelectItem key={`b-${b.id}`} value={b.email}>{b.name}</SelectItem>
+                    ))}
+                    {advisors.length > 0 && advisors.map(a => (
+                      <SelectItem key={`a-${a.id}`} value={a.email}>{a.firstname} {a.lastname}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
