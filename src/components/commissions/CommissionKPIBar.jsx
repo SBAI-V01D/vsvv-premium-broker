@@ -28,7 +28,7 @@ function SectionDivider({ label, color }) {
   )
 }
 
-export default function CommissionKPIBar({ entries, filteredEntries }) {
+export default function CommissionKPIBar({ entries, filteredEntries, period: periodRange }) {
   const global = useMemo(() => calcKPIs(entries), [entries])
   const period = useMemo(() => calcKPIs(filteredEntries), [filteredEntries])
 
@@ -139,32 +139,44 @@ export default function CommissionKPIBar({ entries, filteredEntries }) {
         </div>
       </div>
 
-      {/* Gesamt-Reserve + Storno */}
-      <div className="grid grid-cols-2 gap-2">
-        <Card className={`border-0 ${global.totalReserveOpen > 0 ? 'bg-orange-50 ring-1 ring-orange-200' : 'bg-muted/30'}`}>
-          <CardContent className="p-3 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Gesamte offene Reserve</p>
-              <p className={`text-xl font-bold ${global.totalReserveOpen > 0 ? 'text-orange-700' : 'text-muted-foreground'}`}>
-                {formatCHF(global.totalReserveOpen)}
+      {/* Period Summary + Reserve + Storno */}
+      <div className="space-y-2">
+        {periodRange && (
+          <Card className="border-0 bg-slate-50">
+            <CardContent className="p-3">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Zeitraum</p>
+              <p className="text-sm font-semibold text-foreground">
+                {periodRange.start.toLocaleDateString('de-CH')} – {periodRange.end.toLocaleDateString('de-CH')}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5">Courtage + Provisions-Reserve (Brutto-Bestand)</p>
-            </div>
-            <ShieldAlert className={`w-8 h-8 ${global.totalReserveOpen > 0 ? 'text-orange-300' : 'text-muted-foreground/30'}`} />
-          </CardContent>
-        </Card>
-        <Card className={`border-0 ${global.stornoRate > 10 ? 'bg-red-50 ring-1 ring-red-300' : global.stornoRate > 5 ? 'bg-amber-50' : 'bg-green-50'}`}>
-          <CardContent className="p-3 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Stornoquote (Gesamtbestand)</p>
-              <p className={`text-xl font-bold ${global.stornoRate > 10 ? 'text-red-700' : global.stornoRate > 5 ? 'text-amber-700' : 'text-green-700'}`}>
-                {formatPct(global.stornoRate)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">{global.cancelledCount} storniert von {global.count}</p>
-            </div>
-            <TrendingDown className={`w-8 h-8 ${global.stornoRate > 10 ? 'text-red-300' : global.stornoRate > 5 ? 'text-amber-300' : 'text-green-300'}`} />
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
+        <div className="grid grid-cols-2 gap-2">
+          <Card className={`border-0 ${period.totalReserveOpen > 0 ? 'bg-orange-50 ring-1 ring-orange-200' : 'bg-muted/30'}`}>
+            <CardContent className="p-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Offene Reserve (Periode)</p>
+                <p className={`text-xl font-bold ${period.totalReserveOpen > 0 ? 'text-orange-700' : 'text-muted-foreground'}`}>
+                  {formatCHF(period.totalReserveOpen)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">Courtage + Provision</p>
+              </div>
+              <ShieldAlert className={`w-8 h-8 ${period.totalReserveOpen > 0 ? 'text-orange-300' : 'text-muted-foreground/30'}`} />
+            </CardContent>
+          </Card>
+          <Card className={`border-0 ${period.stornoRate > 10 ? 'bg-red-50 ring-1 ring-red-300' : period.stornoRate > 5 ? 'bg-amber-50' : 'bg-green-50'}`}>
+            <CardContent className="p-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Stornoquote (Periode)</p>
+                <p className={`text-xl font-bold ${period.stornoRate > 10 ? 'text-red-700' : period.stornoRate > 5 ? 'text-amber-700' : 'text-green-700'}`}>
+                  {formatPct(period.stornoRate)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">{period.cancelledCount} von {period.count}</p>
+              </div>
+              <TrendingDown className={`w-8 h-8 ${period.stornoRate > 10 ? 'text-red-300' : period.stornoRate > 5 ? 'text-amber-300' : 'text-green-300'}`} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )

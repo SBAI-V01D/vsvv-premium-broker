@@ -21,6 +21,7 @@ import CommissionTablePaginated from '@/components/commissions/CommissionTablePa
 import CommissionIntelligenceTab from '@/components/commissions/CommissionIntelligenceTab'
 import AuditLogDialog from '@/components/commissions/AuditLogDialog'
 import CommissionFormDialog from '@/components/commissions/CommissionFormDialog'
+import PeriodSelector from '@/components/commissions/PeriodSelector'
 
 const ALL_SPARTEN = ['KVG', 'VVG', 'Leben', 'Sach', 'KFZ', 'BVG', 'Rechtsschutz', 'Haftpflicht', 'Hausrat']
 
@@ -42,8 +43,7 @@ export default function CommissionsAndCourtage() {
   const [filterInsurer, setFilterInsurer] = useState('all')
   const [filterSparte, setFilterSparte] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
-  const [filterYear, setFilterYear] = useState(new Date().getFullYear().toString())
-  const [filterMonth, setFilterMonth] = useState(String(new Date().getMonth() + 1).padStart(2, '0'))
+  const [periodFilter, setPeriodFilter] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAuditLog, setShowAuditLog] = useState(false)
@@ -51,6 +51,17 @@ export default function CommissionsAndCourtage() {
   const [formData, setFormData] = useState({})
   const [formErrors, setFormErrors] = useState({})
   const [submitAttempted, setSubmitAttempted] = useState(false)
+
+  // Initialize period with this month
+  const defaultPeriod = useMemo(() => {
+    const today = new Date()
+    return {
+      start: new Date(today.getFullYear(), today.getMonth(), 1),
+      end: new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    }
+  }, [])
+
+  const actualPeriod = periodFilter || defaultPeriod
 
   // ── Queries ──────────────────────────────────────────────────────────────
   const { data: entries = [], isLoading: loadingEntries } = useQuery({
@@ -236,14 +247,14 @@ export default function CommissionsAndCourtage() {
       const matchSparte = filterSparte === 'all' || e.product_category === filterSparte
       const cStatus = ne.courtage_status || e.status || 'pending'
       const matchStatus = filterStatus === 'all' || cStatus === filterStatus
-      const entryDate = e.entry_date ? new Date(e.entry_date) : null
-      const matchPeriod = !entryDate || (
-        entryDate.getFullYear().toString() === filterYear &&
-        String(entryDate.getMonth() + 1).padStart(2, '0') === filterMonth
-      )
+      
+      // Dynamic period filtering (use received_date or entry_date)
+      const entryDate = e.courtage_received_date || e.provision_received_date || e.entry_date ? new Date(e.courtage_received_date || e.provision_received_date || e.entry_date) : null
+      const matchPeriod = !entryDate || (entryDate >= actualPeriod.start && entryDate <= actualPeriod.end)
+      
       return matchSearch && matchBroker && matchInsurer && matchSparte && matchStatus && matchPeriod
     })
-  }, [activeEntries, search, filterBroker, filterInsurer, filterSparte, filterStatus, filterYear, filterMonth])
+  }, [activeEntries, search, filterBroker, filterInsurer, filterSparte, filterStatus, actualPeriod])
 
   const brokerStats = useMemo(() => {
     const map = {}
@@ -279,7 +290,9 @@ export default function CommissionsAndCourtage() {
     [activeEntries])
 
   const handleCSVExport = () => {
-    downloadCSV(generateCSV(filteredEntries), `courtagen_provisionen_${filterYear}_${filterMonth}.csv`)
+    const startStr = actualPeriod.start.toLocaleDateString('de-CH').replace(/\./g, '-')
+    const endStr = actualPeriod.end.toLocaleDateString('de-CH').replace(/\./g, '-')
+    downloadCSV(generateCSV(filteredEntries), `courtagen_provisionen_${startStr}_bis_${endStr}.csv`)
   }
 
   const isSaving = createMutation.isPending || updateMutation.isPending
@@ -313,35 +326,20 @@ export default function CommissionsAndCourtage() {
         </div>
       </div>
 
-      {/* Zeitraum Filter */}
-       <div className="flex gap-3 items-center flex-wrap bg-muted/30 p-4 rounded-lg border border-border">
-         <span className="text-sm font-semibold text-muted-foreground">Zeitraum:</span>
-         <Select value={filterYear} onValueChange={setFilterYear}>
-           <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
-           <SelectContent>
-             {[2023, 2024, 2025, 2026, 2027].map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
-           </SelectContent>
-         </Select>
-         <Select value={filterMonth} onValueChange={setFilterMonth}>
-           <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-           <SelectContent>
-             {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
-               <SelectItem key={m} value={String(m).padStart(2, '0')}>
-                 {new Date(2024, m - 1).toLocaleDateString('de-CH', { month: 'long' })}
-               </SelectItem>
-             ))}
-           </SelectContent>
-         </Select>
-         <div className="ml-auto text-sm font-semibold text-foreground">
-           {new Date(parseInt(filterYear), parseInt(filterMonth) - 1).toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })} 
-           <span className="text-xs text-muted-foreground ml-2">
-             (01.{filterMonth}.{filterYear} - {new Date(parseInt(filterYear), parseInt(filterMonth), 0).getDate()}.{filterMonth}.{filterYear})
-           </span>
-         </div>
+      {/* Period Selector */}
+       <div className="bg-muted/20 p-4 rounded-lg border border-border">
+         <PeriodSelector 
+           onPeriodChange={setPeriodFilter}
+           initialPeriod="this_month"
+         />
        </div>
 
       {/* KPI Bar */}
-      <CommissionKPIBar entries={activeEntries} filteredEntries={filteredEntries} />
+       <CommissionKPIBar 
+         entries={filteredEntries} 
+         filteredEntries={filteredEntries}
+         period={actualPeriod}
+       />
 
       {/* Storno Banner */}
       {stornoEntries.length > 0 && (
@@ -539,9 +537,9 @@ export default function CommissionsAndCourtage() {
         </TabsContent>
 
         {/* ── BI & Analytics ── */}
-        <TabsContent value="intelligence" className="mt-4">
-          <CommissionIntelligenceTab entries={activeEntries} />
-        </TabsContent>
+         <TabsContent value="intelligence" className="mt-4">
+           <CommissionIntelligenceTab entries={filteredEntries} period={actualPeriod} />
+         </TabsContent>
       </Tabs>
 
       {/* Form Dialog */}

@@ -8,7 +8,7 @@ const COLORS_BLUE    = ['#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdb
 const COLORS_EMERALD = ['#065f46','#047857','#059669','#10b981','#34d399','#6ee7b7']
 const COLORS_MIXED   = ['#2563eb','#059669','#d97706','#dc2626','#7c3aed','#0891b2']
 
-export default function CommissionIntelligenceTab({ entries }) {
+export default function CommissionIntelligenceTab({ entries, period }) {
   const [trendMonths, setTrendMonths] = useState(6)
 
   const active     = useMemo(() => entries.filter(e => !e.archived).map(normalizeLegacyEntry), [entries])
@@ -95,6 +95,16 @@ export default function CommissionIntelligenceTab({ entries }) {
 
   return (
     <div className="space-y-6">
+
+      {/* Period Display */}
+      {period && (
+        <div className="p-3 bg-slate-50 border border-border rounded-lg">
+          <p className="text-xs font-semibold text-muted-foreground">ZEITRAUM DIESER ANALYTIK</p>
+          <p className="text-sm font-bold text-foreground">
+            {period.start.toLocaleDateString('de-CH')} – {period.end.toLocaleDateString('de-CH')}
+          </p>
+        </div>
+      )}
 
       {/* Automatische Warnungen */}
       {(highStornoAdvisors.length > 0 || highStornoSparten.length > 0 || overdueEntries.length > 0) && (
