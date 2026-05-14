@@ -314,25 +314,31 @@ export default function CommissionsAndCourtage() {
       </div>
 
       {/* Zeitraum Filter */}
-      <div className="flex gap-3 items-center flex-wrap">
-        <span className="text-sm font-semibold text-muted-foreground">Zeitraum:</span>
-        <Select value={filterYear} onValueChange={setFilterYear}>
-          <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {[2023, 2024, 2025, 2026, 2027].map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={filterMonth} onValueChange={setFilterMonth}>
-          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
-              <SelectItem key={m} value={String(m).padStart(2, '0')}>
-                {new Date(2024, m - 1).toLocaleDateString('de-CH', { month: 'long' })}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+       <div className="flex gap-3 items-center flex-wrap bg-muted/30 p-4 rounded-lg border border-border">
+         <span className="text-sm font-semibold text-muted-foreground">Zeitraum:</span>
+         <Select value={filterYear} onValueChange={setFilterYear}>
+           <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+           <SelectContent>
+             {[2023, 2024, 2025, 2026, 2027].map(y => <SelectItem key={y} value={y.toString()}>{y}</SelectItem>)}
+           </SelectContent>
+         </Select>
+         <Select value={filterMonth} onValueChange={setFilterMonth}>
+           <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+           <SelectContent>
+             {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
+               <SelectItem key={m} value={String(m).padStart(2, '0')}>
+                 {new Date(2024, m - 1).toLocaleDateString('de-CH', { month: 'long' })}
+               </SelectItem>
+             ))}
+           </SelectContent>
+         </Select>
+         <div className="ml-auto text-sm font-semibold text-foreground">
+           {new Date(parseInt(filterYear), parseInt(filterMonth) - 1).toLocaleDateString('de-CH', { month: 'long', year: 'numeric' })} 
+           <span className="text-xs text-muted-foreground ml-2">
+             (01.{filterMonth}.{filterYear} - {new Date(parseInt(filterYear), parseInt(filterMonth), 0).getDate()}.{filterMonth}.{filterYear})
+           </span>
+         </div>
+       </div>
 
       {/* KPI Bar */}
       <CommissionKPIBar entries={activeEntries} filteredEntries={filteredEntries} />
