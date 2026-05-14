@@ -45,11 +45,17 @@ const STATUS_TRANSITIONS = {
 }
 
 // ─── Pure calculation logic ───────────────────────────────────────────────────
+// KORREKTE FORMEL:
+//   commission_amount (Beraterprovision) = received_amount (erhaltene Gesellschaftscourtage) × commission_percentage / 100
+//   NICHT: premium_yearly × commission_percentage
+//   Die Jahresprämie dient nur als Referenzwert, nicht als Berechnungsgrundlage.
 function calcCommissionFields(data) {
   const premiumYearly = parseFloat(data.premium_yearly) || 0
+  const receivedAmount = parseFloat(data.received_amount) || 0
   const commissionPct = parseFloat(data.commission_percentage) || 0
-  const commissionAmount = Math.round((premiumYearly * commissionPct) / 100 * 100) / 100
-  return { ...data, premium_yearly: premiumYearly, commission_percentage: commissionPct, commission_amount: commissionAmount }
+  // Beraterprovision = erhaltene Gesellschaftscourtage × Berateranteil%
+  const commissionAmount = Math.round((receivedAmount * commissionPct) / 100 * 100) / 100
+  return { ...data, premium_yearly: premiumYearly, received_amount: receivedAmount, commission_percentage: commissionPct, commission_amount: commissionAmount }
 }
 
 function formatCHF(amount) {
@@ -84,8 +90,16 @@ function validateForm(data) {
   if (!data.customer_name) errors.customer_name = 'Pflichtfeld'
   if (!data.product_category) errors.product_category = 'Pflichtfeld'
   if (!data.premium_yearly || parseFloat(data.premium_yearly) <= 0) errors.premium_yearly = 'Muss > 0 sein'
+  // received_amount ist die Berechnungsgrundlage → Pflichtfeld
+  if (!data.received_amount || parseFloat(data.received_amount) <= 0) errors.received_amount = 'Pflichtfeld – Berechnungsgrundlage'
   if (!data.commission_percentage || parseFloat(data.commission_percentage) <= 0) errors.commission_percentage = 'Muss > 0 sein'
   if (parseFloat(data.commission_percentage) > 100) errors.commission_percentage = 'Maximal 100%'
+  // Plausibilitätsprüfung: erhaltene Courtage sollte nicht größer als Jahresprämie sein
+  const received = parseFloat(data.received_amount) || 0
+  const premium = parseFloat(data.premium_yearly) || 0
+  if (received > 0 && premium > 0 && received > premium) {
+    errors.received_amount = 'Erhaltene Courtage grösser als Jahresprämie – bitte prüfen'
+  }
   return errors
 }
 
@@ -168,22 +182,34 @@ function CustomerSearchField({ value, customerId, onChange, customers }) {
 }
 
 // ─── Commission Preview ───────────────────────────────────────────────────────
+// Zeigt die korrekte Berechnungskette:
+//   Gesellschaftscourtage × Berateranteil% = Beraterprovision
 function CommissionPreview({ data }) {
   const calc = calcCommissionFields(data)
-  if (!calc.premium_yearly) return null
+  if (!calc.received_amount) return null
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 grid grid-cols-3 gap-2 text-sm">
-      <div>
-        <p className="text-xs text-blue-500 uppercase font-semibold">Jahresprämie</p>
-        <p className="font-bold text-blue-800">{formatCHF(calc.premium_yearly)}</p>
+    <div className="rounded-lg border overflow-hidden text-sm">
+      <div className="bg-blue-50 border-b border-blue-200 px-3 py-1.5">
+        <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">Berechnungsvorschau</p>
       </div>
-      <div>
-        <p className="text-xs text-blue-500 uppercase font-semibold">Satz</p>
-        <p className="font-bold text-blue-800">{calc.commission_percentage}%</p>
-      </div>
-      <div>
-        <p className="text-xs text-green-600 uppercase font-semibold">Provision</p>
-        <p className="font-bold text-green-700 text-base">{formatCHF(calc.commission_amount)}</p>
+      <div className="bg-blue-50/50 p-3 grid grid-cols-2 gap-x-4 gap-y-2">
+        <div>
+          <p className="text-xs text-muted-foreground uppercase font-semibold">Jahresprämie (Referenz)</p>
+          <p className="font-semibold text-foreground">{formatCHF(calc.premium_yearly)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-blue-600 uppercase font-semibold">Erhaltene Gesellschaftscourtage</p>
+          <p className="font-bold text-blue-800">{formatCHF(calc.received_amount)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground uppercase font-semibold">Berateranteil</p>
+          <p className="font-semibold text-foreground">{calc.commission_percentage}%</p>
+        </div>
+        <div className="bg-green-50 border border-green-200 rounded p-1.5">
+          <p className="text-xs text-green-600 uppercase font-bold">= Beraterprovision</p>
+          <p className="font-bold text-green-700 text-lg leading-tight">{formatCHF(calc.commission_amount)}</p>
+          <p className="text-xs text-green-600 mt-0.5">{formatCHF(calc.received_amount)} × {calc.commission_percentage}%</p>
+        </div>
       </div>
     </div>
   )
@@ -625,9 +651,9 @@ export default function CommissionsAndCourtage() {
                       <th className="text-left py-3 px-4 font-semibold">Kunde</th>
                       <th className="text-left py-3 px-4 font-semibold">Sparte</th>
                       <th className="text-right py-3 px-4 font-semibold">Jahresprämie</th>
-                      <th className="text-right py-3 px-4 font-semibold">Satz %</th>
-                      <th className="text-right py-3 px-4 font-semibold">Erhalten</th>
-                      <th className="text-right py-3 px-4 font-semibold">Provision</th>
+                      <th className="text-right py-3 px-4 font-semibold text-blue-700">Courtage erhalten</th>
+                      <th className="text-right py-3 px-4 font-semibold">Anteil %</th>
+                      <th className="text-right py-3 px-4 font-semibold text-green-700">Beraterprovision</th>
                       <th className="text-center py-3 px-4 font-semibold">Status</th>
                       <th className="w-12"></th>
                     </tr>
@@ -647,9 +673,9 @@ export default function CommissionsAndCourtage() {
                           <td className="py-3 px-4 text-muted-foreground">{e.advisor_name || '–'}</td>
                           <td className="py-3 px-4">{e.customer_name || '–'}</td>
                           <td className="py-3 px-4 text-muted-foreground">{e.product_category || '–'}</td>
-                          <td className="text-right py-3 px-4">{formatCHF(e.premium_yearly)}</td>
+                          <td className="text-right py-3 px-4 text-muted-foreground">{formatCHF(e.premium_yearly)}</td>
+                          <td className="text-right py-3 px-4 font-semibold text-blue-700">{e.received_amount ? formatCHF(e.received_amount) : <span className="text-amber-500 text-xs">Ausstehend</span>}</td>
                           <td className="text-right py-3 px-4 text-muted-foreground">{e.commission_percentage ? `${e.commission_percentage}%` : '–'}</td>
-                          <td className="text-right py-3 px-4 text-blue-600">{e.received_amount ? formatCHF(e.received_amount) : '–'}</td>
                           <td className="text-right py-3 px-4 font-bold text-green-600">{formatCHF(e.commission_amount)}</td>
                           <td className="text-center py-3 px-4">
                             <span className={`text-xs px-2 py-1 rounded-full font-medium ${sm.color}`}>{sm.label}</span>
@@ -696,9 +722,9 @@ export default function CommissionsAndCourtage() {
                     <tfoot>
                       <tr className="bg-muted/40 font-semibold text-sm">
                         <td colSpan="5" className="py-3 px-4">Total ({filteredEntries.length} Einträge)</td>
-                        <td className="text-right py-3 px-4">{formatCHF(filteredEntries.reduce((s, e) => s + (e.premium_yearly || 0), 0))}</td>
+                        <td className="text-right py-3 px-4 text-muted-foreground">{formatCHF(filteredEntries.reduce((s, e) => s + (e.premium_yearly || 0), 0))}</td>
+                        <td className="text-right py-3 px-4 text-blue-700">{formatCHF(filteredEntries.reduce((s, e) => s + (e.received_amount || 0), 0))}</td>
                         <td></td>
-                        <td className="text-right py-3 px-4 text-blue-600">{formatCHF(filteredEntries.reduce((s, e) => s + (e.received_amount || 0), 0))}</td>
                         <td className="text-right py-3 px-4 text-green-600">{formatCHF(filteredEntries.reduce((s, e) => s + (e.commission_amount || 0), 0))}</td>
                         <td colSpan="2"></td>
                       </tr>
@@ -937,34 +963,42 @@ export default function CommissionsAndCourtage() {
             {/* Sektion 4: Provision */}
             <div>
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">4. Provision & Berechnung</p>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-2 text-xs text-amber-700">
+                <strong>Berechnung:</strong> Gesellschaftscourtage × Berateranteil% = Beraterprovision. Die Jahresprämie ist nur ein Referenzwert.
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-semibold">Jahresprämie (CHF) *</label>
+                  <label className="text-sm font-semibold">Jahresprämie Kunde (CHF) *</label>
                   <Input type="number" step="0.01" min="0"
                     value={formData.premium_yearly || ''}
                     onChange={e => handleFormChange({ premium_yearly: e.target.value })}
                     className={`mt-1 ${formErrors.premium_yearly ? 'border-red-400' : ''}`}
                     placeholder="0.00" />
                   {formErrors.premium_yearly && <p className="text-xs text-red-500 mt-0.5">{formErrors.premium_yearly}</p>}
+                  <p className="text-xs text-muted-foreground mt-0.5">Nur als Referenz – nicht Berechnungsgrundlage</p>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold">Provisionssatz (%) *</label>
-                  <Input type="number" step="0.1" min="0" max="100"
-                    value={formData.commission_percentage || ''}
-                    onChange={e => handleFormChange({ commission_percentage: e.target.value })}
-                    className={`mt-1 ${formErrors.commission_percentage ? 'border-red-400' : ''}`}
-                    placeholder="z.B. 5" />
-                  {formErrors.commission_percentage && <p className="text-xs text-red-500 mt-0.5">{formErrors.commission_percentage}</p>}
-                </div>
-                <div>
-                  <label className="text-sm font-semibold">Erhaltener Betrag (CHF)</label>
+                  <label className="text-sm font-semibold text-blue-700">Erhaltene Gesellschaftscourtage (CHF) *</label>
                   <Input type="number" step="0.01" min="0"
                     value={formData.received_amount || ''}
                     onChange={e => handleFormChange({ received_amount: e.target.value })}
-                    className="mt-1" placeholder="0.00" />
+                    className={`mt-1 ${formErrors.received_amount ? 'border-red-400' : 'border-blue-300 focus:border-blue-500'}`}
+                    placeholder="0.00" />
+                  {formErrors.received_amount && <p className="text-xs text-red-500 mt-0.5">{formErrors.received_amount}</p>}
+                  <p className="text-xs text-blue-600 mt-0.5 font-medium">← Berechnungsgrundlage</p>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold">Datum erhalten</label>
+                  <label className="text-sm font-semibold text-green-700">Berateranteil (%) *</label>
+                  <Input type="number" step="0.1" min="0" max="100"
+                    value={formData.commission_percentage || ''}
+                    onChange={e => handleFormChange({ commission_percentage: e.target.value })}
+                    className={`mt-1 ${formErrors.commission_percentage ? 'border-red-400' : 'border-green-300 focus:border-green-500'}`}
+                    placeholder="z.B. 50" />
+                  {formErrors.commission_percentage && <p className="text-xs text-red-500 mt-0.5">{formErrors.commission_percentage}</p>}
+                  <p className="text-xs text-green-600 mt-0.5">Anteil des Beraters an der Courtage</p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold">Datum Courtage erhalten</label>
                   <Input type="date"
                     value={formData.received_date || ''}
                     onChange={e => handleFormChange({ received_date: e.target.value })}
@@ -1042,12 +1076,17 @@ export default function CommissionsAndCourtage() {
       <Dialog open={showSettings} onOpenChange={setShowSettings}>
         <DialogContent className="max-w-xl">
           <DialogHeader><DialogTitle>Einstellungen – Provisionen</DialogTitle></DialogHeader>
-          <div className="space-y-3 text-sm text-muted-foreground">
-            <p>Provisionssätze und Storno-Konfiguration werden in einer separaten Ansicht verwaltet.</p>
+          <div className="space-y-3 text-sm">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-1">
+              <p className="font-bold text-green-800">Berechnungsformel</p>
+              <p className="font-mono text-green-700 bg-green-100 rounded px-2 py-1 text-xs">Beraterprovision = Erhaltene Gesellschaftscourtage × Berateranteil%</p>
+              <p className="text-xs text-green-700">Beispiel: CHF 2'400 × 50% = CHF 1'200 Beraterprovision</p>
+              <p className="text-xs text-muted-foreground mt-1">Die Jahresprämie ist nur ein Referenzwert und wird nicht für die Berechnung verwendet.</p>
+            </div>
             <div className="bg-muted/40 rounded-lg p-3 space-y-1">
               <p className="font-semibold text-foreground">Status-Workflow</p>
-              <p>pending → invoiced → received → earned → paid</p>
-              <p className="text-xs">Jeder Status kann zu «Storniert» wechseln. Terminal-Status: paid, cancelled.</p>
+              <p className="text-muted-foreground">pending → invoiced → received → earned → paid</p>
+              <p className="text-xs text-muted-foreground">Jeder Status kann zu «Storniert» wechseln. Terminal-Status: paid, cancelled.</p>
             </div>
           </div>
           <DialogFooter>
