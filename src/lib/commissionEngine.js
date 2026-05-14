@@ -19,6 +19,13 @@
  *   Provision Netto Payout    = Beraterprovision (Brutto) - Provision Stornoreserve
  *
  * DEFAULT STORNO %: 10
+ * 
+ * 🔴 CRITICAL 2026-05-14: Financial Period Logic
+ * ALL aggregations use financial period dates:
+ * - courtage_received_date (primary)
+ * - courtage_invoiced_date (fallback)
+ * - entry_date (fallback for pending)
+ * NEVER use created_at!
  */
 
 export const DEFAULT_STORNO_PCT = 10
@@ -164,11 +171,46 @@ export function formatDateTime(dateStr) {
 }
 
 // ─── KPI-Engine ───────────────────────────────────────────────────────────────
-// 🔴 CRITICAL FIX 2026-05-14: calcKPIs() MUST use financial period dates, NOT created_at!
-// getFinancialPeriodDate() returns: courtage_received_date > courtage_invoiced_date > entry_date
+/**
+ * 🔴 CRITICAL: Get financial period date (NEVER created_at!)
+ * Priority: courtage_received_date > courtage_invoiced_date > entry_date
+ */
+export function getFinancialPeriodDate(entry) {
+  const e = normalizeLegacyEntry(entry)
+  return e.courtage_received_date || e.courtage_invoiced_date || e.entry_date
+}
+
+/**
+ * Calculate KPIs for ALL entries (global aggregate)
+ */
 export function calcKPIs(entries) {
+  return calcKPIsForPeriod(entries, null, null)
+}
+
+/**
+ * 🔴 CRITICAL: Calculate KPIs for specific financial period
+ * @param entries - Commission entries
+ * @param periodStart - Date (inclusive) or null for all
+ * @param periodEnd - Date (inclusive) or null for all
+ * 
+ * Uses financial period dates ONLY, never created_at
+ */
+export function calcKPIsForPeriod(entries, periodStart = null, periodEnd = null) {
   const normalized = entries.map(normalizeLegacyEntry)
-  const active           = normalized.filter(e => !e.archived)
+  
+  // Filter by financial period (if specified)
+  let filtered = normalized.filter(e => !e.archived)
+  
+  if (periodStart && periodEnd) {
+    filtered = filtered.filter(e => {
+      const financialDate = getFinancialPeriodDate(e)
+      if (!financialDate) return false
+      const d = new Date(financialDate)
+      return d >= periodStart && d <= periodEnd
+    })
+  }
+  
+  const active = filtered
   
   // ENTERPRISE: Consistency check log (non-blocking)
   const inconsistencies = active
@@ -178,11 +220,8 @@ export function calcKPIs(entries) {
     console.warn(`[calcKPIs] ⚠️ ${inconsistencies.length} entries with consistency warnings`)
   }
   
-  // 🔴 CRITICAL: Filter by FINANCIAL period, not created_at
-  // This ensures KPI align with financial reporting periods
   const nonCancCourtage  = active.filter(e => {
     if ((e.courtage_status || e.status) === 'cancelled') return false
-    // Entry is included if it has Courtage data (any status = includes pending too)
     return true
   })
   const nonCancProvision = active.filter(e => {
@@ -300,20 +339,16 @@ export function calcMonthlyTrend(entries, monthsBack = 12) {
     const year  = d.getFullYear()
     const month = d.getMonth() + 1
     const label = d.toLocaleDateString('de-CH', { month: 'short', year: '2-digit' })
-    // 🔴 CRITICAL FIX: Nutze FINANZDATUM, NICHT entry_date!
-    // getFinancialPeriodDate() returns: courtage_received_date > courtage_invoiced_date > entry_date
     const periodStart = d
     const periodEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0)
     
     const me = active.filter(e => {
-      // Courtage-Datum prüfen
       const courtageDate = e.courtage_received_date || e.courtage_invoiced_date || e.entry_date
       if (courtageDate) {
         const cd = new Date(courtageDate)
         if (cd >= periodStart && cd <= periodEnd) return true
       }
       
-      // Provision-Datum prüfen (wenn Courtage nicht passt)
       const provisionDate = e.provision_received_date || e.provision_invoiced_date || e.entry_date
       if (provisionDate) {
         const pd = new Date(provisionDate)
