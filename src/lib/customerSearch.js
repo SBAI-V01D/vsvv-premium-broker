@@ -39,6 +39,7 @@ function scoreCustomer(customer, tokens) {
   const fields = [
     customer.first_name,
     customer.last_name,
+    customer.company_name,
     customer.email,
     customer.city,
     customer.profession,
