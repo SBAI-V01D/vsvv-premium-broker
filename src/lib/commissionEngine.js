@@ -289,10 +289,27 @@ export function calcMonthlyTrend(entries, monthsBack = 12) {
     const year  = d.getFullYear()
     const month = d.getMonth() + 1
     const label = d.toLocaleDateString('de-CH', { month: 'short', year: '2-digit' })
+    // 🔴 CRITICAL FIX: Nutze FINANZDATUM, NICHT entry_date!
+    // getFinancialPeriodDate() returns: courtage_received_date > courtage_invoiced_date > entry_date
+    const periodStart = d
+    const periodEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+    
     const me = active.filter(e => {
-      if (!e.entry_date) return false
-      const ed = new Date(e.entry_date)
-      return ed.getFullYear() === year && (ed.getMonth() + 1) === month
+      // Courtage-Datum prüfen
+      const courtageDate = e.courtage_received_date || e.courtage_invoiced_date || e.entry_date
+      if (courtageDate) {
+        const cd = new Date(courtageDate)
+        if (cd >= periodStart && cd <= periodEnd) return true
+      }
+      
+      // Provision-Datum prüfen (wenn Courtage nicht passt)
+      const provisionDate = e.provision_received_date || e.provision_invoiced_date || e.entry_date
+      if (provisionDate) {
+        const pd = new Date(provisionDate)
+        if (pd >= periodStart && pd <= periodEnd) return true
+      }
+      
+      return false
     })
     months.push({
       label, year, month,
