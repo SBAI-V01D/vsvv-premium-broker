@@ -21,7 +21,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
   const [uploadMode, setUploadMode] = useState(null)
   const [file, setFile] = useState(null)
   const [fileError, setFileError] = useState('')
-  const [form, setForm] = useState({ name: '', notes: '', customer_id: '', contract_id: '' })
+  const [form, setForm] = useState({ name: '', notes: '', customer_id: '', contract_id: '', primary_customer_id: '', is_family_member: false })
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0) // 0-100
   const [uploadError, setUploadError] = useState('')
@@ -41,13 +41,15 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
   })
 
   const selectedCustomer = customers.find(c => c.id === form.customer_id)
+  const selectedPrimaryCustomer = customers.find(c => c.id === form.primary_customer_id)
   const customerContracts = contracts.filter(c => c.customer_id === form.customer_id)
+  const primaryCustomerContracts = contracts.filter(c => c.customer_id === form.primary_customer_id)
 
   const reset = () => {
     setUploadMode(null)
     setFile(null)
     setFileError('')
-    setForm({ name: '', notes: '', customer_id: '', contract_id: '' })
+    setForm({ name: '', notes: '', customer_id: '', contract_id: '', primary_customer_id: '', is_family_member: false })
     setUploading(false)
     setUploadProgress(0)
     setUploadError('')
@@ -133,6 +135,8 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
         customer_id: form.customer_id || undefined,
         customer_name: selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : undefined,
         linked_contract_id: form.contract_id || undefined,
+        primary_customer_id: form.primary_customer_id || undefined,
+        is_family_member: form.is_family_member,
       })
       setUploadProgress(90)
     }
@@ -249,15 +253,33 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
               <>
                 <div>
                   <Label>Kunde (optional)</Label>
-                  <Select value={form.customer_id} onValueChange={v => setForm(p => ({ ...p, customer_id: v, contract_id: '' }))}>
+                  <Select value={form.customer_id} onValueChange={v => setForm(p => ({ ...p, customer_id: v, contract_id: '', is_family_member: false, primary_customer_id: '' }))}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Kunden auswählen..." /></SelectTrigger>
                     <SelectContent>
                       {customers.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.first_name} {c.last_name}
+                          {c.is_family_member ? ` (Familienmitglied)` : ''}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+                
+                {form.customer_id && selectedCustomer?.is_family_member && (
+                  <div>
+                    <Label>Dem Hauptkontakt zuweisen</Label>
+                    <Select value={form.primary_customer_id} onValueChange={v => setForm(p => ({ ...p, primary_customer_id: v, is_family_member: !!v }))}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Hauptkontakt auswählen..." /></SelectTrigger>
+                      <SelectContent>
+                        {customers.filter(c => c.id === selectedCustomer.primary_customer_id).map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                
                 {form.customer_id && customerContracts.length > 0 && (
                   <div>
                     <Label>Verknüpfter Vertrag (optional)</Label>
