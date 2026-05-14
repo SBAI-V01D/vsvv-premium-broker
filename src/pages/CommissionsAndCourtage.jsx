@@ -24,34 +24,25 @@ const SWISS_INSURERS = [
 const ALL_SPARTEN = ['KVG', 'VVG', 'Leben', 'Sach', 'KFZ', 'BVG', 'Rechtsschutz', 'Haftpflicht', 'Hausrat']
 
 const STATUS_OPTIONS = [
-  { value: 'erwartet', label: 'Erwartet', color: 'bg-gray-100 text-gray-700' },
-  { value: 'abgerechnet', label: 'Abgerechnet', color: 'bg-green-100 text-green-700' },
-  { value: 'teilweise_abgerechnet', label: 'Teilweise', color: 'bg-orange-100 text-orange-700' },
-  { value: 'storniert', label: 'Storniert', color: 'bg-red-100 text-red-700' },
+  { value: 'pending', label: 'Ausstehend', color: 'bg-gray-100 text-gray-700' },
+  { value: 'invoiced', label: 'Eingereicht', color: 'bg-blue-100 text-blue-700' },
+  { value: 'received', label: 'Erhalten', color: 'bg-yellow-100 text-yellow-700' },
+  { value: 'earned', label: 'Freigegeben', color: 'bg-indigo-100 text-indigo-700' },
+  { value: 'paid', label: 'Ausbezahlt', color: 'bg-green-100 text-green-700' },
+  { value: 'cancelled', label: 'Storniert', color: 'bg-red-100 text-red-700' },
 ]
 
-// ─── Pure calculation logic (central, no side effects) ───────────────────────
+// ─── Pure calculation logic mapped to CommissionEntry entity fields ──────────
 function calcCommissionFields(data, globalStornoPct = 10) {
-  const gross = parseFloat(data.gross_commission) || 0
-  const companySPercent = parseFloat(data.company_share_percent) ?? 40
-  const brokerSPercent = parseFloat(data.broker_share_percent) || 0
-  const stornoPct = parseFloat(data.storno_percent) ?? globalStornoPct
-
-  const companyShare = (gross * companySPercent) / 100
-  const brokerShare = (gross * brokerSPercent) / 100
-  const stornoAmount = (brokerShare * stornoPct) / 100
-  const netPayout = brokerShare - stornoAmount
+  const premiumYearly = parseFloat(data.premium_yearly) || 0
+  const commissionPct = parseFloat(data.commission_percentage) || 0
+  const commissionAmount = (premiumYearly * commissionPct) / 100
 
   return {
     ...data,
-    gross_commission: gross,
-    company_share_percent: companySPercent,
-    broker_share_percent: brokerSPercent,
-    storno_percent: stornoPct,
-    company_share_amount: companyShare,
-    broker_share_amount: brokerShare,
-    storno_amount: stornoAmount,
-    net_payout: netPayout,
+    premium_yearly: premiumYearly,
+    commission_percentage: commissionPct,
+    commission_amount: commissionAmount,
   }
 }
 
@@ -160,27 +151,22 @@ function CustomerSearchField({ value, customerId, onChange, customers }) {
 }
 
 // ─── Auto-Calc Preview component ─────────────────────────────────────────────
-function CommissionPreview({ data, globalStornoPct }) {
-  const calc = calcCommissionFields(data, globalStornoPct)
-  const gross = calc.gross_commission
-  if (!gross) return null
+function CommissionPreview({ data }) {
+  const calc = calcCommissionFields(data)
+  if (!calc.premium_yearly) return null
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 grid grid-cols-2 gap-2 text-sm">
       <div>
-        <p className="text-xs text-blue-500 uppercase font-semibold">Anteil Gesellschaft</p>
-        <p className="font-bold text-blue-800">{formatCHF(calc.company_share_amount)}</p>
+        <p className="text-xs text-blue-500 uppercase font-semibold">Jahresprämie</p>
+        <p className="font-bold text-blue-800">{formatCHF(calc.premium_yearly)}</p>
       </div>
       <div>
-        <p className="text-xs text-blue-500 uppercase font-semibold">Anteil Berater</p>
-        <p className="font-bold text-blue-800">{formatCHF(calc.broker_share_amount)}</p>
+        <p className="text-xs text-blue-500 uppercase font-semibold">Provisionssatz</p>
+        <p className="font-bold text-blue-800">{calc.commission_percentage}%</p>
       </div>
-      <div>
-        <p className="text-xs text-red-500 uppercase font-semibold">Storno-Abzug</p>
-        <p className="font-bold text-red-700">–{formatCHF(calc.storno_amount)}</p>
-      </div>
-      <div>
-        <p className="text-xs text-green-600 uppercase font-semibold">Netto-Auszahlung</p>
-        <p className="font-bold text-green-700">{formatCHF(calc.net_payout)}</p>
+      <div className="col-span-2">
+        <p className="text-xs text-green-600 uppercase font-semibold">Berechnete Provision</p>
+        <p className="font-bold text-green-700 text-lg">{formatCHF(calc.commission_amount)}</p>
       </div>
     </div>
   )
@@ -189,13 +175,15 @@ function CommissionPreview({ data, globalStornoPct }) {
 // ─── Validation ──────────────────────────────────────────────────────────────
 function validateForm(data) {
   const errors = {}
-  if (!data.settlement_date) errors.settlement_date = 'Pflichtfeld'
+  if (!data.entry_date) errors.entry_date = 'Pflichtfeld'
   if (!data.insurer) errors.insurer = 'Pflichtfeld'
-  if (!data.broker_email) errors.broker_email = 'Pflichtfeld'
+  if (!data.advisor_id) errors.advisor_id = 'Pflichtfeld'
+  if (!data.organization_id) errors.organization_id = 'Pflichtfeld'
   if (!data.customer_name) errors.customer_name = 'Pflichtfeld'
-  if (!data.sparte) errors.sparte = 'Pflichtfeld'
-  if (!data.gross_commission || parseFloat(data.gross_commission) <= 0) errors.gross_commission = 'Muss > 0 sein'
-  if (parseFloat(data.gross_commission) > 500000) errors.gross_commission = 'Unrealistisch hoch – bitte prüfen'
+  if (!data.product_category) errors.product_category = 'Pflichtfeld'
+  if (!data.premium_yearly || parseFloat(data.premium_yearly) <= 0) errors.premium_yearly = 'Muss > 0 sein'
+  if (!data.commission_percentage || parseFloat(data.commission_percentage) <= 0) errors.commission_percentage = 'Muss > 0 sein'
+  if (parseFloat(data.commission_percentage) > 100) errors.commission_percentage = 'Maximal 100%'
   return errors
 }
 
@@ -220,7 +208,12 @@ export default function CommissionsAndCourtage() {
   // ── Data queries ──────────────────────────────────────────────────────────
   const { data: entries = [] } = useQuery({
     queryKey: ['commissionEntries'],
-    queryFn: () => base44.entities.CommissionEntry.list('-settlement_date'),
+    queryFn: () => base44.entities.CommissionEntry.list('-entry_date'),
+  })
+
+  const { data: organizations = [] } = useQuery({
+    queryKey: ['organizations'],
+    queryFn: () => base44.entities.Organization.filter({ status: 'active' }),
   })
 
   const { data: stornoConfig = {} } = useQuery({
@@ -277,10 +270,10 @@ export default function CommissionsAndCourtage() {
 
   const handleNewEntry = () => {
     setFormData({
-      company_share_percent: 40,
-      storno_percent: globalStornoPct,
-      status: 'erwartet',
-      settlement_date: new Date().toISOString().split('T')[0],
+      status: 'pending',
+      entry_date: new Date().toISOString().split('T')[0],
+      commission_percentage: 0,
+      premium_yearly: 0,
     })
     setEditingEntry(null)
     setFormErrors({})
@@ -323,58 +316,57 @@ export default function CommissionsAndCourtage() {
   // ── Filters & KPIs ────────────────────────────────────────────────────────
   const filteredEntries = useMemo(() => {
     return entries.filter(e => {
-      const searchStr = `${e.customer_name} ${e.insurer} ${e.sparte} ${e.broker_name}`.toLowerCase()
+      const searchStr = `${e.customer_name} ${e.insurer} ${e.product_category} ${e.advisor_name}`.toLowerCase()
       const matchSearch = !search.trim() || searchStr.includes(search.toLowerCase())
-      const matchBroker = filterBroker === 'all' || e.broker_email === filterBroker
+      const matchBroker = filterBroker === 'all' || e.advisor_id === filterBroker
       const matchInsurer = filterInsurer === 'all' || e.insurer === filterInsurer
-      const matchSparte = filterSparte === 'all' || e.sparte === filterSparte
+      const matchSparte = filterSparte === 'all' || e.product_category === filterSparte
       const matchStatus = filterStatus === 'all' || e.status === filterStatus
-      const entryDate = new Date(e.settlement_date)
+      const entryDate = new Date(e.entry_date)
       const matchPeriod = entryDate.getFullYear().toString() === filterYear &&
                           String(entryDate.getMonth() + 1).padStart(2, '0') === filterMonth
       return matchSearch && matchBroker && matchInsurer && matchSparte && matchStatus && matchPeriod
     })
   }, [entries, search, filterBroker, filterInsurer, filterSparte, filterStatus, filterYear, filterMonth])
 
-  const allActiveEntries = entries.filter(e => e.status !== 'storniert')
+  const allActiveEntries = entries.filter(e => e.status !== 'cancelled')
   const kpis = {
-    expectedTotal: allActiveEntries.reduce((s, e) => s + (e.gross_commission || 0), 0),
-    settledTotal: filteredEntries.filter(e => e.status === 'abgerechnet').reduce((s, e) => s + (e.gross_commission || 0), 0),
+    expectedTotal: allActiveEntries.reduce((s, e) => s + (e.commission_amount || 0), 0),
+    settledTotal: filteredEntries.filter(e => e.status === 'paid').reduce((s, e) => s + (e.commission_amount || 0), 0),
     avgCommission: filteredEntries.length > 0
-      ? filteredEntries.reduce((s, e) => s + (e.gross_commission || 0), 0) / filteredEntries.length : 0,
-    companyShareTotal: filteredEntries.reduce((s, e) => s + (e.company_share_amount || 0), 0),
-    brokerShareTotal: filteredEntries.reduce((s, e) => s + (e.broker_share_amount || 0), 0),
-    stornoTotal: filteredEntries.reduce((s, e) => s + (e.storno_amount || 0), 0),
-    netPayoutTotal: filteredEntries.reduce((s, e) => s + (e.net_payout || 0), 0),
+      ? filteredEntries.reduce((s, e) => s + (e.commission_amount || 0), 0) / filteredEntries.length : 0,
+    premiumTotal: filteredEntries.reduce((s, e) => s + (e.premium_yearly || 0), 0),
+    commissionTotal: filteredEntries.reduce((s, e) => s + (e.commission_amount || 0), 0),
+    receivedTotal: filteredEntries.reduce((s, e) => s + (e.received_amount || 0), 0),
+    netPayoutTotal: filteredEntries.filter(e => e.status === 'earned' || e.status === 'paid').reduce((s, e) => s + (e.commission_amount || 0), 0),
   }
 
   const brokerStats = useMemo(() => {
     const map = {}
-    entries.filter(e => e.status !== 'storniert').forEach(e => {
-      const key = e.broker_email || e.broker_name || '–'
-      if (!map[key]) map[key] = { name: e.broker_name || e.broker_email || '–', gross: 0, net: 0, storno: 0, count: 0, earned: 0 }
-      map[key].gross += e.gross_commission || 0
-      map[key].net += e.net_payout || 0
-      map[key].storno += e.storno_amount || 0
+    entries.filter(e => e.status !== 'cancelled').forEach(e => {
+      const key = e.advisor_id || e.advisor_name || '–'
+      if (!map[key]) map[key] = { name: e.advisor_name || '–', commission: 0, received: 0, count: 0, paid: 0 }
+      map[key].commission += e.commission_amount || 0
+      map[key].received += e.received_amount || 0
       map[key].count += 1
-      if (e.status === 'abgerechnet') map[key].earned += e.net_payout || 0
+      if (e.status === 'paid') map[key].paid += e.commission_amount || 0
     })
-    return Object.values(map).sort((a, b) => b.gross - a.gross)
+    return Object.values(map).sort((a, b) => b.commission - a.commission)
   }, [entries])
 
-  const stornoEntries = useMemo(() => entries.filter(e => e.status === 'storniert'), [entries])
-  const stornoRisk = useMemo(() => entries.filter(e => e.status === 'erwartet').reduce((s, e) => s + (e.storno_amount || 0), 0), [entries])
+  const stornoEntries = useMemo(() => entries.filter(e => e.status === 'cancelled'), [entries])
+  const stornoRisk = useMemo(() => entries.filter(e => e.status === 'pending').reduce((s, e) => s + (e.commission_amount || 0), 0), [entries])
 
-  const uniqueBrokers = [...new Set(entries.map(e => e.broker_email).filter(Boolean))]
+  const uniqueBrokers = [...new Map(entries.filter(e => e.advisor_id).map(e => [e.advisor_id, { id: e.advisor_id, name: e.advisor_name || e.advisor_id }])).values()]
   const uniqueInsurers = [...new Set(entries.map(e => e.insurer).filter(Boolean))]
 
   const handleCSVExport = () => {
-    const headers = ['Datum', 'Gesellschaft', 'Berater', 'Kunde', 'Sparte', 'Produkt', 'Policen-Nr.', 'Brutto (CHF)', 'Anteil Berater (CHF)', 'Storno (CHF)', 'Netto (CHF)', 'Status']
+    const headers = ['Datum', 'Gesellschaft', 'Berater', 'Kunde', 'Sparte', 'Policen-Nr.', 'Jahresprämie (CHF)', 'Provision %', 'Provision (CHF)', 'Erhalten (CHF)', 'Status']
     const rows = filteredEntries.map(e => [
-      e.settlement_date || '', e.insurer || '', e.broker_name || e.broker_email || '',
-      e.customer_name || '', e.sparte || '', e.product || '', e.policy_number || '',
-      (e.gross_commission || 0).toFixed(2), (e.broker_share_amount || 0).toFixed(2),
-      (e.storno_amount || 0).toFixed(2), (e.net_payout || 0).toFixed(2), e.status || '',
+      e.entry_date || '', e.insurer || '', e.advisor_name || '',
+      e.customer_name || '', e.product_category || '', e.policy_number || '',
+      (e.premium_yearly || 0).toFixed(2), (e.commission_percentage || 0).toFixed(2),
+      (e.commission_amount || 0).toFixed(2), (e.received_amount || 0).toFixed(2), e.status || '',
     ])
     const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n')
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
@@ -496,7 +488,7 @@ export default function CommissionsAndCourtage() {
                 <SelectTrigger className="w-44"><SelectValue placeholder="Alle Berater" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Alle Berater</SelectItem>
-                  {uniqueBrokers.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                  {uniqueBrokers.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             )}
@@ -536,10 +528,10 @@ export default function CommissionsAndCourtage() {
                       <th className="text-left py-3 px-4 font-semibold">Berater</th>
                       <th className="text-left py-3 px-4 font-semibold">Kunde</th>
                       <th className="text-left py-3 px-4 font-semibold">Sparte</th>
-                      <th className="text-right py-3 px-4 font-semibold">Brutto</th>
-                      <th className="text-right py-3 px-4 font-semibold">Anteil Berater</th>
-                      <th className="text-right py-3 px-4 font-semibold">Storno</th>
-                      <th className="text-right py-3 px-4 font-semibold">Netto</th>
+                      <th className="text-right py-3 px-4 font-semibold">Jahresprämie</th>
+                      <th className="text-right py-3 px-4 font-semibold">Satz %</th>
+                      <th className="text-right py-3 px-4 font-semibold">Erhalten</th>
+                      <th className="text-right py-3 px-4 font-semibold">Provision</th>
                       <th className="text-center py-3 px-4 font-semibold">Status</th>
                       <th className="w-12"></th>
                     </tr>
@@ -551,15 +543,15 @@ export default function CommissionsAndCourtage() {
                       const sm = getStatusMeta(e.status)
                       return (
                         <tr key={e.id} className="border-b hover:bg-muted/30">
-                          <td className="py-3 px-4 whitespace-nowrap">{formatDate(e.settlement_date)}</td>
+                          <td className="py-3 px-4 whitespace-nowrap">{formatDate(e.entry_date)}</td>
                           <td className="py-3 px-4 font-medium">{e.insurer}</td>
-                          <td className="py-3 px-4">{e.broker_name || e.broker_email || '–'}</td>
+                          <td className="py-3 px-4">{e.advisor_name || '–'}</td>
                           <td className="py-3 px-4">{e.customer_name || '–'}</td>
-                          <td className="py-3 px-4">{e.sparte}</td>
-                          <td className="text-right py-3 px-4 font-semibold">{formatCHF(e.gross_commission)}</td>
-                          <td className="text-right py-3 px-4">{formatCHF(e.broker_share_amount)}</td>
-                          <td className="text-right py-3 px-4 text-red-600">–{formatCHF(e.storno_amount)}</td>
-                          <td className="text-right py-3 px-4 font-bold text-green-600">{formatCHF(e.net_payout)}</td>
+                          <td className="py-3 px-4">{e.product_category || '–'}</td>
+                          <td className="text-right py-3 px-4 font-semibold">{formatCHF(e.premium_yearly)}</td>
+                          <td className="text-right py-3 px-4">{e.commission_percentage ? `${e.commission_percentage}%` : '–'}</td>
+                          <td className="text-right py-3 px-4 text-muted-foreground">{formatCHF(e.received_amount)}</td>
+                          <td className="text-right py-3 px-4 font-bold text-green-600">{formatCHF(e.commission_amount)}</td>
                           <td className="text-center py-3 px-4">
                             <span className={`text-xs px-2 py-1 rounded-full font-medium ${sm.color}`}>{sm.label}</span>
                           </td>
@@ -599,45 +591,42 @@ export default function CommissionsAndCourtage() {
                 <tr className="border-b bg-muted/40">
                   <th className="text-left py-3 px-4 font-semibold">Berater</th>
                   <th className="text-right py-3 px-4 font-semibold">Anzahl</th>
-                  <th className="text-right py-3 px-4 font-semibold">Brutto</th>
-                  <th className="text-right py-3 px-4 font-semibold">Storno-Abzug</th>
-                  <th className="text-right py-3 px-4 font-semibold">Netto</th>
-                  <th className="text-right py-3 px-4 font-semibold">Abgerechnet</th>
+                  <th className="text-right py-3 px-4 font-semibold">Provision (gesamt)</th>
+                  <th className="text-right py-3 px-4 font-semibold">Erhalten</th>
+                  <th className="text-right py-3 px-4 font-semibold">Ausbezahlt</th>
                 </tr>
               </thead>
               <tbody>
                 {brokerStats.length === 0 ? (
-                  <tr><td colSpan="6" className="text-center py-8 text-muted-foreground">Keine Daten</td></tr>
+                <tr><td colSpan="5" className="text-center py-8 text-muted-foreground">Keine Daten</td></tr>
                 ) : brokerStats.map((b, i) => (
-                  <tr key={i} className="border-b hover:bg-muted/30">
-                    <td className="py-3 px-4 font-medium">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                          {b.name[0]}
-                        </div>
-                        {b.name}
+                <tr key={i} className="border-b hover:bg-muted/30">
+                  <td className="py-3 px-4 font-medium">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                        {b.name[0]}
                       </div>
-                    </td>
-                    <td className="text-right py-3 px-4 text-muted-foreground">{b.count}</td>
-                    <td className="text-right py-3 px-4 font-semibold">{formatCHF(b.gross)}</td>
-                    <td className="text-right py-3 px-4 text-red-600">–{formatCHF(b.storno)}</td>
-                    <td className="text-right py-3 px-4 font-bold text-green-600">{formatCHF(b.net)}</td>
-                    <td className="text-right py-3 px-4">{formatCHF(b.earned)}</td>
-                  </tr>
+                      {b.name}
+                    </div>
+                  </td>
+                  <td className="text-right py-3 px-4 text-muted-foreground">{b.count}</td>
+                  <td className="text-right py-3 px-4 font-semibold">{formatCHF(b.commission)}</td>
+                  <td className="text-right py-3 px-4 text-blue-600">{formatCHF(b.received)}</td>
+                  <td className="text-right py-3 px-4 font-bold text-green-600">{formatCHF(b.paid)}</td>
+                </tr>
                 ))}
-              </tbody>
-              {brokerStats.length > 0 && (
+                </tbody>
+                {brokerStats.length > 0 && (
                 <tfoot>
-                  <tr className="bg-muted/40 font-bold">
-                    <td className="py-3 px-4">Total</td>
-                    <td className="text-right py-3 px-4">{brokerStats.reduce((s, b) => s + b.count, 0)}</td>
-                    <td className="text-right py-3 px-4">{formatCHF(brokerStats.reduce((s, b) => s + b.gross, 0))}</td>
-                    <td className="text-right py-3 px-4 text-red-600">–{formatCHF(brokerStats.reduce((s, b) => s + b.storno, 0))}</td>
-                    <td className="text-right py-3 px-4 text-green-600">{formatCHF(brokerStats.reduce((s, b) => s + b.net, 0))}</td>
-                    <td className="text-right py-3 px-4">{formatCHF(brokerStats.reduce((s, b) => s + b.earned, 0))}</td>
-                  </tr>
+                <tr className="bg-muted/40 font-bold">
+                  <td className="py-3 px-4">Total</td>
+                  <td className="text-right py-3 px-4">{brokerStats.reduce((s, b) => s + b.count, 0)}</td>
+                  <td className="text-right py-3 px-4">{formatCHF(brokerStats.reduce((s, b) => s + b.commission, 0))}</td>
+                  <td className="text-right py-3 px-4 text-blue-600">{formatCHF(brokerStats.reduce((s, b) => s + b.received, 0))}</td>
+                  <td className="text-right py-3 px-4 text-green-600">{formatCHF(brokerStats.reduce((s, b) => s + b.paid, 0))}</td>
+                </tr>
                 </tfoot>
-              )}
+                )}
             </table>
           </CardContent></Card>
         </TabsContent>
@@ -658,16 +647,16 @@ export default function CommissionsAndCourtage() {
               </thead>
               <tbody>
                 {stornoEntries.length === 0 ? (
-                  <tr><td colSpan="6" className="text-center py-8 text-muted-foreground">Keine Storni vorhanden ✓</td></tr>
+                <tr><td colSpan="6" className="text-center py-8 text-muted-foreground">Keine Storni vorhanden ✓</td></tr>
                 ) : stornoEntries.map(e => (
-                  <tr key={e.id} className="border-b hover:bg-red-50/40">
-                    <td className="py-3 px-4">{formatDate(e.settlement_date)}</td>
-                    <td className="py-3 px-4">{e.insurer}</td>
-                    <td className="py-3 px-4">{e.broker_name || e.broker_email}</td>
-                    <td className="py-3 px-4">{e.customer_name}</td>
-                    <td className="text-right py-3 px-4 line-through text-muted-foreground">{formatCHF(e.gross_commission)}</td>
-                    <td className="text-right py-3 px-4 font-bold text-red-600">–{formatCHF(e.net_payout)}</td>
-                  </tr>
+                <tr key={e.id} className="border-b hover:bg-red-50/40">
+                  <td className="py-3 px-4">{formatDate(e.entry_date)}</td>
+                  <td className="py-3 px-4">{e.insurer}</td>
+                  <td className="py-3 px-4">{e.advisor_name || '–'}</td>
+                  <td className="py-3 px-4">{e.customer_name}</td>
+                  <td className="text-right py-3 px-4 line-through text-muted-foreground">{formatCHF(e.premium_yearly)}</td>
+                  <td className="text-right py-3 px-4 font-bold text-red-600">–{formatCHF(e.commission_amount)}</td>
+                </tr>
                 ))}
               </tbody>
             </table>
@@ -691,17 +680,17 @@ export default function CommissionsAndCourtage() {
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">1. Basisdaten</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-semibold">Abrechnungsdatum *</label>
+                  <label className="text-sm font-semibold">Buchungsdatum *</label>
                   <Input type="date"
-                    value={formData.settlement_date || ''}
-                    onChange={e => handleFormChange({ settlement_date: e.target.value })}
-                    className={`mt-1 ${formErrors.settlement_date ? 'border-red-400' : ''}`}
+                    value={formData.entry_date || ''}
+                    onChange={e => handleFormChange({ entry_date: e.target.value })}
+                    className={`mt-1 ${formErrors.entry_date ? 'border-red-400' : ''}`}
                   />
-                  {formErrors.settlement_date && <p className="text-xs text-red-500 mt-0.5">{formErrors.settlement_date}</p>}
+                  {formErrors.entry_date && <p className="text-xs text-red-500 mt-0.5">{formErrors.entry_date}</p>}
                 </div>
                 <div>
                   <label className="text-sm font-semibold">Status *</label>
-                  <Select value={formData.status || 'erwartet'} onValueChange={v => handleFormChange({ status: v })}>
+                  <Select value={formData.status || 'pending'} onValueChange={v => handleFormChange({ status: v })}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
@@ -727,21 +716,39 @@ export default function CommissionsAndCourtage() {
                 </div>
                 <div>
                   <label className="text-sm font-semibold">Berater / Adressvermittler *</label>
-                  <Select value={formData.broker_email || ''} onValueChange={v => {
-                    const broker = brokers.find(b => b.email === v)
-                    handleFormChange({ broker_email: v, broker_name: broker?.name || '' })
+                  <Select value={formData.advisor_id || ''} onValueChange={v => {
+                    const broker = brokers.find(b => b.id === v)
+                    handleFormChange({ advisor_id: v, advisor_name: broker?.name || '' })
                   }}>
-                    <SelectTrigger className={`mt-1 ${formErrors.broker_email ? 'border-red-400' : ''}`}>
+                    <SelectTrigger className={`mt-1 ${formErrors.advisor_id ? 'border-red-400' : ''}`}>
                       <SelectValue placeholder="Berater wählen..." />
                     </SelectTrigger>
                     <SelectContent>
                       {brokers.length === 0
                         ? <SelectItem value="_none" disabled>Keine Berater vorhanden</SelectItem>
-                        : brokers.map(b => <SelectItem key={b.id} value={b.email}>{b.name}</SelectItem>)
+                        : brokers.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)
                       }
                     </SelectContent>
                   </Select>
-                  {formErrors.broker_email && <p className="text-xs text-red-500 mt-0.5">{formErrors.broker_email}</p>}
+                  {formErrors.advisor_id && <p className="text-xs text-red-500 mt-0.5">{formErrors.advisor_id}</p>}
+                </div>
+                <div>
+                  <label className="text-sm font-semibold">Organisation *</label>
+                  <Select value={formData.organization_id || ''} onValueChange={v => {
+                    const org = organizations.find(o => o.id === v)
+                    handleFormChange({ organization_id: v, organization_name: org?.name || '' })
+                  }}>
+                    <SelectTrigger className={`mt-1 ${formErrors.organization_id ? 'border-red-400' : ''}`}>
+                      <SelectValue placeholder="Organisation wählen..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {organizations.length === 0
+                        ? <SelectItem value="_none" disabled>Keine Organisationen vorhanden</SelectItem>
+                        : organizations.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)
+                      }
+                    </SelectContent>
+                  </Select>
+                  {formErrors.organization_id && <p className="text-xs text-red-500 mt-0.5">{formErrors.organization_id}</p>}
                 </div>
               </div>
             </div>
@@ -763,22 +770,16 @@ export default function CommissionsAndCourtage() {
                   {formErrors.insurer && <p className="text-xs text-red-500 mt-0.5">{formErrors.insurer}</p>}
                 </div>
                 <div>
-                  <label className="text-sm font-semibold">Sparte *</label>
-                  <Select value={formData.sparte || ''} onValueChange={v => handleFormChange({ sparte: v })}>
-                    <SelectTrigger className={`mt-1 ${formErrors.sparte ? 'border-red-400' : ''}`}>
+                  <label className="text-sm font-semibold">Sparte / Produktkategorie *</label>
+                  <Select value={formData.product_category || ''} onValueChange={v => handleFormChange({ product_category: v })}>
+                    <SelectTrigger className={`mt-1 ${formErrors.product_category ? 'border-red-400' : ''}`}>
                       <SelectValue placeholder="Wählen..." />
                     </SelectTrigger>
                     <SelectContent>
                       {ALL_SPARTEN.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  {formErrors.sparte && <p className="text-xs text-red-500 mt-0.5">{formErrors.sparte}</p>}
-                </div>
-                <div>
-                  <label className="text-sm font-semibold">Produkt / Tarif</label>
-                  <Input value={formData.product || ''}
-                    onChange={e => handleFormChange({ product: e.target.value })}
-                    className="mt-1" placeholder="z.B. myFlex, Basis, etc." />
+                  {formErrors.product_category && <p className="text-xs text-red-500 mt-0.5">{formErrors.product_category}</p>}
                 </div>
                 <div>
                   <label className="text-sm font-semibold">Policen-Nummer</label>
@@ -794,41 +795,44 @@ export default function CommissionsAndCourtage() {
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">4. Provision & Berechnung</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-semibold">Brutto-Provision (CHF) *</label>
+                  <label className="text-sm font-semibold">Jahresprämie (CHF) *</label>
                   <Input type="number" step="0.01" min="0"
-                    value={formData.gross_commission || ''}
-                    onChange={e => handleFormChange({ gross_commission: e.target.value })}
-                    className={`mt-1 ${formErrors.gross_commission ? 'border-red-400' : ''}`}
+                    value={formData.premium_yearly || ''}
+                    onChange={e => handleFormChange({ premium_yearly: e.target.value })}
+                    className={`mt-1 ${formErrors.premium_yearly ? 'border-red-400' : ''}`}
                     placeholder="0.00"
                   />
-                  {formErrors.gross_commission && <p className="text-xs text-red-500 mt-0.5">{formErrors.gross_commission}</p>}
+                  {formErrors.premium_yearly && <p className="text-xs text-red-500 mt-0.5">{formErrors.premium_yearly}</p>}
                 </div>
                 <div>
-                  <label className="text-sm font-semibold">Anteil Gesellschaft (%)</label>
-                  <Input type="number" step="1" min="0" max="100"
-                    value={formData.company_share_percent ?? 40}
-                    onChange={e => handleFormChange({ company_share_percent: e.target.value })}
-                    className="mt-1" />
+                  <label className="text-sm font-semibold">Provisionssatz (%) *</label>
+                  <Input type="number" step="0.1" min="0" max="100"
+                    value={formData.commission_percentage || ''}
+                    onChange={e => handleFormChange({ commission_percentage: e.target.value })}
+                    className={`mt-1 ${formErrors.commission_percentage ? 'border-red-400' : ''}`}
+                    placeholder="z.B. 5"
+                  />
+                  {formErrors.commission_percentage && <p className="text-xs text-red-500 mt-0.5">{formErrors.commission_percentage}</p>}
                 </div>
                 <div>
-                  <label className="text-sm font-semibold">Anteil Berater (%)</label>
-                  <Input type="number" step="1" min="0" max="100"
-                    value={formData.broker_share_percent || ''}
-                    onChange={e => handleFormChange({ broker_share_percent: e.target.value })}
-                    className="mt-1" placeholder="z.B. 60" />
+                  <label className="text-sm font-semibold">Erhaltener Betrag (CHF)</label>
+                  <Input type="number" step="0.01" min="0"
+                    value={formData.received_amount || ''}
+                    onChange={e => handleFormChange({ received_amount: e.target.value })}
+                    className="mt-1" placeholder="0.00" />
                 </div>
                 <div>
-                  <label className="text-sm font-semibold">Storno-Abzug (%)</label>
-                  <Input type="number" step="1" min="0" max="100"
-                    value={formData.storno_percent ?? globalStornoPct}
-                    onChange={e => handleFormChange({ storno_percent: e.target.value })}
+                  <label className="text-sm font-semibold">Datum erhalten</label>
+                  <Input type="date"
+                    value={formData.received_date || ''}
+                    onChange={e => handleFormChange({ received_date: e.target.value })}
                     className="mt-1" />
                 </div>
               </div>
 
               {/* Live Preview */}
               <div className="mt-3">
-                <CommissionPreview data={formData} globalStornoPct={globalStornoPct} />
+                <CommissionPreview data={formData} />
               </div>
             </div>
 
