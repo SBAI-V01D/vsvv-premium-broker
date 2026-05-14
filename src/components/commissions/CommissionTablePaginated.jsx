@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Edit, Archive, MoreHorizontal, AlertTriangle } from 'lucide-react'
-import { formatCHF, formatDate, STATUS_META, STATUS_TRANSITIONS, checkEntryConsistency, normalizeLegacyEntry } from '@/lib/commissionEngine'
+import { formatCHF, formatDate, STATUS_META, STATUS_TRANSITIONS, checkEntryConsistency, calcKPIs, normalizeLegacyEntry } from '@/lib/commissionEngine'
 
 const PAGE_SIZE = 50
 
@@ -13,17 +13,19 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
   const normalized = useMemo(() => entries.map(normalizeLegacyEntry), [entries])
   const paginated  = useMemo(() => normalized.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [normalized, page])
 
+  // 🔴 CRITICAL: Use central calcKPIs engine (no local reduce)
+  const kpi = useMemo(() => calcKPIs(entries), [entries])
   const totals = useMemo(() => ({
-    premium:          entries.reduce((s, e) => s + (e.premium_yearly || 0), 0),
-    compCourtage:     normalized.reduce((s, e) => s + (e.company_courtage_amount || 0), 0),
-    advisorCourtage:  normalized.reduce((s, e) => s + (e.advisor_courtage_amount || 0), 0),   // Brutto
-    courtageReserve:  normalized.reduce((s, e) => s + (e.courtage_storno_amount || 0), 0),
-    courtagePayout:   normalized.reduce((s, e) => s + (e.courtage_payout_amount || 0), 0),   // Netto
-    compProvision:    normalized.reduce((s, e) => s + (e.company_provision_amount || 0), 0),
-    advisorProvision: normalized.reduce((s, e) => s + (e.advisor_provision_amount || 0), 0), // Brutto
-    provisionReserve: normalized.reduce((s, e) => s + (e.provision_storno_amount || 0), 0),
-    provisionPayout:  normalized.reduce((s, e) => s + (e.provision_payout_amount || 0), 0),  // Netto
-  }), [entries, normalized])
+    premium:          kpi.count > 0 ? entries.reduce((s, e) => s + (e.premium_yearly || 0), 0) : 0,  // Non-financial aggregation
+    compCourtage:     kpi.totalCourtageReceived,
+    advisorCourtage:  kpi.totalAdvisorCourtage,   // Brutto
+    courtageReserve:  kpi.totalCourtageReserve,
+    courtagePayout:   kpi.totalCourtagePayout,    // Netto
+    compProvision:    kpi.totalProvisionReceived,
+    advisorProvision: kpi.totalAdvisorProvision,  // Brutto
+    provisionReserve: kpi.totalProvisionReserve,
+    provisionPayout:  kpi.totalProvisionPayout,   // Netto
+  }), [kpi, entries])
 
   React.useEffect(() => { setPage(1) }, [entries.length])
 
