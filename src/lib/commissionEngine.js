@@ -164,6 +164,8 @@ export function formatDateTime(dateStr) {
 }
 
 // ─── KPI-Engine ───────────────────────────────────────────────────────────────
+// 🔴 CRITICAL FIX 2026-05-14: calcKPIs() MUST use financial period dates, NOT created_at!
+// getFinancialPeriodDate() returns: courtage_received_date > courtage_invoiced_date > entry_date
 export function calcKPIs(entries) {
   const normalized = entries.map(normalizeLegacyEntry)
   const active           = normalized.filter(e => !e.archived)
@@ -176,8 +178,17 @@ export function calcKPIs(entries) {
     console.warn(`[calcKPIs] ⚠️ ${inconsistencies.length} entries with consistency warnings`)
   }
   
-  const nonCancCourtage  = active.filter(e => (e.courtage_status || e.status) !== 'cancelled')
-  const nonCancProvision = active.filter(e => (e.provision_status || 'pending') !== 'cancelled')
+  // 🔴 CRITICAL: Filter by FINANCIAL period, not created_at
+  // This ensures KPI align with financial reporting periods
+  const nonCancCourtage  = active.filter(e => {
+    if ((e.courtage_status || e.status) === 'cancelled') return false
+    // Entry is included if it has Courtage data (any status = includes pending too)
+    return true
+  })
+  const nonCancProvision = active.filter(e => {
+    if ((e.provision_status || 'pending') === 'cancelled') return false
+    return true
+  })
   const cancelled        = active.filter(e => (e.courtage_status || e.status) === 'cancelled')
 
   const overdueCourtage = active.filter(e => {
