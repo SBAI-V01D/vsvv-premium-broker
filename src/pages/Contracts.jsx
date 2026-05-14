@@ -76,13 +76,13 @@ export default function Contracts() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contracts'] }),
   })
 
+  const getCustomer = (id) => customers.find(c => c.id === id)
+
   const filtered = contracts.filter(c => {
     const customer = getCustomer(c.customer_id)
     const customerFullName = customer ? `${customer.first_name} ${customer.last_name}` : ''
     return `${c.customer_name} ${customerFullName} ${c.insurer} ${c.policy_number} ${c.product || ''}`.toLowerCase().includes(search.toLowerCase())
   })
-
-  const getCustomer = (id) => customers.find(c => c.id === id)
   const getContractDocuments = (contractId) => documents.filter(d => d.linked_contract_id === contractId)
 
   const handleSave = (data) => {
