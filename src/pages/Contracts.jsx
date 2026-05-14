@@ -76,9 +76,11 @@ export default function Contracts() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contracts'] }),
   })
 
-  const filtered = contracts.filter(c =>
-    `${c.customer_name} ${c.insurer} ${c.policy_number}`.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = contracts.filter(c => {
+    const customer = getCustomer(c.customer_id)
+    const customerFullName = customer ? `${customer.first_name} ${customer.last_name}` : ''
+    return `${c.customer_name} ${customerFullName} ${c.insurer} ${c.policy_number} ${c.product || ''}`.toLowerCase().includes(search.toLowerCase())
+  })
 
   const getCustomer = (id) => customers.find(c => c.id === id)
   const getContractDocuments = (contractId) => documents.filter(d => d.linked_contract_id === contractId)
@@ -236,9 +238,15 @@ export default function Contracts() {
                   <div className="grid grid-cols-1 md:grid-cols-[1.5fr_2fr_1fr_1.2fr_1.5fr_1.2fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors group">
                     {/* Kunde */}
                     <div className="min-w-0">
-                      <p className="font-semibold text-xs truncate">{contract.customer_name || '–'}</p>
+                      <p className="font-semibold text-xs truncate">
+                        {contract.customer_name ||
+                          (customer ? `${customer.first_name} ${customer.last_name}` : '–')}
+                      </p>
                       {customer?.ahv_number && (
                         <p className="text-xs font-mono text-muted-foreground mt-0.5">{customer.ahv_number}</p>
+                      )}
+                      {!contract.customer_name && customer && (
+                        <p className="text-xs text-amber-600 mt-0.5">{customer.customer_number || ''}</p>
                       )}
                     </div>
 

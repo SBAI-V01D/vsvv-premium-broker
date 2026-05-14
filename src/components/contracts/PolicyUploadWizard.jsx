@@ -508,7 +508,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       let customerId, customerName, orgId, insuredPersonId
 
       // ── OPTION 1: Bestehende Familienstruktur verwenden ──
-      if (customerMode === 'existing_structure') {
+      if (customerMode === 'existing_structure' || customerMode === 'matched') {
         if (!selectedCustomer || !selectedCustomer.id) {
           setError('Bitte einen gültigen Kunden auswählen')
           setSaving(false)
@@ -649,9 +649,14 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         if (!c.insurer) continue
 
         try {
+          // Determine correct customer name for this contract
+          const contractCustomerName = insuredPersonId !== customerId
+            ? (insuredFirstName && insuredLastName ? `${insuredFirstName} ${insuredLastName}` : customerName)
+            : customerName
+
           const created = await base44.entities.Contract.create({
             customer_id: insuredPersonId,
-            customer_name: insuredFirstName && insuredLastName ? `${insuredFirstName} ${insuredLastName}` : customerName,
+            customer_name: contractCustomerName,
             primary_customer_id: customerId,
             is_family_member: insuredPersonId !== customerId,
             organization_id: orgId,
