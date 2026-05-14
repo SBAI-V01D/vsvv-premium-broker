@@ -57,7 +57,10 @@ export default function MoneyDashboard() {
 
   const { data: leads = [] } = useQuery({
     queryKey: ['leads-hot'],
-    queryFn: () => base44.entities.Lead.filter({ status: ['new', 'contacted', 'qualified'] }, '-lead_score', 100),
+    queryFn: async () => {
+      const all = await base44.entities.Lead.list('-lead_score', 100)
+      return all.filter(l => ['new', 'contacted', 'qualified'].includes(l.status))
+    },
   })
 
   const { data: opps = [] } = useQuery({
@@ -81,7 +84,7 @@ export default function MoneyDashboard() {
       return daysUntil > 0 && daysUntil < 30
     }).length
 
-    const hotLeads = leads.filter(l => l.lead_score >= 80).length
+    const hotLeads = leads.filter(l => (l.lead_score || 0) >= 70).length
     const topOpps = opps.filter(o => o.estimated_value > 50000).length
 
     return {
