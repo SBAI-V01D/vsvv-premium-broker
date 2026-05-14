@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, CartesianGrid } from 'recharts'
 import { AlertTriangle, TrendingDown, Award, Clock, AlertCircle, Landmark, TrendingUp } from 'lucide-react'
-import { formatCHF, formatPct, calcStornoByDimension, calcMonthlyTrend, roundCHF, normalizeLegacyEntry } from '@/lib/commissionEngine'
+import { formatCHF, formatPct, calcStornoByDimension, calcMonthlyTrend, calcKPIs, roundCHF, normalizeLegacyEntry } from '@/lib/commissionEngine'
 
 const COLORS_BLUE    = ['#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe']
 const COLORS_EMERALD = ['#065f46','#047857','#059669','#10b981','#34d399','#6ee7b7']
@@ -11,13 +11,16 @@ const COLORS_MIXED   = ['#2563eb','#059669','#d97706','#dc2626','#7c3aed','#0891
 export default function CommissionIntelligenceTab({ entries, period }) {
   const [trendMonths, setTrendMonths] = useState(6)
 
-  const active     = useMemo(() => entries.filter(e => !e.archived).map(normalizeLegacyEntry), [entries])
+  const active = useMemo(() => entries.filter(e => !e.archived).map(normalizeLegacyEntry), [entries])
+  
+  // 🔴 CRITICAL: Central calcMonthlyTrend – no local reduce() for forecasting
   const monthlyTrend = useMemo(() => calcMonthlyTrend(active, trendMonths), [active, trendMonths])
 
-  // Prognose: 3 Monate (linear)
+  // Forecast: use central trend data (no local calculations)
   const forecast = useMemo(() => {
+    if (monthlyTrend.length < 2) return null
     const last3 = monthlyTrend.slice(-3)
-    if (last3.length < 2) return null
+    // Linear trend: avg growth over last 3 months
     const avgC = last3.reduce((s, m) => s + m.advisorCourtage, 0) / last3.length
     const growthC = (last3[last3.length - 1].advisorCourtage - last3[0].advisorCourtage) / Math.max(last3.length - 1, 1)
     const avgP = last3.reduce((s, m) => s + m.advisorProvision, 0) / last3.length
@@ -27,7 +30,7 @@ export default function CommissionIntelligenceTab({ entries, period }) {
       const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
       return {
         label: d.toLocaleDateString('de-CH', { month: 'short', year: '2-digit' }),
-        advisorCourtage:  Math.max(0, roundCHF(avgC + growthC * i)),
+        advisorCourtage: Math.max(0, roundCHF(avgC + growthC * i)),
         advisorProvision: Math.max(0, roundCHF(avgP + growthP * i)),
         isForecast: true,
       }
@@ -36,48 +39,44 @@ export default function CommissionIntelligenceTab({ entries, period }) {
 
   const chartData = useMemo(() => [...monthlyTrend, ...(forecast || [])], [monthlyTrend, forecast])
 
-  // Gesellschaftsvergleich: getrennt nach Courtage / Provision
+  // 🔴 CRITICAL: Use calcKPIs per insurer (no local reduce)
   const byInsurer = useMemo(() => {
-    const map = {}
-    active.forEach(e => {
-      if (!e.insurer) return
-      if (!map[e.insurer]) map[e.insurer] = {
-        insurer: e.insurer, courtage: 0, provision: 0, count: 0, cancelled: 0
-      }
-      const cStatus = e.courtage_status || e.status
-      if (cStatus !== 'cancelled') {
-        map[e.insurer].courtage  += e.advisor_courtage_amount || 0
-        map[e.insurer].provision += e.advisor_provision_amount || 0
-        map[e.insurer].count     += 1
-      } else {
-        map[e.insurer].cancelled += 1
+    const uniqueInsurers = [...new Set(active.map(e => e.insurer).filter(Boolean))]
+    const map = uniqueInsurers.map(insurer => {
+      const insurerEntries = active.filter(e => e.insurer === insurer)
+      const kpi = calcKPIs(insurerEntries)
+      return {
+        insurer,
+        courtage: kpi.totalAdvisorCourtage,
+        provision: kpi.totalAdvisorProvision,
+        count: kpi.count,
+        cancelled: kpi.cancelledCount,
       }
     })
-    return Object.values(map)
+    return map
       .sort((a, b) => (b.courtage + b.provision) - (a.courtage + a.provision))
       .slice(0, 8)
   }, [active])
 
-  // Spartenverteilung – Courtage
+  // 🔴 CRITICAL: Use calcKPIs per sparte (no local reduce)
   const sparteCourtage = useMemo(() => {
-    const map = {}
-    active.filter(e => (e.courtage_status || e.status) !== 'cancelled').forEach(e => {
-      const key = e.product_category || 'Andere'
-      if (!map[key]) map[key] = { name: key, value: 0 }
-      map[key].value += e.advisor_courtage_amount || 0
+    const uniqueSparten = [...new Set(active.filter(e => (e.courtage_status || e.status) !== 'cancelled').map(e => e.product_category).filter(Boolean))]
+    const map = uniqueSparten.map(sparte => {
+      const sparteEntries = active.filter(e => e.product_category === sparte && (e.courtage_status || e.status) !== 'cancelled')
+      const kpi = calcKPIs(sparteEntries)
+      return { name: sparte, value: kpi.totalAdvisorCourtage }
     })
-    return Object.values(map).sort((a, b) => b.value - a.value).slice(0, 6)
+    return map.filter(x => x.value > 0).sort((a, b) => b.value - a.value).slice(0, 6)
   }, [active])
 
-  // Spartenverteilung – Provision
   const sparteProvision = useMemo(() => {
-    const map = {}
-    active.filter(e => (e.provision_status || 'pending') !== 'cancelled').forEach(e => {
-      const key = e.product_category || 'Andere'
-      if (!map[key]) map[key] = { name: key, value: 0 }
-      map[key].value += e.advisor_provision_amount || 0
+    const uniqueSparten = [...new Set(active.filter(e => (e.provision_status || 'pending') !== 'cancelled').map(e => e.product_category).filter(Boolean))]
+    const map = uniqueSparten.map(sparte => {
+      const sparteEntries = active.filter(e => e.product_category === sparte && (e.provision_status || 'pending') !== 'cancelled')
+      const kpi = calcKPIs(sparteEntries)
+      return { name: sparte, value: kpi.totalAdvisorProvision }
     })
-    return Object.values(map).filter(x => x.value > 0).sort((a, b) => b.value - a.value).slice(0, 6)
+    return map.filter(x => x.value > 0).sort((a, b) => b.value - a.value).slice(0, 6)
   }, [active])
 
   const stornoByAdvisor = useMemo(() => calcStornoByDimension(active, 'advisor_id', 'advisor_name'), [active])
@@ -114,7 +113,7 @@ export default function CommissionIntelligenceTab({ entries, period }) {
               <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-red-700">
                 <strong>{overdueEntries.length} überfällige Courtage-Positionen</strong> (eingereicht vor &gt;60 Tagen) ·
-                Offen: <strong>{formatCHF(overdueEntries.reduce((s,e)=>s+(e.advisor_courtage_amount||0),0))}</strong>
+                  Offen: <strong>{formatCHF(calcKPIs(overdueEntries).totalAdvisorCourtage)}</strong>
                 <div className="text-xs mt-1 text-red-600">
                   {overdueEntries.slice(0, 3).map(e => (
                     <span key={e.id} className="mr-3">{e.insurer} – {e.customer_name}</span>
@@ -413,7 +412,7 @@ export default function CommissionIntelligenceTab({ entries, period }) {
                 <tr className="bg-red-50 font-bold text-red-700">
                   <td colSpan="3" className="py-2 px-0">Total überfällig</td>
                   <td className="text-right py-2 text-blue-700">{formatCHF(overdueEntries.reduce((s,e)=>s+(e.company_courtage_amount||0),0))}</td>
-                  <td className="text-right py-2">{formatCHF(overdueEntries.reduce((s,e)=>s+(e.advisor_courtage_amount||0),0))}</td>
+                  <td className="text-right py-2">{formatCHF(calcKPIs(overdueEntries).totalAdvisorCourtage)}</td>
                 </tr>
               </tfoot>
             </table>
