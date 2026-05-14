@@ -109,7 +109,9 @@ export default function Applications() {
   const tabSource = activeTab === 'pending' ? pendingApps : archivedApps
 
   const filtered = tabSource.filter(a => {
-    const searchStr = `${a.customer_name} ${a.insurer} ${a.product} ${getSparteLabel(a.sparte || a.insurance_type)}`.toLowerCase()
+    const customer = getCustomer(a.customer_id)
+    const customerCompanyName = customer?.company_name || ''
+    const searchStr = `${a.customer_name} ${customerCompanyName} ${a.insurer} ${a.product} ${getSparteLabel(a.sparte || a.insurance_type)}`.toLowerCase()
     const matchSearch = !search.trim() || searchStr.includes(search.toLowerCase())
     const matchSparte = filterSparte === 'all' || a.sparte === filterSparte || a.insurance_type === filterSparte
     const matchStatus = filterStatus === 'all' || getStatus(a) === filterStatus.toLowerCase().trim()
