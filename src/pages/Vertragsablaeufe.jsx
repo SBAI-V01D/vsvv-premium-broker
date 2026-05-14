@@ -251,16 +251,20 @@ export default function Vertragsablaeufe() {
   })
 
   // Verträge mit Handlungsbedarf analysieren
-  const actionableItems = useMemo(() => {
-    return contracts
-      .filter(c => {
-        if (['cancelled', 'archived'].includes(c.status)) return false
-        if (c.status === 'expired') {
-          const cancelDays = c.cancellation_deadline ? Math.ceil((new Date(c.cancellation_deadline) - new Date()) / 86400000) : null
-          return cancelDays !== null && cancelDays >= -30 && cancelDays <= 90
-        }
-        return true
-      })
+   const actionableItems = useMemo(() => {
+     return contracts
+       .filter(c => {
+         if (['cancelled', 'archived'].includes(c.status)) return false
+         if (c.status === 'expired') {
+           // Expired-Verträge: Anzeigen wenn in letzten 30 Tagen abgelaufen ODER Kündigungsfrist noch relevant
+           const endDays = c.end_date ? Math.ceil((new Date(c.end_date) - new Date()) / 86400000) : null
+           const cancelDays = c.cancellation_deadline ? Math.ceil((new Date(c.cancellation_deadline) - new Date()) / 86400000) : null
+           const isRecentlyExpired = endDays !== null && endDays >= -30 && endDays <= 0
+           const hasCancellationWindow = cancelDays !== null && cancelDays >= -30 && cancelDays <= 90
+           return isRecentlyExpired || hasCancellationWindow
+         }
+         return true
+       })
       .map(c => {
         const actions = analyzeContract(c)
         return { contract: c, actions, topAction: actions[0] }
