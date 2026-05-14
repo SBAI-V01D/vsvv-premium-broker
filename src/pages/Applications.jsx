@@ -236,12 +236,14 @@ export default function Applications() {
       linked_contract_id: linkedContractId,
       status_changed_at: now,
     })
-    // Invalidate all related caches immediately
-    queryClient.invalidateQueries({ queryKey: ['applications'] })
-    queryClient.invalidateQueries({ queryKey: ['contracts'] })
-    queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
-    queryClient.invalidateQueries({ queryKey: ['customers'] })
-    queryClient.invalidateQueries({ queryKey: ['tasks'] })
+    // Invalidate all related caches immediately — Contracts muss dabei sein!
+    await queryClient.invalidateQueries({ queryKey: ['applications'] })
+    await queryClient.invalidateQueries({ queryKey: ['contracts'] })
+    await queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
+    await queryClient.invalidateQueries({ queryKey: ['customers'] })
+    await queryClient.invalidateQueries({ queryKey: ['tasks'] })
+    // Extra refresh for Contracts page to ensure it reloads
+    queryClient.refetchQueries({ queryKey: ['contracts'] })
     setStatusChanging(null)
   }
 
