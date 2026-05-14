@@ -11,7 +11,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
 import {
-  calcCommissionFields, formatCHF, formatDate, validateCommissionForm,
+  calcCommissionFields, calcKPIs, calcStornoByDimension, formatCHF, formatDate, validateCommissionForm,
   STATUS_META, canTransitionTo, getStatusDates, generateCSV, downloadCSV,
   normalizeLegacyEntry, DEFAULT_STORNO_PCT
 } from '@/lib/commissionEngine'
@@ -268,23 +268,25 @@ export default function CommissionsAndCourtage() {
     })
   }, [activeEntries, search, filterBroker, filterInsurer, filterSparte, filterStatus, actualPeriod])
 
+  // 🔴 CRITICAL: Broker stats now uses central calcKPIs for consistency
   const brokerStats = useMemo(() => {
     const map = {}
-    activeEntries.filter(e => (e.courtage_status || e.status) !== 'cancelled').forEach(e => {
-      const ne = normalizeLegacyEntry(e)
-      const key = ne.advisor_id || '–'
+    // Build per-broker aggregates using same logic as calcKPIs
+    const normalized = activeEntries.map(normalizeLegacyEntry).filter(e => !e.archived && (e.courtage_status || e.status) !== 'cancelled')
+    normalized.forEach(e => {
+      const key = e.advisor_id || '–'
       if (!map[key]) map[key] = {
-        name: ne.advisor_name || '–',
+        name: e.advisor_name || '–',
         courtage: 0, advisorCourtage: 0, provision: 0, advisorProvision: 0,
         courtage_paid: 0, provision_paid: 0, count: 0,
       }
-      map[key].courtage          += ne.company_courtage_amount || 0
-      map[key].advisorCourtage   += ne.advisor_courtage_amount || 0
-      map[key].provision         += ne.company_provision_amount || 0
-      map[key].advisorProvision  += ne.advisor_provision_amount || 0
+      map[key].courtage          += e.company_courtage_amount || 0
+      map[key].advisorCourtage   += e.advisor_courtage_amount || 0  // Brutto
+      map[key].provision         += e.company_provision_amount || 0
+      map[key].advisorProvision  += e.advisor_provision_amount || 0  // Brutto
       map[key].count             += 1
-      if ((ne.courtage_status || ne.status) === 'paid')   map[key].courtage_paid  += ne.advisor_courtage_amount || 0
-      if ((ne.provision_status || 'pending') === 'paid')   map[key].provision_paid += ne.advisor_provision_amount || 0
+      if ((e.courtage_status || e.status) === 'paid')   map[key].courtage_paid  += e.courtage_payout_amount || e.advisor_courtage_amount || 0
+      if ((e.provision_status || 'pending') === 'paid')   map[key].provision_paid += e.provision_payout_amount || e.advisor_provision_amount || 0
     })
     return Object.values(map).sort((a, b) => b.advisorCourtage - a.advisorCourtage)
   }, [activeEntries])
@@ -304,7 +306,11 @@ export default function CommissionsAndCourtage() {
   const handleCSVExport = () => {
     const startStr = actualPeriod.start.toLocaleDateString('de-CH').replace(/\./g, '-')
     const endStr = actualPeriod.end.toLocaleDateString('de-CH').replace(/\./g, '-')
-    downloadCSV(generateCSV(filteredEntries), `courtagen_provisionen_${startStr}_bis_${endStr}.csv`)
+    // 🔴 CRITICAL: Add KPI totals row to CSV for verification
+    const kpi = calcKPIs(filteredEntries)
+    const csvContent = generateCSV(filteredEntries)
+    const totalsRow = `"TOTALE PERIODE","","","","","",${kpi.totalCourtageReceived.toFixed(2)},${kpi.totalAdvisorCourtage.toFixed(2)},"","","","",${kpi.totalProvisionReceived.toFixed(2)},${kpi.totalAdvisorProvision.toFixed(2)},"","",""` 
+    downloadCSV(csvContent + '\n' + totalsRow, `courtagen_provisionen_${startStr}_bis_${endStr}.csv`)
   }
 
   const isSaving = createMutation.isPending || updateMutation.isPending
@@ -353,25 +359,27 @@ export default function CommissionsAndCourtage() {
          period={actualPeriod}
        />
 
-      {/* Storno Banner */}
-      {stornoEntries.length > 0 && (
-        <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-          <span>
-            <strong>{stornoEntries.length} stornierte</strong> Einträge ·
-            Courtage-Verlust Berater: <strong>{formatCHF(stornoEntries.reduce((s, e) => {
-              const ne = normalizeLegacyEntry(e)
-              return s + (ne.advisor_courtage_amount || 0)
-            }, 0))}</strong>
-            {stornoEntries.some(e => normalizeLegacyEntry(e).advisor_provision_amount > 0) && (
-              <span> · Provisions-Verlust: <strong>{formatCHF(stornoEntries.reduce((s, e) => {
-                const ne = normalizeLegacyEntry(e)
-                return s + (ne.advisor_provision_amount || 0)
-              }, 0))}</strong></span>
-            )}
-          </span>
-        </div>
-      )}
+      {/* Storno Banner - 🔴 CRITICAL: Use central storno analysis */}
+       {stornoEntries.length > 0 && (() => {
+         const stornoAnalysis = calcStornoByDimension(stornoEntries, 'advisor_id', 'advisor_name')
+         const totalStornoCourtage = stornoAnalysis.reduce((s, d) => s + d.commissionLost, 0)  // Total from all dimensions
+         const totalStornoProvision = stornoEntries.reduce((s, e) => {
+           const ne = normalizeLegacyEntry(e)
+           return s + (ne.advisor_provision_amount || 0)
+         }, 0)
+         return (
+           <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+             <span>
+               <strong>{stornoEntries.length} stornierte</strong> Einträge ·
+               Courtage-Verlust Berater: <strong>{formatCHF(totalStornoCourtage)}</strong>
+               {totalStornoProvision > 0 && (
+                 <span> · Provisions-Verlust: <strong>{formatCHF(totalStornoProvision)}</strong></span>
+               )}
+             </span>
+           </div>
+         )
+       })()}
 
       {/* Main Tabs */}
       <Tabs defaultValue="liste">
