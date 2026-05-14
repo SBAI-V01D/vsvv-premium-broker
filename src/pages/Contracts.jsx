@@ -165,14 +165,15 @@ export default function Contracts() {
 
   const handleExport = () => {
     if (filtered.length === 0) return
-    const headers = ['ID', 'Kunde', 'Versicherer', 'Police', 'Produkt', 'Jahresprämie', 'Gültig bis', 'Status']
+    const headers = ['ID', 'Kunde', 'Sparte', 'Versicherer', 'Produkt', 'Jahresprämie', 'Gültig ab', 'Gültig bis', 'Status']
     const rows = filtered.map(c => [
       c.id,
       c.customer_name,
+      getSparteLabel(c.sparte || c.insurance_type) || '',
       c.insurer,
-      c.policy_number || '',
       c.product || '',
       c.premium_yearly || '',
+      c.start_date ? new Date(c.start_date).toLocaleDateString('de-CH') : '',
       c.end_date ? new Date(c.end_date).toLocaleDateString('de-CH') : '',
       c.status
     ])
@@ -221,10 +222,9 @@ export default function Contracts() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="hidden md:grid grid-cols-[1.5fr_2fr_1fr_1.2fr_1.5fr_1.2fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="hidden md:grid grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             <div>Kunde</div>
-            <div>Versicherer / Sparte</div>
-            <div>Policen-Nr</div>
+            <div>Sparte / Versicherer</div>
             <div>Produkt / Tarif</div>
             <div>Vertragsdaten</div>
             <div>Jahresprämie</div>
@@ -241,52 +241,55 @@ export default function Contracts() {
               const customer = getCustomer(contract.customer_id)
               return (
                 <div key={contract.id} className={idx > 0 ? 'border-t border-border' : ''}>
-                  <div className="grid grid-cols-1 md:grid-cols-[1.5fr_2fr_1fr_1.2fr_1.5fr_1.2fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors group">
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors group">
                     {/* Kunde */}
                     <div className="min-w-0">
-                      <p className="font-semibold text-xs truncate">
+                      <p className="font-semibold text-sm truncate">
                         {contract.customer_name ||
                           (customer ? `${customer.first_name} ${customer.last_name}` : '–')}
                       </p>
-                      {customer?.ahv_number && (
-                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{customer.ahv_number}</p>
-                      )}
-                      {!contract.customer_name && customer && (
-                        <p className="text-xs text-amber-600 mt-0.5">{customer.customer_number || ''}</p>
-                      )}
+                      {(() => {
+                        const cust = getCustomer(contract.customer_id)
+                        const ahv = cust?.ahv_number
+                        return ahv ? (
+                          <p className="text-xs font-mono text-muted-foreground mt-0.5">{ahv}</p>
+                        ) : null
+                      })()}
                     </div>
 
-                    {/* Versicherer / Sparte */}
+                    {/* Sparte / Versicherer */}
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <Building2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                        <p className="text-xs font-medium truncate">{contract.insurer}</p>
+                        <Tag className="w-3 h-3 text-primary flex-shrink-0" />
+                        <p className="text-sm font-medium truncate">{getSparteLabel(contract.sparte || contract.insurance_type)}</p>
                       </div>
-                      {contract.sparte || contract.insurance_type ? (
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">{getSparteLabel(contract.sparte || contract.insurance_type)}</p>
-                      ) : null}
-                      {contract.sparte_data?.franchise && (
-                        <p className="text-xs text-muted-foreground mt-0.5">Franchise: CHF {contract.sparte_data.franchise}</p>
+                      {contract.product && (
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">{contract.product}</p>
                       )}
-                      {contract.sparte_data?.model && (
-                        <p className="text-xs text-muted-foreground mt-0.5">Modell: {contract.sparte_data.model}</p>
+                      {contract.insurer && (
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <Building2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                          <p className="text-xs text-muted-foreground truncate">{contract.insurer}</p>
+                        </div>
                       )}
-                    </div>
-
-                    {/* Policen-Nr */}
-                    <div className="min-w-0">
-                      {contract.policy_number && (
-                        <p className="text-xs font-medium">{contract.policy_number}</p>
-                      )}
-                      {!contract.policy_number && <span className="text-xs text-muted-foreground">–</span>}
                     </div>
 
                     {/* Produkt / Tarif */}
                     <div className="min-w-0">
-                      {contract.product && (
-                        <p className="text-xs font-medium">{contract.product}</p>
+                      {contract.sparte_data?.franchise && (
+                        <>
+                          <p className="text-sm font-medium">CHF {contract.sparte_data.franchise}</p>
+                          {contract.sparte_data?.model && (
+                            <p className="text-xs text-muted-foreground">{contract.sparte_data.model}</p>
+                          )}
+                        </>
                       )}
-                      {!contract.product && <span className="text-xs text-muted-foreground">–</span>}
+                      {!contract.sparte_data?.franchise && contract.policy_number && (
+                        <p className="text-sm truncate">{contract.policy_number}</p>
+                      )}
+                      {!contract.sparte_data?.franchise && !contract.policy_number && (
+                        <span className="text-xs text-muted-foreground">–</span>
+                      )}
                     </div>
 
                     {/* Vertragsdaten */}
