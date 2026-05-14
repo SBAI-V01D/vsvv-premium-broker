@@ -182,10 +182,10 @@ export default function Tasks() {
               <p className="text-sm text-muted-foreground">Keine offenen Aufgaben</p>
             ) : (
               openTasks.map(t => (
-                <button
+                <div
                   key={t.id}
                   onClick={() => handleTaskClick(t)}
-                  className={`p-3 rounded border text-left transition-colors w-full group ${
+                  className={`p-3 rounded border text-left transition-colors w-full group cursor-pointer ${
                     t.due_date && isOverdue(t.due_date)
                       ? 'bg-red-50 border-red-300 hover:bg-red-100 hover:border-red-400'
                       : 'bg-slate-50 border-border hover:border-primary hover:bg-slate-100'
@@ -211,32 +211,32 @@ export default function Tasks() {
                         <PriorityBadge level={isOverdue(t.due_date) ? 'critical' : taskPriorityToLevel(t.priority)} />
                       </div>
                     </div>
-                  </div>
-                </button>
-              ))
-            )}
-          </CardContent>
-        </Card>
+                    </div>
+                    </div>
+                    ))
+                    )}
+                    </CardContent>
+                    </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">In Bearbeitung ({inProgressTasks.length})</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {inProgressTasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Keine Aufgaben in Bearbeitung</p>
-            ) : (
-              inProgressTasks.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => handleTaskClick(t)}
-                  className={`p-3 rounded border text-left transition-colors w-full group ${
+                    <Card>
+                    <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">In Bearbeitung ({inProgressTasks.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                    {inProgressTasks.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Keine Aufgaben in Bearbeitung</p>
+                    ) : (
+                    inProgressTasks.map(t => (
+                    <div
+                    key={t.id}
+                    onClick={() => handleTaskClick(t)}
+                    className={`p-3 rounded border text-left transition-colors w-full group cursor-pointer ${
                     t.due_date && isOverdue(t.due_date)
                       ? 'bg-red-50 border-red-300 hover:bg-red-100 hover:border-red-400'
                       : 'bg-blue-50 border-blue-200 hover:border-blue-400 hover:bg-blue-100'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
+                    }`}
+                    >
+                    <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium leading-tight">{t.title}</p>
                       {t.customer_name && (
@@ -256,28 +256,28 @@ export default function Tasks() {
                         <PriorityBadge level={isOverdue(t.due_date) ? 'critical' : taskPriorityToLevel(t.priority)} />
                       </div>
                     </div>
-                  </div>
-                </button>
-              ))
-            )}
-          </CardContent>
-        </Card>
+                    </div>
+                    </div>
+                    ))
+                    )}
+                    </CardContent>
+                    </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Erledigt ({completedTasks.length})</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 max-h-96 overflow-y-auto">
-            {completedTasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Keine erledigten Aufgaben</p>
-            ) : (
-              completedTasks.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => handleTaskClick(t)}
-                  className="p-3 bg-green-50 rounded border border-green-200 hover:border-green-400 hover:bg-green-100 text-left transition-colors w-full line-through opacity-75 group flex items-start justify-between gap-2"
-                >
-                  <div className="flex-1 min-w-0">
+                    <Card>
+                    <CardHeader className="pb-3">
+                    <CardTitle className="text-lg">Erledigt ({completedTasks.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 max-h-96 overflow-y-auto">
+                    {completedTasks.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Keine erledigten Aufgaben</p>
+                    ) : (
+                    completedTasks.map(t => (
+                    <div
+                    key={t.id}
+                    onClick={() => handleTaskClick(t)}
+                    className="p-3 bg-green-50 rounded border border-green-200 hover:border-green-400 hover:bg-green-100 text-left transition-colors w-full line-through opacity-75 group flex items-start justify-between gap-2 cursor-pointer"
+                    >
+                    <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{t.title}</p>
                     {t.customer_name && (
                       <button 
@@ -287,8 +287,8 @@ export default function Tasks() {
                         {t.customer_name}
                       </button>
                     )}
-                  </div>
-                </button>
+                    </div>
+                    </div>
               ))
             )}
           </CardContent>
