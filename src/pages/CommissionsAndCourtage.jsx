@@ -54,8 +54,8 @@ export default function CommissionsAndCourtage() {
   })
 
   const { data: brokers = [] } = useQuery({
-    queryKey: ['brokers'],
-    queryFn: () => base44.entities.Broker.filter({ is_active: true }),
+    queryKey: ['advisors'],
+    queryFn: () => base44.entities.Advisor.filter({ status: 'active' }),
   })
 
   // Create/Update mutations
@@ -609,14 +609,15 @@ export default function CommissionsAndCourtage() {
                 <label className="text-sm font-semibold">Berater *</label>
                 <Select value={formData.broker_email || ''} onValueChange={v => {
                   const broker = brokers.find(b => b.email === v)
-                  setFormData(p => ({ ...p, broker_email: v, broker_name: broker?.name }))
+                  const brokerName = broker ? `${broker.firstname} ${broker.lastname}` : ''
+                  setFormData(p => ({ ...p, broker_email: v, broker_name: brokerName }))
                 }}>
                   <SelectTrigger className="mt-1">
                     <SelectValue placeholder="Wählen..." />
                   </SelectTrigger>
                   <SelectContent>
                     {brokers.map(b => (
-                      <SelectItem key={b.id} value={b.email}>{b.name}</SelectItem>
+                      <SelectItem key={b.id} value={b.email}>{b.firstname} {b.lastname}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
