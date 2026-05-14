@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Search, X, User, CheckCircle2, Calculator, Landmark, TrendingUp, Clock, FileText, ShieldCheck } from 'lucide-react'
-import { calcCourtageFields, calcProvisionFields, formatCHF, validateCommissionForm, STATUS_META, canTransitionTo } from '@/lib/commissionEngine'
+import { formatCHF, roundCHF, validateCommissionForm, STATUS_META, canTransitionTo, DEFAULT_STORNO_PCT } from '@/lib/commissionEngine'
 
 const SWISS_INSURERS = [
   'Allianz', 'Axa', 'Baloise', 'CSS', 'Concordia', 'Die Mobiliar', 'Elvia', 'Generali',
@@ -107,47 +107,75 @@ function CustomerSearchField({ value, customerId, onChange, customers }) {
   )
 }
 
-// ─── Courtage Preview ─────────────────────────────────────────────────────────
+// ─── Brutto/Netto-Vorschau Courtage ──────────────────────────────────────────
 function CourtagePreview({ data }) {
-  const company = parseFloat(data.company_courtage_amount) || 0
-  const pct     = parseFloat(data.advisor_courtage_percentage) || 0
+  const company   = parseFloat(data.company_courtage_amount) || 0
+  const pct       = parseFloat(data.advisor_courtage_percentage) || 0
+  const stornoPct = parseFloat(data.courtage_storno_percentage) ?? DEFAULT_STORNO_PCT
   if (company <= 0) return null
-  const advisor = Math.round((company * pct) / 100 * 100) / 100
+  const brutto    = roundCHF((company * pct) / 100)
+  const reserve   = roundCHF((brutto * stornoPct) / 100)
+  const netto     = roundCHF(brutto - reserve)
   return (
     <div className="mt-2 rounded-lg border border-blue-200 overflow-hidden text-xs">
       <div className="bg-blue-100 px-3 py-1.5 flex items-center gap-1.5">
         <Calculator className="w-3.5 h-3.5 text-blue-700" />
-        <span className="font-bold text-blue-700 uppercase tracking-wide">Courtage-Vorschau</span>
+        <span className="font-bold text-blue-700 uppercase tracking-wide">Courtage-Berechnung</span>
       </div>
-      <div className="bg-blue-50/40 p-3 flex items-center gap-2 flex-wrap">
-        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-mono">{formatCHF(company)}</span>
-        <span className="text-muted-foreground">×</span>
-        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded font-mono">{pct}%</span>
-        <span className="text-muted-foreground">=</span>
-        <span className="bg-blue-600 text-white px-3 py-1 rounded-lg font-bold text-sm">{formatCHF(advisor)} Beratercourtage</span>
+      <div className="bg-blue-50/40 p-3 space-y-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-muted-foreground w-28">Ges.courtage × %</span>
+          <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">{formatCHF(company)} × {pct}%</span>
+          <span className="text-muted-foreground">=</span>
+          <span className="font-bold text-blue-800">{formatCHF(brutto)} Brutto</span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-muted-foreground w-28">− Stornoreserve</span>
+          <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded font-mono">{stornoPct}%</span>
+          <span className="text-muted-foreground">=</span>
+          <span className="font-semibold text-orange-600">−{formatCHF(reserve)} Einbehalt</span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap border-t border-blue-200 pt-2">
+          <span className="text-muted-foreground w-28">= Netto auszahlbar</span>
+          <span className="bg-blue-600 text-white px-3 py-1 rounded-lg font-bold">{formatCHF(netto)}</span>
+        </div>
       </div>
     </div>
   )
 }
 
-// ─── Provision Preview ────────────────────────────────────────────────────────
+// ─── Brutto/Netto-Vorschau Provision ─────────────────────────────────────────
 function ProvisionPreview({ data }) {
-  const company = parseFloat(data.company_provision_amount) || 0
-  const pct     = parseFloat(data.advisor_provision_percentage) || 0
+  const company   = parseFloat(data.company_provision_amount) || 0
+  const pct       = parseFloat(data.advisor_provision_percentage) || 0
+  const stornoPct = parseFloat(data.provision_storno_percentage) ?? DEFAULT_STORNO_PCT
   if (company <= 0) return null
-  const advisor = Math.round((company * pct) / 100 * 100) / 100
+  const brutto    = roundCHF((company * pct) / 100)
+  const reserve   = roundCHF((brutto * stornoPct) / 100)
+  const netto     = roundCHF(brutto - reserve)
   return (
     <div className="mt-2 rounded-lg border border-emerald-200 overflow-hidden text-xs">
       <div className="bg-emerald-100 px-3 py-1.5 flex items-center gap-1.5">
         <Calculator className="w-3.5 h-3.5 text-emerald-700" />
-        <span className="font-bold text-emerald-700 uppercase tracking-wide">Provisions-Vorschau</span>
+        <span className="font-bold text-emerald-700 uppercase tracking-wide">Provisions-Berechnung</span>
       </div>
-      <div className="bg-emerald-50/40 p-3 flex items-center gap-2 flex-wrap">
-        <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded font-mono">{formatCHF(company)}</span>
-        <span className="text-muted-foreground">×</span>
-        <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded font-mono">{pct}%</span>
-        <span className="text-muted-foreground">=</span>
-        <span className="bg-emerald-600 text-white px-3 py-1 rounded-lg font-bold text-sm">{formatCHF(advisor)} Beraterprovision</span>
+      <div className="bg-emerald-50/40 p-3 space-y-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-muted-foreground w-28">Ges.provision × %</span>
+          <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">{formatCHF(company)} × {pct}%</span>
+          <span className="text-muted-foreground">=</span>
+          <span className="font-bold text-emerald-800">{formatCHF(brutto)} Brutto</span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-muted-foreground w-28">− Stornoreserve</span>
+          <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded font-mono">{stornoPct}%</span>
+          <span className="text-muted-foreground">=</span>
+          <span className="font-semibold text-orange-600">−{formatCHF(reserve)} Einbehalt</span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap border-t border-emerald-200 pt-2">
+          <span className="text-muted-foreground w-28">= Netto auszahlbar</span>
+          <span className="bg-emerald-600 text-white px-3 py-1 rounded-lg font-bold">{formatCHF(netto)}</span>
+        </div>
       </div>
     </div>
   )
@@ -345,6 +373,17 @@ export default function CommissionFormDialog({
                 {formErrors.advisor_courtage_percentage && <p className="text-xs text-red-500 mt-0.5">{formErrors.advisor_courtage_percentage}</p>}
               </div>
               <div>
+                <label className="text-sm font-semibold text-orange-700">Stornoabzug Courtage (%)</label>
+                <Input type="number" step="0.1" min="0" max="100"
+                  value={formData.courtage_storno_percentage ?? DEFAULT_STORNO_PCT}
+                  onChange={e => onChange({ courtage_storno_percentage: e.target.value })}
+                  className={`mt-1 border-orange-300 focus:border-orange-500 ${formErrors.courtage_storno_percentage ? 'border-red-400' : ''}`}
+                  placeholder="10" />
+                {formErrors.courtage_storno_percentage
+                  ? <p className="text-xs text-red-500 mt-0.5">{formErrors.courtage_storno_percentage}</p>
+                  : <p className="text-xs text-orange-600 mt-0.5">Standard: 10% · Brutto − Reserve = Netto</p>}
+              </div>
+              <div>
                 <label className="text-sm font-semibold text-muted-foreground">Courtage erhalten am</label>
                 <Input type="date" value={formData.courtage_received_date || ''}
                   onChange={e => onChange({ courtage_received_date: e.target.value })}
@@ -396,6 +435,17 @@ export default function CommissionFormDialog({
                   className={`mt-1 border-emerald-300 focus:border-emerald-500 ${formErrors.advisor_provision_percentage ? 'border-red-400' : ''}`}
                   placeholder="z.B. 50" />
                 {formErrors.advisor_provision_percentage && <p className="text-xs text-red-500 mt-0.5">{formErrors.advisor_provision_percentage}</p>}
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-orange-700">Stornoabzug Provision (%)</label>
+                <Input type="number" step="0.1" min="0" max="100"
+                  value={formData.provision_storno_percentage ?? DEFAULT_STORNO_PCT}
+                  onChange={e => onChange({ provision_storno_percentage: e.target.value })}
+                  className={`mt-1 border-orange-300 focus:border-orange-500 ${formErrors.provision_storno_percentage ? 'border-red-400' : ''}`}
+                  placeholder="10" />
+                {formErrors.provision_storno_percentage
+                  ? <p className="text-xs text-red-500 mt-0.5">{formErrors.provision_storno_percentage}</p>
+                  : <p className="text-xs text-orange-600 mt-0.5">Standard: 10% · Brutto − Reserve = Netto</p>}
               </div>
               <div>
                 <label className="text-sm font-semibold text-muted-foreground">Provision erhalten am</label>

@@ -61,12 +61,25 @@
     },
     "advisor_courtage_amount": {
       "type": "number",
-      "description": "COURTAGE: Beratercourtage auto-berechnet (CHF) = company_courtage \u00d7 advisor_courtage_%"
+      "description": "COURTAGE BRUTTO: Beratercourtage = Ges.courtage \u00d7 Berater-% (CHF)"
+    },
+    "courtage_storno_percentage": {
+      "type": "number",
+      "default": 10,
+      "description": "COURTAGE: Stornoabzug % (Standard 10%)"
+    },
+    "courtage_storno_amount": {
+      "type": "number",
+      "description": "COURTAGE: Stornoreserve Einbehalt (CHF) = Brutto \u00d7 Storno-%"
+    },
+    "courtage_payout_amount": {
+      "type": "number",
+      "description": "COURTAGE NETTO: Auszahlbarer Betrag = Brutto - Reserve (CHF)"
     },
     "courtage_received_date": {
       "type": "string",
       "format": "date",
-      "description": "COURTAGE: Datum Courtage von Gesellschaft erhalten"
+      "description": "COURTAGE: Datum erhalten"
     },
     "courtage_status": {
       "type": "string",
@@ -79,7 +92,7 @@
         "cancelled"
       ],
       "default": "pending",
-      "description": "COURTAGE: Status der Courtage-Abrechnung"
+      "description": "COURTAGE: Status"
     },
     "courtage_invoiced_date": {
       "type": "string",
@@ -94,7 +107,7 @@
     "courtage_paid_date": {
       "type": "string",
       "format": "date",
-      "description": "COURTAGE: Datum ausbezahlt"
+      "description": "COURTAGE: Datum ausbezahlt (Netto)"
     },
     "company_provision_amount": {
       "type": "number",
@@ -106,12 +119,25 @@
     },
     "advisor_provision_amount": {
       "type": "number",
-      "description": "PROVISION: Beraterprovision auto-berechnet (CHF) = company_provision \u00d7 advisor_provision_%"
+      "description": "PROVISION BRUTTO: Beraterprovision = Ges.provision \u00d7 Berater-% (CHF)"
+    },
+    "provision_storno_percentage": {
+      "type": "number",
+      "default": 10,
+      "description": "PROVISION: Stornoabzug % (Standard 10%)"
+    },
+    "provision_storno_amount": {
+      "type": "number",
+      "description": "PROVISION: Stornoreserve Einbehalt (CHF) = Brutto \u00d7 Storno-%"
+    },
+    "provision_payout_amount": {
+      "type": "number",
+      "description": "PROVISION NETTO: Auszahlbarer Betrag = Brutto - Reserve (CHF)"
     },
     "provision_received_date": {
       "type": "string",
       "format": "date",
-      "description": "PROVISION: Datum Provision von Gesellschaft erhalten"
+      "description": "PROVISION: Datum erhalten"
     },
     "provision_status": {
       "type": "string",
@@ -124,7 +150,7 @@
         "cancelled"
       ],
       "default": "pending",
-      "description": "PROVISION: Status der Provisions-Abrechnung"
+      "description": "PROVISION: Status"
     },
     "provision_invoiced_date": {
       "type": "string",
@@ -139,7 +165,7 @@
     "provision_paid_date": {
       "type": "string",
       "format": "date",
-      "description": "PROVISION: Datum ausbezahlt"
+      "description": "PROVISION: Datum ausbezahlt (Netto)"
     },
     "status": {
       "type": "string",
@@ -152,7 +178,7 @@
         "cancelled"
       ],
       "default": "pending",
-      "description": "Gesamtstatus (Legacy/R\u00fcckw\u00e4rtskompatibilit\u00e4t)"
+      "description": "Gesamtstatus (Legacy)"
     },
     "entry_date": {
       "type": "string",
@@ -161,35 +187,31 @@
     },
     "commission_percentage": {
       "type": "number",
-      "description": "LEGACY: Berateranteil % (mapped zu advisor_courtage_percentage)"
+      "description": "LEGACY: Berateranteil % \u2192 advisor_courtage_percentage"
     },
     "commission_amount": {
       "type": "number",
-      "description": "LEGACY: Beraterprovision CHF (mapped zu advisor_courtage_amount)"
+      "description": "LEGACY: Beratercourtage CHF \u2192 advisor_courtage_amount"
     },
     "received_amount": {
       "type": "number",
-      "description": "LEGACY: Erhaltene Courtage CHF (mapped zu company_courtage_amount)"
+      "description": "LEGACY: Erhaltene Courtage CHF \u2192 company_courtage_amount"
     },
     "received_date": {
       "type": "string",
-      "format": "date",
-      "description": "LEGACY: Datum erhalten"
+      "format": "date"
     },
     "invoiced_date": {
       "type": "string",
-      "format": "date",
-      "description": "LEGACY: Datum eingereicht"
+      "format": "date"
     },
     "earned_date": {
       "type": "string",
-      "format": "date",
-      "description": "LEGACY: Datum freigegeben"
+      "format": "date"
     },
     "paid_date": {
       "type": "string",
-      "format": "date",
-      "description": "LEGACY: Datum ausbezahlt"
+      "format": "date"
     },
     "payout_id": {
       "type": "string",
@@ -201,17 +223,14 @@
     },
     "storno_eligible_until": {
       "type": "string",
-      "format": "date",
-      "description": "Stornierbar bis"
+      "format": "date"
     },
     "is_storno": {
       "type": "boolean",
-      "default": false,
-      "description": "Ist eine Storno-Entry"
+      "default": false
     },
     "storno_reference_id": {
-      "type": "string",
-      "description": "Original Commission ID (wenn Storno)"
+      "type": "string"
     },
     "is_paid": {
       "type": "boolean",
@@ -219,13 +238,11 @@
       "description": "GUARD: Wurde bereits ausbezahlt"
     },
     "notes": {
-      "type": "string",
-      "description": "Notizen"
+      "type": "string"
     },
     "archived": {
       "type": "boolean",
-      "default": false,
-      "description": "SOFT DELETE"
+      "default": false
     },
     "archived_at": {
       "type": "string",

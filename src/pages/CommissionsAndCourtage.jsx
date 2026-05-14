@@ -13,7 +13,7 @@ import { useToast } from '@/components/ui/use-toast'
 import {
   calcCommissionFields, formatCHF, formatDate, validateCommissionForm,
   STATUS_META, canTransitionTo, getStatusDates, generateCSV, downloadCSV,
-  normalizeLegacyEntry
+  normalizeLegacyEntry, DEFAULT_STORNO_PCT
 } from '@/lib/commissionEngine'
 
 import CommissionKPIBar from '@/components/commissions/CommissionKPIBar'
@@ -165,6 +165,8 @@ export default function CommissionsAndCourtage() {
       status: 'pending', courtage_status: 'pending', provision_status: 'pending',
       entry_date: new Date().toISOString().split('T')[0],
       advisor_courtage_percentage: 0, advisor_provision_percentage: 0,
+      courtage_storno_percentage: DEFAULT_STORNO_PCT,
+      provision_storno_percentage: DEFAULT_STORNO_PCT,
       premium_yearly: 0,
     })
     setEditingEntry(null); setFormErrors({}); setSubmitAttempted(false); setShowForm(true)
@@ -578,9 +580,17 @@ export default function CommissionsAndCourtage() {
               </p>
               <p className="text-xs text-emerald-600">Beispiel: CHF 500 × 80% = CHF 400 Beraterprovision</p>
             </div>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 space-y-1">
+              <p className="font-bold text-orange-800">Stornoreserve-Logik</p>
+              <p className="font-mono text-orange-700 bg-orange-100 rounded px-2 py-1 text-xs">
+                Netto Auszahlung = Brutto − (Brutto × Storno-%)
+              </p>
+              <p className="text-xs text-orange-700">Standard: 10% · Beispiel: CHF 1'000 Brutto − CHF 100 Reserve = CHF 900 Netto</p>
+              <p className="text-xs text-orange-600">Pro Eintrag konfigurierbar. Auszahlungen basieren immer auf Netto.</p>
+            </div>
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-1">
               <p className="font-bold text-amber-800">Fachliche Trennung</p>
-              <p className="text-xs text-amber-700">Courtage und Provision werden vollständig getrennt verwaltet. Sie können gleichzeitig anfallen, unterschiedliche Prozentsätze und Status haben sowie separat storniert werden.</p>
+              <p className="text-xs text-amber-700">Courtage und Provision werden vollständig getrennt verwaltet – inkl. separater Stornoreserven, Status und Auszahlungslogik.</p>
             </div>
             <div className="bg-muted/40 rounded-lg p-3 space-y-1">
               <p className="font-semibold">Status-Workflow (gilt für Courtage + Provision je separat)</p>

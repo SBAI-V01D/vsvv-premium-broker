@@ -14,11 +14,15 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
   const paginated  = useMemo(() => normalized.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [normalized, page])
 
   const totals = useMemo(() => ({
-    premium:         entries.reduce((s, e) => s + (e.premium_yearly || 0), 0),
-    compCourtage:    normalized.reduce((s, e) => s + (e.company_courtage_amount || 0), 0),
-    advisorCourtage: normalized.reduce((s, e) => s + (e.advisor_courtage_amount || 0), 0),
-    compProvision:   normalized.reduce((s, e) => s + (e.company_provision_amount || 0), 0),
-    advisorProvision:normalized.reduce((s, e) => s + (e.advisor_provision_amount || 0), 0),
+    premium:          entries.reduce((s, e) => s + (e.premium_yearly || 0), 0),
+    compCourtage:     normalized.reduce((s, e) => s + (e.company_courtage_amount || 0), 0),
+    advisorCourtage:  normalized.reduce((s, e) => s + (e.advisor_courtage_amount || 0), 0),   // Brutto
+    courtageReserve:  normalized.reduce((s, e) => s + (e.courtage_storno_amount || 0), 0),
+    courtagePayout:   normalized.reduce((s, e) => s + (e.courtage_payout_amount || 0), 0),   // Netto
+    compProvision:    normalized.reduce((s, e) => s + (e.company_provision_amount || 0), 0),
+    advisorProvision: normalized.reduce((s, e) => s + (e.advisor_provision_amount || 0), 0), // Brutto
+    provisionReserve: normalized.reduce((s, e) => s + (e.provision_storno_amount || 0), 0),
+    provisionPayout:  normalized.reduce((s, e) => s + (e.provision_payout_amount || 0), 0),  // Netto
   }), [entries, normalized])
 
   React.useEffect(() => { setPage(1) }, [entries.length])
@@ -44,22 +48,16 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                   <th className="text-left py-3 px-3 font-semibold hidden xl:table-cell">Sparte</th>
                   <th className="text-right py-3 px-3 font-semibold hidden lg:table-cell">Jahresprämie</th>
                   {/* COURTAGE Gruppe */}
-                  <th className="text-right py-3 px-3 font-semibold text-blue-700 bg-blue-50/40 border-l border-blue-200 hidden md:table-cell">
-                    Ges.courtage
-                  </th>
-                  <th className="text-right py-3 px-3 font-semibold text-blue-600 bg-blue-50/40 hidden md:table-cell">%</th>
-                  <th className="text-right py-3 px-3 font-semibold text-blue-700 bg-blue-50/40">
-                    Beratercourtage
-                  </th>
+                  <th className="text-right py-3 px-3 font-semibold text-blue-700 bg-blue-50/40 border-l border-blue-200 hidden md:table-cell">Ges.courtage</th>
+                  <th className="text-right py-3 px-3 font-semibold text-blue-600 bg-blue-50/40 hidden lg:table-cell">Brutto</th>
+                  <th className="text-right py-3 px-3 font-semibold text-orange-600 bg-blue-50/40 hidden xl:table-cell">Reserve</th>
+                  <th className="text-right py-3 px-3 font-semibold text-blue-800 bg-blue-50/40">Netto C.</th>
                   <th className="text-center py-3 px-3 font-semibold text-blue-600 bg-blue-50/40 hidden lg:table-cell">C-Status</th>
                   {/* PROVISION Gruppe */}
-                  <th className="text-right py-3 px-3 font-semibold text-emerald-700 bg-emerald-50/40 border-l border-emerald-200 hidden xl:table-cell">
-                    Ges.provision
-                  </th>
-                  <th className="text-right py-3 px-3 font-semibold text-emerald-600 bg-emerald-50/40 hidden xl:table-cell">%</th>
-                  <th className="text-right py-3 px-3 font-semibold text-emerald-700 bg-emerald-50/40 hidden lg:table-cell">
-                    Beraterprovision
-                  </th>
+                  <th className="text-right py-3 px-3 font-semibold text-emerald-700 bg-emerald-50/40 border-l border-emerald-200 hidden xl:table-cell">Ges.provision</th>
+                  <th className="text-right py-3 px-3 font-semibold text-emerald-600 bg-emerald-50/40 hidden xl:table-cell">Brutto P.</th>
+                  <th className="text-right py-3 px-3 font-semibold text-orange-600 bg-emerald-50/40 hidden xl:table-cell">Reserve P.</th>
+                  <th className="text-right py-3 px-3 font-semibold text-emerald-800 bg-emerald-50/40 hidden lg:table-cell">Netto P.</th>
                   <th className="text-center py-3 px-3 font-semibold text-emerald-600 bg-emerald-50/40 hidden xl:table-cell">P-Status</th>
                   <th className="w-10"></th>
                 </tr>
@@ -106,11 +104,16 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                       <td className="text-right py-2.5 px-3 text-blue-700 text-xs bg-blue-50/20 border-l border-blue-100 hidden md:table-cell">
                         {e.company_courtage_amount ? formatCHF(e.company_courtage_amount) : <span className="text-muted-foreground">–</span>}
                       </td>
-                      <td className="text-right py-2.5 px-3 text-muted-foreground text-xs bg-blue-50/20 hidden md:table-cell">
-                        {e.advisor_courtage_percentage ? `${e.advisor_courtage_percentage}%` : '–'}
+                      <td className="text-right py-2.5 px-3 text-blue-600 text-xs bg-blue-50/20 hidden lg:table-cell" title="Brutto Beratercourtage">
+                        {e.advisor_courtage_amount ? formatCHF(e.advisor_courtage_amount) : '–'}
                       </td>
-                      <td className="text-right py-2.5 px-3 font-bold text-blue-600 text-xs bg-blue-50/20">
-                        {e.advisor_courtage_amount ? formatCHF(e.advisor_courtage_amount) : <span className="text-amber-500 text-xs">Ausstehend</span>}
+                      <td className="text-right py-2.5 px-3 text-orange-500 text-xs bg-blue-50/20 hidden xl:table-cell" title="Stornoreserve">
+                        {e.courtage_storno_amount > 0
+                          ? <span>−{formatCHF(e.courtage_storno_amount)} <span className="text-muted-foreground">({e.courtage_storno_percentage ?? 10}%)</span></span>
+                          : '–'}
+                      </td>
+                      <td className="text-right py-2.5 px-3 font-bold text-blue-800 text-xs bg-blue-50/20" title="Netto auszahlbar">
+                        {e.courtage_payout_amount ? formatCHF(e.courtage_payout_amount) : <span className="text-amber-500">Ausstehend</span>}
                       </td>
                       <td className="text-center py-2.5 px-3 bg-blue-50/20 hidden lg:table-cell">
                         <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${cMeta.color}`}>{cMeta.label}</span>
@@ -119,11 +122,14 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                       <td className="text-right py-2.5 px-3 text-emerald-700 text-xs bg-emerald-50/20 border-l border-emerald-100 hidden xl:table-cell">
                         {e.company_provision_amount ? formatCHF(e.company_provision_amount) : <span className="text-muted-foreground">–</span>}
                       </td>
-                      <td className="text-right py-2.5 px-3 text-muted-foreground text-xs bg-emerald-50/20 hidden xl:table-cell">
-                        {e.advisor_provision_percentage ? `${e.advisor_provision_percentage}%` : '–'}
+                      <td className="text-right py-2.5 px-3 text-emerald-600 text-xs bg-emerald-50/20 hidden xl:table-cell" title="Brutto">
+                        {e.advisor_provision_amount ? formatCHF(e.advisor_provision_amount) : '–'}
                       </td>
-                      <td className="text-right py-2.5 px-3 font-semibold text-emerald-600 text-xs bg-emerald-50/20 hidden lg:table-cell">
-                        {e.advisor_provision_amount ? formatCHF(e.advisor_provision_amount) : <span className="text-muted-foreground">–</span>}
+                      <td className="text-right py-2.5 px-3 text-orange-500 text-xs bg-emerald-50/20 hidden xl:table-cell" title="Reserve">
+                        {e.provision_storno_amount > 0 ? `−${formatCHF(e.provision_storno_amount)}` : '–'}
+                      </td>
+                      <td className="text-right py-2.5 px-3 font-semibold text-emerald-800 text-xs bg-emerald-50/20 hidden lg:table-cell" title="Netto auszahlbar">
+                        {e.provision_payout_amount ? formatCHF(e.provision_payout_amount) : <span className="text-muted-foreground">–</span>}
                       </td>
                       <td className="text-center py-2.5 px-3 bg-emerald-50/20 hidden xl:table-cell">
                         {hasProvision
@@ -178,12 +184,14 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                   <tr className="bg-muted/40 font-semibold text-xs">
                     <td colSpan={6} className="py-3 px-3">Total ({entries.length})</td>
                     <td className="text-right py-3 px-3 text-blue-700 bg-blue-50/20 border-l border-blue-100 hidden md:table-cell">{formatCHF(totals.compCourtage)}</td>
-                    <td className="bg-blue-50/20 hidden md:table-cell"></td>
-                    <td className="text-right py-3 px-3 text-blue-600 font-bold bg-blue-50/20">{formatCHF(totals.advisorCourtage)}</td>
+                    <td className="text-right py-3 px-3 text-blue-600 bg-blue-50/20 hidden lg:table-cell">{formatCHF(totals.advisorCourtage)}</td>
+                    <td className="text-right py-3 px-3 text-orange-500 bg-blue-50/20 hidden xl:table-cell">−{formatCHF(totals.courtageReserve)}</td>
+                    <td className="text-right py-3 px-3 text-blue-800 font-bold bg-blue-50/20">{formatCHF(totals.courtagePayout)}</td>
                     <td className="bg-blue-50/20 hidden lg:table-cell"></td>
                     <td className="text-right py-3 px-3 text-emerald-700 bg-emerald-50/20 border-l border-emerald-100 hidden xl:table-cell">{formatCHF(totals.compProvision)}</td>
-                    <td className="bg-emerald-50/20 hidden xl:table-cell"></td>
-                    <td className="text-right py-3 px-3 text-emerald-600 bg-emerald-50/20 hidden lg:table-cell">{formatCHF(totals.advisorProvision)}</td>
+                    <td className="text-right py-3 px-3 text-emerald-600 bg-emerald-50/20 hidden xl:table-cell">{formatCHF(totals.advisorProvision)}</td>
+                    <td className="text-right py-3 px-3 text-orange-500 bg-emerald-50/20 hidden xl:table-cell">−{formatCHF(totals.provisionReserve)}</td>
+                    <td className="text-right py-3 px-3 text-emerald-800 font-bold bg-emerald-50/20 hidden lg:table-cell">{formatCHF(totals.provisionPayout)}</td>
                     <td className="bg-emerald-50/20 hidden xl:table-cell"></td>
                     <td></td>
                   </tr>

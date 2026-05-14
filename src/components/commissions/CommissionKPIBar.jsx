@@ -1,7 +1,32 @@
 import React, { useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
-import { TrendingUp, TrendingDown, Clock, CheckCircle2, AlertTriangle, AlertCircle, Landmark, UserCheck } from 'lucide-react'
+import { TrendingUp, TrendingDown, Clock, CheckCircle2, AlertCircle, Landmark, UserCheck, ShieldAlert } from 'lucide-react'
 import { calcKPIs, formatCHF, formatPct } from '@/lib/commissionEngine'
+
+function KpiCard({ label, value, sub, icon: Icon, color, bg, warn }) {
+  return (
+    <Card className={`${bg ? `border-0 ${bg}` : ''} ${warn ? 'ring-1 ring-red-300' : ''}`}>
+      <CardContent className="p-3">
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide leading-tight">{label}</p>
+          <Icon className={`w-4 h-4 ${color} flex-shrink-0`} />
+        </div>
+        <p className={`text-lg font-bold ${color} leading-tight`}>{value}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
+      </CardContent>
+    </Card>
+  )
+}
+
+function SectionDivider({ label, color }) {
+  return (
+    <div className={`flex items-center gap-2 mt-1`}>
+      <div className={`h-px flex-1 ${color}`} />
+      <span className={`text-xs font-bold uppercase tracking-widest ${color.replace('bg-', 'text-')}`}>{label}</span>
+      <div className={`h-px flex-1 ${color}`} />
+    </div>
+  )
+}
 
 export default function CommissionKPIBar({ entries, filteredEntries }) {
   const global = useMemo(() => calcKPIs(entries), [entries])
@@ -9,6 +34,7 @@ export default function CommissionKPIBar({ entries, filteredEntries }) {
 
   return (
     <div className="space-y-3">
+
       {/* Overdue Alert */}
       {global.overdueCount > 0 && (
         <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
@@ -25,55 +51,45 @@ export default function CommissionKPIBar({ entries, filteredEntries }) {
         <div className="flex items-center gap-2 mb-2">
           <div className="h-px flex-1 bg-blue-200" />
           <span className="text-xs font-bold text-blue-700 uppercase tracking-widest flex items-center gap-1">
-            <Landmark className="w-3.5 h-3.5" /> Courtage (Gesellschaft → Firma → Berater)
+            <Landmark className="w-3.5 h-3.5" /> Courtage
           </span>
           <div className="h-px flex-1 bg-blue-200" />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Card className="border-0 bg-blue-50">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-blue-600 uppercase tracking-wide leading-tight">Gesellschaftscourtage (Periode)</p>
-                <Landmark className="w-4 h-4 text-blue-600 flex-shrink-0" />
-              </div>
-              <p className="text-xl font-bold text-blue-800 leading-tight">{formatCHF(period.totalCourtageReceived)}</p>
-              <p className="text-xs text-blue-600 mt-0.5">Von Versicherung erhalten · Berechnungsgrundlage</p>
-            </CardContent>
-          </Card>
-          <Card className="border-0 bg-blue-50/60">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-blue-600 uppercase tracking-wide leading-tight">Beratercourtage (Periode)</p>
-                <UserCheck className="w-4 h-4 text-blue-600 flex-shrink-0" />
-              </div>
-              <p className="text-xl font-bold text-blue-700 leading-tight">{formatCHF(period.totalAdvisorCourtage)}</p>
-              <p className="text-xs text-blue-500 mt-0.5">Ges.courtage × Berater-% · {period.nonCancelledCount} Abrechnungen</p>
-            </CardContent>
-          </Card>
-          <Card className={`border-0 ${period.totalCourtagePaid > 0 ? 'bg-green-50' : 'bg-muted/30'}`}>
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide leading-tight">Courtage ausbezahlt</p>
-                <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${period.totalCourtagePaid > 0 ? 'text-green-600' : 'text-muted-foreground'}`} />
-              </div>
-              <p className={`text-xl font-bold leading-tight ${period.totalCourtagePaid > 0 ? 'text-green-700' : 'text-muted-foreground'}`}>
-                {formatCHF(period.totalCourtagePaid)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">{formatPct(period.courtagePayout, 0)} Auszahlungsquote</p>
-            </CardContent>
-          </Card>
-          <Card className={`border-0 ${period.openCourtage > 0 ? 'bg-amber-50' : 'bg-green-50'}`}>
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide leading-tight">Offene Courtage</p>
-                <Clock className={`w-4 h-4 flex-shrink-0 ${period.openCourtage > 0 ? 'text-amber-600' : 'text-green-600'}`} />
-              </div>
-              <p className={`text-xl font-bold leading-tight ${period.openCourtage > 0 ? 'text-amber-700' : 'text-green-700'}`}>
-                {formatCHF(period.openCourtage)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">Berater noch nicht ausbezahlt</p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
+          <KpiCard
+            label="Ges.courtage (Periode)" value={formatCHF(period.totalCourtageReceived)}
+            sub="Von Versicherung – Basis" icon={Landmark} color="text-blue-700" bg="bg-blue-50"
+          />
+          <KpiCard
+            label="Beratercourtage Brutto" value={formatCHF(period.totalAdvisorCourtage)}
+            sub={`Ges.courtage × % · ${period.nonCancelledCount} Abrechnungen`}
+            icon={UserCheck} color="text-blue-600" bg="bg-blue-50/60"
+          />
+          <KpiCard
+            label="Stornoreserve Courtage" value={formatCHF(period.totalCourtageReserve)}
+            sub="Einbehalt – noch nicht freigegeben"
+            icon={ShieldAlert} color="text-orange-600" bg="bg-orange-50"
+            warn={period.totalCourtageReserve > 0}
+          />
+          <KpiCard
+            label="Netto Courtage" value={formatCHF(period.totalCourtagePayout)}
+            sub="Brutto − Reserve = auszahlbar"
+            icon={TrendingUp} color="text-blue-700" bg="bg-blue-50"
+          />
+          <KpiCard
+            label="Courtage ausbezahlt" value={formatCHF(period.totalCourtagePaid)}
+            sub={`${formatPct(period.courtagePayout, 0)} Auszahlungsquote (Netto-Basis)`}
+            icon={CheckCircle2}
+            color={period.totalCourtagePaid > 0 ? 'text-green-700' : 'text-muted-foreground'}
+            bg={period.totalCourtagePaid > 0 ? 'bg-green-50' : ''}
+          />
+          <KpiCard
+            label="Offene Courtage" value={formatCHF(period.openCourtage)}
+            sub="Netto noch nicht ausbezahlt"
+            icon={Clock}
+            color={period.openCourtage > 0 ? 'text-amber-700' : 'text-green-700'}
+            bg={period.openCourtage > 0 ? 'bg-amber-50' : 'bg-green-50'}
+          />
         </div>
       </div>
 
@@ -82,73 +98,71 @@ export default function CommissionKPIBar({ entries, filteredEntries }) {
         <div className="flex items-center gap-2 mb-2">
           <div className="h-px flex-1 bg-emerald-200" />
           <span className="text-xs font-bold text-emerald-700 uppercase tracking-widest flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5" /> Provision (Einmalige Vergütung → Berater)
+            <TrendingUp className="w-3.5 h-3.5" /> Provision
           </span>
           <div className="h-px flex-1 bg-emerald-200" />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Card className="border-0 bg-emerald-50">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-emerald-600 uppercase tracking-wide leading-tight">Gesellschaftsprovision (Periode)</p>
-                <Landmark className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              </div>
-              <p className="text-xl font-bold text-emerald-800 leading-tight">{formatCHF(period.totalProvisionReceived)}</p>
-              <p className="text-xs text-emerald-600 mt-0.5">Von Versicherung erhalten · Berechnungsgrundlage</p>
-            </CardContent>
-          </Card>
-          <Card className="border-0 bg-emerald-50/60">
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-emerald-600 uppercase tracking-wide leading-tight">Beraterprovision (Periode)</p>
-                <UserCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              </div>
-              <p className="text-xl font-bold text-emerald-700 leading-tight">{formatCHF(period.totalAdvisorProvision)}</p>
-              <p className="text-xs text-emerald-500 mt-0.5">Ges.provision × Berater-%</p>
-            </CardContent>
-          </Card>
-          <Card className={`border-0 ${period.totalProvisionPaid > 0 ? 'bg-green-50' : 'bg-muted/30'}`}>
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide leading-tight">Provision ausbezahlt</p>
-                <CheckCircle2 className={`w-4 h-4 flex-shrink-0 ${period.totalProvisionPaid > 0 ? 'text-green-600' : 'text-muted-foreground'}`} />
-              </div>
-              <p className={`text-xl font-bold leading-tight ${period.totalProvisionPaid > 0 ? 'text-green-700' : 'text-muted-foreground'}`}>
-                {formatCHF(period.totalProvisionPaid)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">Berater ausbezahlt</p>
-            </CardContent>
-          </Card>
-          <Card className={`border-0 ${period.openProvision > 0 ? 'bg-amber-50' : 'bg-green-50'}`}>
-            <CardContent className="p-3">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide leading-tight">Offene Provision</p>
-                <Clock className={`w-4 h-4 flex-shrink-0 ${period.openProvision > 0 ? 'text-amber-600' : 'text-green-600'}`} />
-              </div>
-              <p className={`text-xl font-bold leading-tight ${period.openProvision > 0 ? 'text-amber-700' : 'text-green-700'}`}>
-                {formatCHF(period.openProvision)}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">Berater noch nicht ausbezahlt</p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
+          <KpiCard
+            label="Ges.provision (Periode)" value={formatCHF(period.totalProvisionReceived)}
+            sub="Von Versicherung – Basis" icon={Landmark} color="text-emerald-700" bg="bg-emerald-50"
+          />
+          <KpiCard
+            label="Beraterprovision Brutto" value={formatCHF(period.totalAdvisorProvision)}
+            sub="Ges.provision × %" icon={UserCheck} color="text-emerald-600" bg="bg-emerald-50/60"
+          />
+          <KpiCard
+            label="Stornoreserve Provision" value={formatCHF(period.totalProvisionReserve)}
+            sub="Einbehalt – noch nicht freigegeben"
+            icon={ShieldAlert} color="text-orange-600" bg="bg-orange-50"
+            warn={period.totalProvisionReserve > 0}
+          />
+          <KpiCard
+            label="Netto Provision" value={formatCHF(period.totalProvisionPayout)}
+            sub="Brutto − Reserve = auszahlbar"
+            icon={TrendingUp} color="text-emerald-700" bg="bg-emerald-50"
+          />
+          <KpiCard
+            label="Provision ausbezahlt" value={formatCHF(period.totalProvisionPaid)}
+            sub="Netto bereits ausbezahlt"
+            icon={CheckCircle2}
+            color={period.totalProvisionPaid > 0 ? 'text-green-700' : 'text-muted-foreground'}
+            bg={period.totalProvisionPaid > 0 ? 'bg-green-50' : ''}
+          />
+          <KpiCard
+            label="Offene Provision" value={formatCHF(period.openProvision)}
+            sub="Netto noch nicht ausbezahlt"
+            icon={Clock}
+            color={period.openProvision > 0 ? 'text-amber-700' : 'text-green-700'}
+            bg={period.openProvision > 0 ? 'bg-amber-50' : 'bg-green-50'}
+          />
         </div>
       </div>
 
-      {/* Storno */}
-      <div className="grid grid-cols-1">
+      {/* Gesamt-Reserve + Storno */}
+      <div className="grid grid-cols-2 gap-2">
+        <Card className={`border-0 ${global.totalReserveOpen > 0 ? 'bg-orange-50 ring-1 ring-orange-200' : 'bg-muted/30'}`}>
+          <CardContent className="p-3 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Gesamte offene Reserve</p>
+              <p className={`text-xl font-bold ${global.totalReserveOpen > 0 ? 'text-orange-700' : 'text-muted-foreground'}`}>
+                {formatCHF(global.totalReserveOpen)}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">Courtage + Provisions-Reserve (Brutto-Bestand)</p>
+            </div>
+            <ShieldAlert className={`w-8 h-8 ${global.totalReserveOpen > 0 ? 'text-orange-300' : 'text-muted-foreground/30'}`} />
+          </CardContent>
+        </Card>
         <Card className={`border-0 ${global.stornoRate > 10 ? 'bg-red-50 ring-1 ring-red-300' : global.stornoRate > 5 ? 'bg-amber-50' : 'bg-green-50'}`}>
           <CardContent className="p-3 flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Stornoquote (Gesamtbestand)</p>
-              <p className={`text-2xl font-bold ${global.stornoRate > 10 ? 'text-red-700' : global.stornoRate > 5 ? 'text-amber-700' : 'text-green-700'}`}>
+              <p className={`text-xl font-bold ${global.stornoRate > 10 ? 'text-red-700' : global.stornoRate > 5 ? 'text-amber-700' : 'text-green-700'}`}>
                 {formatPct(global.stornoRate)}
               </p>
+              <p className="text-xs text-muted-foreground mt-0.5">{global.cancelledCount} storniert von {global.count}</p>
             </div>
-            <div className="text-right text-xs text-muted-foreground">
-              <p>{global.cancelledCount} storniert von {global.count} gesamt</p>
-              {global.stornoRate > 10 && <p className="text-red-600 font-semibold mt-0.5">⚠ Hohe Stornoquote!</p>}
-            </div>
-            <TrendingDown className={`w-8 h-8 ${global.stornoRate > 10 ? 'text-red-400' : global.stornoRate > 5 ? 'text-amber-400' : 'text-green-400'}`} />
+            <TrendingDown className={`w-8 h-8 ${global.stornoRate > 10 ? 'text-red-300' : global.stornoRate > 5 ? 'text-amber-300' : 'text-green-300'}`} />
           </CardContent>
         </Card>
       </div>
