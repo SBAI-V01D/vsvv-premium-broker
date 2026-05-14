@@ -76,10 +76,15 @@ VERSICHERUNGSDATEN:
 - insurer: Versicherungsgesellschaft (z.B. "Allianz", "CSS", "Generali", "Helsana", "Swica", "Sanitas", "KPT", "Concordia", "ÖKK")
 - policy_number: Policen-Nummer / Vertragsnummer (WICHTIG: vollständige Nummer extrahieren)
 - insurance_type: Versicherungsart (z.B. "Krankenversicherung KVG", "Krankenzusatz VVG", "Motorfahrzeug", "Hausrat", "Haftpflicht", "Leben", "BVG")
-- product: Produkt/Tarif-Bezeichnung (SEHR WICHTIG! z.B. "COMPACT", "STANDARD", "HMO", "Telmed", "TOP", "BASIC", "Comfort", "Vollkasko", "OPTIMA", "Natura")
+- product: Produkt/Tarif-Bezeichnung (SEHR WICHTIG! z.B. "COMPACT", "STANDARD", "HMO", "Telmed", "TOP", "BASIC", "Comfort", "Vollkasko", "OPTIMA", "Natura", "SanaTel", "myFlex", "easy sana", "Smile")
   * Steht oft in GROSSBUCHSTABEN direkt neben oder unter dem Versicherungsnamen
   * Ist der Name des Versicherungsmodells, nicht die Sparte
-  * Beispiele: "CSS COMPACT", "Helsana TOP", "Swica OPTIMA", "Sanitas CASAMED HMO"
+  * Bei Gruppenversicherungen: Produkt-/Tarifname aus der Police extrahieren (z.B. "SanaTel", "HOSPITAL", "GLOBAL Care")
+  * Beispiele: "CSS COMPACT", "Helsana TOP", "Swica OPTIMA", "Sanitas CASAMED HMO", "Groupe Mutuel SanaTel", "Mutuel OPTIMA"
+  * IMMER aus dem Dokument extrahieren — nicht "KVG" oder "VVG" als Produkt verwenden, das ist die Versicherungsart
+- model: Versicherungsmodell / Tarifmodell wenn vorhanden (z.B. "Hausarztmodell", "HMO", "Telmed", "freie Arztwahl", "Standardmodell")
+- franchise: Franchise-Betrag falls vorhanden (z.B. "300", "500", "1000", "1500", "2000", "2500")
+- age_group: Altersgruppe wenn erkennbar (z.B. "Erwachsener", "Kind (0–18 Jahre)", "jung (19–25 Jahre)")
 - start_date: Versicherungsbeginn / Gültig ab (YYYY-MM-DD)
 - end_date: Vertragsablauf / Gültig bis / Ende (YYYY-MM-DD)
 - cancellation_deadline: Kündigungsfrist / Kündigung bis (YYYY-MM-DD) falls vorhanden
@@ -131,7 +136,10 @@ Rückgabe EXAKT als JSON:
   "renewal_date": "YYYY-MM-DD" oder null,
   "premium_monthly": 100.50 oder null,
   "premium_yearly": 1200.00 oder null,
-  "payment_frequency": "monatlich" oder "jährlich" oder null
+  "payment_frequency": "monatlich" oder "jährlich" oder null,
+  "model": "Hausarztmodell" oder "HMO" oder "Telmed" oder null,
+  "franchise": "300" oder "1500" oder null,
+  "age_group": "Erwachsener" oder "Kind (0–18 Jahre)" oder null
 }`,
         file_urls: [file_url],
         response_json_schema: {
@@ -160,7 +168,10 @@ Rückgabe EXAKT als JSON:
             renewal_date: { type: ['string', 'null'] },
             premium_monthly: { type: ['number', 'null'] },
             premium_yearly: { type: ['number', 'null'] },
-            payment_frequency: { type: ['string', 'null'] }
+            payment_frequency: { type: ['string', 'null'] },
+            model: { type: ['string', 'null'] },
+            franchise: { type: ['string', 'null'] },
+            age_group: { type: ['string', 'null'] }
           }
         }
       });
@@ -217,7 +228,14 @@ Rückgabe EXAKT als JSON:
       premiumYearly = Math.round(premiumMonthly * 12 * 100) / 100;
     }
 
-    console.log(`[extractPolicyData] SUCCESS: insurer=${insurer}, name=${firstName} ${lastName}, zip=${zipCode}, role=${role}`);
+    // Build sparte_data from extracted fields
+    const sparteData = {};
+    if (extractedData.model) sparteData.model = extractedData.model;
+    if (extractedData.franchise) sparteData.franchise = extractedData.franchise;
+    if (extractedData.age_group) sparteData.age_group = extractedData.age_group;
+    if (extractedData.payment_frequency) sparteData.zahlungsintervall = extractedData.payment_frequency;
+
+    console.log(`[extractPolicyData] SUCCESS: insurer=${insurer}, product=${product}, name=${firstName} ${lastName}, zip=${zipCode}, role=${role}`);
 
     return Response.json({
       success: true,
@@ -246,7 +264,7 @@ Rückgabe EXAKT als JSON:
         premium_monthly: premiumMonthly,
         premium_yearly: premiumYearly,
         payment_frequency: extractedData.payment_frequency || null,
-        sparte_data: {},
+        sparte_data: sparteData,
         additional_products: [],
         notes: null
       }

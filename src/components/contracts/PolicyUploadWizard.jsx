@@ -402,13 +402,20 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
 
       // Build contracts from extracted data
       const sparteKey = mapInsuranceType(d.insurance_type) || d.insurance_type || ''
-      const sparteData = d.sparte_data || {}
+      // Merge sparte_data: backend already builds it, but also check top-level fields as fallback
+      const sparteData = {
+        ...(d.sparte_data || {}),
+        ...(d.model ? { model: d.model } : {}),
+        ...(d.franchise ? { franchise: d.franchise } : {}),
+        ...(d.age_group ? { age_group: d.age_group } : {}),
+        ...(d.payment_frequency ? { zahlungsintervall: d.payment_frequency } : {}),
+      }
 
       const baseContract = {
         insurer: d.insurer || d.provider || '',
         policy_number: d.policy_number || '',
         sparte: sparteKey,
-        product: d.product || d.tariff || '',
+        product: d.product || '',
         premium_monthly: d.premium_monthly || '',
         premium_yearly: d.premium_yearly || '',
         start_date: d.start_date || '',
