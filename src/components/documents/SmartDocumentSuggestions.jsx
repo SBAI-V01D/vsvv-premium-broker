@@ -226,7 +226,17 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
   // FLOW B: Neuer Hauptkontakt
   // ─────────────────────────────────────────────
   const handleSavePrimary = async () => {
-    const user = await base44.auth.me()
+    // Organisations-ID: aus insights (vorhandener Kunde) oder erste verfügbare Org
+    let orgId = insights.matchedPrimaryCustomer?.organization_id || null
+    if (!orgId) {
+      const orgs = await base44.entities.Organization.list('-created_date', 1)
+      orgId = orgs?.[0]?.id || null
+    }
+    if (!orgId) {
+      alert('Fehler: Keine Organisation gefunden. Bitte zuerst eine Organisation anlegen.')
+      return
+    }
+
     const newCustomer = await createCustomerMut.mutateAsync({
       first_name: primaryData.first_name,
       last_name: primaryData.last_name,
@@ -236,13 +246,13 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
       street: primaryData.street || null,
       zip_code: primaryData.zip_code || null,
       city: primaryData.city || null,
-      organization_id: user.organization_id,
+      organization_id: orgId,
       is_family_member: false,
       family_role: 'primary',
       status: 'active',
     })
     setCreatedCustomerId(newCustomer.id)
-    window.__tmpNewPrimary = { id: newCustomer.id, orgId: user.organization_id, advisorId: null }
+    window.__tmpNewPrimary = { id: newCustomer.id, orgId, advisorId: null }
     setPrimaryStep(1)
   }
 
