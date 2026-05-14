@@ -17,19 +17,13 @@ Deno.serve(async (req) => {
 
     const application = data;
 
-    // Trigger on status change to approved/active states
-    const approvedStatuses = ['approved', 'active', 'accepted', 'confirmed'];
-    const isNowApproved = approvedStatuses.includes(application.custom_status) || 
-                          approvedStatuses.includes(application.status);
-    const wasApprovedBefore = old_data && (
-      approvedStatuses.includes(old_data.custom_status) || 
-      approvedStatuses.includes(old_data.status)
-    );
-
-    // Only create contract on transition to approved (not if already approved)
-    if (!isNowApproved || (old_data && wasApprovedBefore)) {
-      return Response.json({ status: 'skipped', reason: 'Status not transitioning to approved' });
-    }
+    // Diese Funktion ist redundant mit onApplicationUpdate
+    // onApplicationUpdate kümmert sich bereits um Vertragserstellung
+    // Diese Funktion wird deaktiviert um Duplikate zu verhindern
+    return Response.json({ 
+      status: 'skipped', 
+      reason: 'Disabled - onApplicationUpdate handles contract creation' 
+    });
 
     if (!application.customer_id || !application.insurer) {
       return Response.json({ status: 'skipped', reason: 'Missing customer_id or insurer' });
