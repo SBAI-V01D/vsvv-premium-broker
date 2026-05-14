@@ -215,12 +215,12 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
 
       {/* ── Tages-Zusammenfassung ───────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
+        {useMemo(() => [
           { label: 'Offene Aufgaben',    value: openTasks.length,          color: 'text-amber-600',  bg: 'bg-amber-50',   path: '/aufgaben',          icon: CheckSquare },
           { label: 'Verkaufschancen',    value: verkaufschancen.filter(v => !['gewonnen','verloren'].includes(v.status)).length, color: 'text-blue-600', bg: 'bg-blue-50', path: '/verkaufschancen', icon: TrendingUp },
           { label: 'Neue Leads',         value: activeLeads.filter(l => l.status === 'new').length, color: 'text-violet-600', bg: 'bg-violet-50', path: '/leads', icon: Target },
           { label: 'Vertragsabläufe',    value: expiringContracts.length,   color: expiringContracts.length > 0 ? 'text-orange-600' : 'text-muted-foreground', bg: expiringContracts.length > 0 ? 'bg-orange-50' : 'bg-muted', path: '/vertragsablaeufe', icon: RefreshCw },
-        ].map(k => (
+        ], [openTasks, verkaufschancen, activeLeads, expiringContracts]).map(k => (
           <button
             key={k.label}
             onClick={() => navigate(k.path)}
