@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 
 import TodayDashboard from '@/components/dashboard/TodayDashboard'
+import MoneyDashboard from '@/components/dashboard/MoneyDashboard'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -143,7 +144,11 @@ export default function Dashboard() {
       </div>
 
       {/* ── Dashboard Content ────────────────────────────────────────────── */}
-      <div className="pt-5">
+      <div className="pt-5 space-y-6">
+        {/* 💰 MONEY DASHBOARD – Geld & Vertrieb im Fokus */}
+        <MoneyDashboard />
+        
+        {/* Klassisches Tages-Dashboard */}
         <TodayDashboard
           openTasks={openTasks}
           expiringContracts={expiringContracts}
