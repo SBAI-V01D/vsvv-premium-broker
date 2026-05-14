@@ -87,16 +87,11 @@ export default function Tasks() {
   }
 
   // Filter: nur echte, aktive Tasks (keine Zombie-Tasks)
-  // assigned_to ist optional — viele auto-erstellte Tasks haben keinen Broker gesetzt
-  // customer_id ist AUCH optional — viele auto-created Tasks haben keinen Bezug
   const isValidTask = (t) => {
-    return t.status !== 'completed'
-      && !t.deleted
-      && !t.archived
-      && !t.is_test_data
+    return !t.deleted && !t.archived && !t.is_test_data
   }
 
-  // Split by category
+  // Split by category AND status
   const adminTasks = tasks.filter(t => !CONTRACT_TASK_TYPES.includes(t.task_type) && isValidTask(t))
   const contractTasks = tasks.filter(t => CONTRACT_TASK_TYPES.includes(t.task_type) && isValidTask(t))
   const activeCategoryTasks = categoryTab === 'admin' ? adminTasks : contractTasks
