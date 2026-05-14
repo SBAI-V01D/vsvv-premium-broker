@@ -43,7 +43,8 @@ export default function Dashboard() {
     contracts.filter(c => {
       if (!c.end_date || ['cancelled', 'archived'].includes(c.status)) return false
       const d = new Date(c.end_date + 'T00:00:00')
-      return d >= new Date(today.getTime() - 30 * 86400000) && d <= in90
+      const thirtyDaysAgo = new Date(today.getTime() - 30 * 86400000)
+      return d >= thirtyDaysAgo && d <= in90
     }),
     [contracts]
   )
