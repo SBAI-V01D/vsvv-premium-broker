@@ -167,6 +167,15 @@ export function formatDateTime(dateStr) {
 export function calcKPIs(entries) {
   const normalized = entries.map(normalizeLegacyEntry)
   const active           = normalized.filter(e => !e.archived)
+  
+  // ENTERPRISE: Consistency check log (non-blocking)
+  const inconsistencies = active
+    .map((e, i) => ({ index: i, warnings: checkEntryConsistency(e) }))
+    .filter(x => x.warnings.length > 0)
+  if (inconsistencies.length > 0) {
+    console.warn(`[calcKPIs] ⚠️ ${inconsistencies.length} entries with consistency warnings`)
+  }
+  
   const nonCancCourtage  = active.filter(e => (e.courtage_status || e.status) !== 'cancelled')
   const nonCancProvision = active.filter(e => (e.provision_status || 'pending') !== 'cancelled')
   const cancelled        = active.filter(e => (e.courtage_status || e.status) === 'cancelled')

@@ -108,7 +108,19 @@ export default function CommissionsAndCourtage() {
 
   // ── Mutations ────────────────────────────────────────────────────────────
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.CommissionEntry.create(calcCommissionFields(data)),
+    mutationFn: async (data) => {
+      // SECURITY GATE: Prüfe ob User darf erstellen
+      const accessCheck = await base44.functions.invoke('guardCommissionAccess', {
+        action: 'create',
+        advisor_id: data.advisor_id,
+      }).catch(e => ({ data: { allowed: false, reason: e.message } }));
+      
+      if (!accessCheck.data?.allowed) {
+        throw new Error(`Zugriff verweigert: ${accessCheck.data?.reason || 'Keine Berechtigung'}`);
+      }
+
+      return base44.entities.CommissionEntry.create(calcCommissionFields(data));
+    },
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
       const c = normalizeLegacyEntry(created)
