@@ -8,13 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  Search, Plus, Edit, Archive, Settings, Download, MoreHorizontal,
-  AlertTriangle, X, User, CheckCircle2, Calculator, TrendingUp,
-  Clock, ShieldCheck, FileText, History, BarChart2
+  Search, Plus, Settings, Download, AlertTriangle, X, User, CheckCircle2,
+  Calculator, TrendingUp, Clock, ShieldCheck, FileText, History, BarChart2
 } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
+import {
+  calcCommissionFields, formatCHF, formatDate, validateCommissionForm,
+  STATUS_TRANSITIONS, STATUS_META, canTransitionTo, getStatusDates,
+  generateCSV, downloadCSV
+} from '@/lib/commissionEngine'
 
 // Subcomponents
 import CommissionKPIBar from '@/components/commissions/CommissionKPIBar'
@@ -30,70 +33,15 @@ const SWISS_INSURERS = [
 ]
 const ALL_SPARTEN = ['KVG', 'VVG', 'Leben', 'Sach', 'KFZ', 'BVG', 'Rechtsschutz', 'Haftpflicht', 'Hausrat']
 
-const STATUS_OPTIONS = [
-  { value: 'pending',   label: 'Ausstehend',  color: 'bg-gray-100 text-gray-700',     icon: Clock },
-  { value: 'invoiced',  label: 'Eingereicht', color: 'bg-blue-100 text-blue-700',     icon: FileText },
-  { value: 'received',  label: 'Erhalten',    color: 'bg-yellow-100 text-yellow-700', icon: TrendingUp },
-  { value: 'earned',    label: 'Freigegeben', color: 'bg-indigo-100 text-indigo-700', icon: ShieldCheck },
-  { value: 'paid',      label: 'Ausbezahlt',  color: 'bg-green-100 text-green-700',   icon: CheckCircle2 },
-  { value: 'cancelled', label: 'Storniert',   color: 'bg-red-100 text-red-700',       icon: X },
+// STATUS_OPTIONS with icons for form display (engine has STATUS_META for table)
+const STATUS_OPTIONS_WITH_ICONS = [
+  { value: 'pending',   label: 'Ausstehend',  icon: Clock },
+  { value: 'invoiced',  label: 'Eingereicht', icon: FileText },
+  { value: 'received',  label: 'Erhalten',    icon: TrendingUp },
+  { value: 'earned',    label: 'Freigegeben', icon: ShieldCheck },
+  { value: 'paid',      label: 'Ausbezahlt',  icon: CheckCircle2 },
+  { value: 'cancelled', label: 'Storniert',   icon: X },
 ]
-
-const STATUS_TRANSITIONS = {
-  pending:   ['invoiced', 'cancelled'],
-  invoiced:  ['received', 'cancelled'],
-  received:  ['earned',   'cancelled'],
-  earned:    ['paid',     'cancelled'],
-  paid:      [],
-  cancelled: [],
-}
-
-// ─── Central Calculation Engine ───────────────────────────────────────────────
-export function calcCommissionFields(data) {
-  const premiumYearly = parseFloat(data.premium_yearly) || 0
-  const receivedAmount = parseFloat(data.received_amount) || 0
-  const commissionPct = parseFloat(data.commission_percentage) || 0
-  const commissionAmount = Math.round((receivedAmount * commissionPct) / 100 * 100) / 100
-  return { ...data, premium_yearly: premiumYearly, received_amount: receivedAmount, commission_percentage: commissionPct, commission_amount: commissionAmount }
-}
-
-export function formatCHF(amount) {
-  return (amount || 0).toLocaleString('de-CH', { style: 'currency', currency: 'CHF' })
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return '–'
-  return new Date(dateStr).toLocaleDateString('de-CH')
-}
-
-function getStatusMeta(status) {
-  return STATUS_OPTIONS.find(s => s.value === status) || STATUS_OPTIONS[0]
-}
-
-function canTransitionTo(current, next) {
-  return (STATUS_TRANSITIONS[current] || []).includes(next)
-}
-
-// ─── Validation ───────────────────────────────────────────────────────────────
-function validateForm(data) {
-  const errors = {}
-  if (!data.entry_date) errors.entry_date = 'Pflichtfeld'
-  if (!data.insurer) errors.insurer = 'Pflichtfeld'
-  if (!data.advisor_id) errors.advisor_id = 'Pflichtfeld'
-  if (!data.organization_id) errors.organization_id = 'Pflichtfeld'
-  if (!data.customer_name) errors.customer_name = 'Pflichtfeld'
-  if (!data.product_category) errors.product_category = 'Pflichtfeld'
-  if (!data.premium_yearly || parseFloat(data.premium_yearly) <= 0) errors.premium_yearly = 'Muss > 0 sein'
-  if (!data.received_amount || parseFloat(data.received_amount) <= 0) errors.received_amount = 'Pflichtfeld – Berechnungsgrundlage'
-  if (!data.commission_percentage || parseFloat(data.commission_percentage) <= 0) errors.commission_percentage = 'Muss > 0 sein'
-  if (parseFloat(data.commission_percentage) > 100) errors.commission_percentage = 'Maximal 100%'
-  const received = parseFloat(data.received_amount) || 0
-  const premium = parseFloat(data.premium_yearly) || 0
-  if (received > 0 && premium > 0 && received > premium) {
-    errors.received_amount = 'Erhaltene Courtage grösser als Jahresprämie – bitte prüfen'
-  }
-  return errors
-}
 
 // ─── Customer Search ──────────────────────────────────────────────────────────
 function CustomerSearchField({ value, customerId, onChange, customers }) {
@@ -321,17 +269,13 @@ export default function CommissionsAndCourtage() {
 
   const statusChangeMutation = useMutation({
     mutationFn: ({ id, newStatus, entry }) => {
-      const updates = { status: newStatus }
-      if (newStatus === 'invoiced') updates.invoiced_date = new Date().toISOString().split('T')[0]
-      if (newStatus === 'received') updates.received_date = new Date().toISOString().split('T')[0]
-      if (newStatus === 'earned') updates.earned_date = new Date().toISOString().split('T')[0]
-      if (newStatus === 'paid') { updates.paid_date = new Date().toISOString().split('T')[0]; updates.is_paid = true }
+      const updates = getStatusDates(newStatus)
       return base44.entities.CommissionEntry.update(id, updates).then(r => ({ result: r, entry, newStatus }))
     },
     onSuccess: ({ result, entry, newStatus }) => {
       queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
-      const from = getStatusMeta(entry.status)
-      const to = getStatusMeta(newStatus)
+      const from = STATUS_META[entry.status] || STATUS_META.pending
+      const to = STATUS_META[newStatus] || STATUS_META.pending
       writeAuditLog(result.id, 'update',
         `Status geändert: ${from.label} → ${to.label} (${entry.customer_name})`,
         { status: entry.status }, { status: newStatus })
@@ -359,14 +303,14 @@ export default function CommissionsAndCourtage() {
   const handleFormChange = useCallback((updates) => {
     setFormData(prev => {
       const next = { ...prev, ...updates }
-      if (submitAttempted) setFormErrors(validateForm(next))
+      if (submitAttempted) setFormErrors(validateCommissionForm(next))
       return next
     })
   }, [submitAttempted])
 
   const handleSave = () => {
     setSubmitAttempted(true)
-    const errors = validateForm(formData)
+    const errors = validateCommissionForm(formData)
     setFormErrors(errors)
     if (Object.keys(errors).length > 0) return
     if (createMutation.isPending || updateMutation.isPending) return
@@ -388,7 +332,7 @@ export default function CommissionsAndCourtage() {
 
   const handleStatusChange = (entry, newStatus) => {
     if (!canTransitionTo(entry.status, newStatus)) {
-      toast({ title: 'Ungültiger Statuswechsel', description: `Von "${getStatusMeta(entry.status).label}" nicht direkt zu "${getStatusMeta(newStatus).label}" möglich.`, variant: 'destructive' })
+      toast({ title: 'Ungültiger Statuswechsel', description: `Von "${STATUS_META[entry.status]?.label}" nicht direkt zu "${STATUS_META[newStatus]?.label}" möglich.`, variant: 'destructive' })
       return
     }
     statusChangeMutation.mutate({ id: entry.id, newStatus, entry })
@@ -434,18 +378,7 @@ export default function CommissionsAndCourtage() {
   const uniqueInsurers = useMemo(() => [...new Set(activeEntries.map(e => e.insurer).filter(Boolean))], [activeEntries])
 
   const handleCSVExport = () => {
-    const headers = ['Datum', 'Gesellschaft', 'Berater', 'Kunde', 'Sparte', 'Policen-Nr.', 'Jahresprämie (CHF)', 'Courtage erhalten (CHF)', 'Berateranteil %', 'Beraterprovision (CHF)', 'Status']
-    const rows = filteredEntries.map(e => [
-      e.entry_date || '', e.insurer || '', e.advisor_name || '',
-      e.customer_name || '', e.product_category || '', e.policy_number || '',
-      (e.premium_yearly || 0).toFixed(2), (e.received_amount || 0).toFixed(2),
-      (e.commission_percentage || 0).toFixed(2), (e.commission_amount || 0).toFixed(2), e.status || '',
-    ])
-    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n')
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href = url; a.download = `provisionen_${filterYear}_${filterMonth}.csv`; a.click()
-    URL.revokeObjectURL(url)
+    downloadCSV(generateCSV(filteredEntries), `provisionen_${filterYear}_${filterMonth}.csv`)
   }
 
   const isSaving = createMutation.isPending || updateMutation.isPending
@@ -557,7 +490,7 @@ export default function CommissionsAndCourtage() {
               <SelectTrigger className="w-36 h-9 text-sm"><SelectValue placeholder="Alle Status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Alle Status</SelectItem>
-                {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                {STATUS_OPTIONS_WITH_ICONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -703,9 +636,9 @@ export default function CommissionsAndCourtage() {
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {editingEntry
-                        ? STATUS_OPTIONS.filter(s => s.value === formData.status || canTransitionTo(editingEntry.status, s.value))
+                        ? STATUS_OPTIONS_WITH_ICONS.filter(s => s.value === formData.status || canTransitionTo(editingEntry.status, s.value))
                             .map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)
-                        : STATUS_OPTIONS.slice(0, 2).map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)
+                        : STATUS_OPTIONS_WITH_ICONS.slice(0, 2).map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)
                       }
                     </SelectContent>
                   </Select>

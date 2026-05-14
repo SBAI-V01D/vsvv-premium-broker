@@ -2,54 +2,27 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Edit, Archive, MoreHorizontal, Clock, FileText, TrendingUp, ShieldCheck, CheckCircle2, X } from 'lucide-react'
+import { Edit, Archive, MoreHorizontal, AlertTriangle } from 'lucide-react'
+import { formatCHF, formatDate, STATUS_META, STATUS_TRANSITIONS, checkEntryConsistency } from '@/lib/commissionEngine'
 
 const PAGE_SIZE = 50
-
-function formatCHF(amount) {
-  return (amount || 0).toLocaleString('de-CH', { style: 'currency', currency: 'CHF' })
-}
-function formatDate(dateStr) {
-  if (!dateStr) return '–'
-  return new Date(dateStr).toLocaleDateString('de-CH')
-}
-
-const STATUS_META = {
-  pending:   { label: 'Ausstehend',  color: 'bg-gray-100 text-gray-700' },
-  invoiced:  { label: 'Eingereicht', color: 'bg-blue-100 text-blue-700' },
-  received:  { label: 'Erhalten',    color: 'bg-yellow-100 text-yellow-700' },
-  earned:    { label: 'Freigegeben', color: 'bg-indigo-100 text-indigo-700' },
-  paid:      { label: 'Ausbezahlt',  color: 'bg-green-100 text-green-700' },
-  cancelled: { label: 'Storniert',   color: 'bg-red-100 text-red-700' },
-}
-
-const STATUS_TRANSITIONS = {
-  pending:   ['invoiced', 'cancelled'],
-  invoiced:  ['received', 'cancelled'],
-  received:  ['earned',   'cancelled'],
-  earned:    ['paid',     'cancelled'],
-  paid:      [],
-  cancelled: [],
-}
 
 export default function CommissionTablePaginated({ entries, loading, onEdit, onArchive, onStatusChange }) {
   const [page, setPage] = useState(1)
 
   const totalPages = Math.max(1, Math.ceil(entries.length / PAGE_SIZE))
-  const paginated = useMemo(() => entries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [entries, page])
+  const paginated  = useMemo(() => entries.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [entries, page])
 
   const totals = useMemo(() => ({
-    premium: entries.reduce((s, e) => s + (e.premium_yearly || 0), 0),
-    received: entries.reduce((s, e) => s + (e.received_amount || 0), 0),
+    premium:    entries.reduce((s, e) => s + (e.premium_yearly || 0), 0),
+    received:   entries.reduce((s, e) => s + (e.received_amount || 0), 0),
     commission: entries.reduce((s, e) => s + (e.commission_amount || 0), 0),
   }), [entries])
 
-  // Reset page when entries change
   React.useEffect(() => { setPage(1) }, [entries.length])
 
   return (
     <div className="space-y-3">
-      {/* Count info */}
       {entries.length > PAGE_SIZE && (
         <p className="text-xs text-muted-foreground">
           Zeige {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, entries.length)} von {entries.length} Einträgen
@@ -81,17 +54,29 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                 ) : paginated.length === 0 ? (
                   <tr><td colSpan="11" className="text-center py-10 text-muted-foreground">Keine Einträge für diesen Zeitraum</td></tr>
                 ) : paginated.map(e => {
-                  const sm = STATUS_META[e.status] || STATUS_META.pending
-                  const allowedNext = STATUS_TRANSITIONS[e.status] || []
+                  const sm           = STATUS_META[e.status] || STATUS_META.pending
+                  const allowedNext  = STATUS_TRANSITIONS[e.status] || []
+                  const warnings     = checkEntryConsistency(e)
+                  const isOverdue    = e.status === 'invoiced' && e.invoiced_date &&
+                    (Date.now() - new Date(e.invoiced_date).getTime()) / 86400000 > 60
+
                   return (
-                    <tr key={e.id} className="border-b hover:bg-muted/30 transition-colors">
-                      <td className="py-2.5 px-4 whitespace-nowrap text-muted-foreground text-xs">{formatDate(e.entry_date)}</td>
+                    <tr key={e.id} className={`border-b transition-colors ${warnings.length > 0 ? 'bg-amber-50/40 hover:bg-amber-50' : 'hover:bg-muted/30'}`}>
+                      <td className="py-2.5 px-4 whitespace-nowrap text-muted-foreground text-xs">
+                        {formatDate(e.entry_date)}
+                        {isOverdue && <span className="ml-1 text-red-500" title="Überfällig (>60 Tage seit Einreichung)">⚠</span>}
+                      </td>
                       <td className="py-2.5 px-4 font-medium hidden md:table-cell">{e.insurer}</td>
                       <td className="py-2.5 px-4 text-muted-foreground text-xs hidden lg:table-cell">{e.advisor_name || '–'}</td>
                       <td className="py-2.5 px-4">
                         <div>
                           <p className="font-medium text-xs leading-tight">{e.customer_name || '–'}</p>
                           <p className="text-xs text-muted-foreground md:hidden">{e.insurer}</p>
+                          {warnings.length > 0 && (
+                            <p className="text-xs text-amber-600 flex items-center gap-1 mt-0.5">
+                              <AlertTriangle className="w-3 h-3" /> Inkonsistenz
+                            </p>
+                          )}
                         </div>
                       </td>
                       <td className="py-2.5 px-4 text-muted-foreground text-xs hidden xl:table-cell">{e.product_category || '–'}</td>
@@ -132,6 +117,14 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                                 })}
                               </>
                             )}
+                            {warnings.length > 0 && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <div className="px-2 py-1 text-xs text-amber-600 font-semibold">
+                                  {warnings.map((w, i) => <div key={i}>⚠ {w}</div>)}
+                                </div>
+                              </>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-amber-600"
                               onClick={() => { if (confirm('Eintrag archivieren? Bleibt im Audit Log erhalten.')) onArchive(e) }}>
@@ -162,7 +155,6 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
         </CardContent>
       </Card>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground text-xs">Seite {page} von {totalPages}</span>
