@@ -65,7 +65,10 @@ export default function MoneyDashboard() {
 
   const { data: opps = [] } = useQuery({
     queryKey: ['opportunities-top'],
-    queryFn: () => base44.entities.Verkaufschance.filter({ status: ['neu', 'in_ausschreibung', 'offerten_erhalten'] }, '-estimated_value', 50),
+    queryFn: async () => {
+      const all = await base44.entities.Verkaufschance.list('-estimated_value', 50)
+      return all.filter(o => ['neu', 'in_ausschreibung', 'offerten_erhalten'].includes(o.status))
+    },
   })
 
   const { data: contracts = [] } = useQuery({
@@ -85,7 +88,8 @@ export default function MoneyDashboard() {
     }).length
 
     const hotLeads = leads.filter(l => (l.lead_score || 0) >= 70).length
-    const topOpps = opps.filter(o => o.estimated_value > 50000).length
+    const topOpps = opps.length
+    const risks = contracts.filter(c => c.churn_risk === 'high' || c.pricing_status === 'high').length
 
     return {
       courtageOpen,
@@ -94,7 +98,8 @@ export default function MoneyDashboard() {
       renewalNext30,
       hotLeads,
       topOpps,
-    }
+      risks,
+      }
   }, [entries, leads, opps, contracts])
 
   return (
@@ -150,8 +155,8 @@ export default function MoneyDashboard() {
           </TabsTrigger>
           <TabsTrigger value="risks" className="flex items-center gap-1">
             <AlertTriangle className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Risiken</span>
-            <span className="sm:hidden">!</span>
+            <span className="hidden sm:inline">Risiken ({kpis.risks})</span>
+            <span className="sm:hidden">{kpis.risks}</span>
           </TabsTrigger>
         </TabsList>
 
@@ -179,59 +184,71 @@ export default function MoneyDashboard() {
         </TabsContent>
 
         <TabsContent value="opportunities" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Top Opportunities</CardTitle>
-              <CardDescription>
-                Größte Chancen – sortiert nach Courtage-Potenzial
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {opps.slice(0, 10).map(opp => (
-                  <div key={opp.id} className="flex items-center justify-between p-2 hover:bg-muted rounded">
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{opp.title}</p>
-                      <p className="text-xs text-muted-foreground">{opp.customer_name}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-sm">{formatCHF(opp.estimated_value)}</p>
-                      <p className="text-xs text-amber-600">~{formatCHF(opp.estimated_value * 0.02)} Courtage</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+           <Card>
+             <CardHeader>
+               <CardTitle className="text-base">Top Opportunities ({opps.length})</CardTitle>
+               <CardDescription>
+                 Größte Chancen – sortiert nach Courtage-Potenzial
+               </CardDescription>
+             </CardHeader>
+             <CardContent>
+               {opps.length === 0 ? (
+                 <p className="text-center text-muted-foreground py-8">Keine Opportunities</p>
+               ) : (
+                 <div className="space-y-2">
+                   {opps.slice(0, 10).map(opp => (
+                     <div key={opp.id} className="flex items-center justify-between p-2 hover:bg-muted rounded">
+                       <div className="flex-1">
+                         <p className="font-medium text-sm">{opp.title}</p>
+                         <p className="text-xs text-muted-foreground">{opp.customer_name}</p>
+                       </div>
+                       <div className="text-right">
+                         <p className="font-bold text-sm">{formatCHF(opp.estimated_value)}</p>
+                         <p className="text-xs text-amber-600">~{formatCHF(opp.estimated_value * 0.02)} Courtage</p>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               )}
+             </CardContent>
+           </Card>
+         </TabsContent>
 
         <TabsContent value="renewals" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Vertragsabläufe (Nächste 30 Tage)</CardTitle>
-              <CardDescription>
-                Renewal Chancen – Follow-up erforderlich
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">{kpis.renewalNext30} Verträge verfallen in den nächsten 30 Tagen</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
+           <Card>
+             <CardHeader>
+               <CardTitle className="text-base">Vertragsabläufe ({kpis.renewalNext30})</CardTitle>
+               <CardDescription>
+                 Renewal Chancen – Follow-up erforderlich
+               </CardDescription>
+             </CardHeader>
+             <CardContent>
+               {kpis.renewalNext30 === 0 ? (
+                 <p className="text-center text-muted-foreground py-8">Keine Vertragsabläufe in den nächsten 30 Tagen</p>
+               ) : (
+                 <p className="text-muted-foreground">{kpis.renewalNext30} Verträge verfallen in den nächsten 30 Tagen</p>
+               )}
+             </CardContent>
+           </Card>
+         </TabsContent>
 
         <TabsContent value="risks" className="mt-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-red-500" />
-                Kündigungsrisiken
+                Kündigungsrisiken ({kpis.risks})
               </CardTitle>
               <CardDescription>
                 Gefährdete Kunden, Storno-Wahrscheinlichkeit
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Risikoanalyse wird aufgebaut...</p>
+              {kpis.risks === 0 ? (
+                <p className="text-center text-muted-foreground py-8">Keine Risiken erkannt</p>
+              ) : (
+                <p className="text-red-600 font-semibold">{kpis.risks} Verträge mit erhöhtem Risiko</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
