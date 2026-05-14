@@ -73,16 +73,20 @@ KONTAKTDATEN:
 - email: E-Mail-Adresse
 
 VERSICHERUNGSDATEN:
-- insurer: Versicherungsgesellschaft (z.B. "Allianz", "CSS", "Generali")
-- policy_number: Policen-Nummer
-- insurance_type: Versicherungsart (z.B. "Krankenversicherung", "Haftpflicht", "Motorfahrzeug")
-- product: Produkt/Tarif (z.B. "HMO Basic", "Comfort", "Standard")
-- start_date: Versicherungsbeginn (YYYY-MM-DD)
-- end_date: Vertragsablauf/Vertragsende (YYYY-MM-DD)
+- insurer: Versicherungsgesellschaft (z.B. "Allianz", "CSS", "Generali", "Helsana", "Swica", "Sanitas", "KPT", "Concordia", "ÖKK")
+- policy_number: Policen-Nummer / Vertragsnummer (WICHTIG: vollständige Nummer extrahieren)
+- insurance_type: Versicherungsart (z.B. "Krankenversicherung KVG", "Krankenzusatz VVG", "Motorfahrzeug", "Hausrat", "Haftpflicht", "Leben", "BVG")
+- product: Produkt/Tarif-Bezeichnung (SEHR WICHTIG! z.B. "COMPACT", "STANDARD", "HMO", "Telmed", "TOP", "BASIC", "Comfort", "Vollkasko", "OPTIMA", "Natura")
+  * Steht oft in GROSSBUCHSTABEN direkt neben oder unter dem Versicherungsnamen
+  * Ist der Name des Versicherungsmodells, nicht die Sparte
+  * Beispiele: "CSS COMPACT", "Helsana TOP", "Swica OPTIMA", "Sanitas CASAMED HMO"
+- start_date: Versicherungsbeginn / Gültig ab (YYYY-MM-DD)
+- end_date: Vertragsablauf / Gültig bis / Ende (YYYY-MM-DD)
+- cancellation_deadline: Kündigungsfrist / Kündigung bis (YYYY-MM-DD) falls vorhanden
 - renewal_date: Nächster Erneuerungstermin falls vorhanden (YYYY-MM-DD)
-- premium_monthly: Monatsprämie (nur Zahl, kein CHF)
-- premium_yearly: Jahresprämie (nur Zahl, kein CHF)
-- payment_frequency: Zahlungsintervall (monatlich, jährlich, etc.)
+- premium_monthly: Monatsprämie (nur Zahl, kein CHF-Zeichen)
+- premium_yearly: Jahresprämie (nur Zahl, kein CHF-Zeichen). Falls nur Monatsprämie: null setzen.
+- payment_frequency: Zahlungsintervall ("monatlich", "jährlich", "halbjährlich", "vierteljährlich")
 
 ERKENNUNGSREGELN FÜR SCHWEIZER POLICEN:
 1. Achte auf typische Schweizer Formatierung (CHF, 4-stellige PLZ)
@@ -104,24 +108,26 @@ AUSGABE:
 
 Rückgabe EXAKT als JSON:
 {
-  "first_name": "...",
-  "last_name": "...",
+  "policy_holder_name": "Vollständiger Name des Versicherungsnehmers" oder null,
+  "first_name": "Vorname der versicherten Person",
+  "last_name": "Nachname der versicherten Person",
   "birthdate": "YYYY-MM-DD" oder null,
   "gender": "M" oder "W" oder null,
   "role": "Versicherungsnehmer" oder "Ehepartner" oder "Kind" oder null,
-  "street": "...",
+  "street": "Strassenname Hausnummer",
   "zip_code": "1234" oder null,
-  "city": "...",
+  "city": "Ortsname",
   "country": "CH" oder null,
-  "phone": "...",
-  "mobile": "...",
-  "email": "...",
-  "insurer": "...",
-  "policy_number": "...",
-  "insurance_type": "...",
-  "product": "...",
+  "phone": "Telefonnummer" oder null,
+  "mobile": "Mobilnummer" oder null,
+  "email": "email@example.com" oder null,
+  "insurer": "Name der Versicherungsgesellschaft",
+  "policy_number": "Policen-/Vertragsnummer",
+  "insurance_type": "Krankenversicherung KVG" oder "Krankenzusatz VVG" oder "Motorfahrzeug" etc.,
+  "product": "COMPACT" oder "HMO" oder "TOP" oder "Vollkasko" etc. - IMMER EXTRAHIEREN wenn sichtbar,
   "start_date": "YYYY-MM-DD" oder null,
   "end_date": "YYYY-MM-DD" oder null,
+  "cancellation_deadline": "YYYY-MM-DD" oder null,
   "renewal_date": "YYYY-MM-DD" oder null,
   "premium_monthly": 100.50 oder null,
   "premium_yearly": 1200.00 oder null,
@@ -150,6 +156,7 @@ Rückgabe EXAKT als JSON:
             product: { type: ['string', 'null'] },
             start_date: { type: ['string', 'null'] },
             end_date: { type: ['string', 'null'] },
+            cancellation_deadline: { type: ['string', 'null'] },
             renewal_date: { type: ['string', 'null'] },
             premium_monthly: { type: ['number', 'null'] },
             premium_yearly: { type: ['number', 'null'] },
@@ -199,6 +206,7 @@ Rückgabe EXAKT als JSON:
     
     const startDate = (extractedData.start_date || '').trim() || null;
     const endDate = (extractedData.end_date || '').trim() || null;
+    const cancellationDeadline = (extractedData.cancellation_deadline || '').trim() || null;
     const renewalDate = (extractedData.renewal_date || '').trim() || null;
     
     let premiumMonthly = Number(extractedData.premium_monthly) || null;
@@ -233,6 +241,7 @@ Rückgabe EXAKT als JSON:
         product: product,
         start_date: startDate,
         end_date: endDate,
+        cancellation_deadline: cancellationDeadline,
         renewal_date: renewalDate,
         premium_monthly: premiumMonthly,
         premium_yearly: premiumYearly,

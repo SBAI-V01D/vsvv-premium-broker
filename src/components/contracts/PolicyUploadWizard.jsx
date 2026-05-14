@@ -206,12 +206,16 @@ function NewCustomerForm({ data, onChange }) {
 // ── KI Extraction Summary ─────────────────────────────────────────────────────
 function ExtractionSummary({ data }) {
   const fields = [
-    { label: 'Versicherungsnehmer', value: [data.first_name, data.last_name].filter(Boolean).join(' ') || data.policy_holder_name },
+    { label: 'Versicherungsnehmer', value: data.policy_holder_name },
+    { label: 'Versicherte Person', value: [data.first_name, data.last_name].filter(Boolean).join(' ') || null },
     { label: 'Geburtsdatum', value: data.birthdate },
     { label: 'Adresse', value: [data.street, [data.zip_code, data.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') },
     { label: 'Versicherung', value: data.insurer || data.provider },
     { label: 'Policen-Nr.', value: data.policy_number },
-    { label: 'Produkt', value: data.product },
+    { label: 'Produkt / Tarif', value: data.product },
+    { label: 'Versicherungsart', value: data.insurance_type },
+    { label: 'Beginn', value: data.start_date },
+    { label: 'Monatsprämie', value: data.premium_monthly ? `CHF ${data.premium_monthly.toLocaleString('de-CH')}` : null },
     { label: 'Jahresprämie', value: data.premium_yearly ? `CHF ${data.premium_yearly.toLocaleString('de-CH')}` : null },
   ].filter(f => f.value)
 
@@ -404,7 +408,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         insurer: d.insurer || d.provider || '',
         policy_number: d.policy_number || '',
         sparte: sparteKey,
-        product: d.product || '',
+        product: d.product || d.tariff || '',
         premium_monthly: d.premium_monthly || '',
         premium_yearly: d.premium_yearly || '',
         start_date: d.start_date || '',
