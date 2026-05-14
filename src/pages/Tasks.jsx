@@ -50,6 +50,7 @@ export default function Tasks() {
         status: data.status || selectedTask.status,
         notes: data.notes || selectedTask.notes,
         due_date: data.due_date || selectedTask.due_date,
+        completion_date: data.completion_date || selectedTask.completion_date,
         assigned_to: data.assigned_to || selectedTask.assigned_to,
       }
       
