@@ -123,7 +123,7 @@ export default function CommissionIntelligenceTab({ entries }) {
       {/* ── Trend + Prognose ── */}
       <Card>
         <CardHeader className="pb-2 flex flex-row items-center justify-between">
-          <CardTitle className="text-base">Provision & Courtage – Trend + Prognose</CardTitle>
+          <CardTitle className="text-base">Courtage & Provision – Trend + Prognose</CardTitle>
           <div className="flex gap-1">
             {[6, 12].map(m => (
               <button key={m} onClick={() => setTrendMonths(m)}
@@ -304,8 +304,8 @@ export default function CommissionIntelligenceTab({ entries }) {
                 <th className="text-left pb-2">Eingereicht</th>
                 <th className="text-left pb-2">Gesellschaft</th>
                 <th className="text-left pb-2">Kunde</th>
-                <th className="text-right pb-2">Provision</th>
-              </tr></thead>
+                <th className="text-right pb-2">Beraterprovision</th>
+                </tr></thead>
               <tbody>
                 {overdueEntries.map(e => {
                   const days = Math.floor((Date.now() - new Date(e.invoiced_date).getTime()) / 86400000)

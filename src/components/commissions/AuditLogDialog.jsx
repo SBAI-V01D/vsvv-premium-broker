@@ -125,7 +125,7 @@ export default function AuditLogDialog({ open, onClose, auditLogs }) {
     const headers = ['Zeitstempel', 'Benutzer', 'Aktion', 'Beschreibung']
     const rows    = filtered.map(l => [formatDateTime(l.changed_at), l.changed_by || '', l.action || '', l.summary || ''])
     const csv     = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n')
-    downloadCSV(csv, 'audit_log_provisionen.csv')
+    downloadCSV(csv, 'audit_log_courtagen_provisionen.csv')
   }
 
   const resetFilters = () => {
@@ -138,7 +138,7 @@ export default function AuditLogDialog({ open, onClose, auditLogs }) {
       <DialogContent className="max-w-5xl max-h-[92vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <History className="w-5 h-5 text-primary" /> Audit Log – Provisionen
+            <History className="w-5 h-5 text-primary" /> Audit Log – Courtagen & Provisionen
             <span className="text-sm font-normal text-muted-foreground ml-1">({auditLogs.length} Einträge total)</span>
           </DialogTitle>
         </DialogHeader>

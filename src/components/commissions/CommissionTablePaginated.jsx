@@ -42,8 +42,8 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                   <th className="text-left py-3 px-4 font-semibold hidden xl:table-cell">Sparte</th>
                   <th className="text-right py-3 px-4 font-semibold hidden lg:table-cell">Jahresprämie</th>
                   <th className="text-right py-3 px-4 font-semibold text-blue-700">Courtage erh.</th>
-                  <th className="text-right py-3 px-4 font-semibold hidden md:table-cell">Anteil %</th>
-                  <th className="text-right py-3 px-4 font-semibold text-green-700">Provision</th>
+                  <th className="text-right py-3 px-4 font-semibold hidden md:table-cell">Berater-%</th>
+                  <th className="text-right py-3 px-4 font-semibold text-green-700">Provision Berater</th>
                   <th className="text-center py-3 px-4 font-semibold">Status</th>
                   <th className="w-10"></th>
                 </tr>

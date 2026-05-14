@@ -389,10 +389,10 @@ export default function CommissionsAndCourtage() {
       {/* Header */}
       <div className="flex justify-between items-center flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Provisionen & Courtagen
+          <h1 className="text-2xl md:text-3xl font-bold">Courtagen & Provisionen
             {!loadingEntries && <span className="text-muted-foreground text-lg md:text-xl font-normal ml-2">({activeEntries.length})</span>}
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">Revisionssichere Verwaltung aller Provisionen und Abgeltungen</p>
+          <p className="text-muted-foreground mt-1 text-sm">Gesellschaftscourtagen · Beraterprovision · Revisionssichere Verwaltung</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button onClick={() => setShowAuditLog(true)} variant="outline" size="sm">
@@ -438,7 +438,7 @@ export default function CommissionsAndCourtage() {
       {stornoEntries.length > 0 && (
         <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-          <span><strong>{stornoEntries.length} stornierte</strong> Einträge · Verlust: <strong>{formatCHF(stornoEntries.reduce((s, e) => s + (e.commission_amount || 0), 0))}</strong></span>
+          <span><strong>{stornoEntries.length} stornierte</strong> Einträge · Provision-Verlust Berater: <strong>{formatCHF(stornoEntries.reduce((s, e) => s + (e.commission_amount || 0), 0))}</strong></span>
         </div>
       )}
 
@@ -512,10 +512,10 @@ export default function CommissionsAndCourtage() {
                 <tr className="border-b bg-muted/40">
                   <th className="text-left py-3 px-4 font-semibold">Berater</th>
                   <th className="text-right py-3 px-4 font-semibold">Anzahl</th>
-                  <th className="text-right py-3 px-4 font-semibold hidden md:table-cell">Provision (gesamt)</th>
-                  <th className="text-right py-3 px-4 font-semibold hidden md:table-cell">Erhalten</th>
-                  <th className="text-right py-3 px-4 font-semibold">Ausbezahlt</th>
-                  <th className="text-right py-3 px-4 font-semibold">Offen</th>
+                  <th className="text-right py-3 px-4 font-semibold hidden md:table-cell">Provision Berater</th>
+                  <th className="text-right py-3 px-4 font-semibold hidden md:table-cell text-blue-700">Courtage erhalten</th>
+                  <th className="text-right py-3 px-4 font-semibold text-green-700">Ausbezahlt</th>
+                  <th className="text-right py-3 px-4 font-semibold text-amber-700">Offen</th>
                 </tr>
               </thead>
               <tbody>
@@ -567,7 +567,7 @@ export default function CommissionsAndCourtage() {
                   <th className="text-left py-3 px-4 font-semibold">Kunde</th>
                   <th className="text-left py-3 px-4 font-semibold hidden md:table-cell">Sparte</th>
                   <th className="text-right py-3 px-4 font-semibold hidden lg:table-cell">Jahresprämie</th>
-                  <th className="text-right py-3 px-4 font-semibold text-red-600">Storno-Verlust</th>
+                  <th className="text-right py-3 px-4 font-semibold text-red-600">Verlust (Provision)</th>
                 </tr>
               </thead>
               <tbody>
@@ -593,7 +593,7 @@ export default function CommissionsAndCourtage() {
               {stornoEntries.length > 0 && (
                 <tfoot>
                   <tr className="bg-red-50 font-bold text-red-700">
-                    <td colSpan="6" className="py-3 px-4">Total Storno-Verlust</td>
+                    <td colSpan="6" className="py-3 px-4">Total Storno-Verlust (Provision Berater)</td>
                     <td className="text-right py-3 px-4">–{formatCHF(stornoEntries.reduce((s, e) => s + (e.commission_amount || 0), 0))}</td>
                   </tr>
                 </tfoot>
@@ -738,9 +738,9 @@ export default function CommissionsAndCourtage() {
 
             {/* 4. Provision */}
             <div>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">4. Provision & Berechnung</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-3">4. Courtage & Provision</p>
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-3 text-xs text-amber-700">
-                <strong>Formel:</strong> Gesellschaftscourtage × Berateranteil% = Beraterprovision. Jahresprämie = nur Referenz.
+                <strong>Formel:</strong> Gesellschaftscourtage × Berateranteil% = Beraterprovision &nbsp;|&nbsp; Jahresprämie = nur Referenz.
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -824,7 +824,7 @@ export default function CommissionsAndCourtage() {
       {/* ── Settings Dialog ── */}
       <Dialog open={showSettings} onOpenChange={setShowSettings}>
         <DialogContent className="max-w-xl">
-          <DialogHeader><DialogTitle>Einstellungen – Provisionen</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Einstellungen – Courtagen & Provisionen</DialogTitle></DialogHeader>
           <div className="space-y-3 text-sm">
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-1">
               <p className="font-bold text-green-800">Berechnungsformel</p>
