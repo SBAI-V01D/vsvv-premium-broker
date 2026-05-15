@@ -687,7 +687,7 @@ export default function Applications() {
         open={!!statusChanging}
         onOpenChange={(open) => { if (!open) setStatusChanging(null) }}
         statusDefinitions={statusDefs}
-        currentStatus={statusChanging ? getStatus(statusChanging) : ''}
+        currentStatus={statusChanging ? (statusDefs.find(s => s.key === getStatus(statusChanging)) ? getStatus(statusChanging) : '') : ''}
         onSave={handleStatusChange}
         title="Antragsstatus ändern"
       />
