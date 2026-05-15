@@ -14,8 +14,10 @@ export function usePortalData() {
       return res.data
     },
     enabled: !!customerId,
-    staleTime: 0, // Always fresh
-    retry: 2,
+    staleTime: 30_000,       // 30s cache — verhindert Re-Fetch bei jedem Re-Render / Refresh
+    gcTime: 5 * 60_000,      // 5min im Cache halten
+    retry: 1,                // Weniger Retries = schnelleres Failure-Feedback
+    retryDelay: 1500,
   })
 
   const invalidateCache = () => {

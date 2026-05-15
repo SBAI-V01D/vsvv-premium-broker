@@ -103,25 +103,40 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Customer not found' }, { status: 404 });
     }
 
-    // Fetch Familienmitglieder und Verträge
+    // Fetch Familienmitglieder und Verträge — TARGETED queries (kein Full-Table-Scan)
     const primaryCustomerId = customer.primary_customer_id || customer.id;
-    const allCustomers = await base44.asServiceRole.entities.Customer.list(null, 500);
-    const allContracts = await base44.asServiceRole.entities.Contract.list(null, 1000);
-    
-    // Hole ALLE Familienmitglieder: Hauptkontakt + alle mit der gleichen primary_customer_id
-    const primaryCustomer = allCustomers.find(c => c.id === primaryCustomerId);
-    const familyMembers = allCustomers.filter(c => 
-      c.primary_customer_id === primaryCustomerId || c.id === primaryCustomerId
-    );
-    
-    // Stelle sicher, dass der Hauptkontakt immer dabei ist
-    const customers = [
-      primaryCustomer,
-      ...familyMembers.filter(c => c.id !== primaryCustomerId)
-    ].filter(Boolean);
-    const contracts = allContracts || [];
+
+    // Parallel: Familienmitglieder + direkte Verträge des Hauptkunden
+    const [familyByPrimary, familyAsPrimary, directContracts, familyContracts] = await Promise.all([
+      base44.asServiceRole.entities.Customer.filter({ primary_customer_id: primaryCustomerId }),
+      base44.asServiceRole.entities.Customer.filter({ id: primaryCustomerId }),
+      base44.asServiceRole.entities.Contract.filter({ customer_id: primaryCustomerId }),
+      base44.asServiceRole.entities.Contract.filter({ primary_customer_id: primaryCustomerId }),
+    ]);
+
+    // Merge + deduplicate customers
+    const customerMap = {};
+    [...(familyAsPrimary || []), ...(familyByPrimary || [])].forEach(c => { customerMap[c.id] = c; });
+    const customers = Object.values(customerMap);
+
+    // Merge + deduplicate contracts
+    const contractMap = {};
+    [...(directContracts || []), ...(familyContracts || [])].forEach(c => { contractMap[c.id] = c; });
+
+    // Also fetch contracts for each family member (they may have their own customer_id)
+    const familyMemberIds = customers.map(c => c.id).filter(id => id !== primaryCustomerId);
+    if (familyMemberIds.length > 0) {
+      // Fetch in parallel, max 10 concurrent
+      const chunks = [];
+      for (let i = 0; i < familyMemberIds.length; i += 5) chunks.push(familyMemberIds.slice(i, i + 5));
+      for (const chunk of chunks) {
+        const results = await Promise.all(chunk.map(id => base44.asServiceRole.entities.Contract.filter({ customer_id: id })));
+        results.flat().forEach(c => { contractMap[c.id] = c; });
+      }
+    }
+
+    const householdContracts = Object.values(contractMap);
     const customerIds = customers.map(m => m.id);
-    const householdContracts = contracts.filter(c => customerIds.includes(c.customer_id));
 
     // PDF im Querformat
     const doc = new jsPDF({ 

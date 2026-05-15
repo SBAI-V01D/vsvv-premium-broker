@@ -79,6 +79,8 @@ export default function PortalDashboard() {
   }
 
   const saveCustomerData = async () => {
+    // Guard: verhindert doppeltes Speichern bei mehrfachem Klick oder parallelen Requests
+    if (savingCustomer) return
     setSavingCustomer(true)
     setCustomerError('')
     try {
@@ -136,51 +138,43 @@ export default function PortalDashboard() {
 
   const handleDocumentUpload = async (e) => {
     e.preventDefault()
-    if (!uploadFile) return
-    
+    // Guard: verhindert Doppel-Submit
+    if (uploadingDoc || !uploadFile) return
+
     setUploadingDoc(true)
     setUploadError('')
     try {
-      const reader = new FileReader()
-      reader.onload = async () => {
-        try {
-          const file_base64 = reader.result.split(',')[1]
-          
-          const session_token = localStorage.getItem('portal_session_token') || ''
-          await base44.functions.invoke('uploadPortalDocument', {
-            file_base64,
-            filename: uploadFile.name,
-            customer_id: localStorage.getItem('portal_customer_id'),
-            session_token,
-            customer_name: `${customer.first_name} ${customer.last_name}`,
-            category: uploadCategory,
-          })
-          
-          setUploadFile(null)
-          setUploadCategory('other')
-          setUploadingDoc(false)
-          setUploadSuccess(true)
-          
-          // Refresh document list immediately
-          invalidateCache()
-          
-          // Close dialog and reset success after 3 seconds
-          setTimeout(() => {
-            setShowUpload(false)
-            setUploadSuccess(false)
-          }, 2000)
-        } catch (err) {
-          setUploadError('Fehler beim Hochladen: ' + err.message)
-          setUploadingDoc(false)
-        }
-      }
-      reader.onerror = () => {
-        setUploadError('Fehler beim Lesen der Datei')
-        setUploadingDoc(false)
-      }
-      reader.readAsDataURL(uploadFile)
+      // Promise-basiertes FileReader — kein Callback-State-Inkonsistenz bei Refresh
+      const file_base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result.split(',')[1])
+        reader.onerror = () => reject(new Error('Fehler beim Lesen der Datei'))
+        reader.readAsDataURL(uploadFile)
+      })
+
+      const session_token = localStorage.getItem('portal_session_token') || ''
+      await base44.functions.invoke('uploadPortalDocument', {
+        file_base64,
+        filename: uploadFile.name,
+        customer_id: localStorage.getItem('portal_customer_id'),
+        session_token,
+        customer_name: `${customer.first_name} ${customer.last_name}`,
+        category: uploadCategory,
+      })
+
+      setUploadFile(null)
+      setUploadCategory('other')
+      setUploadSuccess(true)
+      invalidateCache()
+
+      setTimeout(() => {
+        setShowUpload(false)
+        setUploadSuccess(false)
+      }, 2000)
     } catch (err) {
       setUploadError('Fehler beim Hochladen: ' + err.message)
+    } finally {
+      // finally: State wird immer bereinigt, auch bei Browser-Refresh mid-upload
       setUploadingDoc(false)
     }
   }
