@@ -102,54 +102,67 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
     setUploadProgress(10)
     setStep('uploading')
 
-    // Step 1: Upload file
-    setUploadProgress(30)
-    const { file_url } = await base44.integrations.Core.UploadFile({ file })
-    setUploadProgress(60)
+    try {
+      // Step 1: Upload file
+      setUploadProgress(30)
+      const { file_url } = await base44.integrations.Core.UploadFile({ file })
+      setUploadProgress(60)
 
-    if (uploadMode === 'antrag') {
-      const doc = await base44.entities.Document.create({
-        name: form.name,
-        file_url,
-        category: 'application',
-        doc_type: 'antrag',
-        classification_status: 'ausstehend',
-        notes: form.notes || undefined,
-        uploaded_by: 'broker',
-      })
-      setUploadProgress(85)
-      base44.entities.AutomationQueue.create({
-        job_type: 'ki_extraction',
-        status: 'pending',
-        related_document_id: doc.id,
-        related_entity_type: 'Document',
-        related_entity_id: doc.id,
-        payload: JSON.stringify({ file_url, file_name: form.name, document_id: doc.id }),
-      }).catch(err => console.error('Queue creation failed:', err))
-    } else {
-      await base44.entities.Document.create({
-        name: form.name,
-        file_url,
-        category: 'other',
-        doc_type: 'anlage',
-        classification_status: 'klassifiziert',
-        notes: form.notes || undefined,
-        uploaded_by: 'broker',
-        customer_id: form.customer_id || undefined,
-        customer_name: selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : undefined,
-        linked_contract_id: form.contract_id || undefined,
-        primary_customer_id: form.primary_customer_id || undefined,
-        is_family_member: form.is_family_member,
-      })
-      setUploadProgress(90)
+      if (uploadMode === 'antrag') {
+        const doc = await base44.entities.Document.create({
+          name: form.name,
+          file_url,
+          category: 'application',
+          doc_type: 'antrag',
+          classification_status: 'ausstehend',
+          notes: form.notes || undefined,
+          uploaded_by: 'broker',
+        })
+        setUploadProgress(85)
+        base44.entities.AutomationQueue.create({
+          job_type: 'ki_extraction',
+          status: 'pending',
+          related_document_id: doc.id,
+          related_entity_type: 'Document',
+          related_entity_id: doc.id,
+          payload: JSON.stringify({ file_url, file_name: form.name, document_id: doc.id }),
+        }).catch(err => console.error('Queue creation failed:', err))
+      } else {
+        await base44.entities.Document.create({
+          name: form.name,
+          file_url,
+          category: 'other',
+          doc_type: 'anlage',
+          classification_status: 'klassifiziert',
+          notes: form.notes || undefined,
+          uploaded_by: 'broker',
+          customer_id: form.customer_id || undefined,
+          customer_name: selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : undefined,
+          linked_contract_id: form.contract_id || undefined,
+          primary_customer_id: form.primary_customer_id || undefined,
+          is_family_member: form.is_family_member,
+        })
+        setUploadProgress(90)
+      }
+
+      setUploadProgress(100)
+      setStep('success')
+      setTimeout(() => {
+        onSuccess()
+        handleClose()
+      }, 1200)
+    } catch (uploadErr) {
+      console.error('[DocumentUpload] Upload failed:', uploadErr)
+      const status = uploadErr?.response?.status || uploadErr?.status
+      let msg = uploadErr?.response?.data?.message || uploadErr?.message || 'Unbekannter Fehler'
+      if (status === 413 || msg.toLowerCase().includes('size') || msg.toLowerCase().includes('too large')) {
+        msg = `Die Datei ist zu gross für die KI-Verarbeitung (max. ${MAX_ANTRAG_SIZE_MB} MB). Bitte komprimieren Sie das PDF und versuchen Sie es erneut.`
+      }
+      setUploadError(msg)
+      setStep('form')
+      setUploading(false)
+      setUploadProgress(0)
     }
-
-    setUploadProgress(100)
-    setStep('success')
-    setTimeout(() => {
-      onSuccess()
-      handleClose()
-    }, 1200)
   }
 
   return (
