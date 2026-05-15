@@ -220,8 +220,8 @@ export default function CustomerDetail() {
     setStatusChangingContract(null)
   }
 
-  if (!accessChecked) {
-    return <div className="flex items-center justify-center h-64"><p>Prüfe Zugriff...</p></div>
+  if (!accessChecked && !hasAccess) {
+    return <div className="flex items-center justify-center h-64"><div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div></div>
   }
 
   if (!hasAccess) {
