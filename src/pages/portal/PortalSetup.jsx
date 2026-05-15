@@ -34,6 +34,7 @@ export default function PortalSetup() {
       if (portal_password_must_change) { setMustChangePassword(true); setLoading(false); return }
       localStorage.setItem('portal_customer_id', customer_id)
       localStorage.setItem('portal_email', email)
+      localStorage.setItem('portal_session_token', verifyResult.data.session_token || '')
       navigate('/portal')
     } catch {
       setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.')
@@ -50,9 +51,11 @@ export default function PortalSetup() {
     try {
       const lookupResult = await base44.functions.invoke('managePortalPassword', { action: 'lookup_customer', email })
       const { customer_id } = lookupResult.data
-      await base44.functions.invoke('managePortalPassword', { action: 'reset_password', customer_id, password: newPassword })
+      // Use change_password which requires the original login password as old_password
+      const changeResult = await base44.functions.invoke('managePortalPassword', { action: 'change_password', customer_id, old_password: password, new_password: newPassword })
       localStorage.setItem('portal_customer_id', customer_id)
       localStorage.setItem('portal_email', email)
+      localStorage.setItem('portal_session_token', changeResult.data?.session_token || '')
       navigate('/portal')
     } catch {
       setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.')

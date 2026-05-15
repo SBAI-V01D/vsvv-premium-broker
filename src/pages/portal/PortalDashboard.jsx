@@ -100,10 +100,13 @@ export default function PortalDashboard() {
         ahv_number: editForm.ahv_number,
       }
       
-      // Update in CRM (backend)
-      await base44.functions.invoke('updatePortalCustomer', {
+      const session_token = localStorage.getItem('portal_session_token') || ''
+      // Update via secured getPortalData endpoint
+      await base44.functions.invoke('getPortalData', {
         customer_id: customerId,
-        data: dataToSave,
+        session_token,
+        action: 'update_customer',
+        update_data: dataToSave,
       })
       
       // Store in localStorage for immediate display
@@ -143,10 +146,12 @@ export default function PortalDashboard() {
         try {
           const file_base64 = reader.result.split(',')[1]
           
+          const session_token = localStorage.getItem('portal_session_token') || ''
           await base44.functions.invoke('uploadPortalDocument', {
             file_base64,
             filename: uploadFile.name,
             customer_id: localStorage.getItem('portal_customer_id'),
+            session_token,
             customer_name: `${customer.first_name} ${customer.last_name}`,
             category: uploadCategory,
           })

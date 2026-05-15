@@ -9,7 +9,8 @@ export function usePortalData() {
     queryKey: ['portal-all-data', customerId],
     queryFn: async () => {
       if (!customerId) return null
-      const res = await base44.functions.invoke('getPortalData', { customer_id: customerId })
+      const session_token = localStorage.getItem('portal_session_token') || ''
+      const res = await base44.functions.invoke('getPortalData', { customer_id: customerId, session_token })
       return res.data
     },
     enabled: !!customerId,

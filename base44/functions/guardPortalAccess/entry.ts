@@ -1,14 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 /**
- * GUARD: Portal Data Access Control + Role-Based
- * 
- * RULES:
- * - admin: kann ALLE Daten sehen
- * - advisor: kann Daten der zugewiesenen Kunden sehen (via advisor_id)
- * - customer: kann NUR eigene Daten sehen (record.customer_id = app_user.customer_id)
- * 
- * CRITICAL: Data Privacy Protection
+ * GUARD: Portal Data Access Control
+ * FIXED: user_role is NEVER accepted from client payload — always use authenticated user.role
  */
 
 Deno.serve(async (req) => {
@@ -21,108 +15,55 @@ Deno.serve(async (req) => {
     }
 
     const payload = await req.json();
-    const {
-      entity_type, // 'Contract', 'Document', 'Application'
-      entity_id,
-      app_user_customer_id,
-      user_role = user.role, // default to authenticated user's role
-    } = payload;
+    const { entity_type, entity_id, app_user_customer_id } = payload;
+    // SECURITY: NEVER use user_role from payload — always derive from authenticated session
+    const user_role = user.role;
 
     if (!entity_type || !entity_id || !app_user_customer_id) {
-      return Response.json(
-        {
-          error: 'entity_type, entity_id, app_user_customer_id erforderlich',
-        },
-        { status: 400 }
-      );
+      return Response.json({ error: 'entity_type, entity_id, app_user_customer_id erforderlich' }, { status: 400 });
     }
 
-    console.log(
-      `[guardPortalAccess] CHECK ${entity_type}=${entity_id} for customer=${app_user_customer_id}, user_role=${user_role}`
-    );
+    console.log(`[guardPortalAccess] CHECK ${entity_type}=${entity_id} for customer=${app_user_customer_id}, role=${user_role}`);
 
-    // ─── ADMIN BYPASS: Admins see everything ───
+    // Admin bypass
     if (user_role === 'admin') {
-      console.log(`[guardPortalAccess] ✅ ADMIN: Unlimited access`);
-      return Response.json({
-        allowed: true,
-        entity_type,
-        entity_id,
-        message: 'Admin – Unlimited access',
-      });
+      return Response.json({ allowed: true, entity_type, entity_id, message: 'Admin – Unlimited access' });
     }
 
-    // ─── FETCH ENTITY ───
+    // Fetch entity using service role
     let entity;
     try {
-      entity = await base44.entities[entity_type].get(entity_id);
+      entity = await base44.asServiceRole.entities[entity_type].get(entity_id);
     } catch {
-      return Response.json(
-        { allowed: false, error: `${entity_type} nicht gefunden` },
-        { status: 404 }
-      );
+      return Response.json({ allowed: false, error: `${entity_type} nicht gefunden` }, { status: 404 });
     }
 
-    // ─── ADVISOR: Check if customer is assigned to this advisor ───
+    if (!entity) {
+      return Response.json({ allowed: false, error: `${entity_type} nicht gefunden` }, { status: 404 });
+    }
+
+    // Advisor: check customer is assigned to this advisor
     if (user_role === 'advisor') {
-      const ownerCustomer = await base44.entities.Customer.get(entity.customer_id);
-      if (ownerCustomer?.advisor_id === user.id) {
-        console.log(
-          `[guardPortalAccess] ✅ ADVISOR: Customer ${entity.customer_id} is assigned to you`
-        );
-        return Response.json({
-          allowed: true,
-          entity_type,
-          entity_id,
-          message: 'Zugriff erlaubt (zugewiesener Kunde)',
-        });
-      } else {
-        console.error(
-          `[guardPortalAccess] ❌ ADVISOR BLOCKED: Customer ${entity.customer_id} not assigned to advisor ${user.id}`
-        );
-        return Response.json({
-          allowed: false,
-          error: 'Dieser Kunde ist dir nicht zugewiesen',
-          entity_type,
-          entity_id,
-        });
+      const ownerCustomer = await base44.asServiceRole.entities.Customer.get(entity.customer_id);
+      if (ownerCustomer?.advisor_id === user.id ||
+          ownerCustomer?.primary_advisor_id === user.id ||
+          (ownerCustomer?.assigned_advisors || []).includes(user.id)) {
+        return Response.json({ allowed: true, entity_type, entity_id, message: 'Zugriff erlaubt (zugewiesener Kunde)' });
       }
+      return Response.json({ allowed: false, error: 'Dieser Kunde ist dir nicht zugewiesen', entity_type, entity_id }, { status: 403 });
     }
 
-    // ─── CUSTOMER: Check customer_id MATCH ───
+    // Customer: strict customer_id match
     if (user_role === 'customer') {
-      if (entity.customer_id !== app_user_customer_id) {
-        console.error(
-          `[guardPortalAccess] ❌ BLOCKED: ${entity_type}=${entity_id} belongs to customer ${entity.customer_id}, not ${app_user_customer_id}`
-        );
-        return Response.json({
-          allowed: false,
-          error: 'Zugriff verweigert: Diese Daten gehören nicht zu dir',
-          entity_type,
-          entity_id,
-        });
+      if (entity.customer_id !== app_user_customer_id && entity.primary_customer_id !== app_user_customer_id) {
+        return Response.json({ allowed: false, error: 'Zugriff verweigert: Diese Daten gehören nicht zu dir', entity_type, entity_id }, { status: 403 });
       }
-      console.log(
-        `[guardPortalAccess] ✅ SAFE: ${entity_type}=${entity_id} gehört zu customer=${app_user_customer_id}`
-      );
-      return Response.json({
-        allowed: true,
-        entity_type,
-        entity_id,
-        message: 'Zugriff erlaubt',
-      });
+      return Response.json({ allowed: true, entity_type, entity_id, message: 'Zugriff erlaubt' });
     }
 
-    // Unknown role
-    return Response.json({
-      allowed: false,
-      error: 'Unbekannte Benutzerrolle',
-    }, { status: 403 });
+    return Response.json({ allowed: false, error: 'Unbekannte Benutzerrolle' }, { status: 403 });
   } catch (error) {
     console.error(`[guardPortalAccess] ERROR: ${error.message}`);
-    return Response.json(
-      { allowed: false, error: error.message },
-      { status: 500 }
-    );
+    return Response.json({ allowed: false, error: 'Interner Fehler' }, { status: 500 });
   }
 });
