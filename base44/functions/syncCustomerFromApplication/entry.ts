@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
         birthdate,
         ahv_number,
         nationality,
-      });
+      }, matchedCustomer);
 
       await base44.entities.Customer.update(matchedCustomer.id, updateData);
 
@@ -180,17 +180,27 @@ function findCustomerMatch(customers, extractedData) {
 }
 
 /**
- * Build update data, only including non-empty values
+ * Build update data: only include non-empty values from extracted data,
+ * and NEVER overwrite existing customer fields that are already populated.
+ * This prevents document extraction from wiping email, mobile, AHV, etc.
  */
-function buildUpdateData(data) {
+function buildUpdateData(data, existingCustomer = {}) {
   const update = {};
 
+  // Fields that should NEVER overwrite an existing non-empty value
+  const protectedFields = ['email', 'phone', 'mobile', 'ahv_number', 'birthdate', 'bank_account'];
+
   for (const [key, value] of Object.entries(data)) {
-    if (value && value.trim && value.trim() !== '') {
-      update[key] = value;
-    } else if (value && typeof value === 'string' && value !== '') {
-      update[key] = value;
+    // Skip empty/null values
+    const hasValue = value && (typeof value !== 'string' || value.trim() !== '');
+    if (!hasValue) continue;
+
+    // For protected fields: only update if the customer doesn't already have a value
+    if (protectedFields.includes(key) && existingCustomer[key]) {
+      continue; // Don't overwrite existing protected field
     }
+
+    update[key] = value;
   }
 
   return update;
