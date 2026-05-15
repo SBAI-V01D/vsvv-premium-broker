@@ -3,6 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 /**
  * Full backup - complete system snapshot
  * Run once daily
+ * BackupLog entity: incremental | full | archive
  */
 Deno.serve(async (req) => {
   try {

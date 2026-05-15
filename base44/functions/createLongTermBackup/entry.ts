@@ -3,6 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 /**
  * Long-term backup - weekly archive for compliance
  * Run once weekly
+ * BackupLog entity: incremental | full | archive
  */
 Deno.serve(async (req) => {
   try {

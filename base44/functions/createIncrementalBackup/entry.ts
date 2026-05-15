@@ -3,6 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 /**
  * Incremental backup - only changed records since last backup
  * Run every 15 minutes
+ * BackupLog entity: incremental | full | archive
  */
 Deno.serve(async (req) => {
   try {

@@ -1,0 +1,72 @@
+{
+  "name": "BackupLog",
+  "type": "object",
+  "properties": {
+    "backup_id": {
+      "type": "string",
+      "description": "Eindeutige Backup-ID (z.B. incr_1234567890)"
+    },
+    "backup_type": {
+      "type": "string",
+      "enum": [
+        "incremental",
+        "full",
+        "long_term",
+        "archive"
+      ],
+      "description": "Backup-Typ"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "failed",
+        "partial"
+      ],
+      "default": "completed",
+      "description": "Status des Backups"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Zeitstempel des Backups"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Fehlermeldung bei fehlgeschlagenem Backup"
+    },
+    "total_records": {
+      "type": "number",
+      "description": "Gesamtanzahl gesicherter Datens\u00e4tze"
+    },
+    "total_changes": {
+      "type": "number",
+      "description": "Anzahl ge\u00e4nderter Datens\u00e4tze (incremental)"
+    },
+    "checksum": {
+      "type": "string",
+      "description": "Pr\u00fcfsumme zur Integrit\u00e4tsverifikation"
+    },
+    "retention_days": {
+      "type": "number",
+      "description": "Aufbewahrungsdauer in Tagen"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "E-Mail des ausl\u00f6senden Benutzers"
+    },
+    "week_number": {
+      "type": "number",
+      "description": "Kalenderwoche (f\u00fcr Archive-Backups)"
+    },
+    "compliance_tags": {
+      "type": "string",
+      "description": "Compliance-Tags (z.B. audit,longterm)"
+    }
+  },
+  "required": [
+    "backup_type",
+    "status",
+    "timestamp"
+  ]
+}
