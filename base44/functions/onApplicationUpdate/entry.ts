@@ -99,9 +99,10 @@ Deno.serve(async (req) => {
         (app.linked_contract_id && c.id === app.linked_contract_id)
       );
 
+      const premiumMonthly = app.estimated_premium_monthly || null;
+      const premiumYearly = app.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null);
+
       if (!alreadyLinked) {
-        const premiumMonthly = app.estimated_premium_monthly || null;
-        const premiumYearly = app.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null);
 
         // Guard: insurance_type und organization_id sind required auf Contract
         const insuranceType = app.insurance_type || app.sparte || 'other';
