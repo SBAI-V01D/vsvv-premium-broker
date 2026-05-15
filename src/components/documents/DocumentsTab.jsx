@@ -35,7 +35,7 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
   const queryClient = useQueryClient();
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [form, setForm] = useState({ name: '', category: 'police', linked_contract_id: '', linked_claim_id: '', notes: '', visible_in_portal: true });
+  const [form, setForm] = useState({ name: '', category: 'police', linked_contract_id: '', linked_claim_id: '', notes: '', visible_in_portal: false });
   const [file, setFile] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const [editingDoc, setEditingDoc] = useState(null);
@@ -68,7 +68,7 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
       linked_contract_id: doc.linked_contract_id || '',
       linked_claim_id: doc.linked_claim_id || '',
       notes: doc.notes || '',
-      visible_in_portal: doc.visible_in_portal !== false,
+      visible_in_portal: doc.visible_in_portal === true,
     });
   };
 
@@ -108,7 +108,7 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
     setUploading(false);
     setShowUpload(false);
     setFile(null);
-    setForm({ name: '', category: 'police', linked_contract_id: '', linked_claim_id: '', notes: '', visible_in_portal: true });
+    setForm({ name: '', category: 'police', linked_contract_id: '', linked_claim_id: '', notes: '', visible_in_portal: false });
   };
 
   const linkedContractName = (id) => {
