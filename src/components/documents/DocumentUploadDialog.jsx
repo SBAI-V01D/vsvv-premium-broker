@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Upload, Zap, Paperclip, Loader2, CheckCircle2, AlertCircle, FileText } from 'lucide-react'
 
 const MAX_FILE_SIZE_MB = 50
+const MAX_ANTRAG_SIZE_MB = 10 // LLM-Limit für KI-Extraktion
 const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg',
   'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx']
@@ -59,18 +60,20 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
 
   const handleClose = () => { reset(); onOpenChange(false) }
 
-  const validateFile = (f) => {
+  const validateFile = (f, mode = uploadMode) => {
     if (!f) return 'Keine Datei ausgewählt.'
     const ext = '.' + f.name.split('.').pop().toLowerCase()
     if (!ALLOWED_EXTENSIONS.includes(ext)) return `Dateityp nicht erlaubt. Erlaubt: ${ALLOWED_EXTENSIONS.join(', ')}`
-    if (f.size > MAX_FILE_SIZE_MB * 1024 * 1024) return `Datei zu gross. Maximum: ${MAX_FILE_SIZE_MB} MB`
     if (f.size === 0) return 'Datei ist leer.'
+    if (mode === 'antrag' && f.size > MAX_ANTRAG_SIZE_MB * 1024 * 1024)
+      return `Versicherungsanträge dürfen max. ${MAX_ANTRAG_SIZE_MB} MB gross sein (für KI-Verarbeitung). Aktuelle Grösse: ${(f.size / 1024 / 1024).toFixed(1)} MB. Bitte PDF komprimieren.`
+    if (f.size > MAX_FILE_SIZE_MB * 1024 * 1024) return `Datei zu gross. Maximum: ${MAX_FILE_SIZE_MB} MB`
     return ''
   }
 
   const applyFile = (f) => {
     if (!f) return
-    const err = validateFile(f)
+    const err = validateFile(f, uploadMode)
     setFileError(err)
     if (!err) {
       setFile(f)
@@ -200,7 +203,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
 
             {/* Drag & Drop File Area */}
             <div>
-              <Label>Datei (PDF / JPG / PNG / DOCX) — max. {MAX_FILE_SIZE_MB} MB</Label>
+              <Label>Datei (PDF / JPG / PNG / DOCX) — max. {uploadMode === 'antrag' ? MAX_ANTRAG_SIZE_MB : MAX_FILE_SIZE_MB} MB{uploadMode === 'antrag' ? ' (KI-Limit)' : ''}</Label>
               <div
                 onDrop={handleDrop}
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}

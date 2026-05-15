@@ -356,6 +356,24 @@ Deno.serve(async (req) => {
 
     console.log(`[extractApplicationData] START file=${file_name}`);
 
+    // STEP 0: Check file size before sending to LLM (limit: 10MB)
+    try {
+      const headRes = await fetch(file_url, { method: 'HEAD' });
+      const contentLength = headRes.headers.get('content-length');
+      if (contentLength && parseInt(contentLength) > 10 * 1024 * 1024) {
+        const sizeMB = (parseInt(contentLength) / 1024 / 1024).toFixed(1);
+        console.warn(`[extractApplicationData] File too large: ${sizeMB}MB (max 10MB)`);
+        return Response.json({
+          success: false,
+          error: `Die PDF-Datei ist zu gross (${sizeMB} MB). Bitte komprimieren Sie das Dokument auf unter 10 MB und laden Sie es erneut hoch.`,
+          error_code: 'FILE_TOO_LARGE',
+          file_size_mb: parseFloat(sizeMB),
+        }, { status: 413 });
+      }
+    } catch (sizeCheckErr) {
+      console.warn(`[extractApplicationData] Size check failed (non-fatal): ${sizeCheckErr.message}`);
+    }
+
     // STEP 1: Extract raw data via LLM
     const raw = await base44.integrations.Core.InvokeLLM({
       prompt: `Du bist ein Experte für Schweizer Versicherungsformulare (KVG, VVG, KK, Leben, Sach).
