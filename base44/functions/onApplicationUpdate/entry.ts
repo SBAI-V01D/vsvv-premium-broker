@@ -87,11 +87,12 @@ Deno.serve(async (req) => {
 
     // ── 3. AUTOMATISCHE VERTRAGSERSTELLUNG bei Annahme ───────────────────────
     if (statusChanged && isNewAcceptance && app.customer_id) {
-      // Duplikatschutz: prüfen ob bereits ein Vertrag mit dieser Antrags-ID existiert
-      const existingContracts = await base44.asServiceRole.entities.Contract.filter({
-        // Suche über linked_application_id oder customer_id + insurer als Fallback
-        customer_id: app.customer_id,
-      });
+      // Duplikatschutz: prüfen über linked_application_id (direkt — kein race-window)
+      const [existingByLink, existingByCustomer] = await Promise.all([
+        base44.asServiceRole.entities.Contract.filter({ linked_application_id: app.id }),
+        base44.asServiceRole.entities.Contract.filter({ customer_id: app.customer_id }),
+      ]);
+      const existingContracts = [...existingByLink, ...existingByCustomer];
 
       const alreadyLinked = existingContracts.some(c =>
         c.linked_application_id === app.id ||

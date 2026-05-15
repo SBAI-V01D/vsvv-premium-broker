@@ -96,8 +96,9 @@ Deno.serve(async (req) => {
         
         if (newCustomerId && newCustomerId !== application.customer_id) {
           console.log(`[REPAIR] Application ${application.id}: ${application.customer_id} → ${newCustomerId}`);
+          // Only update customer_id — do NOT pass full object (avoids required-field validation errors)
           await base44.entities.Application.update(application.id, {
-            customer_id: newCustomerId
+            customer_id: newCustomerId,
           });
           applicationsFixed++;
         }

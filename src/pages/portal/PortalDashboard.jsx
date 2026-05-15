@@ -123,8 +123,9 @@ export default function PortalDashboard() {
       setTimeout(() => setCustomerSuccess(false), 3000)
     } catch (err) {
       setCustomerError('Fehler beim Speichern: ' + err.message)
+    } finally {
+      setSavingCustomer(false)
     }
-    setSavingCustomer(false)
   }
 
   const activeContracts = contracts.filter(c => c.status === 'active').length
