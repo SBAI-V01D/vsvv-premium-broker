@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
 
     return Response.json({ success: true, file_url, document: doc });
   } catch (error) {
-    console.error('Upload error:', error);
-    return Response.json({ error: 'Fehler beim Hochladen' }, { status: 500 });
+    console.error('[uploadPortalDocument] ERROR:', error.message);
+    return Response.json({ error: error.message || 'Fehler beim Hochladen' }, { status: 500 });
   }
 });

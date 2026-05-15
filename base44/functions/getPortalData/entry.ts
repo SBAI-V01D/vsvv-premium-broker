@@ -91,6 +91,7 @@ Deno.serve(async (req) => {
 
     return Response.json({ customer: safeCustomer, contracts, documents, applications })
   } catch (error) {
-    return Response.json({ error: 'Ein Fehler ist aufgetreten' }, { status: 500 })
+    console.error('[getPortalData] ERROR:', error.message)
+    return Response.json({ error: error.message || 'Ein Fehler ist aufgetreten' }, { status: 500 })
   }
 })

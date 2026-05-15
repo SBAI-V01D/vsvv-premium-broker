@@ -102,17 +102,25 @@ Deno.serve(async (req) => {
         const premiumMonthly = app.estimated_premium_monthly || null;
         const premiumYearly = app.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null);
 
+        // Guard: insurance_type und organization_id sind required auf Contract
+        const insuranceType = app.insurance_type || app.sparte || 'other';
+        const organizationId = app.organization_id || null;
+        if (!organizationId) {
+          console.warn(`[onApplicationUpdate] Kein organization_id auf Antrag ${app.id} — Vertragserstellung übersprungen`);
+          return Response.json({ ok: true, skipped: 'no organization_id', application_id: app.id });
+        }
+
         const newContract = await base44.asServiceRole.entities.Contract.create({
           customer_id: app.customer_id,
           customer_name: app.customer_name,
           primary_customer_id: app.primary_customer_id || app.customer_id,
           is_family_member: app.is_family_member || false,
-          organization_id: app.organization_id,
+          organization_id: organizationId,
           insurer: app.insurer,
-          insurance_type: app.insurance_type || app.sparte,
-          sparte: app.sparte || app.insurance_type,
+          insurance_type: insuranceType,
+          sparte: app.sparte || insuranceType,
           sparte_data: app.sparte_data || {},
-          product: app.product || app.sparte,
+          product: app.product || app.sparte || '',
           policy_number: app.policy_number || '',
           premium_yearly: premiumYearly,
           premium_monthly: premiumMonthly,
