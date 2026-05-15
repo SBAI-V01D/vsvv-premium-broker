@@ -275,19 +275,27 @@ export default function Contracts() {
                     </div>
 
                     {/* Produkt / Tarif */}
-                    <div className="min-w-0">
+                    <div className="min-w-0 space-y-0.5">
+                      {contract.policy_number && (
+                        <p className="text-xs font-mono text-muted-foreground">{contract.policy_number}</p>
+                      )}
+                      {contract.product && (
+                        <p className="text-sm font-medium truncate">{contract.product}</p>
+                      )}
                       {contract.sparte_data?.franchise && (
-                        <>
-                          <p className="text-sm font-medium">CHF {contract.sparte_data.franchise}</p>
-                          {contract.sparte_data?.model && (
-                            <p className="text-xs text-muted-foreground">{contract.sparte_data.model}</p>
-                          )}
-                        </>
+                        <p className="text-xs text-muted-foreground">Franchise: CHF {contract.sparte_data.franchise}</p>
                       )}
-                      {!contract.sparte_data?.franchise && contract.policy_number && (
-                        <p className="text-sm truncate">{contract.policy_number}</p>
+                      {contract.sparte_data?.model && (
+                        <p className="text-xs text-muted-foreground">Modell: {contract.sparte_data.model}</p>
                       )}
-                      {!contract.sparte_data?.franchise && !contract.policy_number && (
+                      {Array.isArray(contract.sparte_data?.produkte) && contract.sparte_data.produkte.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {contract.sparte_data.produkte.map((p, i) => (
+                            <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{p.name || p}</span>
+                          ))}
+                        </div>
+                      )}
+                      {!contract.product && !contract.policy_number && !contract.sparte_data?.franchise && !contract.sparte_data?.model && (
                         <span className="text-xs text-muted-foreground">–</span>
                       )}
                     </div>
