@@ -94,7 +94,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
 
   const handleUpload = async (e) => {
     e.preventDefault()
-    const err = validateFile(file)
+    const err = validateFile(file, uploadMode)
     if (err) { setFileError(err); return }
 
     setUploading(true)
