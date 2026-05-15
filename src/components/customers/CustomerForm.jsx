@@ -430,15 +430,21 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
           <SelectTrigger className="mt-1"><SelectValue placeholder="Berater auswählen..." /></SelectTrigger>
           <SelectContent>
             <SelectItem value={null}>– Kein Berater –</SelectItem>
-            {advisors.length === 0 ? (
-              <div className="p-2 text-sm text-muted-foreground">Keine Berater vorhanden</div>
-            ) : (
-              advisors.map(a => (
-                <SelectItem key={a.id} value={a.id}>
-                  {a.firstname} {a.lastname}
-                </SelectItem>
-              ))
-            )}
+            {advisors
+              .sort((a, b) => {
+                const roleOrder = { team_lead: 0, advisor: 1, address_broker: 2 }
+                return (roleOrder[a.data?.role || a.role] ?? 9) - (roleOrder[b.data?.role || b.role] ?? 9)
+              })
+              .map(a => {
+                const role = a.data?.role || a.role
+                const roleLabel = role === 'address_broker' ? ' (Adressvermittler)' : role === 'team_lead' ? ' (Teamleiter)' : ''
+                return (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.data?.firstname || a.firstname} {a.data?.lastname || a.lastname}{roleLabel}
+                  </SelectItem>
+                )
+              })
+            }
           </SelectContent>
         </Select>
       </div>
