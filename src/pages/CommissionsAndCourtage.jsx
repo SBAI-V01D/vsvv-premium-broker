@@ -127,7 +127,6 @@ export default function CommissionsAndCourtage() {
       writeAuditLog(created.id, 'create',
         `Abrechnung erfasst: ${created.insurer} – ${created.customer_name} | Courtage: ${formatCHF(c.advisor_courtage_amount)} | Provision: ${formatCHF(c.advisor_provision_amount)}`,
         {}, created)
-      toast({ title: 'Abrechnung gespeichert' })
       setShowForm(false); resetForm()
     },
     onError: (err) => toast({ title: 'Fehler beim Speichern', description: err.message, variant: 'destructive' }),
@@ -142,7 +141,6 @@ export default function CommissionsAndCourtage() {
       writeAuditLog(result.id, 'update',
         `Abrechnung bearbeitet: ${result.insurer} – ${result.customer_name} | Courtage: ${formatCHF(c.advisor_courtage_amount)} | Provision: ${formatCHF(c.advisor_provision_amount)}`,
         oldData, result)
-      toast({ title: 'Änderungen gespeichert' })
       setShowForm(false); resetForm()
     },
     onError: (err) => toast({ title: 'Fehler beim Aktualisieren', description: err.message, variant: 'destructive' }),
