@@ -141,31 +141,38 @@ export async function enrichCustomer(customerId, extractedData, customerType, ba
     await import('./customerTypeDetection.js');
 
   const commonData = extractCommonData(extractedData);
+  // Fetch current customer data to avoid overwriting existing values
+  let existingCustomer = {};
+  try {
+    const results = await base44.entities.Customer.filter({ id: customerId }, '-created_date', 1);
+    existingCustomer = results[0] || {};
+  } catch { /* non-fatal */ }
+
   const updateData = {};
 
-  // Only add if not already set
-  if (commonData.email && !updateData.email) updateData.email = commonData.email;
-  if (commonData.phone && !updateData.phone) updateData.phone = commonData.phone;
-  if (commonData.mobile && !updateData.mobile) updateData.mobile = commonData.mobile;
-  if (commonData.street && !updateData.street) updateData.street = commonData.street;
-  if (commonData.zip_code && !updateData.zip_code) updateData.zip_code = commonData.zip_code;
-  if (commonData.city && !updateData.city) updateData.city = commonData.city;
-  if (commonData.canton && !updateData.canton) updateData.canton = commonData.canton;
+  // Only add if not already set on the existing customer record
+  if (commonData.email && !existingCustomer.email) updateData.email = commonData.email;
+  if (commonData.phone && !existingCustomer.phone) updateData.phone = commonData.phone;
+  if (commonData.mobile && !existingCustomer.mobile) updateData.mobile = commonData.mobile;
+  if (commonData.street && !existingCustomer.street) updateData.street = commonData.street;
+  if (commonData.zip_code && !existingCustomer.zip_code) updateData.zip_code = commonData.zip_code;
+  if (commonData.city && !existingCustomer.city) updateData.city = commonData.city;
+  if (commonData.canton && !existingCustomer.canton) updateData.canton = commonData.canton;
 
   if (customerType === 'private') {
     const privData = parsePrivateCustomerData(extractedData);
-    if (privData.first_name && !updateData.first_name) updateData.first_name = privData.first_name;
-    if (privData.last_name && !updateData.last_name) updateData.last_name = privData.last_name;
-    if (privData.birthdate && !updateData.birthdate) updateData.birthdate = privData.birthdate;
-    if (privData.profession && !updateData.profession) updateData.profession = privData.profession;
+    if (privData.first_name && !existingCustomer.first_name) updateData.first_name = privData.first_name;
+    if (privData.last_name && !existingCustomer.last_name) updateData.last_name = privData.last_name;
+    if (privData.birthdate && !existingCustomer.birthdate) updateData.birthdate = privData.birthdate;
+    if (privData.profession && !existingCustomer.profession) updateData.profession = privData.profession;
   } else {
     const compData = parseCompanyData(extractedData);
-    if (compData.company_name && !updateData.company_name) updateData.company_name = compData.company_name;
-    if (compData.legal_form && !updateData.legal_form) updateData.legal_form = compData.legal_form;
-    if (compData.uid_number && !updateData.uid_number) updateData.uid_number = compData.uid_number;
-    if (compData.industry && !updateData.industry) updateData.industry = compData.industry;
-    if (compData.contact_person_firstname && !updateData.contact_person_firstname) updateData.contact_person_firstname = compData.contact_person_firstname;
-    if (compData.contact_person_lastname && !updateData.contact_person_lastname) updateData.contact_person_lastname = compData.contact_person_lastname;
+    if (compData.company_name && !existingCustomer.company_name) updateData.company_name = compData.company_name;
+    if (compData.legal_form && !existingCustomer.legal_form) updateData.legal_form = compData.legal_form;
+    if (compData.uid_number && !existingCustomer.uid_number) updateData.uid_number = compData.uid_number;
+    if (compData.industry && !existingCustomer.industry) updateData.industry = compData.industry;
+    if (compData.contact_person_firstname && !existingCustomer.contact_person_firstname) updateData.contact_person_firstname = compData.contact_person_firstname;
+    if (compData.contact_person_lastname && !existingCustomer.contact_person_lastname) updateData.contact_person_lastname = compData.contact_person_lastname;
   }
 
   if (Object.keys(updateData).length > 0) {

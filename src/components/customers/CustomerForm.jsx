@@ -138,112 +138,42 @@ const COUNTRIES = [
 ]
 
 export default function CustomerForm({ customer, primaryCustomers = [], onSave, onCancel, saving }) {
-   const [form, setForm] = useState(() => {
-       if (!customer) {
-          return {
-             first_name: '',
-             last_name: '',
-             email: '',
-             phone: '',
-             mobile: '',
-             street: '',
-             zip_code: '',
-             city: '',
-             canton: '',
-             birthdate: '',
-             ahv_number: '',
-             profession: '',
-             civil_status: 'single',
-             nationality: 'CH',
-             drivers_license_date: '',
-             bank_account: '',
-             risk_profile: 'medium',
-             customer_type: 'private',
-             status: 'active',
-             mandate_status: 'active',
-             association_membership: 'none',
-             permit_type: 'none',
-             is_family_member: false,
-             primary_customer_id: '',
-             family_role: 'primary',
-             notes: '',
-             assigned_broker: '',
-             organization_id: '',
-             advisor_id: '',
-          }
-       }
-      // Normalize all fields: replace null/undefined with '' or defaults
-      const n = (v) => v == null ? '' : v
-      return {
-         ...customer,
-         first_name: n(customer.first_name),
-         last_name: n(customer.last_name),
-         email: n(customer.email),
-         phone: n(customer.phone),
-         mobile: n(customer.mobile),
-         street: n(customer.street),
-         zip_code: n(customer.zip_code),
-         city: n(customer.city),
-         canton: n(customer.canton),
-         birthdate: n(customer.birthdate),
-         ahv_number: n(customer.ahv_number),
-         profession: n(customer.profession),
-         drivers_license_date: n(customer.drivers_license_date),
-         bank_account: n(customer.bank_account),
-         notes: n(customer.notes),
-         assigned_broker: n(customer.assigned_broker),
-         organization_id: n(customer.organization_id),
-         advisor_id: n(customer.advisor_id),
-         primary_customer_id: n(customer.primary_customer_id),
-         // Select fields with fallback defaults
-         civil_status: customer.civil_status || 'single',
-         nationality: customer.nationality || 'CH',
-         risk_profile: customer.risk_profile || 'medium',
-         status: customer.status || 'active',
-         mandate_status: customer.mandate_status || 'pending',
-         association_membership: customer.association_membership || 'none',
-         permit_type: customer.permit_type || 'none',
-         family_role: customer.family_role || 'primary',
-         is_family_member: customer.is_family_member || false,
-      }
-   })
+  const normalizeCustomer = (c) => {
+    if (!c) return {
+      first_name: '', last_name: '', email: '', phone: '', mobile: '',
+      street: '', zip_code: '', city: '', canton: '', birthdate: '',
+      ahv_number: '', profession: '', civil_status: 'single', nationality: 'CH',
+      drivers_license_date: '', bank_account: '', risk_profile: 'medium',
+      customer_type: 'private', status: 'active', mandate_status: 'active',
+      association_membership: 'none', permit_type: 'none', is_family_member: false,
+      primary_customer_id: '', family_role: 'primary', notes: '',
+      assigned_broker: '', organization_id: '', advisor_id: '',
+    }
+    const n = (v) => v == null ? '' : v
+    return {
+      ...c,
+      first_name: n(c.first_name), last_name: n(c.last_name), email: n(c.email),
+      phone: n(c.phone), mobile: n(c.mobile), street: n(c.street),
+      zip_code: n(c.zip_code), city: n(c.city), canton: n(c.canton),
+      birthdate: n(c.birthdate), ahv_number: n(c.ahv_number), profession: n(c.profession),
+      drivers_license_date: n(c.drivers_license_date), bank_account: n(c.bank_account),
+      notes: n(c.notes), assigned_broker: n(c.assigned_broker),
+      organization_id: n(c.organization_id), advisor_id: n(c.advisor_id),
+      primary_customer_id: n(c.primary_customer_id),
+      civil_status: c.civil_status || 'single', nationality: c.nationality || 'CH',
+      risk_profile: c.risk_profile || 'medium', status: c.status || 'active',
+      mandate_status: c.mandate_status || 'pending',
+      association_membership: c.association_membership || 'none',
+      permit_type: c.permit_type || 'none', family_role: c.family_role || 'primary',
+      is_family_member: c.is_family_member || false,
+    }
+  }
 
-   // Re-initialize form when customer prop changes (e.g. dialog reopened with different customer)
-   useEffect(() => {
-      if (!customer) return
-      const n = (v) => v == null ? '' : v
-      setForm({
-         ...customer,
-         first_name: n(customer.first_name),
-         last_name: n(customer.last_name),
-         email: n(customer.email),
-         phone: n(customer.phone),
-         mobile: n(customer.mobile),
-         street: n(customer.street),
-         zip_code: n(customer.zip_code),
-         city: n(customer.city),
-         canton: n(customer.canton),
-         birthdate: n(customer.birthdate),
-         ahv_number: n(customer.ahv_number),
-         profession: n(customer.profession),
-         drivers_license_date: n(customer.drivers_license_date),
-         bank_account: n(customer.bank_account),
-         notes: n(customer.notes),
-         assigned_broker: n(customer.assigned_broker),
-         organization_id: n(customer.organization_id),
-         advisor_id: n(customer.advisor_id),
-         primary_customer_id: n(customer.primary_customer_id),
-         civil_status: customer.civil_status || 'single',
-         nationality: customer.nationality || 'CH',
-         risk_profile: customer.risk_profile || 'medium',
-         status: customer.status || 'active',
-         mandate_status: customer.mandate_status || 'pending',
-         association_membership: customer.association_membership || 'none',
-         permit_type: customer.permit_type || 'none',
-         family_role: customer.family_role || 'primary',
-         is_family_member: customer.is_family_member || false,
-      })
-   }, [customer?.id])
+  const [form, setForm] = useState(() => normalizeCustomer(customer))
+
+  useEffect(() => {
+    setForm(normalizeCustomer(customer))
+  }, [customer?.id])
 
    const [autoFilled, setAutoFilled] = useState(false)
    const [plzError, setPlzError] = useState('')
