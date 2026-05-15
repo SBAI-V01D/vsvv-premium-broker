@@ -101,8 +101,25 @@ Dateiname: "${docData.name || ''}"`,
 
     // ── STEP 2: Dokument aktualisieren ───────────────────────────────────
     const classificationStatus = confidence >= 0.85 ? 'klassifiziert' : 'pruefung_erforderlich';
+
+    // Mapping KI-Kategorie → Document.category
+    const categoryMapping = {
+      antrag:               'vertrag',
+      offerte:              'vertrag',
+      police:               'police',
+      kuendigung:           'korrespondenz',
+      rechnung:             'rechnung',
+      schadensmeldung:      'schadenfall',
+      gesundheitsdeklaration: 'sonstiges',
+      vollmacht:            'sonstiges',
+      mahnung:              'korrespondenz',
+      korrespondenz:        'korrespondenz',
+    };
+    const mappedCategory = categoryMapping[category] || 'sonstiges';
+
     await base44.asServiceRole.entities.Document.update(documentId, {
       doc_type: ['antrag', 'offerte'].includes(category) ? 'antrag' : 'anlage',
+      category: mappedCategory,
       classification_status: classificationStatus,
       classification_confidence: confidence,
       classification_reason: classification?.summary || `Automatisch klassifiziert als: ${category}`,

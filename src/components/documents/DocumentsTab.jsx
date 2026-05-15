@@ -72,10 +72,22 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
     });
   };
 
+  const guessCategory = (filename) => {
+    const lower = filename.toLowerCase();
+    if (/antrag|offerte|angebot/.test(lower)) return 'vertrag';
+    if (/police|polizze|polic[ey]/.test(lower)) return 'police';
+    if (/rechnung|pr[äa]mie|invoice/.test(lower)) return 'rechnung';
+    if (/schaden|claim/.test(lower)) return 'schadenfall';
+    if (/k[üu]ndigung/.test(lower)) return 'korrespondenz';
+    if (/ausweis|pass|id[-_]/.test(lower)) return 'ausweis';
+    return 'sonstiges';
+  };
+
   const applyFile = (f) => {
     if (!f) return;
     setFile(f);
-    setForm(p => ({ ...p, name: p.name || f.name.replace(/\.[^.]+$/, '') }));
+    const baseName = f.name.replace(/\.[^.]+$/, '');
+    setForm(p => ({ ...p, name: p.name || baseName, category: guessCategory(f.name) }));
   };
 
   const handleFileChange = (e) => applyFile(e.target.files[0]);
