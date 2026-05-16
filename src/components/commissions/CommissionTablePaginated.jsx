@@ -83,7 +83,7 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                   const warnings = checkEntryConsistency(origEntry)
                   const isOverdue = cStatus === 'invoiced' && (e.courtage_invoiced_date || e.invoiced_date) &&
                     (Date.now() - new Date(e.courtage_invoiced_date || e.invoiced_date).getTime()) / 86400000 > 60
-                  const hasProvision = (e.company_provision_amount || 0) !== 0
+                  const hasProvision = (e.company_provision_amount || 0) !== 0 || (e.advisor_provision_amount || 0) !== 0 || isStorno
                   const isStorno = e.is_storno === true
 
                   // Für Storno: Brutto = Bruttoentschädigung (gespeichert als negativ)
