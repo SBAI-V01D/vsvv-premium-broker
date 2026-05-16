@@ -668,59 +668,61 @@ export default function CommissionFormDialog({
                 </div>
               </div>
             ) : (
-              /* ── STANDARD PROVISION EINGABE ── */
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm font-semibold text-emerald-700">
-                    <Landmark className="w-3.5 h-3.5 inline mr-1" />
-                    Gesellschaftsprovision (CHF)
-                  </label>
-                  <Input type="number" step="0.01" min="0"
-                    value={formData.company_provision_amount || ''}
-                    onChange={e => onChange({ company_provision_amount: e.target.value })}
-                    className="mt-1 border-emerald-300 focus:border-emerald-500"
-                    placeholder="0.00 (optional)" />
-                  <p className="text-xs text-emerald-600 mt-0.5 font-medium">← Berechnungsgrundlage Provision</p>
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-emerald-700">Beraterprovision (%)</label>
-                  <Input type="number" step="0.1" min="0" max="100"
-                    value={formData.advisor_provision_percentage || ''}
-                    onChange={e => onChange({ advisor_provision_percentage: e.target.value })}
-                    className={`mt-1 border-emerald-300 focus:border-emerald-500 ${formErrors.advisor_provision_percentage ? 'border-red-400' : ''}`}
-                    placeholder="z.B. 50" />
-                  {formErrors.advisor_provision_percentage && <p className="text-xs text-red-500 mt-0.5">{formErrors.advisor_provision_percentage}</p>}
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-orange-700">Stornoabzug Provision (%)</label>
-                  <Input type="number" step="0.1" min="0" max="100"
-                    value={formData.provision_storno_percentage ?? DEFAULT_STORNO_PCT}
-                    onChange={e => onChange({ provision_storno_percentage: e.target.value })}
-                    className={`mt-1 border-orange-300 focus:border-orange-500 ${formErrors.provision_storno_percentage ? 'border-red-400' : ''}`}
-                    placeholder="10" />
-                  {formErrors.provision_storno_percentage
-                    ? <p className="text-xs text-red-500 mt-0.5">{formErrors.provision_storno_percentage}</p>
-                    : <p className="text-xs text-orange-600 mt-0.5">Standard: 10% · Brutto − Reserve = Netto</p>}
-                </div>
-                <div>
-                  <label className="text-sm font-semibold text-muted-foreground">Provision erhalten am</label>
-                  <Input type="date" value={formData.provision_received_date || ''}
-                    onChange={e => onChange({ provision_received_date: e.target.value })}
-                    className="mt-1" />
-                </div>
-                <div>
-                  <label className="text-sm font-semibold">Provisions Status</label>
-                  <Select value={formData.provision_status || 'pending'}
-                    onValueChange={v => onChange({ provision_status: v })}>
-                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {allowedStatuses('provision_status').map(s => (
-                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+               /* ── STANDARD PROVISION EINGABE ── */
+               <div className="space-y-3">
+                 <div className="grid grid-cols-2 gap-3">
+                   <div>
+                     <label className="text-sm font-semibold text-emerald-700">
+                       <Landmark className="w-3.5 h-3.5 inline mr-1" />
+                       Gesellschaftsprovision (CHF)
+                     </label>
+                     <Input type="number" step="0.01" min="0"
+                       value={formData.company_provision_amount || ''}
+                       onChange={e => onChange({ company_provision_amount: e.target.value })}
+                       className="mt-1 border-emerald-300 focus:border-emerald-500"
+                       placeholder="0.00 (optional)" />
+                     <p className="text-xs text-emerald-600 mt-0.5 font-medium">← Berechnungsgrundlage Provision</p>
+                   </div>
+                   <div>
+                     <label className="text-sm font-semibold text-emerald-700">Beraterprovision (%)</label>
+                     <Input type="number" step="0.1" min="0" max="100"
+                       value={formData.advisor_provision_percentage || ''}
+                       onChange={e => onChange({ advisor_provision_percentage: e.target.value })}
+                       className={`mt-1 border-emerald-300 focus:border-emerald-500 ${formErrors.advisor_provision_percentage ? 'border-red-400' : ''}`}
+                       placeholder="z.B. 50" />
+                     {formErrors.advisor_provision_percentage && <p className="text-xs text-red-500 mt-0.5">{formErrors.advisor_provision_percentage}</p>}
+                   </div>
+                   <div>
+                     <label className="text-sm font-semibold text-orange-700">Stornoabzug Provision (%)</label>
+                     <Input type="number" step="0.1" min="0" max="100"
+                       value={formData.provision_storno_percentage ?? DEFAULT_STORNO_PCT}
+                       onChange={e => onChange({ provision_storno_percentage: e.target.value })}
+                       className={`mt-1 border-orange-300 focus:border-orange-500 ${formErrors.provision_storno_percentage ? 'border-red-400' : ''}`}
+                       placeholder="10" />
+                     {formErrors.provision_storno_percentage
+                       ? <p className="text-xs text-red-500 mt-0.5">{formErrors.provision_storno_percentage}</p>
+                       : <p className="text-xs text-orange-600 mt-0.5">Standard: 10% · Brutto − Reserve = Netto</p>}
+                   </div>
+                   <div>
+                     <label className="text-sm font-semibold text-muted-foreground">Provision erhalten am</label>
+                     <Input type="date" value={formData.provision_received_date || ''}
+                       onChange={e => onChange({ provision_received_date: e.target.value })}
+                       className="mt-1" />
+                   </div>
+                 </div>
+                 <div>
+                   <label className="text-sm font-semibold">Provisions Status</label>
+                   <Select value={formData.provision_status || 'pending'}
+                     onValueChange={v => onChange({ provision_status: v })}>
+                     <SelectTrigger className="mt-1"><SelectValue placeholder="Status wählen..." /></SelectTrigger>
+                     <SelectContent>
+                       {allowedStatuses('provision_status').map(s => (
+                         <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                       ))}
+                     </SelectContent>
+                   </Select>
+                 </div>
+               </div>
             )}
             {!formData.is_storno && <ProvisionPreview data={formData} />}
           </div>
