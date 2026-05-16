@@ -133,6 +133,17 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
       return
     }
 
+    // Fallback: organization_id aus erster verfügbarer Org laden
+    let resolvedOrgId = orgId
+    if (!resolvedOrgId) {
+      const orgs = await base44.entities.Organization.list('-created_date', 1)
+      resolvedOrgId = orgs?.[0]?.id || null
+    }
+    if (!resolvedOrgId) {
+      alert('Fehler: Keine Organisation gefunden. Bitte zuerst eine Organisation anlegen.')
+      return
+    }
+
     let newContractId = null
 
     if (createContract && contractData.insurer) {
@@ -152,7 +163,7 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
         customer_name: customerNameForContract,
         primary_customer_id: primaryCustomerId,
         is_family_member: customerId !== primaryCustomerId,
-        organization_id: orgId,
+        organization_id: resolvedOrgId,
         advisor_id: advisorId,
         insurer: contractData.insurer,
         insurance_type: contractData.insurance_type || 'other',
