@@ -72,13 +72,15 @@ Deno.serve(async (req) => {
     }
 
     // Duplikat-Check: Existiert bereits eine offene/ausstehende Provision für diesen Vertrag?
+    // CRITICAL: Ausschließlich nicht-Storno-Einträge, um Reaktivierungen nach Storno korrekt zu handhaben
     const existingProvisions = await base44.asServiceRole.entities.CommissionEntry.filter({
-      contract_id: contractId,
+      policy_id: contractId,
     });
     
     const hasOpenProvision = existingProvisions.some(e => 
       (e.provision_status === 'ausstehend' || e.provision_status === 'pending') &&
-      !e.archived
+      !e.archived &&
+      !e.is_storno  // Stornos sind nicht "offen" für Duplikat-Prüfung
     );
 
     if (hasOpenProvision) {
