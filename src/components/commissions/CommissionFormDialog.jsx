@@ -10,7 +10,7 @@
  *   Beraterprovision = Gesellschaftsprovision × Beraterprovision-% / 100
  */
 import React, { useRef, useEffect, useState, useMemo } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -292,6 +292,7 @@ export default function CommissionFormDialog({
             {editingEntry ? 'Abrechnung bearbeiten' : 'Neue Abrechnung erfassen'}
           </DialogTitle>
         </DialogHeader>
+        <DialogDescription className="sr-only">Formular zur Erfassung von Courtage- und Provisionsabrechnung</DialogDescription>
 
         <div className="space-y-5 py-1">
 
