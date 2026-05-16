@@ -85,11 +85,15 @@ export default function Documents() {
     updateMutation.mutate({ id: doc.id, data: { classification_status: 'ausstehend' } })
   }
 
-  const handleClassifyAll = async () => {
-    const docsToClassify = documents.filter(d => d.classification_status === 'pruefung_erforderlich')
-    if (docsToClassify.length === 0) return
+  const handleFixClassificationStatus = async () => {
+    // Alle Dokumente mit "pruefung_erforderlich" aber bereits zugewiesener Kategorie → klassifiziert
+    const docsToFix = documents.filter(d => 
+      d.classification_status === 'pruefung_erforderlich' && 
+      (d.doc_type === 'antrag' || d.doc_type === 'anlage' || d.category)
+    )
+    if (docsToFix.length === 0) return
     
-    for (const doc of docsToClassify) {
+    for (const doc of docsToFix) {
       updateMutation.mutate({
         id: doc.id,
         data: { classification_status: 'klassifiziert' },
@@ -177,8 +181,8 @@ export default function Documents() {
         </div>
         <div className="flex gap-2">
            {counts.pruefung_erforderlich > 0 && (
-             <Button onClick={handleClassifyAll} variant="outline" className="gap-2 text-amber-600 border-amber-200 hover:bg-amber-50">
-               <CheckCircle2 className="w-4 h-4" /> {counts.pruefung_erforderlich} klassifizieren
+             <Button onClick={handleFixClassificationStatus} variant="outline" className="gap-2 text-amber-600 border-amber-200 hover:bg-amber-50">
+               <CheckCircle2 className="w-4 h-4" /> {counts.pruefung_erforderlich} Status korrigieren
              </Button>
            )}
            <Button onClick={() => setSmartUploadOpen(true)} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
