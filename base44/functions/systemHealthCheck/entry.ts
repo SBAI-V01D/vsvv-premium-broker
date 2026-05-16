@@ -170,8 +170,8 @@ Deno.serve(async (req) => {
 
   report.categories.performance = performance;
 
-  // ── 6. SICHERUNG (Backup) ─────────────────────────────────────────────────
-  const backup = { score: 100, checks: {} };
+  // ── 6. SICHERUNG (Backup) + SCHEMA-KONSISTENZ ────────────────────────────
+  const backup = { score: 100, checks: {}, schema_validation: {} };
 
   // Letztes Backup
   const lastBackup = backupLogs.find(b => b.status === 'completed');
@@ -196,13 +196,71 @@ Deno.serve(async (req) => {
   backup.checks.failed_backups_24h = recentFailedBackups.length;
   if (recentFailedBackups.length > 0) deduct(15, `${recentFailedBackups.length} fehlgeschlagene Backups in den letzten 24h`, 'critical');
 
-  // Backup-Typen vorhanden?
-  const hasIncremental = backupLogs.some(b => b.backup_type === 'incremental' && b.status === 'completed');
-  const hasFull = backupLogs.some(b => b.backup_type === 'full' && b.status === 'completed');
-  backup.checks.has_incremental_backup = hasIncremental;
-  backup.checks.has_full_backup = hasFull;
-  if (!hasIncremental) deduct(10, 'Kein inkrementelles Backup vorhanden');
-  if (!hasFull) deduct(10, 'Kein Full-Backup vorhanden');
+  // ── SCHEMA-KONSISTENZ: Alle 3 Backup-Typen prüfen ────────────────────────
+
+  // 1) INCREMENTAL: backup_id startet mit 'incr_', hat total_changes (Zahl), retention_days=1
+  const lastIncremental = backupLogs.find(b => b.backup_type === 'incremental' && b.status === 'completed');
+  const incrSchema = { present: !!lastIncremental, checks: {} };
+  if (lastIncremental) {
+    incrSchema.checks.backup_id_prefix_ok    = lastIncremental.backup_id?.startsWith('incr_') === true;
+    incrSchema.checks.total_changes_is_num   = typeof lastIncremental.total_changes === 'number';
+    incrSchema.checks.retention_days_correct = lastIncremental.retention_days === 1;
+    incrSchema.checks.status_completed       = lastIncremental.status === 'completed';
+    const incrOk = Object.values(incrSchema.checks).every(v => v === true);
+    incrSchema.ok = incrOk;
+    if (!incrOk) deduct(15, 'Incremental-Backup Schema-Fehler (backup_id / total_changes / retention_days)', 'critical');
+  } else {
+    incrSchema.ok = false;
+    deduct(10, 'Kein abgeschlossenes Incremental-Backup vorhanden');
+  }
+  backup.schema_validation.incremental = incrSchema;
+
+  // 2) FULL: backup_id startet mit 'full_', hat total_records > 0, checksum gesetzt, retention_days=30
+  const lastFull = backupLogs.find(b => b.backup_type === 'full' && b.status === 'completed');
+  const fullSchema = { present: !!lastFull, checks: {} };
+  if (lastFull) {
+    fullSchema.checks.backup_id_prefix_ok    = lastFull.backup_id?.startsWith('full_') === true;
+    fullSchema.checks.total_records_positive = typeof lastFull.total_records === 'number' && lastFull.total_records > 0;
+    fullSchema.checks.checksum_present       = !!lastFull.checksum;
+    fullSchema.checks.retention_days_correct = lastFull.retention_days === 30;
+    fullSchema.checks.status_completed       = lastFull.status === 'completed';
+    const fullOk = Object.values(fullSchema.checks).every(v => v === true);
+    fullSchema.ok = fullOk;
+    if (!fullOk) deduct(15, 'Full-Backup Schema-Fehler (backup_id / total_records / checksum / retention_days)', 'critical');
+  } else {
+    fullSchema.ok = false;
+    deduct(10, 'Kein abgeschlossenes Full-Backup vorhanden');
+  }
+  backup.schema_validation.full = fullSchema;
+
+  // 3) ARCHIVE: backup_id startet mit 'archive_', hat total_records > 0, compliance_tags enthält 'audit' und 'longterm', retention_days=3650
+  const lastArchive = backupLogs.find(b => b.backup_type === 'archive' && b.status === 'completed');
+  const archiveSchema = { present: !!lastArchive, checks: {} };
+  if (lastArchive) {
+    const tags = lastArchive.compliance_tags || '';
+    archiveSchema.checks.backup_id_prefix_ok    = lastArchive.backup_id?.startsWith('archive_') === true;
+    archiveSchema.checks.total_records_positive = typeof lastArchive.total_records === 'number' && lastArchive.total_records > 0;
+    archiveSchema.checks.compliance_tag_audit   = tags.includes('audit');
+    archiveSchema.checks.compliance_tag_longterm = tags.includes('longterm');
+    archiveSchema.checks.retention_days_correct = lastArchive.retention_days === 3650;
+    archiveSchema.checks.status_completed       = lastArchive.status === 'completed';
+    const archiveOk = Object.values(archiveSchema.checks).every(v => v === true);
+    archiveSchema.ok = archiveOk;
+    if (!archiveOk) deduct(15, 'Archive-Backup Schema-Fehler (backup_id / compliance_tags / retention_days)', 'critical');
+  } else {
+    archiveSchema.ok = false;
+    deduct(8, 'Kein abgeschlossenes Archive-Backup vorhanden');
+  }
+  backup.schema_validation.archive = archiveSchema;
+
+  // Zusammenfassung Schema-Konsistenz
+  backup.checks.has_incremental_backup     = incrSchema.present;
+  backup.checks.has_full_backup            = fullSchema.present;
+  backup.checks.has_archive_backup         = archiveSchema.present;
+  backup.checks.schema_incremental_ok      = incrSchema.ok;
+  backup.checks.schema_full_ok             = fullSchema.ok;
+  backup.checks.schema_archive_ok          = archiveSchema.ok;
+  backup.checks.all_schemas_valid          = incrSchema.ok && fullSchema.ok && archiveSchema.ok;
 
   report.categories.backup = backup;
 
