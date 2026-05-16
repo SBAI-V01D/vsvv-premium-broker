@@ -108,13 +108,18 @@ function CustomerSearchField({ value, customerId, onChange, customers }) {
 }
 
 // ─── Universelle Berechnungsvorschau ──────────────────────────────────────────
-function CalcPreview({ type, companyAmount, advisorPct, stornoPct, isStorno }) {
+function CalcPreview({ type, companyAmount, advisorPct, stornoPct, isStorno, directAmount }) {
   const company = parseFloat(companyAmount) || 0
   const pct     = parseFloat(advisorPct) || 0
   const sPct    = parseFloat(stornoPct) ?? DEFAULT_STORNO_PCT
-  if (company <= 0 || pct <= 0) return null
 
-  const brutto  = roundCHF((company * pct) / 100)
+  // Bei Storno: entweder direkter Betrag ODER Gesellschaftsbetrag ohne %-Pflicht
+  const hasPctCalc = company > 0 && pct > 0
+  const hasDirectStorno = isStorno && (parseFloat(directAmount) || 0) > 0
+  if (!hasPctCalc && !hasDirectStorno) return null
+
+  // Wenn kein %-Rechner, nimm den direkten Betrag als Brutto
+  const brutto  = hasPctCalc ? roundCHF((company * pct) / 100) : roundCHF(Math.abs(parseFloat(directAmount) || 0))
   const reserve = roundCHF((brutto * sPct) / 100)
   const netto   = roundCHF(brutto - reserve)
 
@@ -139,9 +144,11 @@ function CalcPreview({ type, companyAmount, advisorPct, stornoPct, isStorno }) {
       </div>
       <div className={`${color.bg} p-3 space-y-2`}>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-muted-foreground w-28">{rowLabel}</span>
-          <span className={`${color.bruttoBox} px-2 py-0.5 rounded font-mono`}>{formatCHF(company)} × {pct}%</span>
-          <span className="text-muted-foreground">=</span>
+          <span className="text-muted-foreground w-28">{hasPctCalc ? rowLabel : 'Stornobetrag'}</span>
+          {hasPctCalc
+            ? <><span className={`${color.bruttoBox} px-2 py-0.5 rounded font-mono`}>{formatCHF(company)} × {pct}%</span>
+                <span className="text-muted-foreground">=</span></>
+            : null}
           <span className={`font-bold ${color.bruttoText}`}>{formatCHF(brutto)} Brutto</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -162,8 +169,8 @@ function CalcPreview({ type, companyAmount, advisorPct, stornoPct, isStorno }) {
 }
 
 // Keep named aliases for backward compat
-const CourtagePreview  = ({ data }) => <CalcPreview type="courtage"  companyAmount={data.company_courtage_amount}  advisorPct={data.advisor_courtage_percentage}  stornoPct={data.courtage_storno_percentage}  isStorno={data.is_storno} />
-const ProvisionPreview = ({ data }) => <CalcPreview type="provision" companyAmount={data.company_provision_amount} advisorPct={data.advisor_provision_percentage} stornoPct={data.provision_storno_percentage} isStorno={data.is_storno} />
+const CourtagePreview  = ({ data }) => <CalcPreview type="courtage"  companyAmount={data.company_courtage_amount}  advisorPct={data.advisor_courtage_percentage}  stornoPct={data.courtage_storno_percentage}  isStorno={data.is_storno} directAmount={data.advisor_courtage_amount} />
+const ProvisionPreview = ({ data }) => <CalcPreview type="provision" companyAmount={data.company_provision_amount} advisorPct={data.advisor_provision_percentage} stornoPct={data.provision_storno_percentage} isStorno={data.is_storno} directAmount={data.advisor_provision_amount} />
 
 // ─── Section Header ───────────────────────────────────────────────────────────
 function SectionHeader({ letter, title, subtitle, color }) {
