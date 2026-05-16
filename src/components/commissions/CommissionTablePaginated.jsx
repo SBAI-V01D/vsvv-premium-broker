@@ -79,10 +79,11 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                   const warnings = checkEntryConsistency(origEntry)
                   const isOverdue = cStatus === 'invoiced' && (e.courtage_invoiced_date || e.invoiced_date) &&
                     (Date.now() - new Date(e.courtage_invoiced_date || e.invoiced_date).getTime()) / 86400000 > 60
-                  const hasProvision = (e.company_provision_amount || 0) > 0
+                  const hasProvision = (e.company_provision_amount || 0) !== 0
+                  const isStorno = e.is_storno === true
 
                   return (
-                    <tr key={e.id} className={`border-b transition-colors ${warnings.length > 0 ? 'bg-amber-50/40 hover:bg-amber-50' : 'hover:bg-muted/30'}`}>
+                    <tr key={e.id} className={`border-b transition-colors ${isStorno ? 'bg-red-50/50 hover:bg-red-50' : warnings.length > 0 ? 'bg-amber-50/40 hover:bg-amber-50' : 'hover:bg-muted/30'}`}>
                       <td className="py-2.5 px-3 whitespace-nowrap text-muted-foreground text-xs">
                         {formatDate(e.entry_date)}
                         {isOverdue && <span className="ml-1 text-red-500" title="Courtage überfällig">⚠</span>}
@@ -91,9 +92,12 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                       <td className="py-2.5 px-3 text-muted-foreground text-xs hidden lg:table-cell">{e.advisor_name || '–'}</td>
                       <td className="py-2.5 px-3">
                         <div>
-                          <p className="font-medium text-xs leading-tight">{e.customer_name || '–'}</p>
+                          <p className="font-medium text-xs leading-tight flex items-center gap-1">
+                            {e.customer_name || '–'}
+                            {isStorno && <span className="text-xs bg-red-100 text-red-700 px-1 rounded font-bold">STORNO</span>}
+                          </p>
                           <p className="text-xs text-muted-foreground md:hidden">{e.insurer}</p>
-                          {warnings.length > 0 && (
+                          {warnings.length > 0 && !isStorno && (
                             <p className="text-xs text-amber-600 flex items-center gap-1 mt-0.5">
                               <AlertTriangle className="w-3 h-3" /> Inkonsistenz
                             </p>
@@ -115,7 +119,9 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                           : '–'}
                       </td>
                       <td className="text-right py-2.5 px-3 font-bold text-blue-800 text-xs bg-blue-50/20" title="Netto auszahlbar">
-                        {e.courtage_payout_amount ? formatCHF(e.courtage_payout_amount) : <span className="text-amber-500">Ausstehend</span>}
+                        {e.courtage_payout_amount != null && e.courtage_payout_amount !== 0
+                          ? <span className={e.courtage_payout_amount < 0 ? 'text-red-600' : ''}>{formatCHF(e.courtage_payout_amount)}</span>
+                          : <span className="text-amber-500">Ausstehend</span>}
                       </td>
                       <td className="text-center py-2.5 px-3 bg-blue-50/20 hidden lg:table-cell">
                         <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${cMeta.color}`}>{cMeta.label}</span>
@@ -131,7 +137,9 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                         {e.provision_storno_amount > 0 ? `−${formatCHF(e.provision_storno_amount)}` : '–'}
                       </td>
                       <td className="text-right py-2.5 px-3 font-semibold text-emerald-800 text-xs bg-emerald-50/20 hidden lg:table-cell" title="Netto auszahlbar">
-                        {e.provision_payout_amount ? formatCHF(e.provision_payout_amount) : <span className="text-muted-foreground">–</span>}
+                        {e.provision_payout_amount != null && e.provision_payout_amount !== 0
+                          ? <span className={e.provision_payout_amount < 0 ? 'text-red-600' : ''}>{formatCHF(e.provision_payout_amount)}</span>
+                          : <span className="text-muted-foreground">–</span>}
                       </td>
                       <td className="text-center py-2.5 px-3 bg-emerald-50/20 hidden xl:table-cell">
                         {hasProvision
