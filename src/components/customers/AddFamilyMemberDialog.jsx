@@ -15,6 +15,11 @@ export default function AddFamilyMemberDialog({ customer, open, onOpenChange }) 
   
   const [formData, setFormData] = useState({
     firstName: '',
+    lastName: customer?.last_name || '',
+    email: customer?.email || '',
+    street: customer?.street || '',
+    zip_code: customer?.zip_code || '',
+    city: customer?.city || '',
     familyRole: '',
     birthdate: '',
     gender: '',
@@ -28,6 +33,11 @@ export default function AddFamilyMemberDialog({ customer, open, onOpenChange }) 
         primaryCustomerId: customer.id,
         primaryCustomerName: `${customer.first_name} ${customer.last_name}`,
         firstName: data.firstName,
+        lastName: data.lastName || customer.last_name,
+        email: data.email || null,
+        street: data.street || null,
+        zip_code: data.zip_code || null,
+        city: data.city || null,
         familyRole: data.familyRole,
         birthdate: data.birthdate || null,
         gender: data.gender || null,
@@ -67,7 +77,7 @@ export default function AddFamilyMemberDialog({ customer, open, onOpenChange }) 
   }
 
   const handleClose = () => {
-    setFormData({ firstName: '', familyRole: '', birthdate: '', gender: '' })
+    setFormData({ firstName: '', lastName: customer?.last_name || '', email: customer?.email || '', street: customer?.street || '', zip_code: customer?.zip_code || '', city: customer?.city || '', familyRole: '', birthdate: '', gender: '' })
     setError('')
     onOpenChange(false)
   }
@@ -87,15 +97,73 @@ export default function AddFamilyMemberDialog({ customer, open, onOpenChange }) 
             </div>
           )}
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="firstName">Vorname *</Label>
+              <Input
+                id="firstName"
+                value={formData.firstName}
+                onChange={(e) => setFormData(p => ({ ...p, firstName: e.target.value }))}
+                placeholder="z.B. Anna"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="lastName">Nachname *</Label>
+              <Input
+                id="lastName"
+                value={formData.lastName}
+                onChange={(e) => setFormData(p => ({ ...p, lastName: e.target.value }))}
+                placeholder="Nachname"
+                className="mt-1"
+              />
+            </div>
+          </div>
+
           <div>
-            <Label htmlFor="firstName">Vorname *</Label>
+            <Label htmlFor="email">E-Mail</Label>
             <Input
-              id="firstName"
-              value={formData.firstName}
-              onChange={(e) => setFormData(p => ({ ...p, firstName: e.target.value }))}
-              placeholder="z.B. Anna"
+              id="email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData(p => ({ ...p, email: e.target.value }))}
+              placeholder="E-Mail"
               className="mt-1"
             />
+          </div>
+
+          <div>
+            <Label htmlFor="street">Strasse</Label>
+            <Input
+              id="street"
+              value={formData.street}
+              onChange={(e) => setFormData(p => ({ ...p, street: e.target.value }))}
+              placeholder="Strasse"
+              className="mt-1"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="zip_code">PLZ</Label>
+              <Input
+                id="zip_code"
+                value={formData.zip_code}
+                onChange={(e) => setFormData(p => ({ ...p, zip_code: e.target.value }))}
+                placeholder="PLZ"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="city">Ort</Label>
+              <Input
+                id="city"
+                value={formData.city}
+                onChange={(e) => setFormData(p => ({ ...p, city: e.target.value }))}
+                placeholder="Ort"
+                className="mt-1"
+              />
+            </div>
           </div>
 
           <div>

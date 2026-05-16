@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { primaryCustomerId, primaryCustomerName, firstName, lastName, familyRole, birthdate, gender } = await req.json();
+    const { primaryCustomerId, primaryCustomerName, firstName, lastName, familyRole, birthdate, gender, email, street, zip_code, city } = await req.json();
 
     // Validierung
     if (!primaryCustomerId || !firstName || !familyRole) {
@@ -50,12 +50,12 @@ Deno.serve(async (req) => {
     const familyMember = {
       first_name: firstName,
       last_name: lastName,
-      email: `noemail.${Date.now()}@family.local`, // Placeholder Email (obligatorisch), keine leeren E-Mails
-      phone: primaryCustomer.phone, // Optional übernehmen
-      mobile: primaryCustomer.mobile, // Optional übernehmen
-      street: primaryCustomer.street,
-      zip_code: primaryCustomer.zip_code,
-      city: primaryCustomer.city,
+      email: email || primaryCustomer.email || `noemail.${Date.now()}@family.local`,
+      phone: primaryCustomer.phone,
+      mobile: primaryCustomer.mobile,
+      street: street || primaryCustomer.street,
+      zip_code: zip_code || primaryCustomer.zip_code,
+      city: city || primaryCustomer.city,
       canton: primaryCustomer.canton,
       nationality: primaryCustomer.nationality,
       birthdate: birthdate || null,
