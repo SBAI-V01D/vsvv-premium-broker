@@ -711,14 +711,19 @@ export default function CommissionFormDialog({
                    </div>
                  </div>
                  <div>
-                   <label className="text-sm font-semibold">Provisions Status</label>
+                   <label className="text-sm font-semibold text-emerald-700">Provisions Status *</label>
                    <Select value={formData.provision_status || 'pending'}
                      onValueChange={v => onChange({ provision_status: v })}>
-                     <SelectTrigger className="mt-1"><SelectValue placeholder="Status wählen..." /></SelectTrigger>
+                     <SelectTrigger className="mt-1 border-emerald-300 focus:border-emerald-500">
+                       <SelectValue placeholder="Status wählen..." />
+                     </SelectTrigger>
                      <SelectContent>
-                       {allowedStatuses('provision_status').map(s => (
-                         <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                       ))}
+                       {allowedStatuses('provision_status').length > 0 
+                         ? allowedStatuses('provision_status').map(s => (
+                             <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                           ))
+                         : <SelectItem value="pending">Ausstehend</SelectItem>
+                       }
                      </SelectContent>
                    </Select>
                  </div>
