@@ -75,6 +75,8 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
     insurance_type: insights.suggestedContract?.insurance_type || 'other',
     policy_number: insights.suggestedContract?.policy_number || '',
     premium_yearly: insights.suggestedContract?.premium_yearly || '',
+    product: insights.suggestedContract?.product || '',
+    sparte: insights.suggestedContract?.sparte || '',
   })
 
   const [createContract, setCreateContract] = useState(true)
@@ -169,6 +171,8 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
         insurance_type: contractData.insurance_type || 'other',
         policy_number: contractData.policy_number || null,
         premium_yearly: contractData.premium_yearly ? Number(contractData.premium_yearly) : null,
+        product: contractData.product || null,
+        sparte: contractData.sparte || null,
         status: 'active',
         process_status: 'neu',
       })
@@ -715,6 +719,18 @@ function ContractForm({ contractData, setContractData, createContract, setCreate
               placeholder="Jahresprämie CHF"
               value={contractData.premium_yearly}
               onChange={(e) => setContractData(p => ({ ...p, premium_yearly: e.target.value }))}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              placeholder="Produkt / Tarif (z.B. COMPLETA PLUS)"
+              value={contractData.product}
+              onChange={(e) => setContractData(p => ({ ...p, product: e.target.value }))}
+            />
+            <Input
+              placeholder="Sparte (z.B. KVG, VVG, MF)"
+              value={contractData.sparte}
+              onChange={(e) => setContractData(p => ({ ...p, sparte: e.target.value }))}
             />
           </div>
         </div>

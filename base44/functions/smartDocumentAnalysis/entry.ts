@@ -68,19 +68,26 @@ Deno.serve(async (req) => {
 
       try {
         extractedData = await base44.integrations.Core.InvokeLLM({
-          prompt: `Analysiere dieses Versicherungsdokument STRUKTURIERT:
+          prompt: `Analysiere dieses Versicherungsdokument und extrahiere folgende Felder:
 
-1. **Versicherungsnehmer**: Vorname, Nachname
-2. **Geburtsdatum**: YYYY-MM-DD
-3. **Adresse**: Strasse, PLZ, Ort
-4. **E-Mail / Telefon**
-5. **Versicherter / Lenker**: Vorname, Nachname (falls unterschiedlich)
-6. **Versicherer**
-7. **Policennummer**
-8. **Versicherungsart**
-9. **Jahresprämie**
+1. policy_holder_first_name: Vorname des Versicherungsnehmers
+2. policy_holder_last_name: Nachname des Versicherungsnehmers
+3. insured_first_name: Vorname der versicherten Person (falls abweichend vom VN)
+4. insured_last_name: Nachname der versicherten Person (falls abweichend vom VN)
+5. birthdate: Geburtsdatum im Format YYYY-MM-DD
+6. street: Strasse und Hausnummer
+7. zip_code: Postleitzahl
+8. city: Ort
+9. email: E-Mail-Adresse
+10. phone: Telefonnummer
+11. insurer: Name der Versicherungsgesellschaft (z.B. "Helsana", "CSS", "AXA", "Zurich", "Swica", "Sanitas")
+12. policy_number: Policennummer oder Vertragsnummer
+13. insurance_type: Versicherungsart als EXAKTER Wert aus: "life", "health", "property", "liability", "motor", "other" — Regeln: KVG/Krankenpflege/Zusatz/Spital = "health"; Auto/Kasko/MF = "motor"; Hausrat/Gebäude = "property"; Haftpflicht = "liability"; Lebensversicherung/Rente = "life"; sonst "other"
+14. premium_yearly: Jahresprämie als Zahl in CHF (falls nur Monatsprämie angegeben, mal 12 rechnen)
+15. product: Produktname oder Tarifbezeichnung (z.B. "COMPLETA PLUS", "TOP", "STANDARD", "Basis")
+16. sparte: Versicherungssparte (z.B. "KVG", "VVG", "UVG", "BVG", "MF", "Haftpflicht", "Leben")
 
-Antworte NUR mit JSON.`,
+Antworte NUR mit JSON, keine Erklärungen.`,
           file_urls: [file_url],
           response_json_schema: {
             type: 'object',
@@ -99,6 +106,8 @@ Antworte NUR mit JSON.`,
               policy_number: { type: ['string', 'null'] },
               insurance_type: { type: ['string', 'null'] },
               premium_yearly: { type: ['number', 'null'] },
+              product: { type: ['string', 'null'] },
+              sparte: { type: ['string', 'null'] },
             }
           },
           model: 'gemini_3_flash'
@@ -253,26 +262,43 @@ Antworte NUR mit JSON.`,
     // ============================================================
     // PRIORITÄT 4: VERTRAG ERKANNT?
     // ============================================================
-    if (extracted?.insurer && extracted?.insurance_type) {
-      // Bestehende Verträge checken
+    // Normalisiere insurance_type aus KI-Text auf gültigen Enum-Wert
+    const normalizeInsuranceType = (raw) => {
+      if (!raw) return 'other';
+      const r = raw.toLowerCase();
+      if (r.includes('kranken') || r.includes('health') || r.includes('kvg') || r.includes('vvg') || r.includes('zusatz') || r.includes('krankenpflege')) return 'health';
+      if (r.includes('leben') || r.includes('life') || r.includes('rente') || r.includes('vorsorge')) return 'life';
+      if (r.includes('haftpflicht') || r.includes('liability') || r.includes('haftung')) return 'liability';
+      if (r.includes('motor') || r.includes('fahrzeug') || r.includes('auto') || r.includes('kfz') || r.includes('kasko')) return 'motor';
+      if (r.includes('sach') || r.includes('property') || r.includes('hausrat') || r.includes('gebäude')) return 'property';
+      return 'other';
+    };
+
+    if (extracted?.insurer) {
+      const normalizedType = normalizeInsuranceType(extracted.insurance_type);
+
+      // Bestehende Verträge checken (nur wenn Kunde bekannt)
       const existingContracts = (insights.matchedPerson?.id || insights.matchedPrimaryCustomer?.id)
         ? allContracts.filter(c => 
             c.customer_id === (insights.matchedPerson?.id || insights.matchedPrimaryCustomer?.id)
           )
         : [];
 
-      // Ist es ein neuer Vertrag?
-      const sameInsurer = !existingContracts.find(c =>
-        c.insurer.toLowerCase() === extracted.insurer.toLowerCase() &&
-        c.insurance_type === extracted.insurance_type
-      );
+      // Nur dann überspringen wenn identischer Vertrag (Versicherer + Policennummer) bereits existiert
+      const alreadyExists = extracted.policy_number
+        ? existingContracts.find(c =>
+            c.policy_number && c.policy_number === extracted.policy_number
+          )
+        : false;
 
-      if (sameInsurer) {
+      if (!alreadyExists) {
         insights.suggestedContract = {
           insurer: extracted.insurer,
-          insurance_type: extracted.insurance_type,
+          insurance_type: normalizedType,
           premium_yearly: extracted.premium_yearly,
           policy_number: extracted.policy_number,
+          product: extracted.product || null,
+          sparte: extracted.sparte || null,
         };
         insights.contractConfidence = 85;
         insights.detectionPhase = 'new_contract_detected';
