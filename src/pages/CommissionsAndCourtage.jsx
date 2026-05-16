@@ -13,7 +13,7 @@ import { useToast } from '@/components/ui/use-toast'
 import {
   calcCommissionFields, calcKPIs, calcStornoByDimension, formatCHF, formatDate, validateCommissionForm,
   STATUS_META, canTransitionTo, getStatusDates, generateCSV, downloadCSV,
-  normalizeLegacyEntry, DEFAULT_STORNO_PCT
+  normalizeLegacyEntry, DEFAULT_STORNO_PCT, roundCHF
 } from '@/lib/commissionEngine'
 
 import CommissionKPIBar from '@/components/commissions/CommissionKPIBar'
@@ -119,7 +119,7 @@ export default function CommissionsAndCourtage() {
         throw new Error(`Zugriff verweigert: ${accessCheck.data?.reason || 'Keine Berechtigung'}`);
       }
 
-      return base44.entities.CommissionEntry.create(calcCommissionFields(data));
+      return base44.entities.CommissionEntry.create(data.is_storno ? data : calcCommissionFields(data));
     },
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
@@ -134,7 +134,7 @@ export default function CommissionsAndCourtage() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data, oldData }) =>
-      base44.entities.CommissionEntry.update(id, calcCommissionFields(data)).then(r => ({ result: r, oldData })),
+      base44.entities.CommissionEntry.update(id, data.is_storno ? data : calcCommissionFields(data)).then(r => ({ result: r, oldData })),
     onSuccess: ({ result, oldData }) => {
       queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
       const c = normalizeLegacyEntry(result)
@@ -213,19 +213,32 @@ export default function CommissionsAndCourtage() {
     setFormErrors(errors)
     if (Object.keys(errors).length > 0) return
     if (createMutation.isPending || updateMutation.isPending) return
-    // Für Storno: Beträge negieren
     let saveData = { ...formData }
     if (saveData.is_storno) {
-      const neg = (v) => v ? -Math.abs(parseFloat(v) || 0) : v
+      // Storno: Beträge negieren und direkt speichern — KEIN calcCommissionFields!
+      const neg = (v) => -Math.abs(parseFloat(v) || 0)
+      const sPctC = parseFloat(saveData.courtage_storno_percentage) ?? DEFAULT_STORNO_PCT
+      const sPctP = parseFloat(saveData.provision_storno_percentage) ?? DEFAULT_STORNO_PCT
+      const bruttoC = Math.abs(parseFloat(saveData.advisor_courtage_amount) || 0)
+      const bruttoP = Math.abs(parseFloat(saveData.advisor_provision_amount) || 0)
+      const reserveC = roundCHF((bruttoC * sPctC) / 100)
+      const reserveP = roundCHF((bruttoP * sPctP) / 100)
       saveData = {
         ...saveData,
-        company_courtage_amount: neg(saveData.company_courtage_amount),
-        advisor_courtage_amount: neg(saveData.advisor_courtage_amount),
-        courtage_payout_amount: neg(saveData.courtage_payout_amount),
-        company_provision_amount: neg(saveData.company_provision_amount),
-        advisor_provision_amount: neg(saveData.advisor_provision_amount),
-        provision_payout_amount: neg(saveData.provision_payout_amount),
-        premium_yearly: saveData.premium_yearly || 0,
+        premium_yearly: roundCHF(saveData.premium_yearly || 0),
+        // Courtage: alle Felder negativ
+        company_courtage_amount:   neg(saveData.company_courtage_amount),
+        advisor_courtage_amount:   -bruttoC,
+        courtage_storno_amount:    reserveC,      // Reserve bleibt positiv (Einbehalt)
+        courtage_payout_amount:    -(bruttoC - reserveC),
+        // Provision: alle Felder negativ
+        company_provision_amount:  neg(saveData.company_provision_amount),
+        advisor_provision_amount:  -bruttoP,
+        provision_storno_amount:   reserveP,
+        provision_payout_amount:   -(bruttoP - reserveP),
+        // Legacy
+        received_amount:    neg(saveData.company_courtage_amount),
+        commission_amount:  -bruttoC,
       }
     }
 

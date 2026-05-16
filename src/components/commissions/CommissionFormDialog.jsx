@@ -370,27 +370,45 @@ export default function CommissionFormDialog({
               </p>
             )}
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-semibold text-blue-700">
-                  <Landmark className="w-3.5 h-3.5 inline mr-1" />
-                  Gesellschaftscourtage (CHF)
-                </label>
-                <Input type="number" step="0.01" min="0"
-                  value={formData.company_courtage_amount || ''}
-                  onChange={e => onChange({ company_courtage_amount: e.target.value })}
-                  className={`mt-1 border-blue-300 focus:border-blue-500 ${formErrors.company_courtage_amount ? 'border-red-400' : ''}`}
-                  placeholder="0.00" />
-                <p className="text-xs text-blue-600 mt-0.5 font-medium">← Berechnungsgrundlage Courtage</p>
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-blue-700">Beratercourtage (%)</label>
-                <Input type="number" step="0.1" min="0" max="100"
-                  value={formData.advisor_courtage_percentage || ''}
-                  onChange={e => onChange({ advisor_courtage_percentage: e.target.value })}
-                  className={`mt-1 border-blue-300 focus:border-blue-500 ${formErrors.advisor_courtage_percentage ? 'border-red-400' : ''}`}
-                  placeholder="z.B. 50" />
-                {formErrors.advisor_courtage_percentage && <p className="text-xs text-red-500 mt-0.5">{formErrors.advisor_courtage_percentage}</p>}
-              </div>
+              {formData.is_storno ? (
+                <div className="col-span-2">
+                  <label className="text-sm font-semibold text-red-700">
+                    <Landmark className="w-3.5 h-3.5 inline mr-1" />
+                    Beratercourtage Stornobetrag (CHF)
+                  </label>
+                  <Input type="number" step="0.01" min="0"
+                    value={formData.advisor_courtage_amount || ''}
+                    onChange={e => onChange({ advisor_courtage_amount: e.target.value })}
+                    className={`mt-1 border-red-300 focus:border-red-500 ${formErrors.company_courtage_amount ? 'border-red-400' : ''}`}
+                    placeholder="z.B. 649.60 (wird als −649.60 gebucht)" />
+                  <p className="text-xs text-red-600 mt-0.5 font-medium">← Betrag der stornierten Beratercourtage (positiv eingeben)</p>
+                  {formErrors.company_courtage_amount && <p className="text-xs text-red-500 mt-0.5">{formErrors.company_courtage_amount}</p>}
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-sm font-semibold text-blue-700">
+                      <Landmark className="w-3.5 h-3.5 inline mr-1" />
+                      Gesellschaftscourtage (CHF)
+                    </label>
+                    <Input type="number" step="0.01" min="0"
+                      value={formData.company_courtage_amount || ''}
+                      onChange={e => onChange({ company_courtage_amount: e.target.value })}
+                      className={`mt-1 border-blue-300 focus:border-blue-500 ${formErrors.company_courtage_amount ? 'border-red-400' : ''}`}
+                      placeholder="0.00" />
+                    <p className="text-xs text-blue-600 mt-0.5 font-medium">← Berechnungsgrundlage Courtage</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-blue-700">Beratercourtage (%)</label>
+                    <Input type="number" step="0.1" min="0" max="100"
+                      value={formData.advisor_courtage_percentage || ''}
+                      onChange={e => onChange({ advisor_courtage_percentage: e.target.value })}
+                      className={`mt-1 border-blue-300 focus:border-blue-500 ${formErrors.advisor_courtage_percentage ? 'border-red-400' : ''}`}
+                      placeholder="z.B. 50" />
+                    {formErrors.advisor_courtage_percentage && <p className="text-xs text-red-500 mt-0.5">{formErrors.advisor_courtage_percentage}</p>}
+                  </div>
+                </>
+              )}
               <div>
                 <label className="text-sm font-semibold text-orange-700">Stornoabzug Courtage (%)</label>
                 <Input type="number" step="0.1" min="0" max="100"
@@ -434,27 +452,44 @@ export default function CommissionFormDialog({
               subtitle="Gesellschaft → Firma → Berater · Formel: Gesellschaftsprovision × Beraterprovision-% = Beraterprovision"
             />
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-semibold text-emerald-700">
-                  <Landmark className="w-3.5 h-3.5 inline mr-1" />
-                  Gesellschaftsprovision (CHF)
-                </label>
-                <Input type="number" step="0.01" min="0"
-                  value={formData.company_provision_amount || ''}
-                  onChange={e => onChange({ company_provision_amount: e.target.value })}
-                  className="mt-1 border-emerald-300 focus:border-emerald-500"
-                  placeholder="0.00 (optional)" />
-                <p className="text-xs text-emerald-600 mt-0.5 font-medium">← Berechnungsgrundlage Provision</p>
-              </div>
-              <div>
-                <label className="text-sm font-semibold text-emerald-700">Beraterprovision (%)</label>
-                <Input type="number" step="0.1" min="0" max="100"
-                  value={formData.advisor_provision_percentage || ''}
-                  onChange={e => onChange({ advisor_provision_percentage: e.target.value })}
-                  className={`mt-1 border-emerald-300 focus:border-emerald-500 ${formErrors.advisor_provision_percentage ? 'border-red-400' : ''}`}
-                  placeholder="z.B. 50" />
-                {formErrors.advisor_provision_percentage && <p className="text-xs text-red-500 mt-0.5">{formErrors.advisor_provision_percentage}</p>}
-              </div>
+              {formData.is_storno ? (
+                <div className="col-span-2">
+                  <label className="text-sm font-semibold text-red-700">
+                    <Landmark className="w-3.5 h-3.5 inline mr-1" />
+                    Beraterprovision Stornobetrag (CHF)
+                  </label>
+                  <Input type="number" step="0.01" min="0"
+                    value={formData.advisor_provision_amount || ''}
+                    onChange={e => onChange({ advisor_provision_amount: e.target.value })}
+                    className="mt-1 border-red-300 focus:border-red-500"
+                    placeholder="0.00 (optional, positiv eingeben)" />
+                  <p className="text-xs text-red-600 mt-0.5 font-medium">← Betrag der stornierten Beraterprovision (positiv eingeben)</p>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-sm font-semibold text-emerald-700">
+                      <Landmark className="w-3.5 h-3.5 inline mr-1" />
+                      Gesellschaftsprovision (CHF)
+                    </label>
+                    <Input type="number" step="0.01" min="0"
+                      value={formData.company_provision_amount || ''}
+                      onChange={e => onChange({ company_provision_amount: e.target.value })}
+                      className="mt-1 border-emerald-300 focus:border-emerald-500"
+                      placeholder="0.00 (optional)" />
+                    <p className="text-xs text-emerald-600 mt-0.5 font-medium">← Berechnungsgrundlage Provision</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-emerald-700">Beraterprovision (%)</label>
+                    <Input type="number" step="0.1" min="0" max="100"
+                      value={formData.advisor_provision_percentage || ''}
+                      onChange={e => onChange({ advisor_provision_percentage: e.target.value })}
+                      className={`mt-1 border-emerald-300 focus:border-emerald-500 ${formErrors.advisor_provision_percentage ? 'border-red-400' : ''}`}
+                      placeholder="z.B. 50" />
+                    {formErrors.advisor_provision_percentage && <p className="text-xs text-red-500 mt-0.5">{formErrors.advisor_provision_percentage}</p>}
+                  </div>
+                </>
+              )}
               <div>
                 <label className="text-sm font-semibold text-orange-700">Stornoabzug Provision (%)</label>
                 <Input type="number" step="0.1" min="0" max="100"

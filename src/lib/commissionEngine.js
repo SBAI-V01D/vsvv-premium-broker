@@ -464,26 +464,33 @@ export function validateCommissionForm(data) {
   const premium = parseFloat(data.premium_yearly) || 0
   if (premium <= 0) errors.premium_yearly = 'Muss > 0 sein'
 
-  const hasCourtage  = (parseFloat(data.company_courtage_amount) || 0) > 0
-  const hasProvision = (parseFloat(data.company_provision_amount) || 0) > 0
+  const isStorno = !!data.is_storno
+  const hasCourtage  = isStorno
+    ? (parseFloat(data.advisor_courtage_amount) || 0) > 0
+    : (parseFloat(data.company_courtage_amount) || 0) > 0
+  const hasProvision = isStorno
+    ? (parseFloat(data.advisor_provision_amount) || 0) > 0
+    : (parseFloat(data.company_provision_amount) || 0) > 0
   if (!hasCourtage && !hasProvision) {
     errors.company_courtage_amount = 'Mindestens Courtage oder Provision muss angegeben werden'
   }
 
-  if (hasCourtage) {
-    const pct = parseFloat(data.advisor_courtage_percentage) || 0
-    if (pct <= 0)  errors.advisor_courtage_percentage = 'Muss > 0 sein'
-    if (pct > 100) errors.advisor_courtage_percentage = 'Maximal 100%'
-    const sp = parseFloat(data.courtage_storno_percentage)
-    if (!isNaN(sp) && (sp < 0 || sp > 100)) errors.courtage_storno_percentage = '0–100%'
-  }
+  if (!isStorno) {
+    if (hasCourtage) {
+      const pct = parseFloat(data.advisor_courtage_percentage) || 0
+      if (pct <= 0)  errors.advisor_courtage_percentage = 'Muss > 0 sein'
+      if (pct > 100) errors.advisor_courtage_percentage = 'Maximal 100%'
+      const sp = parseFloat(data.courtage_storno_percentage)
+      if (!isNaN(sp) && (sp < 0 || sp > 100)) errors.courtage_storno_percentage = '0–100%'
+    }
 
-  if (hasProvision) {
-    const pct = parseFloat(data.advisor_provision_percentage) || 0
-    if (pct <= 0)  errors.advisor_provision_percentage = 'Muss > 0 sein'
-    if (pct > 100) errors.advisor_provision_percentage = 'Maximal 100%'
-    const sp = parseFloat(data.provision_storno_percentage)
-    if (!isNaN(sp) && (sp < 0 || sp > 100)) errors.provision_storno_percentage = '0–100%'
+    if (hasProvision) {
+      const pct = parseFloat(data.advisor_provision_percentage) || 0
+      if (pct <= 0)  errors.advisor_provision_percentage = 'Muss > 0 sein'
+      if (pct > 100) errors.advisor_provision_percentage = 'Maximal 100%'
+      const sp = parseFloat(data.provision_storno_percentage)
+      if (!isNaN(sp) && (sp < 0 || sp > 100)) errors.provision_storno_percentage = '0–100%'
+    }
   }
 
   return errors
