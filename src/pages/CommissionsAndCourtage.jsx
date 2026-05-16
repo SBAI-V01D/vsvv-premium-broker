@@ -42,7 +42,7 @@ export default function CommissionsAndCourtage() {
   const [filterBroker, setFilterBroker] = useState('all')
   const [filterInsurer, setFilterInsurer] = useState('all')
   const [filterSparte, setFilterSparte] = useState('all')
-  const [filterStatus, setFilterStatus] = useState('all')
+  const [filterStatus, setFilterStatus] = useState('erwartet')
   const [periodFilter, setPeriodFilter] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [showSettings, setShowSettings] = useState(false)

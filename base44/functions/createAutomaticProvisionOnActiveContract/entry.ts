@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     });
     
     const hasOpenProvision = existingProvisions.some(e => 
-      (e.provision_status === 'ausstehend' || e.provision_status === 'pending') &&
+      (e.provision_status === 'erwartet' || e.provision_status === 'ausstehend' || e.provision_status === 'pending') &&
       !e.archived &&
       !e.is_storno  // Stornos sind nicht "offen" für Duplikat-Prüfung
     );
@@ -115,9 +115,9 @@ Deno.serve(async (req) => {
       provision_storno_percentage: 10, // Default-Wert
       provision_payout_amount: null,
       
-      // Status: OFFEN, nicht freigegeben
-      provision_status: 'ausstehend',
-      status: 'pending',
+      // Status: ERWARTET (nicht eingegangen, nicht ausbezahlt)
+      provision_status: 'erwartet',
+      status: 'erwartet',
       entry_date: new Date().toISOString().split('T')[0],
       
       // Markierungen für automatische Erstellung
