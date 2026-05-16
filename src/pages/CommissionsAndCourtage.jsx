@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import {
-  Search, Plus, Settings, Download, AlertTriangle, History, BarChart2
+  Search, Plus, Settings, Download, AlertTriangle, History, BarChart2, RefreshCw
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
@@ -341,6 +341,9 @@ export default function CommissionsAndCourtage() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })} variant="outline" size="sm" title="Daten neu laden">
+            <RefreshCw className="w-4 h-4 mr-1.5 md:mr-2" /><span className="hidden md:inline">Aktualisieren</span>
+          </Button>
           <Button onClick={() => setShowAuditLog(true)} variant="outline" size="sm">
             <History className="w-4 h-4 mr-1.5 md:mr-2" /><span className="hidden md:inline">Audit Log</span>
           </Button>
