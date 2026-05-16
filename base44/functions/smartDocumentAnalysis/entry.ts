@@ -84,8 +84,9 @@ Deno.serve(async (req) => {
 12. policy_number: Policennummer oder Vertragsnummer
 13. insurance_type: Versicherungsart als EXAKTER Wert aus: "life", "health", "property", "liability", "motor", "other" — Regeln: KVG/Krankenpflege/Zusatz/Spital = "health"; Auto/Kasko/MF = "motor"; Hausrat/Gebäude = "property"; Haftpflicht = "liability"; Lebensversicherung/Rente = "life"; sonst "other"
 14. premium_yearly: Jahresprämie als Zahl in CHF (falls nur Monatsprämie angegeben, mal 12 rechnen)
-15. product: Produktname oder Tarifbezeichnung (z.B. "COMPLETA PLUS", "TOP", "STANDARD", "Basis")
-16. sparte: Versicherungssparte (z.B. "KVG", "VVG", "UVG", "BVG", "MF", "Haftpflicht", "Leben")
+15. product: Produktname oder Tarifbezeichnung (z.B. "COMPLETA PLUS", "TOP", "Hausarztversicherung Profit"). Falls mehrere Produkte: das Hauptprodukt nennen.
+16. sparte: Versicherungssparte (z.B. "KVG", "VVG", "UVG", "BVG", "MF", "Haftpflicht", "Leben"). Falls KVG und VVG kombiniert: "KVG/VVG"
+17. start_date: Vertragsbeginn im Format YYYY-MM-DD (z.B. aus "Police gültig ab:", "Vertragsbeginn:", "gültig ab:")
 
 Antworte NUR mit JSON, keine Erklärungen.`,
           file_urls: [file_url],
@@ -108,6 +109,7 @@ Antworte NUR mit JSON, keine Erklärungen.`,
               premium_yearly: { type: ['number', 'null'] },
               product: { type: ['string', 'null'] },
               sparte: { type: ['string', 'null'] },
+              start_date: { type: ['string', 'null'] },
             }
           },
           model: 'gemini_3_flash'
@@ -291,7 +293,9 @@ Antworte NUR mit JSON, keine Erklärungen.`,
           )
         : false;
 
-      if (!alreadyExists) {
+      if (alreadyExists) {
+        // Vertrag existiert bereits → trotzdem Daten zurückgeben für Update-Möglichkeit
+        insights.existingContractId = alreadyExists.id;
         insights.suggestedContract = {
           insurer: extracted.insurer,
           insurance_type: normalizedType,
@@ -299,6 +303,20 @@ Antworte NUR mit JSON, keine Erklärungen.`,
           policy_number: extracted.policy_number,
           product: extracted.product || null,
           sparte: extracted.sparte || null,
+          start_date: extracted.start_date || null,
+        };
+        insights.contractAlreadyExists = true;
+        insights.contractConfidence = 95;
+        insights.detectionPhase = 'contract_already_exists';
+      } else {
+        insights.suggestedContract = {
+          insurer: extracted.insurer,
+          insurance_type: normalizedType,
+          premium_yearly: extracted.premium_yearly,
+          policy_number: extracted.policy_number,
+          product: extracted.product || null,
+          sparte: extracted.sparte || null,
+          start_date: extracted.start_date || null,
         };
         insights.contractConfidence = 85;
         insights.detectionPhase = 'new_contract_detected';

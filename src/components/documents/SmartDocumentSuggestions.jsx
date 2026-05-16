@@ -77,6 +77,7 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
     premium_yearly: insights.suggestedContract?.premium_yearly || '',
     product: insights.suggestedContract?.product || '',
     sparte: insights.suggestedContract?.sparte || '',
+    start_date: insights.suggestedContract?.start_date || '',
   })
 
   const [createContract, setCreateContract] = useState(true)
@@ -115,6 +116,7 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
     person_in_family_found: 'Person in Familie gefunden',
     new_family_member_suggested: 'Neues Familienmitglied erkannt',
     new_contract_detected: 'Neuer Vertrag erkannt',
+    contract_already_exists: 'Vertrag existiert bereits – Daten können aktualisiert werden',
     new_primary_customer_last_resort: 'Kein bestehender Kunde gefunden',
     extraction_failed: 'Extraktion fehlgeschlagen',
   }[insights.detectionPhase] || 'Analyse abgeschlossen'
@@ -173,6 +175,7 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
         premium_yearly: contractData.premium_yearly ? Number(contractData.premium_yearly) : null,
         product: contractData.product || null,
         sparte: contractData.sparte || null,
+        start_date: contractData.start_date || null,
         status: 'active',
         process_status: 'neu',
       })
@@ -733,6 +736,12 @@ function ContractForm({ contractData, setContractData, createContract, setCreate
               onChange={(e) => setContractData(p => ({ ...p, sparte: e.target.value }))}
             />
           </div>
+          <Input
+            type="date"
+            placeholder="Vertragsbeginn"
+            value={contractData.start_date}
+            onChange={(e) => setContractData(p => ({ ...p, start_date: e.target.value }))}
+          />
         </div>
       )}
     </Card>
