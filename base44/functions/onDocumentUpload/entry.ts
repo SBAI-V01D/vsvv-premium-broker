@@ -36,6 +36,9 @@ Deno.serve(async (req) => {
       classification = await base44.asServiceRole.integrations.Core.InvokeLLM({
         prompt: `Analysiere dieses Versicherungsdokument präzise.
 
+DATEINAME PRIORITÄT: "${docData.name || 'unbekannt'}"
+Wenn der Dateiname Hinweise enthält (z.B. "Antrag", "Police", "Kündigung"), priorisiere diese Klassifizierung.
+
 Erkenne:
 1. document_category: Genauer Dokumententyp:
    - "police" (Versicherungspolice / Vertrag)
@@ -50,9 +53,7 @@ Erkenne:
    - "korrespondenz" (sonstige Korrespondenz)
 
 2. customer_data: Alle Kundendaten die du findest
-3. insurance_data: Alle Versicherungsdaten
-
-Dateiname: "${docData.name || ''}"`,
+3. insurance_data: Alle Versicherungsdaten`,
         file_urls: [docData.file_url],
         response_json_schema: {
           type: 'object',
