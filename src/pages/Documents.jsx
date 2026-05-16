@@ -59,7 +59,12 @@ export default function Documents() {
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Document.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['documents'] }),
+    onSuccess: (_, deletedId) => {
+      // Optimistic update: entferne lokal aus dem Cache statt alles neu zu laden
+      queryClient.setQueryData(['documents'], (old) => 
+        old ? old.filter(doc => doc.id !== deletedId) : old
+      )
+    },
   })
 
   const handleReclassify = (doc, newType) => {
