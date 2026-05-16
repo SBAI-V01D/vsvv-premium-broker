@@ -107,79 +107,63 @@ function CustomerSearchField({ value, customerId, onChange, customers }) {
   )
 }
 
-// ─── Brutto/Netto-Vorschau Courtage ──────────────────────────────────────────
-function CourtagePreview({ data }) {
-  const company   = parseFloat(data.company_courtage_amount) || 0
-  const pct       = parseFloat(data.advisor_courtage_percentage) || 0
-  const stornoPct = parseFloat(data.courtage_storno_percentage) ?? DEFAULT_STORNO_PCT
-  if (company <= 0) return null
-  const brutto    = roundCHF((company * pct) / 100)
-  const reserve   = roundCHF((brutto * stornoPct) / 100)
-  const netto     = roundCHF(brutto - reserve)
+// ─── Universelle Berechnungsvorschau ──────────────────────────────────────────
+function CalcPreview({ type, companyAmount, advisorPct, stornoPct, isStorno }) {
+  const company = parseFloat(companyAmount) || 0
+  const pct     = parseFloat(advisorPct) || 0
+  const sPct    = parseFloat(stornoPct) ?? DEFAULT_STORNO_PCT
+  if (company <= 0 || pct <= 0) return null
+
+  const brutto  = roundCHF((company * pct) / 100)
+  const reserve = roundCHF((brutto * sPct) / 100)
+  const netto   = roundCHF(brutto - reserve)
+
+  const isCourtage = type === 'courtage'
+  const color = isStorno
+    ? { border: 'border-red-200', header: 'bg-red-100', headerText: 'text-red-700', headerIcon: 'text-red-700', bg: 'bg-red-50/40', bruttoBox: 'bg-red-100 text-red-800', bruttoText: 'text-red-800', divider: 'border-red-200', nettoBox: 'bg-red-600 text-white' }
+    : isCourtage
+      ? { border: 'border-blue-200', header: 'bg-blue-100', headerText: 'text-blue-700', headerIcon: 'text-blue-700', bg: 'bg-blue-50/40', bruttoBox: 'bg-blue-100 text-blue-800', bruttoText: 'text-blue-800', divider: 'border-blue-200', nettoBox: 'bg-blue-600 text-white' }
+      : { border: 'border-emerald-200', header: 'bg-emerald-100', headerText: 'text-emerald-700', headerIcon: 'text-emerald-700', bg: 'bg-emerald-50/40', bruttoBox: 'bg-emerald-100 text-emerald-800', bruttoText: 'text-emerald-800', divider: 'border-emerald-200', nettoBox: 'bg-emerald-600 text-white' }
+
+  const label = isStorno
+    ? (isCourtage ? 'STORNO COURTAGE' : 'STORNO PROVISION')
+    : (isCourtage ? 'Courtage-Berechnung' : 'Provisions-Berechnung')
+  const rowLabel = isCourtage ? 'Ges.courtage × %' : 'Ges.provision × %'
+
   return (
-    <div className="mt-2 rounded-lg border border-blue-200 overflow-hidden text-xs">
-      <div className="bg-blue-100 px-3 py-1.5 flex items-center gap-1.5">
-        <Calculator className="w-3.5 h-3.5 text-blue-700" />
-        <span className="font-bold text-blue-700 uppercase tracking-wide">Courtage-Berechnung</span>
+    <div className={`mt-2 rounded-lg border ${color.border} overflow-hidden text-xs`}>
+      <div className={`${color.header} px-3 py-1.5 flex items-center gap-1.5`}>
+        <Calculator className={`w-3.5 h-3.5 ${color.headerIcon}`} />
+        <span className={`font-bold ${color.headerText} uppercase tracking-wide`}>{label}</span>
+        {isStorno && <span className={`ml-auto text-xs ${color.headerText} font-normal`}>→ wird negativ gebucht</span>}
       </div>
-      <div className="bg-blue-50/40 p-3 space-y-2">
+      <div className={`${color.bg} p-3 space-y-2`}>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-muted-foreground w-28">Ges.courtage × %</span>
-          <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-mono">{formatCHF(company)} × {pct}%</span>
+          <span className="text-muted-foreground w-28">{rowLabel}</span>
+          <span className={`${color.bruttoBox} px-2 py-0.5 rounded font-mono`}>{formatCHF(company)} × {pct}%</span>
           <span className="text-muted-foreground">=</span>
-          <span className="font-bold text-blue-800">{formatCHF(brutto)} Brutto</span>
+          <span className={`font-bold ${color.bruttoText}`}>{formatCHF(brutto)} Brutto</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-muted-foreground w-28">− Stornoreserve</span>
-          <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded font-mono">{stornoPct}%</span>
+          <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded font-mono">{sPct}%</span>
           <span className="text-muted-foreground">=</span>
           <span className="font-semibold text-orange-600">−{formatCHF(reserve)} Einbehalt</span>
         </div>
-        <div className="flex items-center gap-2 flex-wrap border-t border-blue-200 pt-2">
-          <span className="text-muted-foreground w-28">= Netto auszahlbar</span>
-          <span className="bg-blue-600 text-white px-3 py-1 rounded-lg font-bold">{formatCHF(netto)}</span>
+        <div className={`flex items-center gap-2 flex-wrap border-t ${color.divider} pt-2`}>
+          <span className="text-muted-foreground w-28">{isStorno ? '= Storno-Netto' : '= Netto auszahlbar'}</span>
+          <span className={`${color.nettoBox} px-3 py-1 rounded-lg font-bold`}>
+            {isStorno ? `−${formatCHF(netto)}` : formatCHF(netto)}
+          </span>
         </div>
       </div>
     </div>
   )
 }
 
-// ─── Brutto/Netto-Vorschau Provision ─────────────────────────────────────────
-function ProvisionPreview({ data }) {
-  const company   = parseFloat(data.company_provision_amount) || 0
-  const pct       = parseFloat(data.advisor_provision_percentage) || 0
-  const stornoPct = parseFloat(data.provision_storno_percentage) ?? DEFAULT_STORNO_PCT
-  if (company <= 0) return null
-  const brutto    = roundCHF((company * pct) / 100)
-  const reserve   = roundCHF((brutto * stornoPct) / 100)
-  const netto     = roundCHF(brutto - reserve)
-  return (
-    <div className="mt-2 rounded-lg border border-emerald-200 overflow-hidden text-xs">
-      <div className="bg-emerald-100 px-3 py-1.5 flex items-center gap-1.5">
-        <Calculator className="w-3.5 h-3.5 text-emerald-700" />
-        <span className="font-bold text-emerald-700 uppercase tracking-wide">Provisions-Berechnung</span>
-      </div>
-      <div className="bg-emerald-50/40 p-3 space-y-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-muted-foreground w-28">Ges.provision × %</span>
-          <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono">{formatCHF(company)} × {pct}%</span>
-          <span className="text-muted-foreground">=</span>
-          <span className="font-bold text-emerald-800">{formatCHF(brutto)} Brutto</span>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-muted-foreground w-28">− Stornoreserve</span>
-          <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded font-mono">{stornoPct}%</span>
-          <span className="text-muted-foreground">=</span>
-          <span className="font-semibold text-orange-600">−{formatCHF(reserve)} Einbehalt</span>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap border-t border-emerald-200 pt-2">
-          <span className="text-muted-foreground w-28">= Netto auszahlbar</span>
-          <span className="bg-emerald-600 text-white px-3 py-1 rounded-lg font-bold">{formatCHF(netto)}</span>
-        </div>
-      </div>
-    </div>
-  )
-}
+// Keep named aliases for backward compat
+const CourtagePreview  = ({ data }) => <CalcPreview type="courtage"  companyAmount={data.company_courtage_amount}  advisorPct={data.advisor_courtage_percentage}  stornoPct={data.courtage_storno_percentage}  isStorno={data.is_storno} />
+const ProvisionPreview = ({ data }) => <CalcPreview type="provision" companyAmount={data.company_provision_amount} advisorPct={data.advisor_provision_percentage} stornoPct={data.provision_storno_percentage} isStorno={data.is_storno} />
 
 // ─── Section Header ───────────────────────────────────────────────────────────
 function SectionHeader({ letter, title, subtitle, color }) {
