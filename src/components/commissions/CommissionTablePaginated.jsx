@@ -99,12 +99,21 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                       <td className="py-2.5 px-3 font-medium text-xs hidden md:table-cell">{e.insurer}</td>
                       <td className="py-2.5 px-3 text-muted-foreground text-xs hidden lg:table-cell">{e.advisor_name || '–'}</td>
                       <td className="py-2.5 px-3">
-                        <div>
+                        <div className="space-y-1">
                           <p className="font-medium text-xs leading-tight flex items-center gap-1 flex-wrap">
                             {isStorno && <span className="text-xs bg-red-600 text-white px-1.5 py-0.5 rounded font-bold shrink-0">−STORNO</span>}
                             {origEntry.created_automatically && <span className="text-xs bg-emerald-100 text-emerald-700 border border-emerald-200 px-1 py-0.5 rounded flex items-center gap-0.5 shrink-0"><Zap className="w-2.5 h-2.5" />Auto</span>}
+                            {/* COMPAT: pending/erwartet gleichbehandelt */}
+                            {(pStatus === 'erwartet' || pStatus === 'pending') && !isStorno && <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded shrink-0 font-medium">Erwartet</span>}
                             {e.customer_name || '–'}
                           </p>
+                          {/* Police-Nr und Vertragsbeginn */}
+                          {e.policy_number && (
+                            <p className="text-xs text-muted-foreground">
+                              Police: <span className="font-mono">{e.policy_number}</span>
+                              {e.start_date && <span className="ml-2">·&nbsp;ab {formatDate(e.start_date)}</span>}
+                            </p>
+                          )}
                           <p className="text-xs text-muted-foreground md:hidden">{e.insurer}</p>
                           {isStorno && e.storno_grund && (
                             <p className="text-xs text-red-500 mt-0.5 italic">{e.storno_grund}</p>
@@ -169,9 +178,14 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                           : <span className="text-muted-foreground">–</span>}
                       </td>
                       <td className="text-center py-2.5 px-3 bg-emerald-50/20 hidden lg:table-cell">
-                        {hasProvision
-                          ? <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${pMeta.color}`}>{pMeta.label}</span>
-                          : <span className="text-xs text-muted-foreground">–</span>}
+                        {hasProvision ? (
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${pMeta.color}`}>
+                            {/* COMPAT: "pending" als "Erwartet" anzeigen */}
+                            {pStatus === 'pending' || pStatus === 'erwartet' ? 'Erwartet' : pMeta.label}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">–</span>
+                        )}
                       </td>
                       <td className="py-2.5 px-2">
                         <DropdownMenu>
