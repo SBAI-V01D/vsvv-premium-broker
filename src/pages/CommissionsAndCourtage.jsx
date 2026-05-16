@@ -274,8 +274,9 @@ export default function CommissionsAndCourtage() {
       const cStatus = ne.courtage_status || e.status || 'pending'
       const matchStatus = filterStatus === 'all' || cStatus === filterStatus
       
-      // Dynamic period filtering (use received_date or entry_date)
-      const entryDate = e.courtage_received_date || e.provision_received_date || e.entry_date ? new Date(e.courtage_received_date || e.provision_received_date || e.entry_date) : null
+      // Dynamic period filtering — parse date as local (YYYY-MM-DD) to avoid UTC offset issues
+      const rawDate = e.courtage_received_date || e.provision_received_date || e.entry_date
+      const entryDate = rawDate ? (() => { const [y,m,d] = rawDate.split('-'); return new Date(+y, +m-1, +d) })() : null
       const matchPeriod = !entryDate || (entryDate >= actualPeriod.start && entryDate <= actualPeriod.end)
       
       return matchSearch && matchBroker && matchInsurer && matchSparte && matchStatus && matchPeriod
