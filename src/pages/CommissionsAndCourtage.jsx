@@ -363,13 +363,50 @@ export default function CommissionsAndCourtage() {
         </div>
       </div>
 
+      {/* Expected Provisions Alert - PROMINENT */}
+      {(() => {
+        const expectedCount = activeEntries.filter(e => {
+          const pStatus = e.provision_status || e.status || 'pending'
+          return pStatus === 'erwartet' || pStatus === 'pending'
+        }).length
+        const expectedAmount = activeEntries
+          .filter(e => {
+            const pStatus = e.provision_status || e.status || 'pending'
+            return pStatus === 'erwartet' || pStatus === 'pending'
+          })
+          .reduce((s, e) => s + (e.advisor_provision_amount || 0), 0)
+
+        if (expectedCount > 0) {
+          return (
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4 space-y-2">
+              <div className="flex items-start gap-3">
+                <div className="text-3xl">💰</div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-amber-900 text-lg">{expectedCount} erwartete Provisionen</h3>
+                  <p className="text-amber-800 text-sm mt-1">
+                    Gesamtbetrag: <span className="font-bold text-base">{formatCHF(expectedAmount)}</span> · Diese Provisionen sind aus aktiven Verträgen ausstehend
+                  </p>
+                  <Button 
+                    onClick={() => { setFilterStatus('erwartet'); document.querySelector('[value="provisions"]')?.click() }}
+                    className="mt-3 bg-amber-600 hover:bg-amber-700"
+                  >
+                    📋 Erwartete Provisionen anzeigen
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )
+        }
+        return null
+      })()}
+
       {/* Period Selector */}
        <div className="bg-muted/20 p-4 rounded-lg border border-border">
-         <PeriodSelector 
-           onPeriodChange={setPeriodFilter}
-           initialPeriod="this_month"
-         />
-       </div>
+          <PeriodSelector 
+            onPeriodChange={setPeriodFilter}
+            initialPeriod="this_month"
+          />
+        </div>
 
       {/* KPI Bar */}
        <CommissionKPIBar 
