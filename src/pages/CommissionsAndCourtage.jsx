@@ -333,7 +333,7 @@ export default function CommissionsAndCourtage() {
       {/* Header */}
       <div className="flex justify-between items-center flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Courtagen & Provisionen
+          <h1 className="text-2xl md:text-3xl font-bold">Provisionen & Courtagen
             {!loadingEntries && <span className="text-muted-foreground text-lg font-normal ml-2">({activeEntries.length})</span>}
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">
@@ -394,9 +394,10 @@ export default function CommissionsAndCourtage() {
        })()}
 
       {/* Main Tabs */}
-      <Tabs defaultValue="liste">
+      <Tabs defaultValue="provisions">
         <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="liste">Liste ({filteredEntries.length})</TabsTrigger>
+          <TabsTrigger value="provisions">Provisionen ({filteredEntries.length})</TabsTrigger>
+          <TabsTrigger value="courtage">Courtagen ({filteredEntries.length})</TabsTrigger>
           <TabsTrigger value="berater">Berater ({brokerStats.length})</TabsTrigger>
           <TabsTrigger value="storno">Stornos ({stornoEntries.length})</TabsTrigger>
           <TabsTrigger value="intelligence" className="flex items-center gap-1">
@@ -404,8 +405,8 @@ export default function CommissionsAndCourtage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* ── Liste ── */}
-        <TabsContent value="liste" className="mt-4 space-y-4">
+        {/* ── Provisionen ── */}
+        <TabsContent value="provisions" className="mt-4 space-y-4">
           <div className="flex flex-wrap gap-2">
             <div className="relative flex-1 min-w-44">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -447,6 +448,59 @@ export default function CommissionsAndCourtage() {
           </div>
           <CommissionTablePaginated
             entries={filteredEntries}
+            loading={loadingEntries}
+            onEdit={handleEditEntry}
+            onArchive={(entry) => archiveMutation.mutate({ id: entry.id, entry })}
+            onStatusChange={handleStatusChange}
+          />
+        </TabsContent>
+
+        {/* ── Courtagen ── */}
+        <TabsContent value="courtage" className="mt-4 space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <div className="relative flex-1 min-w-44">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Suche (Kunde, Gesellschaft, Police...)" value={search}
+                onChange={e => setSearch(e.target.value)} className="pl-9 h-9" />
+            </div>
+            {uniqueBrokers.length > 0 && (
+              <Select value={filterBroker} onValueChange={setFilterBroker}>
+                <SelectTrigger className="w-40 h-9 text-sm"><SelectValue placeholder="Alle Berater" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle Berater</SelectItem>
+                  {uniqueBrokers.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+            {uniqueInsurers.length > 0 && (
+              <Select value={filterInsurer} onValueChange={setFilterInsurer}>
+                <SelectTrigger className="w-40 h-9 text-sm"><SelectValue placeholder="Alle Gesellsch." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Alle Gesellschaften</SelectItem>
+                  {uniqueInsurers.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={filterSparte} onValueChange={setFilterSparte}>
+              <SelectTrigger className="w-36 h-9 text-sm"><SelectValue placeholder="Alle Sparten" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle Sparten</SelectItem>
+                {ALL_SPARTEN.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-36 h-9 text-sm"><SelectValue placeholder="Alle Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alle Status</SelectItem>
+                {STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <CommissionTablePaginated
+            entries={filteredEntries.filter(e => {
+              const ne = normalizeLegacyEntry(e);
+              return ne.company_courtage_amount > 0 || ne.advisor_courtage_amount > 0;
+            })}
             loading={loadingEntries}
             onEdit={handleEditEntry}
             onArchive={(entry) => archiveMutation.mutate({ id: entry.id, entry })}
