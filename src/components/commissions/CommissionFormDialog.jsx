@@ -278,9 +278,7 @@ export default function CommissionFormDialog({
     onChange(updates)
   }
   const allowedStatuses = (key) => {
-    if (!editingEntry) return STATUS_OPTIONS.slice(0, 2)
-    const current = formData[key] || 'pending'
-    return STATUS_OPTIONS.filter(s => s.value === current || canTransitionTo(current, s.value))
+    return STATUS_OPTIONS
   }
 
   return (
