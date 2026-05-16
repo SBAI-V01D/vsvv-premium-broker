@@ -387,10 +387,13 @@ export default function CommissionsAndCourtage() {
                     Gesamtbetrag: <span className="font-bold text-base">{formatCHF(expectedAmount)}</span> · Diese Provisionen sind aus aktiven Verträgen ausstehend
                   </p>
                   <Button 
-                    onClick={() => { setFilterStatus('erwartet'); document.querySelector('[value="provisions"]')?.click() }}
-                    className="mt-3 bg-amber-600 hover:bg-amber-700"
+                   onClick={() => { 
+                     setFilterStatus('erwartet')
+                     setTimeout(() => document.querySelector('[value="provisions"]')?.click(), 100)
+                   }}
+                   className="mt-3 bg-amber-600 hover:bg-amber-700"
                   >
-                    📋 Erwartete Provisionen anzeigen
+                   📋 Erwartete Provisionen anzeigen
                   </Button>
                 </div>
               </div>
