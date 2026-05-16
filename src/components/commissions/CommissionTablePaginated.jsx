@@ -56,11 +56,11 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                   <th className="text-right py-3 px-3 font-semibold text-blue-800 bg-blue-50/40">Netto C.</th>
                   <th className="text-center py-3 px-3 font-semibold text-blue-600 bg-blue-50/40 hidden lg:table-cell">C-Status</th>
                   {/* PROVISION Gruppe */}
-                  <th className="text-right py-3 px-3 font-semibold text-emerald-700 bg-emerald-50/40 border-l border-emerald-200 hidden xl:table-cell">Ges.provision</th>
-                  <th className="text-right py-3 px-3 font-semibold text-emerald-600 bg-emerald-50/40 hidden xl:table-cell">Brutto P.</th>
-                  <th className="text-right py-3 px-3 font-semibold text-orange-600 bg-emerald-50/40 hidden xl:table-cell">Reserve P.</th>
-                  <th className="text-right py-3 px-3 font-semibold text-emerald-800 bg-emerald-50/40 hidden lg:table-cell">Netto P.</th>
-                  <th className="text-center py-3 px-3 font-semibold text-emerald-600 bg-emerald-50/40 hidden xl:table-cell">P-Status</th>
+                  <th className="text-right py-3 px-3 font-semibold text-emerald-700 bg-emerald-50/40 border-l border-emerald-200 hidden md:table-cell">Ges.provision</th>
+                  <th className="text-right py-3 px-3 font-semibold text-emerald-600 bg-emerald-50/40 hidden lg:table-cell">Brutto P.</th>
+                  <th className="text-right py-3 px-3 font-semibold text-orange-600 bg-emerald-50/40 hidden lg:table-cell">Reserve P.</th>
+                  <th className="text-right py-3 px-3 font-semibold text-emerald-800 bg-emerald-50/40 hidden md:table-cell">Netto P.</th>
+                  <th className="text-center py-3 px-3 font-semibold text-emerald-600 bg-emerald-50/40 hidden lg:table-cell">P-Status</th>
                   <th className="w-10"></th>
                 </tr>
               </thead>
@@ -127,21 +127,21 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                         <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${cMeta.color}`}>{cMeta.label}</span>
                       </td>
                       {/* PROVISION */}
-                      <td className="text-right py-2.5 px-3 text-emerald-700 text-xs bg-emerald-50/20 border-l border-emerald-100 hidden xl:table-cell">
+                      <td className="text-right py-2.5 px-3 text-emerald-700 text-xs bg-emerald-50/20 border-l border-emerald-100 hidden md:table-cell">
                         {e.company_provision_amount ? formatCHF(e.company_provision_amount) : <span className="text-muted-foreground">–</span>}
                       </td>
-                      <td className="text-right py-2.5 px-3 text-emerald-600 text-xs bg-emerald-50/20 hidden xl:table-cell" title="Brutto">
+                      <td className="text-right py-2.5 px-3 text-emerald-600 text-xs bg-emerald-50/20 hidden lg:table-cell" title="Brutto">
                         {e.advisor_provision_amount ? formatCHF(e.advisor_provision_amount) : '–'}
                       </td>
-                      <td className="text-right py-2.5 px-3 text-orange-500 text-xs bg-emerald-50/20 hidden xl:table-cell" title="Reserve">
+                      <td className="text-right py-2.5 px-3 text-orange-500 text-xs bg-emerald-50/20 hidden lg:table-cell" title="Reserve">
                         {e.provision_storno_amount > 0 ? `−${formatCHF(e.provision_storno_amount)}` : '–'}
                       </td>
-                      <td className="text-right py-2.5 px-3 font-semibold text-emerald-800 text-xs bg-emerald-50/20 hidden lg:table-cell" title="Netto auszahlbar">
+                      <td className="text-right py-2.5 px-3 font-semibold text-emerald-800 text-xs bg-emerald-50/20 hidden md:table-cell" title="Netto auszahlbar">
                         {e.provision_payout_amount != null && e.provision_payout_amount !== 0
                           ? <span className={e.provision_payout_amount < 0 ? 'text-red-600' : ''}>{formatCHF(e.provision_payout_amount)}</span>
                           : <span className="text-muted-foreground">–</span>}
                       </td>
-                      <td className="text-center py-2.5 px-3 bg-emerald-50/20 hidden xl:table-cell">
+                      <td className="text-center py-2.5 px-3 bg-emerald-50/20 hidden lg:table-cell">
                         {hasProvision
                           ? <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${pMeta.color}`}>{pMeta.label}</span>
                           : <span className="text-xs text-muted-foreground">–</span>}
@@ -198,11 +198,11 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                     <td className="text-right py-3 px-3 text-orange-500 bg-blue-50/20 hidden xl:table-cell">−{formatCHF(totals.courtageReserve)}</td>
                     <td className="text-right py-3 px-3 text-blue-800 font-bold bg-blue-50/20">{formatCHF(totals.courtagePayout)}</td>
                     <td className="bg-blue-50/20 hidden lg:table-cell"></td>
-                    <td className="text-right py-3 px-3 text-emerald-700 bg-emerald-50/20 border-l border-emerald-100 hidden xl:table-cell">{formatCHF(totals.compProvision)}</td>
-                    <td className="text-right py-3 px-3 text-emerald-600 bg-emerald-50/20 hidden xl:table-cell">{formatCHF(totals.advisorProvision)}</td>
-                    <td className="text-right py-3 px-3 text-orange-500 bg-emerald-50/20 hidden xl:table-cell">−{formatCHF(totals.provisionReserve)}</td>
-                    <td className="text-right py-3 px-3 text-emerald-800 font-bold bg-emerald-50/20 hidden lg:table-cell">{formatCHF(totals.provisionPayout)}</td>
-                    <td className="bg-emerald-50/20 hidden xl:table-cell"></td>
+                    <td className="text-right py-3 px-3 text-emerald-700 bg-emerald-50/20 border-l border-emerald-100 hidden md:table-cell">{formatCHF(totals.compProvision)}</td>
+                    <td className="text-right py-3 px-3 text-emerald-600 bg-emerald-50/20 hidden lg:table-cell">{formatCHF(totals.advisorProvision)}</td>
+                    <td className="text-right py-3 px-3 text-orange-500 bg-emerald-50/20 hidden lg:table-cell">−{formatCHF(totals.provisionReserve)}</td>
+                    <td className="text-right py-3 px-3 text-emerald-800 font-bold bg-emerald-50/20 hidden md:table-cell">{formatCHF(totals.provisionPayout)}</td>
+                    <td className="bg-emerald-50/20 hidden lg:table-cell"></td>
                     <td></td>
                   </tr>
                 </tfoot>
