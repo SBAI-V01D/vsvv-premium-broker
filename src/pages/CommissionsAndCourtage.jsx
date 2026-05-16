@@ -133,6 +133,7 @@ export default function CommissionsAndCourtage() {
         `Abrechnung erfasst: ${created.insurer} – ${created.customer_name} | Courtage: ${formatCHF(c.advisor_courtage_amount)} | Provision: ${formatCHF(c.advisor_provision_amount)}`,
         {}, created)
       setShowForm(false); resetForm()
+      // Keine Toast-Meldung bei erfolgreichem Speichern
     },
     onError: (err) => toast({ title: 'Fehler beim Speichern', description: err.message, variant: 'destructive' }),
   })
@@ -147,6 +148,7 @@ export default function CommissionsAndCourtage() {
         `Abrechnung bearbeitet: ${result.insurer} – ${result.customer_name} | Courtage: ${formatCHF(c.advisor_courtage_amount)} | Provision: ${formatCHF(c.advisor_provision_amount)}`,
         oldData, result)
       setShowForm(false); resetForm()
+      // Keine Toast-Meldung bei erfolgreichem Update
     },
     onError: (err) => toast({ title: 'Fehler beim Aktualisieren', description: err.message, variant: 'destructive' }),
   })
@@ -176,7 +178,7 @@ export default function CommissionsAndCourtage() {
         `${label} Status geändert → ${to} (${entry.customer_name})`,
         { [`${type}_status`]: entry[`${type}_status`] || entry.status },
         { [`${type}_status`]: newStatus })
-      toast({ title: `${label} Status: ${to}`, description: `${entry.customer_name} – ${entry.insurer}` })
+      // Keine Toast-Meldung bei erfolgreichem Statuswechsel
     },
     onError: (err) => toast({ title: 'Fehler bei Statusänderung', description: err.message, variant: 'destructive' }),
   })
