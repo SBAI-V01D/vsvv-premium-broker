@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Search, X, User, CheckCircle2, Calculator, Landmark, TrendingUp, Clock, FileText, ShieldCheck } from 'lucide-react'
+import { Search, X, User, CheckCircle2, Calculator, Landmark, TrendingUp, Clock, FileText, ShieldCheck, AlertTriangle } from 'lucide-react'
 import { formatCHF, roundCHF, validateCommissionForm, STATUS_META, canTransitionTo, DEFAULT_STORNO_PCT } from '@/lib/commissionEngine'
 
 const SWISS_INSURERS = [
@@ -223,6 +223,34 @@ export default function CommissionFormDialog({
         </DialogHeader>
 
         <div className="space-y-5 py-1">
+
+          {/* ── Storno-Schalter ── */}
+          <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${formData.is_storno ? 'border-red-400 bg-red-50' : 'border-border bg-muted/20 hover:bg-muted/40'}`}>
+            <input
+              type="checkbox"
+              checked={!!formData.is_storno}
+              onChange={e => onChange({
+                is_storno: e.target.checked,
+                courtage_status: e.target.checked ? 'cancelled' : (formData.courtage_status === 'cancelled' ? 'pending' : formData.courtage_status),
+                provision_status: e.target.checked ? 'cancelled' : (formData.provision_status === 'cancelled' ? 'pending' : formData.provision_status),
+                status: e.target.checked ? 'cancelled' : 'pending',
+              })}
+              className="w-4 h-4 accent-red-600"
+            />
+            <div className="flex items-center gap-2">
+              <AlertTriangle className={`w-4 h-4 ${formData.is_storno ? 'text-red-600' : 'text-muted-foreground'}`} />
+              <span className={`font-semibold text-sm ${formData.is_storno ? 'text-red-700' : 'text-foreground'}`}>
+                Storno-Buchung
+              </span>
+              <span className="text-xs text-muted-foreground">– Beträge werden als Minus-Buchung erfasst</span>
+            </div>
+          </label>
+
+          {formData.is_storno && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">
+              Erfasst einen <strong>Storno-Eintrag</strong>. Positive Beträge werden automatisch negativ gebucht (z.B. CHF 500 → −CHF 500).
+            </div>
+          )}
 
           {/* ──────────────────────────────────────────────
               A. VERTRAGSGRUNDLAGEN
@@ -490,8 +518,8 @@ export default function CommissionFormDialog({
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={onClose}>Abbrechen</Button>
-          <Button onClick={onSave} disabled={isSaving} className="min-w-36">
-            {isSaving ? 'Speichern...' : editingEntry ? 'Änderungen speichern' : 'Abrechnung speichern'}
+          <Button onClick={onSave} disabled={isSaving} className={`min-w-36 ${formData.is_storno ? 'bg-red-600 hover:bg-red-700' : ''}`}>
+            {isSaving ? 'Speichern...' : editingEntry ? 'Änderungen speichern' : formData.is_storno ? 'Storno buchen' : 'Abrechnung speichern'}
           </Button>
         </DialogFooter>
       </DialogContent>
