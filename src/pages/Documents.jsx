@@ -69,7 +69,7 @@ export default function Documents() {
 
   const deleteBulkMutation = useMutation({
     mutationFn: async () => {
-      const toDelete = documents.filter(d => d.classification_status === 'pruefung_erforderlich')
+      const toDelete = documents.filter(d => d.doc_type === 'unbekannt')
       for (const doc of toDelete) {
         await base44.entities.Document.delete(doc.id)
       }
@@ -77,7 +77,7 @@ export default function Documents() {
     },
     onSuccess: () => {
       queryClient.setQueryData(['documents'], (old) =>
-        old ? old.filter(doc => doc.classification_status !== 'pruefung_erforderlich') : old
+        old ? old.filter(doc => doc.doc_type !== 'unbekannt') : old
       )
     },
   })
