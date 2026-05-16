@@ -269,10 +269,11 @@ export default function CommissionsAndCourtage() {
       const matchInsurer = filterInsurer === 'all' || e.insurer === filterInsurer
       const matchSparte = filterSparte === 'all' || e.product_category === filterSparte
       const cStatus = ne.courtage_status || e.status || 'pending'
-      // COMPAT: Filter "erwartet" zeigt auch alte "pending"-Einträge (Übergangslösung)
+      const pStatus = ne.provision_status || e.status || 'pending'
+      // COMPAT: Filter "erwartet" prüft BOTH courtage_status + provision_status
       const matchStatus = filterStatus === 'all' || 
-        (filterStatus === 'erwartet' && (cStatus === 'erwartet' || cStatus === 'pending')) || 
-        cStatus === filterStatus
+        (filterStatus === 'erwartet' && ((cStatus === 'erwartet' || cStatus === 'pending') || (pStatus === 'erwartet' || pStatus === 'pending'))) || 
+        cStatus === filterStatus || pStatus === filterStatus
       
       // Dynamic period filtering — parse date as local (YYYY-MM-DD) to avoid UTC offset issues
       const rawDate = e.courtage_received_date || e.provision_received_date || e.entry_date
