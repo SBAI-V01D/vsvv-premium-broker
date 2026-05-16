@@ -155,10 +155,13 @@ Dateiname: "${docData.name || ''}"`,
     if (matchedCustomer) {
       const customerName = matchedCustomer.company_name ||
         `${matchedCustomer.first_name || ''} ${matchedCustomer.last_name || ''}`.trim();
+      // Wenn Kunde erfolgreich zugeordnet: Status auf "klassifiziert" setzen
+      // (auch wenn KI-Konfidenz < 85% war — die Zuordnung ist die fachliche Validierung)
       await base44.asServiceRole.entities.Document.update(documentId, {
         customer_id: matchedCustomer.id,
         customer_name: customerName,
         processing_stage: 'customer_mapped',
+        classification_status: 'klassifiziert', // Upgrade nach erfolgreicher Zuordnung
       });
     }
 
