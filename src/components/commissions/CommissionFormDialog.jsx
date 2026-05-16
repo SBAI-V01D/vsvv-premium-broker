@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Search, X, User, CheckCircle2, Calculator, Landmark, TrendingUp, Clock, FileText, ShieldCheck, AlertTriangle, RotateCcw, ArrowRight } from 'lucide-react'
+import { Search, X, User, CheckCircle2, Calculator, Landmark, TrendingUp, Clock, FileText, ShieldCheck, AlertTriangle, RotateCcw, ArrowRight, Zap } from 'lucide-react'
 import { formatCHF, roundCHF, validateCommissionForm, STATUS_META, canTransitionTo, DEFAULT_STORNO_PCT, calcStornoPreview } from '@/lib/commissionEngine'
 
 const SWISS_INSURERS = [
@@ -295,6 +295,15 @@ export default function CommissionFormDialog({
         <DialogDescription className="sr-only">Formular zur Erfassung von Courtage- und Provisionsabrechnung</DialogDescription>
 
         <div className="space-y-5 py-1">
+
+          {/* ── Auto-Erstellungs-Badge ── */}
+          {formData.created_automatically && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-emerald-700">
+              <Zap className="w-4 h-4 flex-shrink-0" />
+              <span className="font-medium">Automatisch aus Vertragsaktivierung erstellt</span>
+              <span className="text-emerald-600 text-xs ml-auto">Bitte Beträge ergänzen</span>
+            </div>
+          )}
 
           {/* ── Storno-Schalter ── */}
           <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${formData.is_storno ? 'border-red-400 bg-red-50' : 'border-border bg-muted/20 hover:bg-muted/40'}`}>

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Edit, Archive, MoreHorizontal, AlertTriangle } from 'lucide-react'
+import { Edit, Archive, MoreHorizontal, AlertTriangle, Zap } from 'lucide-react'
 import { formatCHF, formatDate, STATUS_META, STATUS_TRANSITIONS, checkEntryConsistency, calcKPIs, normalizeLegacyEntry } from '@/lib/commissionEngine'
 
 const PAGE_SIZE = 50
@@ -100,8 +100,9 @@ export default function CommissionTablePaginated({ entries, loading, onEdit, onA
                       <td className="py-2.5 px-3 text-muted-foreground text-xs hidden lg:table-cell">{e.advisor_name || '–'}</td>
                       <td className="py-2.5 px-3">
                         <div>
-                          <p className="font-medium text-xs leading-tight flex items-center gap-1">
+                          <p className="font-medium text-xs leading-tight flex items-center gap-1 flex-wrap">
                             {isStorno && <span className="text-xs bg-red-600 text-white px-1.5 py-0.5 rounded font-bold shrink-0">−STORNO</span>}
+                            {origEntry.created_automatically && <span className="text-xs bg-emerald-100 text-emerald-700 border border-emerald-200 px-1 py-0.5 rounded flex items-center gap-0.5 shrink-0"><Zap className="w-2.5 h-2.5" />Auto</span>}
                             {e.customer_name || '–'}
                           </p>
                           <p className="text-xs text-muted-foreground md:hidden">{e.insurer}</p>
