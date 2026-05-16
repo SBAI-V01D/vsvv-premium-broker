@@ -570,7 +570,10 @@ export default function CustomerDetail() {
                         {/* Status */}
                         <div className="flex items-center gap-2">
                           <button onClick={() => setStatusChangingContract(c)} className="hover:opacity-80 transition-opacity">
-                            <StatusBadge statusDef={{ label: c.custom_status || label(STATUS_LABELS, c.status) }} label={c.custom_status || label(STATUS_LABELS, c.status)} />
+                            <StatusBadge
+                              statusDef={statusDefs.find(s => s.key === (c.custom_status || '').toLowerCase().trim()) || statusDefs.find(s => s.key === (c.status || '').toLowerCase().trim())}
+                              label={c.custom_status || label(STATUS_LABELS, c.status)}
+                            />
                           </button>
                         </div>
 
