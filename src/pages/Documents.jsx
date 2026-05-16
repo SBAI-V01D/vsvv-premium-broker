@@ -98,10 +98,20 @@ export default function Documents() {
     )
     if (docsToFix.length === 0) return
     
+    // Update lokal im Cache statt einzelne Mutations
+    queryClient.setQueryData(['documents'], (old) =>
+      old ? old.map(doc =>
+        docsToFix.find(d => d.id === doc.id)
+          ? { ...doc, classification_status: 'klassifiziert' }
+          : doc
+      ) : old
+    )
+    
+    // Dann Server aktualisieren
     for (const doc of docsToFix) {
-      updateMutation.mutate({
-        id: doc.id,
-        data: { classification_status: 'klassifiziert' },
+      base44.entities.Document.update(doc.id, { classification_status: 'klassifiziert' }).catch(err => {
+        console.error('Update failed:', err)
+        queryClient.invalidateQueries({ queryKey: ['documents'] })
       })
     }
   }
