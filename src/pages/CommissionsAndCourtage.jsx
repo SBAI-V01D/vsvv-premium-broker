@@ -367,12 +367,12 @@ export default function CommissionsAndCourtage() {
       {(() => {
         const expectedCount = activeEntries.filter(e => {
           const pStatus = e.provision_status || e.status || 'pending'
-          return pStatus === 'erwartet' || pStatus === 'pending' || pStatus === 'earned'
+          return pStatus === 'erwartet' || pStatus === 'pending' || pStatus === 'earned' || pStatus === 'invoiced'
         }).length
         const expectedAmount = activeEntries
           .filter(e => {
             const pStatus = e.provision_status || e.status || 'pending'
-            return pStatus === 'erwartet' || pStatus === 'pending' || pStatus === 'earned'
+            return pStatus === 'erwartet' || pStatus === 'pending' || pStatus === 'earned' || pStatus === 'invoiced'
           })
           .reduce((s, e) => s + (e.advisor_provision_amount || 0), 0)
 
