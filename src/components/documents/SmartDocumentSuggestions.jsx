@@ -128,6 +128,13 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
   // FINALIZE: Vertrag + Dokument abschliessen
   // ─────────────────────────────────────────────
   const finalize = async (customerId, primaryCustomerId, orgId, advisorId) => {
+    if (createContract && !contractData.insurer) {
+      alert('Bitte Versicherer eingeben, um einen Vertrag zu erstellen.')
+      return
+    }
+
+    let newContractId = null
+
     if (createContract && contractData.insurer) {
       // Kundenname für den Vertrag ermitteln
       const allFamilyMembers = insights.availableFamilyMembers || []
@@ -137,10 +144,10 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
         : (customerId === primaryCustomerId
           ? (insights.matchedPrimaryCustomer
             ? `${insights.matchedPrimaryCustomer.first_name} ${insights.matchedPrimaryCustomer.last_name}`
-            : '')
+            : `${primaryData.first_name} ${primaryData.last_name}`)
           : `${personData.first_name} ${personData.last_name}`)
 
-      await createContractMut.mutateAsync({
+      const newContract = await createContractMut.mutateAsync({
         customer_id: customerId,
         customer_name: customerNameForContract,
         primary_customer_id: primaryCustomerId,
@@ -154,15 +161,18 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
         status: 'active',
         process_status: 'neu',
       })
+      newContractId = newContract?.id || null
     }
 
     await updateDocMut.mutateAsync({
       id: document.id,
       updates: {
         customer_id: customerId,
+        customer_name: `${personData.first_name || primaryData.first_name} ${personData.last_name || primaryData.last_name}`.trim() || undefined,
         primary_customer_id: primaryCustomerId,
-        processing_stage: 'customer_mapped',
+        processing_stage: newContractId ? 'policy_created' : 'customer_mapped',
         classification_status: 'klassifiziert',
+        linked_contract_id: newContractId || undefined,
       }
     })
 
@@ -391,7 +401,7 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
             </p>
           </Card>
 
-          {ContractForm({ contractData, setContractData, createContract, setCreateContract })}
+          <ContractForm contractData={contractData} setContractData={setContractData} createContract={createContract} setCreateContract={setCreateContract} />
 
           <ActionBar
             onBack={() => setMode(null)}
@@ -533,7 +543,7 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
             <strong>{personData.first_name} {personData.last_name}</strong> wurde angelegt und der Familie zugeordnet.
           </Card>
 
-          {ContractForm({ contractData, setContractData, createContract, setCreateContract })}
+          <ContractForm contractData={contractData} setContractData={setContractData} createContract={createContract} setCreateContract={setCreateContract} />
 
           <ActionBar
             onBack={() => setStep(1)}
@@ -629,7 +639,7 @@ export default function SmartDocumentSuggestions({ document, insights, onSuccess
             <strong>{primaryData.first_name} {primaryData.last_name}</strong> wurde als neuer Kunde gespeichert.
           </Card>
 
-          {ContractForm({ contractData, setContractData, createContract, setCreateContract })}
+          <ContractForm contractData={contractData} setContractData={setContractData} createContract={createContract} setCreateContract={setCreateContract} />
 
           <ActionBar
             onBack={() => setPrimaryStep(0)}
