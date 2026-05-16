@@ -67,6 +67,21 @@ export default function Documents() {
     },
   })
 
+  const deleteBulkMutation = useMutation({
+    mutationFn: async () => {
+      const toDelete = documents.filter(d => d.classification_status === 'pruefung_erforderlich')
+      for (const doc of toDelete) {
+        await base44.entities.Document.delete(doc.id)
+      }
+      return toDelete.length
+    },
+    onSuccess: () => {
+      queryClient.setQueryData(['documents'], (old) =>
+        old ? old.filter(doc => doc.classification_status !== 'pruefung_erforderlich') : old
+      )
+    },
+  })
+
   const handleReclassify = (doc, newType) => {
     updateMutation.mutate({
       id: doc.id,
@@ -196,9 +211,23 @@ export default function Documents() {
         </div>
         <div className="flex gap-2">
            {counts.pruefung_erforderlich > 0 && (
-             <Button onClick={handleFixClassificationStatus} variant="outline" className="gap-2 text-amber-600 border-amber-200 hover:bg-amber-50">
-               <CheckCircle2 className="w-4 h-4" /> {counts.pruefung_erforderlich} Status korrigieren
-             </Button>
+             <>
+               <Button 
+                 onClick={() => {
+                   if (confirm(`${counts.pruefung_erforderlich} Dokumente mit Status "Prüfung erforderlich" löschen?`)) {
+                     deleteBulkMutation.mutate()
+                   }
+                 }} 
+                 variant="outline" 
+                 className="gap-2 text-red-600 border-red-200 hover:bg-red-50"
+                 disabled={deleteBulkMutation.isPending}
+               >
+                 <Trash2 className="w-4 h-4" /> {counts.pruefung_erforderlich} löschen
+               </Button>
+               <Button onClick={handleFixClassificationStatus} variant="outline" className="gap-2 text-amber-600 border-amber-200 hover:bg-amber-50">
+                 <CheckCircle2 className="w-4 h-4" /> {counts.pruefung_erforderlich} Status korrigieren
+               </Button>
+             </>
            )}
            <Button onClick={() => setSmartUploadOpen(true)} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
              <Plus className="w-4 h-4" /> Smart Upload
