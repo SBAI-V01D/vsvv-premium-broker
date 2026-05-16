@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   Search, Plus, MoreHorizontal, FileText, ExternalLink,
-  Zap, Paperclip, Tag, Trash2, Eye, RefreshCw, Clock, Download, AlertCircle
+  Zap, Paperclip, Tag, Trash2, Eye, RefreshCw, Clock, Download, AlertCircle, CheckCircle2
 } from 'lucide-react'
 import DocumentTypeBadge from '@/components/documents/DocumentTypeBadge'
 import DocumentTagBadge from '@/components/documents/DocumentTagBadge'
@@ -83,6 +83,18 @@ export default function Documents() {
       payload: JSON.stringify({ file_url: doc.file_url, file_name: doc.name, document_id: doc.id }),
     })
     updateMutation.mutate({ id: doc.id, data: { classification_status: 'ausstehend' } })
+  }
+
+  const handleClassifyAll = async () => {
+    const docsToClassify = documents.filter(d => d.classification_status === 'pruefung_erforderlich')
+    if (docsToClassify.length === 0) return
+    
+    for (const doc of docsToClassify) {
+      updateMutation.mutate({
+        id: doc.id,
+        data: { classification_status: 'klassifiziert' },
+      })
+    }
   }
 
   const filtered = documents.filter(doc => {
@@ -164,13 +176,18 @@ export default function Documents() {
           <p className="text-muted-foreground mt-1">Intelligente Klassifizierung & automatische Antragserfassung</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setSmartUploadOpen(true)} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
-            <Plus className="w-4 h-4" /> Smart Upload
-          </Button>
-          <Button onClick={() => setUploadOpen(true)} variant="outline" className="gap-2">
-            <Plus className="w-4 h-4" /> Standard Upload
-          </Button>
-        </div>
+           {counts.pruefung_erforderlich > 0 && (
+             <Button onClick={handleClassifyAll} variant="outline" className="gap-2 text-amber-600 border-amber-200 hover:bg-amber-50">
+               <CheckCircle2 className="w-4 h-4" /> {counts.pruefung_erforderlich} klassifizieren
+             </Button>
+           )}
+           <Button onClick={() => setSmartUploadOpen(true)} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+             <Plus className="w-4 h-4" /> Smart Upload
+           </Button>
+           <Button onClick={() => setUploadOpen(true)} variant="outline" className="gap-2">
+             <Plus className="w-4 h-4" /> Standard Upload
+           </Button>
+         </div>
       </div>
 
       {/* KPI strip */}
