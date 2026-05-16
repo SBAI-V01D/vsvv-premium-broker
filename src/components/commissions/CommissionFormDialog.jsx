@@ -254,8 +254,29 @@ function SectionHeader({ letter, title, subtitle, color }) {
 // ─── Main Dialog ──────────────────────────────────────────────────────────────
 export default function CommissionFormDialog({
   open, onClose, editingEntry, formData, formErrors, submitAttempted,
-  onChange, onSave, isSaving, customers, brokers, organizations
+  onChange, onSave, isSaving, customers, contracts = [], brokers, organizations
 }) {
+  const customerContracts = useMemo(() => {
+    if (!formData.customer_id) return []
+    return contracts.filter(c => c.customer_id === formData.customer_id && !c.archived)
+  }, [formData.customer_id, contracts])
+
+  const handleContractSelect = (contractId) => {
+    const c = customerContracts.find(x => x.id === contractId)
+    if (!c) return
+    const updates = {}
+    if (c.policy_number) updates.policy_number = c.policy_number
+    if (c.premium_yearly) updates.premium_yearly = c.premium_yearly
+    if (c.insurer) updates.insurer = c.insurer
+    if (c.start_date) updates.start_date = c.start_date
+    // Map sparte to product_category
+    if (c.sparte || c.insurance_type) {
+      const sparte = c.sparte || c.insurance_type
+      const sparteMap = { kvg: 'KVG', vvg: 'VVG', life: 'Leben', property: 'Sach', motor: 'KFZ', bvg: 'BVG', liability: 'Haftpflicht', health: 'KVG', other: 'VVG' }
+      updates.product_category = sparteMap[sparte?.toLowerCase()] || sparte
+    }
+    onChange(updates)
+  }
   const allowedStatuses = (key) => {
     if (!editingEntry) return STATUS_OPTIONS.slice(0, 2)
     const current = formData[key] || 'pending'
@@ -331,6 +352,32 @@ export default function CommissionFormDialog({
               />
               {formErrors.customer_name && <p className="text-xs text-red-500 mt-0.5">{formErrors.customer_name}</p>}
             </div>
+
+            {/* Vertrag aus Kundenpolicen wählen */}
+            {customerContracts.length > 0 && (
+              <div>
+                <label className="text-sm font-semibold text-primary flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5" /> Vertrag auswählen (Police automatisch übernehmen)
+                </label>
+                <Select onValueChange={handleContractSelect}>
+                  <SelectTrigger className="mt-1 border-primary/40 bg-primary/5">
+                    <SelectValue placeholder="Vertrag wählen → Police & Prämie werden übernommen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customerContracts.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        <span className="font-medium">{c.insurer}</span>
+                        {c.policy_number && <span className="text-muted-foreground ml-2">· {c.policy_number}</span>}
+                        {c.premium_yearly && <span className="text-muted-foreground ml-2">· CHF {c.premium_yearly.toLocaleString('de-CH')}/J.</span>}
+                        {(c.sparte || c.insurance_type) && <span className="text-muted-foreground ml-2">· {c.sparte || c.insurance_type}</span>}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-primary/70 mt-0.5">Policen-Nr., Jahresprämie, Gesellschaft & Sparte werden automatisch übernommen</p>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 gap-3">
               <div>
                 <label className="text-sm font-semibold">Berater *</label>

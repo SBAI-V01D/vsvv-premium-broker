@@ -84,6 +84,11 @@ export default function CommissionsAndCourtage() {
     queryFn: () => base44.entities.Customer.list(null, 2000),
     staleTime: 60_000,
   })
+  const { data: contracts = [] } = useQuery({
+    queryKey: ['contracts-for-commission'],
+    queryFn: () => base44.entities.Contract.filter({ archived: false }, null, 5000),
+    staleTime: 60_000,
+  })
   const { data: auditLogs = [] } = useQuery({
     queryKey: ['auditLogs-commission'],
     queryFn: () => base44.entities.AuditLog.filter({ entity_type: 'commission' }, '-changed_at', 500),
@@ -579,6 +584,7 @@ export default function CommissionsAndCourtage() {
         onSave={handleSave}
         isSaving={isSaving}
         customers={customers}
+        contracts={contracts}
         brokers={brokers}
         organizations={organizations}
       />
