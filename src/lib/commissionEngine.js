@@ -60,23 +60,25 @@ export function normalizeLegacyEntry(entry) {
     e.provision_storno_percentage = DEFAULT_STORNO_PCT
   }
 
-  // Storno-Beträge berechnen falls nicht gesetzt
+  // Storno-Beträge berechnen falls nicht gesetzt (auch für negative Werte / Storni)
   const brutto_c = roundCHF(e.advisor_courtage_amount)
   const storno_c_pct = roundPct(e.courtage_storno_percentage)
-  if (!e.courtage_storno_amount && brutto_c > 0) {
-    e.courtage_storno_amount = roundCHF((brutto_c * storno_c_pct) / 100)
+  if (!e.courtage_storno_amount && brutto_c !== 0) {
+    e.courtage_storno_amount = roundCHF((Math.abs(brutto_c) * storno_c_pct) / 100)
   }
-  if (!e.courtage_payout_amount && brutto_c > 0) {
-    e.courtage_payout_amount = roundCHF(brutto_c - (e.courtage_storno_amount || 0))
+  if (!e.courtage_payout_amount && brutto_c !== 0) {
+    const nettoAbs = roundCHF(Math.abs(brutto_c) - (e.courtage_storno_amount || 0))
+    e.courtage_payout_amount = brutto_c < 0 ? -nettoAbs : nettoAbs
   }
 
   const brutto_p = roundCHF(e.advisor_provision_amount)
   const storno_p_pct = roundPct(e.provision_storno_percentage)
-  if (!e.provision_storno_amount && brutto_p > 0) {
-    e.provision_storno_amount = roundCHF((brutto_p * storno_p_pct) / 100)
+  if (!e.provision_storno_amount && brutto_p !== 0) {
+    e.provision_storno_amount = roundCHF((Math.abs(brutto_p) * storno_p_pct) / 100)
   }
-  if (!e.provision_payout_amount && brutto_p > 0) {
-    e.provision_payout_amount = roundCHF(brutto_p - (e.provision_storno_amount || 0))
+  if (!e.provision_payout_amount && brutto_p !== 0) {
+    const nettoAbs = roundCHF(Math.abs(brutto_p) - (e.provision_storno_amount || 0))
+    e.provision_payout_amount = brutto_p < 0 ? -nettoAbs : nettoAbs
   }
 
   return e
@@ -220,15 +222,19 @@ export function calcKPIsForPeriod(entries, periodStart = null, periodEnd = null)
     console.warn(`[calcKPIs] ⚠️ ${inconsistencies.length} entries with consistency warnings`)
   }
   
+  // Storni (is_storno=true) werden IMMER ins Total eingerechnet (als negative Werte)
+  // Nur echte "cancelled"-Status-Einträge (manuelle Stornierung) werden ausgeschlossen
   const nonCancCourtage  = active.filter(e => {
+    if (e.is_storno) return true  // Storno-Buchungen immer einrechnen
     if ((e.courtage_status || e.status) === 'cancelled') return false
     return true
   })
   const nonCancProvision = active.filter(e => {
+    if (e.is_storno) return true  // Storno-Buchungen immer einrechnen
     if ((e.provision_status || 'pending') === 'cancelled') return false
     return true
   })
-  const cancelled        = active.filter(e => (e.courtage_status || e.status) === 'cancelled')
+  const cancelled = active.filter(e => !e.is_storno && (e.courtage_status || e.status) === 'cancelled')
 
   const overdueCourtage = active.filter(e => {
     if ((e.courtage_status || e.status) !== 'invoiced') return false
