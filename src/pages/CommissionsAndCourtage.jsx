@@ -599,10 +599,10 @@ export default function CommissionsAndCourtage() {
       />
 
       {/* Settings */}
-      <Dialog open={showSettings} onOpenChange={setShowSettings}>
+      <Dialog open={showSettings} onOpenChange={(open) => setShowSettings(open)}>
         <DialogContent className="max-w-xl">
           <DialogHeader><DialogTitle>Einstellungen – Courtagen & Provisionen</DialogTitle></DialogHeader>
-          <div className="space-y-3 text-sm">
+          <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto pr-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1">
               <p className="font-bold text-blue-800 flex items-center gap-1.5">Courtage-Formel</p>
               <p className="font-mono text-blue-700 bg-blue-100 rounded px-2 py-1 text-xs">
