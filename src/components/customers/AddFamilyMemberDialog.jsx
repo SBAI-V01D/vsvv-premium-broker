@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
@@ -25,6 +25,24 @@ export default function AddFamilyMemberDialog({ customer, open, onOpenChange }) 
     gender: '',
   })
   const [error, setError] = useState('')
+
+  // Wenn Dialog öffnet oder customer sich ändert: Felder neu befüllen
+  useEffect(() => {
+    if (open && customer) {
+      setFormData({
+        firstName: '',
+        lastName: customer.last_name || '',
+        email: customer.email || '',
+        street: customer.street || '',
+        zip_code: customer.zip_code || '',
+        city: customer.city || '',
+        familyRole: '',
+        birthdate: '',
+        gender: '',
+      })
+      setError('')
+    }
+  }, [open, customer?.id])
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
