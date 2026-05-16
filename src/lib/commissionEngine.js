@@ -466,10 +466,10 @@ export function validateCommissionForm(data) {
 
   const isStorno = !!data.is_storno
   const hasCourtage  = isStorno
-    ? (parseFloat(data.advisor_courtage_amount) || 0) > 0
+    ? ((parseFloat(data.abschlussprovision_courtage) || 0) > 0 || (parseFloat(data.company_courtage_amount) || 0) > 0)
     : (parseFloat(data.company_courtage_amount) || 0) > 0
   const hasProvision = isStorno
-    ? (parseFloat(data.advisor_provision_amount) || 0) > 0
+    ? ((parseFloat(data.abschlussprovision_provision) || 0) > 0 || (parseFloat(data.company_provision_amount) || 0) > 0)
     : (parseFloat(data.company_provision_amount) || 0) > 0
   if (!hasCourtage && !hasProvision) {
     errors.company_courtage_amount = 'Mindestens Courtage oder Provision muss angegeben werden'
@@ -494,6 +494,121 @@ export function validateCommissionForm(data) {
   }
 
   return errors
+}
+
+// ─── Storno-Persistierung ─────────────────────────────────────────────────────
+/**
+ * Berechnet alle Storno-Felder und gibt ein vollständig persistierbares Objekt zurück.
+ * Alle Berechnungswerte werden gespeichert – keine reine Laufzeitberechnung.
+ *
+ * @param {object} formData  – Rohdaten aus dem Formular
+ * @param {object|null} originalEntry – Ursprungs-Abrechnung (wenn bekannt)
+ */
+export function calcStornoSaveData(formData, originalEntry = null) {
+  const today = new Date().toISOString().split('T')[0]
+
+  // ── Courtage ──
+  const courtageAbschluss = roundCHF(formData.abschlussprovision_courtage || 0)
+  const courtageBase      = roundCHF(formData.company_courtage_amount || 0)
+  const courtageBrutto    = roundCHF(courtageAbschluss + courtageBase)   // = Bruttoentschädigung
+  const sPctC             = roundPct(
+    formData.courtage_storno_percentage !== undefined && formData.courtage_storno_percentage !== null
+      ? formData.courtage_storno_percentage : DEFAULT_STORNO_PCT
+  )
+  const courtageReserve   = roundCHF((courtageBrutto * sPctC) / 100)
+  const courtageNetto     = roundCHF(courtageBrutto - courtageReserve)
+
+  // ── Provision ──
+  const provisionAbschluss = roundCHF(formData.abschlussprovision_provision || 0)
+  const provisionBase      = roundCHF(formData.company_provision_amount || 0)
+  const provisionBrutto    = roundCHF(provisionAbschluss + provisionBase)
+  const sPctP              = roundPct(
+    formData.provision_storno_percentage !== undefined && formData.provision_storno_percentage !== null
+      ? formData.provision_storno_percentage : DEFAULT_STORNO_PCT
+  )
+  const provisionReserve   = roundCHF((provisionBrutto * sPctP) / 100)
+  const provisionNetto     = roundCHF(provisionBrutto - provisionReserve)
+
+  // Rückforderung: wenn war ausbezahlt → Netto ist Rückforderungsbetrag
+  const warAusbezahlt      = !!(formData.storno_war_ausbezahlt || originalEntry?.is_paid)
+  const rueckforderung     = warAusbezahlt ? roundCHF(courtageNetto + provisionNetto) : 0
+
+  return {
+    ...formData,
+    // ── Abschlussprovision (fachliche Trennung) ──
+    abschlussprovision_courtage:    courtageAbschluss,
+    abschlussprovision_provision:   provisionAbschluss,
+    bruttoentschaedigung_courtage:  courtageBrutto,
+    bruttoentschaedigung_provision: provisionBrutto,
+
+    // ── Courtage-Felder (alle negativ gespeichert) ──
+    company_courtage_amount:    -(courtageBase),
+    advisor_courtage_amount:    -(courtageBrutto),
+    courtage_storno_percentage: sPctC,
+    courtage_storno_amount:     courtageReserve,       // Reserve bleibt positiv (Einbehalt)
+    courtage_payout_amount:     -(courtageNetto),      // Negativ = Rückbuchung
+
+    // ── Provision-Felder (alle negativ gespeichert) ──
+    company_provision_amount:   -(provisionBase),
+    advisor_provision_amount:   -(provisionBrutto),
+    provision_storno_percentage: sPctP,
+    provision_storno_amount:    provisionReserve,
+    provision_payout_amount:    -(provisionNetto),
+
+    // ── Storno-Audit-Felder ──
+    storno_datum:                   formData.storno_datum || today,
+    storno_reference_id:            formData.storno_reference_id || originalEntry?.id || '',
+    storno_ursprung_courtage_brutto: originalEntry?.advisor_courtage_amount ?? courtageBrutto,
+    storno_ursprung_provision_brutto: originalEntry?.advisor_provision_amount ?? provisionBrutto,
+    storno_ursprung_courtage_netto:  originalEntry?.courtage_payout_amount ?? courtageNetto,
+    storno_ursprung_provision_netto: originalEntry?.provision_payout_amount ?? provisionNetto,
+    storno_war_ausbezahlt:           warAusbezahlt,
+    storno_rueckforderungsbetrag:    rueckforderung,
+    storno_grund:                    formData.storno_grund || '',
+
+    // ── Status ──
+    is_storno:        true,
+    courtage_status:  'cancelled',
+    provision_status: 'cancelled',
+    status:           'cancelled',
+    premium_yearly:   roundCHF(formData.premium_yearly || 0),
+
+    // Legacy-Sync
+    received_amount:   -(courtageBase),
+    commission_amount: -(courtageBrutto),
+  }
+}
+
+/**
+ * Live-Berechnung für Storno-Formular (ohne Speichern)
+ * Gibt Zwischenwerte für die Anzeige zurück.
+ */
+export function calcStornoPreview(formData) {
+  const courtageAbschluss = roundCHF(parseFloat(formData.abschlussprovision_courtage) || 0)
+  const courtageBase      = roundCHF(parseFloat(formData.company_courtage_amount) || 0)
+  const courtageBrutto    = roundCHF(courtageAbschluss + courtageBase)
+  const sPctC             = roundPct(formData.courtage_storno_percentage ?? DEFAULT_STORNO_PCT)
+  const courtageReserve   = roundCHF((courtageBrutto * sPctC) / 100)
+  const courtageNetto     = roundCHF(courtageBrutto - courtageReserve)
+
+  const provisionAbschluss = roundCHF(parseFloat(formData.abschlussprovision_provision) || 0)
+  const provisionBase      = roundCHF(parseFloat(formData.company_provision_amount) || 0)
+  const provisionBrutto    = roundCHF(provisionAbschluss + provisionBase)
+  const sPctP              = roundPct(formData.provision_storno_percentage ?? DEFAULT_STORNO_PCT)
+  const provisionReserve   = roundCHF((provisionBrutto * sPctP) / 100)
+  const provisionNetto     = roundCHF(provisionBrutto - provisionReserve)
+
+  return {
+    // Courtage
+    courtageAbschluss, courtageBase, courtageBrutto, sPctC, courtageReserve, courtageNetto,
+    // Provision
+    provisionAbschluss, provisionBase, provisionBrutto, sPctP, provisionReserve, provisionNetto,
+    // Gesamt
+    gesamtBrutto: roundCHF(courtageBrutto + provisionBrutto),
+    gesamtNetto:  roundCHF(courtageNetto + provisionNetto),
+    hasCourtage:  courtageBrutto > 0,
+    hasProvision: provisionBrutto > 0,
+  }
 }
 
 // ─── Export-Engine ────────────────────────────────────────────────────────────

@@ -15,8 +15,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Search, X, User, CheckCircle2, Calculator, Landmark, TrendingUp, Clock, FileText, ShieldCheck, AlertTriangle } from 'lucide-react'
-import { formatCHF, roundCHF, validateCommissionForm, STATUS_META, canTransitionTo, DEFAULT_STORNO_PCT } from '@/lib/commissionEngine'
+import { Search, X, User, CheckCircle2, Calculator, Landmark, TrendingUp, Clock, FileText, ShieldCheck, AlertTriangle, RotateCcw, ArrowRight } from 'lucide-react'
+import { formatCHF, roundCHF, validateCommissionForm, STATUS_META, canTransitionTo, DEFAULT_STORNO_PCT, calcStornoPreview } from '@/lib/commissionEngine'
 
 const SWISS_INSURERS = [
   'Allianz', 'Axa', 'Baloise', 'CSS', 'Concordia', 'Die Mobiliar', 'Elvia', 'Generali',
@@ -107,70 +107,129 @@ function CustomerSearchField({ value, customerId, onChange, customers }) {
   )
 }
 
-// ─── Universelle Berechnungsvorschau ──────────────────────────────────────────
-function CalcPreview({ type, companyAmount, advisorPct, stornoPct, isStorno, directAmount }) {
+// ─── Standard Berechnungsvorschau (nicht-Storno) ──────────────────────────────
+function CalcPreview({ type, companyAmount, advisorPct, stornoPct }) {
   const company = parseFloat(companyAmount) || 0
   const pct     = parseFloat(advisorPct) || 0
   const sPct    = parseFloat(stornoPct) ?? DEFAULT_STORNO_PCT
+  if (company <= 0 || pct <= 0) return null
 
-  // Bei Storno: entweder direkter Betrag ODER Gesellschaftsbetrag ohne %-Pflicht
-  const hasPctCalc = company > 0 && pct > 0
-  const hasDirectStorno = isStorno && (parseFloat(directAmount) || 0) > 0
-  if (!hasPctCalc && !hasDirectStorno) return null
-
-  // Wenn kein %-Rechner, nimm den direkten Betrag als Brutto
-  const brutto  = hasPctCalc ? roundCHF((company * pct) / 100) : roundCHF(Math.abs(parseFloat(directAmount) || 0))
+  const brutto  = roundCHF((company * pct) / 100)
   const reserve = roundCHF((brutto * sPct) / 100)
   const netto   = roundCHF(brutto - reserve)
 
   const isCourtage = type === 'courtage'
-  const color = isStorno
-    ? { border: 'border-red-200', header: 'bg-red-100', headerText: 'text-red-700', headerIcon: 'text-red-700', bg: 'bg-red-50/40', bruttoBox: 'bg-red-100 text-red-800', bruttoText: 'text-red-800', divider: 'border-red-200', nettoBox: 'bg-red-600 text-white' }
-    : isCourtage
-      ? { border: 'border-blue-200', header: 'bg-blue-100', headerText: 'text-blue-700', headerIcon: 'text-blue-700', bg: 'bg-blue-50/40', bruttoBox: 'bg-blue-100 text-blue-800', bruttoText: 'text-blue-800', divider: 'border-blue-200', nettoBox: 'bg-blue-600 text-white' }
-      : { border: 'border-emerald-200', header: 'bg-emerald-100', headerText: 'text-emerald-700', headerIcon: 'text-emerald-700', bg: 'bg-emerald-50/40', bruttoBox: 'bg-emerald-100 text-emerald-800', bruttoText: 'text-emerald-800', divider: 'border-emerald-200', nettoBox: 'bg-emerald-600 text-white' }
-
-  const label = isStorno
-    ? (isCourtage ? 'STORNO COURTAGE' : 'STORNO PROVISION')
-    : (isCourtage ? 'Courtage-Berechnung' : 'Provisions-Berechnung')
-  const rowLabel = isCourtage ? 'Ges.courtage × %' : 'Ges.provision × %'
+  const c = isCourtage
+    ? { border: 'border-blue-200', header: 'bg-blue-100', text: 'text-blue-700', bg: 'bg-blue-50/40', nettoBox: 'bg-blue-600 text-white', bruttoBox: 'bg-blue-100 text-blue-800' }
+    : { border: 'border-emerald-200', header: 'bg-emerald-100', text: 'text-emerald-700', bg: 'bg-emerald-50/40', nettoBox: 'bg-emerald-600 text-white', bruttoBox: 'bg-emerald-100 text-emerald-800' }
+  const label = isCourtage ? 'Courtage-Berechnung' : 'Provisions-Berechnung'
 
   return (
-    <div className={`mt-2 rounded-lg border ${color.border} overflow-hidden text-xs`}>
-      <div className={`${color.header} px-3 py-1.5 flex items-center gap-1.5`}>
-        <Calculator className={`w-3.5 h-3.5 ${color.headerIcon}`} />
-        <span className={`font-bold ${color.headerText} uppercase tracking-wide`}>{label}</span>
-        {isStorno && <span className={`ml-auto text-xs ${color.headerText} font-normal`}>→ wird negativ gebucht</span>}
+    <div className={`mt-2 rounded-lg border ${c.border} overflow-hidden text-xs`}>
+      <div className={`${c.header} px-3 py-1.5 flex items-center gap-1.5`}>
+        <Calculator className={`w-3.5 h-3.5 ${c.text}`} />
+        <span className={`font-bold ${c.text} uppercase tracking-wide`}>{label}</span>
       </div>
-      <div className={`${color.bg} p-3 space-y-2`}>
+      <div className={`${c.bg} p-3 space-y-2`}>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-muted-foreground w-28">{hasPctCalc ? rowLabel : 'Stornobetrag'}</span>
-          {hasPctCalc
-            ? <><span className={`${color.bruttoBox} px-2 py-0.5 rounded font-mono`}>{formatCHF(company)} × {pct}%</span>
-                <span className="text-muted-foreground">=</span></>
-            : null}
-          <span className={`font-bold ${color.bruttoText}`}>{formatCHF(brutto)} Brutto</span>
+          <span className="text-muted-foreground w-28">{isCourtage ? 'Ges.courtage × %' : 'Ges.provision × %'}</span>
+          <span className={`${c.bruttoBox} px-2 py-0.5 rounded font-mono`}>{formatCHF(company)} × {pct}%</span>
+          <ArrowRight className="w-3 h-3 text-muted-foreground" />
+          <span className={`font-bold ${c.text}`}>{formatCHF(brutto)} Brutto</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-muted-foreground w-28">− Stornoreserve</span>
           <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded font-mono">{sPct}%</span>
-          <span className="text-muted-foreground">=</span>
-          <span className="font-semibold text-orange-600">−{formatCHF(reserve)} Einbehalt</span>
+          <ArrowRight className="w-3 h-3 text-muted-foreground" />
+          <span className="font-semibold text-orange-600">−{formatCHF(reserve)}</span>
         </div>
-        <div className={`flex items-center gap-2 flex-wrap border-t ${color.divider} pt-2`}>
-          <span className="text-muted-foreground w-28">{isStorno ? '= Storno-Netto' : '= Netto auszahlbar'}</span>
-          <span className={`${color.nettoBox} px-3 py-1 rounded-lg font-bold`}>
-            {isStorno ? `−${formatCHF(netto)}` : formatCHF(netto)}
-          </span>
+        <div className={`flex items-center gap-2 flex-wrap border-t ${c.border} pt-2`}>
+          <span className="text-muted-foreground w-28">= Netto auszahlbar</span>
+          <span className={`${c.nettoBox} px-3 py-1 rounded-lg font-bold`}>{formatCHF(netto)}</span>
         </div>
       </div>
     </div>
   )
 }
+const CourtagePreview  = ({ data }) => <CalcPreview type="courtage"  companyAmount={data.company_courtage_amount}  advisorPct={data.advisor_courtage_percentage}  stornoPct={data.courtage_storno_percentage} />
+const ProvisionPreview = ({ data }) => <CalcPreview type="provision" companyAmount={data.company_provision_amount} advisorPct={data.advisor_provision_percentage} stornoPct={data.provision_storno_percentage} />
 
-// Keep named aliases for backward compat
-const CourtagePreview  = ({ data }) => <CalcPreview type="courtage"  companyAmount={data.company_courtage_amount}  advisorPct={data.advisor_courtage_percentage}  stornoPct={data.courtage_storno_percentage}  isStorno={data.is_storno} directAmount={data.advisor_courtage_amount} />
-const ProvisionPreview = ({ data }) => <CalcPreview type="provision" companyAmount={data.company_provision_amount} advisorPct={data.advisor_provision_percentage} stornoPct={data.provision_storno_percentage} isStorno={data.is_storno} directAmount={data.advisor_provision_amount} />
+// ─── Storno Live-Summary ───────────────────────────────────────────────────────
+function StornoLiveSummary({ formData }) {
+  const p = calcStornoPreview(formData)
+  const hasAny = p.hasCourtage || p.hasProvision
+  if (!hasAny) return (
+    <div className="mt-3 p-3 bg-red-50/60 border border-red-200 rounded-lg text-xs text-red-600">
+      Bitte Beträge erfassen, um die Berechnung zu sehen.
+    </div>
+  )
+  return (
+    <div className="mt-3 rounded-lg border border-red-300 overflow-hidden text-xs">
+      <div className="bg-red-600 text-white px-3 py-2 flex items-center gap-2">
+        <Calculator className="w-3.5 h-3.5" />
+        <span className="font-bold uppercase tracking-wide">Storno-Berechnung (Live)</span>
+        <span className="ml-auto opacity-80">→ alle Werte werden negativ gebucht</span>
+      </div>
+
+      {p.hasCourtage && (
+        <div className="bg-red-50/60 p-3 space-y-1.5 border-b border-red-200">
+          <p className="font-semibold text-red-800 mb-1.5">COURTAGE</p>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Abschlussprovision</span>
+            <span className="font-mono">{formatCHF(p.courtageAbschluss)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">+ Courtage (Ges.)</span>
+            <span className="font-mono">{formatCHF(p.courtageBase)}</span>
+          </div>
+          <div className="flex justify-between border-t border-red-200 pt-1.5">
+            <span className="font-semibold text-red-700">= Bruttoentschädigung</span>
+            <span className="font-bold font-mono text-red-700">{formatCHF(p.courtageBrutto)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">− Stornoabzug ({p.sPctC}%)</span>
+            <span className="font-mono text-orange-600">−{formatCHF(p.courtageReserve)}</span>
+          </div>
+          <div className="flex justify-between border-t border-red-300 pt-1.5">
+            <span className="font-bold text-red-800">= Netto Storno</span>
+            <span className="font-bold font-mono bg-red-600 text-white px-2 py-0.5 rounded">−{formatCHF(p.courtageNetto)}</span>
+          </div>
+        </div>
+      )}
+
+      {p.hasProvision && (
+        <div className="bg-red-50/40 p-3 space-y-1.5 border-b border-red-200">
+          <p className="font-semibold text-red-800 mb-1.5">PROVISION</p>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Abschlussprovision</span>
+            <span className="font-mono">{formatCHF(p.provisionAbschluss)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">+ Provision (Ges.)</span>
+            <span className="font-mono">{formatCHF(p.provisionBase)}</span>
+          </div>
+          <div className="flex justify-between border-t border-red-200 pt-1.5">
+            <span className="font-semibold text-red-700">= Bruttoentschädigung</span>
+            <span className="font-bold font-mono text-red-700">{formatCHF(p.provisionBrutto)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">− Stornoabzug ({p.sPctP}%)</span>
+            <span className="font-mono text-orange-600">−{formatCHF(p.provisionReserve)}</span>
+          </div>
+          <div className="flex justify-between border-t border-red-300 pt-1.5">
+            <span className="font-bold text-red-800">= Netto Storno</span>
+            <span className="font-bold font-mono bg-red-600 text-white px-2 py-0.5 rounded">−{formatCHF(p.provisionNetto)}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-red-100 p-3 flex items-center justify-between">
+        <span className="font-bold text-red-900">Gesamt-Stornobetrag (Netto)</span>
+        <span className="font-bold text-base font-mono bg-red-700 text-white px-3 py-1 rounded-lg">−{formatCHF(p.gesamtNetto)}</span>
+      </div>
+    </div>
+  )
+}
 
 // ─── Section Header ───────────────────────────────────────────────────────────
 function SectionHeader({ letter, title, subtitle, color }) {
@@ -238,8 +297,9 @@ export default function CommissionFormDialog({
           </label>
 
           {formData.is_storno && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">
-              Erfasst einen <strong>Storno-Eintrag</strong>. Positive Beträge werden automatisch negativ gebucht (z.B. CHF 500 → −CHF 500).
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700 space-y-1">
+              <p><strong>Storno-Buchung:</strong> Alle Beträge werden als negative Korrekturbuchung erfasst.</p>
+              <p className="text-red-600">Abschlussprovision + Courtage/Provision = Bruttoentschädigung → abzüglich Stornoabzug = Netto-Storno</p>
             </div>
           )}
 
@@ -362,84 +422,138 @@ export default function CommissionFormDialog({
             <SectionHeader
               letter="B" color="blue"
               title="COURTAGE"
-              subtitle="Gesellschaft → Firma → Berater · Formel: Gesellschaftscourtage × Beratercourtage-% = Beratercourtage"
+              subtitle={formData.is_storno ? 'Storno: Abschlussprovision + Courtage = Brutto → Abzug Stornoabzug = Netto' : 'Gesellschaft → Firma → Berater · Formel: Gesellschaftscourtage × Beratercourtage-% = Beratercourtage'}
             />
             {formErrors.company_courtage_amount && (
               <p className="text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded border border-amber-200">
                 {formErrors.company_courtage_amount}
               </p>
             )}
-            <div className="grid grid-cols-2 gap-3">
-              {formData.is_storno ? (
-                <div className="col-span-2">
-                  <label className="text-sm font-semibold text-red-700">
-                    <Landmark className="w-3.5 h-3.5 inline mr-1" />
-                    Beratercourtage Stornobetrag (CHF)
-                  </label>
-                  <Input type="number" step="0.01" min="0"
-                    value={formData.advisor_courtage_amount || ''}
-                    onChange={e => onChange({ advisor_courtage_amount: e.target.value })}
-                    className={`mt-1 border-red-300 focus:border-red-500 ${formErrors.company_courtage_amount ? 'border-red-400' : ''}`}
-                    placeholder="z.B. 649.60 (wird als −649.60 gebucht)" />
-                  <p className="text-xs text-red-600 mt-0.5 font-medium">← Betrag der stornierten Beratercourtage (positiv eingeben)</p>
-                  {formErrors.company_courtage_amount && <p className="text-xs text-red-500 mt-0.5">{formErrors.company_courtage_amount}</p>}
-                </div>
-              ) : (
-                <>
+
+            {formData.is_storno ? (
+              /* ── STORNO COURTAGE EINGABE ── */
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-sm font-semibold text-blue-700">
-                      <Landmark className="w-3.5 h-3.5 inline mr-1" />
+                    <label className="text-sm font-semibold text-red-700">
+                      Abschlussprovision Courtage (CHF)
+                    </label>
+                    <Input type="number" step="0.01" min="0"
+                      value={formData.abschlussprovision_courtage || ''}
+                      onChange={e => onChange({ abschlussprovision_courtage: e.target.value })}
+                      className="mt-1 border-red-300 focus:border-red-500"
+                      placeholder="0.00" />
+                    <p className="text-xs text-red-600 mt-0.5">Einmalige Abschlussprovision (Courtage)</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-red-700">
                       Gesellschaftscourtage (CHF)
                     </label>
                     <Input type="number" step="0.01" min="0"
                       value={formData.company_courtage_amount || ''}
                       onChange={e => onChange({ company_courtage_amount: e.target.value })}
-                      className={`mt-1 border-blue-300 focus:border-blue-500 ${formErrors.company_courtage_amount ? 'border-red-400' : ''}`}
+                      className="mt-1 border-red-300 focus:border-red-500"
                       placeholder="0.00" />
-                    <p className="text-xs text-blue-600 mt-0.5 font-medium">← Berechnungsgrundlage Courtage</p>
+                    <p className="text-xs text-red-600 mt-0.5">Laufende Courtage (Ges.)</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-semibold text-orange-700">Stornoabzug Courtage (%)</label>
+                    <Input type="number" step="0.1" min="0" max="100"
+                      value={formData.courtage_storno_percentage ?? DEFAULT_STORNO_PCT}
+                      onChange={e => onChange({ courtage_storno_percentage: e.target.value })}
+                      className="mt-1 border-orange-300 focus:border-orange-500"
+                      placeholder="10" />
+                    <p className="text-xs text-orange-600 mt-0.5">Standard: 10%</p>
                   </div>
                   <div>
-                    <label className="text-sm font-semibold text-blue-700">Beratercourtage (%)</label>
-                    <Input type="number" step="0.1" min="0" max="100"
-                      value={formData.advisor_courtage_percentage || ''}
-                      onChange={e => onChange({ advisor_courtage_percentage: e.target.value })}
-                      className={`mt-1 border-blue-300 focus:border-blue-500 ${formErrors.advisor_courtage_percentage ? 'border-red-400' : ''}`}
-                      placeholder="z.B. 50" />
-                    {formErrors.advisor_courtage_percentage && <p className="text-xs text-red-500 mt-0.5">{formErrors.advisor_courtage_percentage}</p>}
+                    <label className="text-sm font-semibold text-muted-foreground">Storno-Datum</label>
+                    <Input type="date" value={formData.storno_datum || new Date().toISOString().split('T')[0]}
+                      onChange={e => onChange({ storno_datum: e.target.value })}
+                      className="mt-1" />
                   </div>
-                </>
-              )}
-              <div>
-                <label className="text-sm font-semibold text-orange-700">Stornoabzug Courtage (%)</label>
-                <Input type="number" step="0.1" min="0" max="100"
-                  value={formData.courtage_storno_percentage ?? DEFAULT_STORNO_PCT}
-                  onChange={e => onChange({ courtage_storno_percentage: e.target.value })}
-                  className={`mt-1 border-orange-300 focus:border-orange-500 ${formErrors.courtage_storno_percentage ? 'border-red-400' : ''}`}
-                  placeholder="10" />
-                {formErrors.courtage_storno_percentage
-                  ? <p className="text-xs text-red-500 mt-0.5">{formErrors.courtage_storno_percentage}</p>
-                  : <p className="text-xs text-orange-600 mt-0.5">Standard: 10% · Brutto − Reserve = Netto</p>}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-semibold text-muted-foreground">Referenz Ursprungs-ID</label>
+                    <Input value={formData.storno_reference_id || ''}
+                      onChange={e => onChange({ storno_reference_id: e.target.value })}
+                      className="mt-1" placeholder="ID der Originalabrechnung (optional)" />
+                  </div>
+                  <div className="flex items-end pb-1">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox"
+                        checked={!!formData.storno_war_ausbezahlt}
+                        onChange={e => onChange({ storno_war_ausbezahlt: e.target.checked })}
+                        className="w-4 h-4 accent-red-600" />
+                      <span className="text-sm font-semibold text-red-700">War bereits ausbezahlt</span>
+                    </label>
+                  </div>
+                </div>
+                {formData.storno_war_ausbezahlt && (
+                  <div className="bg-red-100 border border-red-300 rounded-lg p-2.5 text-xs text-red-800 flex items-center gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                    Bereits ausbezahlte Beträge müssen zurückgefordert werden. Der Rückforderungsbetrag wird automatisch berechnet.
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="text-sm font-semibold text-muted-foreground">Courtage erhalten am</label>
-                <Input type="date" value={formData.courtage_received_date || ''}
-                  onChange={e => onChange({ courtage_received_date: e.target.value })}
-                  className="mt-1" />
+            ) : (
+              /* ── STANDARD COURTAGE EINGABE ── */
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-semibold text-blue-700">
+                    <Landmark className="w-3.5 h-3.5 inline mr-1" />
+                    Gesellschaftscourtage (CHF)
+                  </label>
+                  <Input type="number" step="0.01" min="0"
+                    value={formData.company_courtage_amount || ''}
+                    onChange={e => onChange({ company_courtage_amount: e.target.value })}
+                    className={`mt-1 border-blue-300 focus:border-blue-500 ${formErrors.company_courtage_amount ? 'border-red-400' : ''}`}
+                    placeholder="0.00" />
+                  <p className="text-xs text-blue-600 mt-0.5 font-medium">← Berechnungsgrundlage Courtage</p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-blue-700">Beratercourtage (%)</label>
+                  <Input type="number" step="0.1" min="0" max="100"
+                    value={formData.advisor_courtage_percentage || ''}
+                    onChange={e => onChange({ advisor_courtage_percentage: e.target.value })}
+                    className={`mt-1 border-blue-300 focus:border-blue-500 ${formErrors.advisor_courtage_percentage ? 'border-red-400' : ''}`}
+                    placeholder="z.B. 50" />
+                  {formErrors.advisor_courtage_percentage && <p className="text-xs text-red-500 mt-0.5">{formErrors.advisor_courtage_percentage}</p>}
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-orange-700">Stornoabzug Courtage (%)</label>
+                  <Input type="number" step="0.1" min="0" max="100"
+                    value={formData.courtage_storno_percentage ?? DEFAULT_STORNO_PCT}
+                    onChange={e => onChange({ courtage_storno_percentage: e.target.value })}
+                    className={`mt-1 border-orange-300 focus:border-orange-500 ${formErrors.courtage_storno_percentage ? 'border-red-400' : ''}`}
+                    placeholder="10" />
+                  {formErrors.courtage_storno_percentage
+                    ? <p className="text-xs text-red-500 mt-0.5">{formErrors.courtage_storno_percentage}</p>
+                    : <p className="text-xs text-orange-600 mt-0.5">Standard: 10% · Brutto − Reserve = Netto</p>}
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-muted-foreground">Courtage erhalten am</label>
+                  <Input type="date" value={formData.courtage_received_date || ''}
+                    onChange={e => onChange({ courtage_received_date: e.target.value })}
+                    className="mt-1" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold">Courtage Status</label>
+                  <Select value={formData.courtage_status || 'pending'}
+                    onValueChange={v => onChange({ courtage_status: v, status: v })}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {allowedStatuses('courtage_status').map(s => (
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-semibold">Courtage Status</label>
-                <Select value={formData.courtage_status || 'pending'}
-                  onValueChange={v => onChange({ courtage_status: v, status: v })}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {allowedStatuses('courtage_status').map(s => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <CourtagePreview data={formData} />
+            )}
+            {!formData.is_storno && <CourtagePreview data={formData} />}
           </div>
 
           {/* ──────────────────────────────────────────────
@@ -449,79 +563,110 @@ export default function CommissionFormDialog({
             <SectionHeader
               letter="C" color="emerald"
               title="PROVISION"
-              subtitle="Gesellschaft → Firma → Berater · Formel: Gesellschaftsprovision × Beraterprovision-% = Beraterprovision"
+              subtitle={formData.is_storno ? 'Storno: Abschlussprovision + Provision = Brutto → Abzug Stornoabzug = Netto' : 'Gesellschaft → Firma → Berater · Formel: Gesellschaftsprovision × Beraterprovision-% = Beraterprovision'}
             />
-            <div className="grid grid-cols-2 gap-3">
-              {formData.is_storno ? (
-                <div className="col-span-2">
+
+            {formData.is_storno ? (
+              /* ── STORNO PROVISION EINGABE ── */
+              <div className="grid grid-cols-2 gap-3">
+                <div>
                   <label className="text-sm font-semibold text-red-700">
-                    <Landmark className="w-3.5 h-3.5 inline mr-1" />
-                    Beraterprovision Stornobetrag (CHF)
+                    Abschlussprovision Provision (CHF)
                   </label>
                   <Input type="number" step="0.01" min="0"
-                    value={formData.advisor_provision_amount || ''}
-                    onChange={e => onChange({ advisor_provision_amount: e.target.value })}
+                    value={formData.abschlussprovision_provision || ''}
+                    onChange={e => onChange({ abschlussprovision_provision: e.target.value })}
                     className="mt-1 border-red-300 focus:border-red-500"
-                    placeholder="0.00 (optional, positiv eingeben)" />
-                  <p className="text-xs text-red-600 mt-0.5 font-medium">← Betrag der stornierten Beraterprovision (positiv eingeben)</p>
+                    placeholder="0.00 (optional)" />
+                  <p className="text-xs text-red-600 mt-0.5">Einmalige Abschlussprovision (Provision)</p>
                 </div>
-              ) : (
-                <>
-                  <div>
-                    <label className="text-sm font-semibold text-emerald-700">
-                      <Landmark className="w-3.5 h-3.5 inline mr-1" />
-                      Gesellschaftsprovision (CHF)
-                    </label>
-                    <Input type="number" step="0.01" min="0"
-                      value={formData.company_provision_amount || ''}
-                      onChange={e => onChange({ company_provision_amount: e.target.value })}
-                      className="mt-1 border-emerald-300 focus:border-emerald-500"
-                      placeholder="0.00 (optional)" />
-                    <p className="text-xs text-emerald-600 mt-0.5 font-medium">← Berechnungsgrundlage Provision</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-emerald-700">Beraterprovision (%)</label>
-                    <Input type="number" step="0.1" min="0" max="100"
-                      value={formData.advisor_provision_percentage || ''}
-                      onChange={e => onChange({ advisor_provision_percentage: e.target.value })}
-                      className={`mt-1 border-emerald-300 focus:border-emerald-500 ${formErrors.advisor_provision_percentage ? 'border-red-400' : ''}`}
-                      placeholder="z.B. 50" />
-                    {formErrors.advisor_provision_percentage && <p className="text-xs text-red-500 mt-0.5">{formErrors.advisor_provision_percentage}</p>}
-                  </div>
-                </>
-              )}
-              <div>
-                <label className="text-sm font-semibold text-orange-700">Stornoabzug Provision (%)</label>
-                <Input type="number" step="0.1" min="0" max="100"
-                  value={formData.provision_storno_percentage ?? DEFAULT_STORNO_PCT}
-                  onChange={e => onChange({ provision_storno_percentage: e.target.value })}
-                  className={`mt-1 border-orange-300 focus:border-orange-500 ${formErrors.provision_storno_percentage ? 'border-red-400' : ''}`}
-                  placeholder="10" />
-                {formErrors.provision_storno_percentage
-                  ? <p className="text-xs text-red-500 mt-0.5">{formErrors.provision_storno_percentage}</p>
-                  : <p className="text-xs text-orange-600 mt-0.5">Standard: 10% · Brutto − Reserve = Netto</p>}
+                <div>
+                  <label className="text-sm font-semibold text-red-700">
+                    Gesellschaftsprovision (CHF)
+                  </label>
+                  <Input type="number" step="0.01" min="0"
+                    value={formData.company_provision_amount || ''}
+                    onChange={e => onChange({ company_provision_amount: e.target.value })}
+                    className="mt-1 border-red-300 focus:border-red-500"
+                    placeholder="0.00 (optional)" />
+                  <p className="text-xs text-red-600 mt-0.5">Laufende Provision (Ges.)</p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-orange-700">Stornoabzug Provision (%)</label>
+                  <Input type="number" step="0.1" min="0" max="100"
+                    value={formData.provision_storno_percentage ?? DEFAULT_STORNO_PCT}
+                    onChange={e => onChange({ provision_storno_percentage: e.target.value })}
+                    className="mt-1 border-orange-300 focus:border-orange-500"
+                    placeholder="10" />
+                  <p className="text-xs text-orange-600 mt-0.5">Standard: 10%</p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-muted-foreground">Storno-Grund (optional)</label>
+                  <Input value={formData.storno_grund || ''}
+                    onChange={e => onChange({ storno_grund: e.target.value })}
+                    className="mt-1" placeholder="z.B. Kündigung, Nichtzahlung..." />
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-semibold text-muted-foreground">Provision erhalten am</label>
-                <Input type="date" value={formData.provision_received_date || ''}
-                  onChange={e => onChange({ provision_received_date: e.target.value })}
-                  className="mt-1" />
+            ) : (
+              /* ── STANDARD PROVISION EINGABE ── */
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-semibold text-emerald-700">
+                    <Landmark className="w-3.5 h-3.5 inline mr-1" />
+                    Gesellschaftsprovision (CHF)
+                  </label>
+                  <Input type="number" step="0.01" min="0"
+                    value={formData.company_provision_amount || ''}
+                    onChange={e => onChange({ company_provision_amount: e.target.value })}
+                    className="mt-1 border-emerald-300 focus:border-emerald-500"
+                    placeholder="0.00 (optional)" />
+                  <p className="text-xs text-emerald-600 mt-0.5 font-medium">← Berechnungsgrundlage Provision</p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-emerald-700">Beraterprovision (%)</label>
+                  <Input type="number" step="0.1" min="0" max="100"
+                    value={formData.advisor_provision_percentage || ''}
+                    onChange={e => onChange({ advisor_provision_percentage: e.target.value })}
+                    className={`mt-1 border-emerald-300 focus:border-emerald-500 ${formErrors.advisor_provision_percentage ? 'border-red-400' : ''}`}
+                    placeholder="z.B. 50" />
+                  {formErrors.advisor_provision_percentage && <p className="text-xs text-red-500 mt-0.5">{formErrors.advisor_provision_percentage}</p>}
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-orange-700">Stornoabzug Provision (%)</label>
+                  <Input type="number" step="0.1" min="0" max="100"
+                    value={formData.provision_storno_percentage ?? DEFAULT_STORNO_PCT}
+                    onChange={e => onChange({ provision_storno_percentage: e.target.value })}
+                    className={`mt-1 border-orange-300 focus:border-orange-500 ${formErrors.provision_storno_percentage ? 'border-red-400' : ''}`}
+                    placeholder="10" />
+                  {formErrors.provision_storno_percentage
+                    ? <p className="text-xs text-red-500 mt-0.5">{formErrors.provision_storno_percentage}</p>
+                    : <p className="text-xs text-orange-600 mt-0.5">Standard: 10% · Brutto − Reserve = Netto</p>}
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-muted-foreground">Provision erhalten am</label>
+                  <Input type="date" value={formData.provision_received_date || ''}
+                    onChange={e => onChange({ provision_received_date: e.target.value })}
+                    className="mt-1" />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold">Provisions Status</label>
+                  <Select value={formData.provision_status || 'pending'}
+                    onValueChange={v => onChange({ provision_status: v })}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {allowedStatuses('provision_status').map(s => (
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-semibold">Provisions Status</label>
-                <Select value={formData.provision_status || 'pending'}
-                  onValueChange={v => onChange({ provision_status: v })}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {allowedStatuses('provision_status').map(s => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <ProvisionPreview data={formData} />
+            )}
+            {!formData.is_storno && <ProvisionPreview data={formData} />}
           </div>
+
+          {/* ── Storno Live-Zusammenfassung ── */}
+          {formData.is_storno && <StornoLiveSummary formData={formData} />}
 
           {/* Notizen */}
           <div>

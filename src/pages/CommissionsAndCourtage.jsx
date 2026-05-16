@@ -11,7 +11,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
 import {
-  calcCommissionFields, calcKPIs, calcStornoByDimension, formatCHF, formatDate, validateCommissionForm,
+  calcCommissionFields, calcStornoSaveData, calcKPIs, calcStornoByDimension, formatCHF, formatDate, validateCommissionForm,
   STATUS_META, canTransitionTo, getStatusDates, generateCSV, downloadCSV,
   normalizeLegacyEntry, DEFAULT_STORNO_PCT, roundCHF
 } from '@/lib/commissionEngine'
@@ -215,31 +215,8 @@ export default function CommissionsAndCourtage() {
     if (createMutation.isPending || updateMutation.isPending) return
     let saveData = { ...formData }
     if (saveData.is_storno) {
-      // Storno: Beträge negieren und direkt speichern — KEIN calcCommissionFields!
-      const neg = (v) => -Math.abs(parseFloat(v) || 0)
-      const sPctC = parseFloat(saveData.courtage_storno_percentage) ?? DEFAULT_STORNO_PCT
-      const sPctP = parseFloat(saveData.provision_storno_percentage) ?? DEFAULT_STORNO_PCT
-      const bruttoC = Math.abs(parseFloat(saveData.advisor_courtage_amount) || 0)
-      const bruttoP = Math.abs(parseFloat(saveData.advisor_provision_amount) || 0)
-      const reserveC = roundCHF((bruttoC * sPctC) / 100)
-      const reserveP = roundCHF((bruttoP * sPctP) / 100)
-      saveData = {
-        ...saveData,
-        premium_yearly: roundCHF(saveData.premium_yearly || 0),
-        // Courtage: alle Felder negativ
-        company_courtage_amount:   neg(saveData.company_courtage_amount),
-        advisor_courtage_amount:   -bruttoC,
-        courtage_storno_amount:    reserveC,      // Reserve bleibt positiv (Einbehalt)
-        courtage_payout_amount:    -(bruttoC - reserveC),
-        // Provision: alle Felder negativ
-        company_provision_amount:  neg(saveData.company_provision_amount),
-        advisor_provision_amount:  -bruttoP,
-        provision_storno_amount:   reserveP,
-        provision_payout_amount:   -(bruttoP - reserveP),
-        // Legacy
-        received_amount:    neg(saveData.company_courtage_amount),
-        commission_amount:  -bruttoC,
-      }
+      // Storno: vollständige Persistierung aller Berechnungsfelder via calcStornoSaveData
+      saveData = calcStornoSaveData(saveData, null)
     }
 
     if (editingEntry) {

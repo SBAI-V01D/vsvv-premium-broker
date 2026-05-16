@@ -167,6 +167,60 @@
       "format": "date",
       "description": "PROVISION: Datum ausbezahlt (Netto)"
     },
+    "abschlussprovision_courtage": {
+      "type": "number",
+      "description": "ABSCHLUSS: Abschlussprovision (Courtage-Teil) \u2013 Eingabe im Formular"
+    },
+    "abschlussprovision_provision": {
+      "type": "number",
+      "description": "ABSCHLUSS: Abschlussprovision (Provisions-Teil) \u2013 Eingabe im Formular"
+    },
+    "bruttoentschaedigung_courtage": {
+      "type": "number",
+      "description": "ABSCHLUSS: Bruttoentsch\u00e4digung Courtage = Abschlussprovision + Courtage"
+    },
+    "bruttoentschaedigung_provision": {
+      "type": "number",
+      "description": "ABSCHLUSS: Bruttoentsch\u00e4digung Provision = Abschlussprovision + Provision"
+    },
+    "storno_datum": {
+      "type": "string",
+      "format": "date",
+      "description": "STORNO: Datum der Storno-Buchung"
+    },
+    "storno_reference_id": {
+      "type": "string",
+      "description": "STORNO: Referenz auf Ursprungs-Abrechnung (ID)"
+    },
+    "storno_ursprung_courtage_brutto": {
+      "type": "number",
+      "description": "STORNO AUDIT: Urspr\u00fcngliche Beratercourtage Brutto"
+    },
+    "storno_ursprung_provision_brutto": {
+      "type": "number",
+      "description": "STORNO AUDIT: Urspr\u00fcngliche Beraterprovision Brutto"
+    },
+    "storno_ursprung_courtage_netto": {
+      "type": "number",
+      "description": "STORNO AUDIT: Urspr\u00fcngliche Courtage Netto (ausbezahlt)"
+    },
+    "storno_ursprung_provision_netto": {
+      "type": "number",
+      "description": "STORNO AUDIT: Urspr\u00fcngliche Provision Netto"
+    },
+    "storno_war_ausbezahlt": {
+      "type": "boolean",
+      "default": false,
+      "description": "STORNO: War die urspr\u00fcngliche Abrechnung bereits ausbezahlt?"
+    },
+    "storno_rueckforderungsbetrag": {
+      "type": "number",
+      "description": "STORNO: R\u00fcckforderungsbetrag (wenn bereits ausbezahlt)"
+    },
+    "storno_grund": {
+      "type": "string",
+      "description": "STORNO: Grund der Stornierung"
+    },
     "status": {
       "type": "string",
       "enum": [
@@ -228,9 +282,6 @@
     "is_storno": {
       "type": "boolean",
       "default": false
-    },
-    "storno_reference_id": {
-      "type": "string"
     },
     "is_paid": {
       "type": "boolean",
