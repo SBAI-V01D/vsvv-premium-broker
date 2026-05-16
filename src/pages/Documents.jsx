@@ -67,7 +67,7 @@ export default function Documents() {
       id: doc.id,
       data: {
         doc_type: newType,
-        classification_status: newType === 'antrag' ? 'klassifiziert' : 'manuell',
+        classification_status: 'klassifiziert',
       },
     })
   }
