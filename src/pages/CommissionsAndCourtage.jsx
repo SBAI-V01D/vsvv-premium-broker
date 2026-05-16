@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import {
-  Search, Plus, Settings, Download, AlertTriangle, History, BarChart2
+  Search, Plus, Settings, Download, AlertTriangle, History, BarChart2, Undo2
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
@@ -21,6 +21,7 @@ import CommissionTablePaginated from '@/components/commissions/CommissionTablePa
 import CommissionIntelligenceTab from '@/components/commissions/CommissionIntelligenceTab'
 import AuditLogDialog from '@/components/commissions/AuditLogDialog'
 import CommissionFormDialog from '@/components/commissions/CommissionFormDialog'
+import StornoFormDialog from '@/components/commissions/StornoFormDialog'
 import PeriodSelector from '@/components/commissions/PeriodSelector'
 
 const ALL_SPARTEN = ['KVG', 'VVG', 'Leben', 'Sach', 'KFZ', 'BVG', 'Rechtsschutz', 'Haftpflicht', 'Hausrat']
@@ -45,6 +46,7 @@ export default function CommissionsAndCourtage() {
   const [filterStatus, setFilterStatus] = useState('all')
   const [periodFilter, setPeriodFilter] = useState(null)
   const [showForm, setShowForm] = useState(false)
+  const [showStornoForm, setShowStornoForm] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAuditLog, setShowAuditLog] = useState(false)
   const [editingEntry, setEditingEntry] = useState(null)
@@ -311,6 +313,19 @@ export default function CommissionsAndCourtage() {
     downloadCSV(csvContent + '\n' + totalsRow, `courtagen_provisionen_${startStr}_bis_${endStr}.csv`)
   }
 
+  const stornoMutation = useMutation({
+    mutationFn: async (data) => base44.entities.CommissionEntry.create(data),
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
+      writeAuditLog(created.id, 'create',
+        `Direkter Storno erfasst: ${created.insurer} – ${created.customer_name || '–'} | Berater: ${created.advisor_name}`,
+        {}, created)
+      setShowStornoForm(false)
+      toast({ title: 'Storno gebucht', description: `${created.insurer} – negativer Eintrag erstellt.` })
+    },
+    onError: (err) => toast({ title: 'Fehler beim Storno', description: err.message, variant: 'destructive' }),
+  })
+
   const isSaving = createMutation.isPending || updateMutation.isPending
 
   return (
@@ -335,6 +350,9 @@ export default function CommissionsAndCourtage() {
           </Button>
           <Button onClick={() => setShowSettings(true)} variant="outline" size="sm">
             <Settings className="w-4 h-4 mr-1.5 md:mr-2" /><span className="hidden md:inline">Einstellungen</span>
+          </Button>
+          <Button onClick={() => setShowStornoForm(true)} variant="outline" size="sm" className="border-red-300 text-red-700 hover:bg-red-50">
+            <Undo2 className="w-4 h-4 mr-1.5 md:mr-2" /><span className="hidden sm:inline">Storno erfassen</span><span className="sm:hidden">Storno</span>
           </Button>
           <Button onClick={handleNewEntry}>
             <Plus className="w-4 h-4 mr-1.5 md:mr-2" /><span className="hidden sm:inline">Neue Abrechnung</span><span className="sm:hidden">Neu</span>
@@ -571,6 +589,17 @@ export default function CommissionsAndCourtage() {
         onChange={handleFormChange}
         onSave={handleSave}
         isSaving={isSaving}
+        customers={customers}
+        brokers={brokers}
+        organizations={organizations}
+      />
+
+      {/* Storno Form */}
+      <StornoFormDialog
+        open={showStornoForm}
+        onClose={() => setShowStornoForm(false)}
+        onSave={(data) => stornoMutation.mutate(data)}
+        isSaving={stornoMutation.isPending}
         customers={customers}
         brokers={brokers}
         organizations={organizations}
