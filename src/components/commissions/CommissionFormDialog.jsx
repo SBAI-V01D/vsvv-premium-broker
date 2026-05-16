@@ -382,16 +382,19 @@ export default function CommissionFormDialog({
               <div>
                 <label className="text-sm font-semibold">Berater *</label>
                 <Select value={formData.advisor_id || ''} onValueChange={v => {
-                  const b = brokers.find(x => x.id === v)
-                  onChange({ advisor_id: v, advisor_name: b?.name || '' })
+                  const b = brokers?.find(x => x.id === v)
+                  onChange({ advisor_id: v, advisor_name: b?.firstname ? `${b.firstname} ${b.lastname}` : b?.name || '' })
                 }}>
                   <SelectTrigger className={`mt-1 ${formErrors.advisor_id ? 'border-red-400' : ''}`}>
                     <SelectValue placeholder="Berater wählen..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {brokers.length === 0
-                      ? <SelectItem value="_none" disabled>Keine Berater</SelectItem>
-                      : brokers.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)
+                    {!brokers || brokers.length === 0
+                      ? <SelectItem value={null}>Keine Berater verfügbar</SelectItem>
+                      : brokers.map(b => {
+                        const displayName = b.firstname ? `${b.firstname} ${b.lastname}` : b.name || `Berater ${b.id}`
+                        return <SelectItem key={b.id} value={b.id}>{displayName}</SelectItem>
+                      })
                     }
                   </SelectContent>
                 </Select>
@@ -400,15 +403,15 @@ export default function CommissionFormDialog({
               <div>
                 <label className="text-sm font-semibold">Organisation *</label>
                 <Select value={formData.organization_id || ''} onValueChange={v => {
-                  const o = organizations.find(x => x.id === v)
+                  const o = organizations?.find(x => x.id === v)
                   onChange({ organization_id: v, organization_name: o?.name || '' })
                 }}>
                   <SelectTrigger className={`mt-1 ${formErrors.organization_id ? 'border-red-400' : ''}`}>
                     <SelectValue placeholder="Organisation wählen..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {organizations.length === 0
-                      ? <SelectItem value="_none" disabled>Keine Organisationen</SelectItem>
+                    {!organizations || organizations.length === 0
+                      ? <SelectItem value={null}>Keine Organisationen verfügbar</SelectItem>
                       : organizations.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)
                     }
                   </SelectContent>
