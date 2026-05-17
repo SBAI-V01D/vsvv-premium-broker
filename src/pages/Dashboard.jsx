@@ -24,34 +24,30 @@ export default function Dashboard() {
   const queryClient = useQueryClient()
 
   // ── Daten laden ───────────────────────────────────────────────────────────
-  const { data: tasks = [] }            = useQuery({ queryKey: ['tasks'],            queryFn: () => base44.entities.Task.list() })
-  const { data: contracts = [] }        = useQuery({ queryKey: ['contracts'],        queryFn: () => base44.entities.Contract.list() })
-  const { data: leads = [] }            = useQuery({ queryKey: ['leads'],            queryFn: () => base44.entities.Lead.list() })
-  const { data: verkaufschancen = [] }  = useQuery({ queryKey: ['verkaufschancen'],  queryFn: () => base44.entities.Verkaufschance.list('-created_date') })
+  const { data: tasks = [] }           = useQuery({ queryKey: ['tasks'],           queryFn: () => base44.entities.Task.filter({ status: ['open', 'in_progress'] }, '-due_date', 100) })
+  const { data: contracts = [] }       = useQuery({ queryKey: ['contracts'],       queryFn: () => base44.entities.Contract.filter({ status: 'active' }, '-end_date', 200) })
+  const { data: leads = [] }           = useQuery({ queryKey: ['leads'],           queryFn: () => base44.entities.Lead.filter({ status: ['new', 'contacted', 'qualified'] }, '-lead_score', 50) })
+  const { data: verkaufschancen = [] } = useQuery({ queryKey: ['verkaufschancen'], queryFn: () => base44.entities.Verkaufschance.list('-created_date', 100) })
 
   // ── Abgeleitete Daten ─────────────────────────────────────────────────────
-  const openTasks = useMemo(() =>
-    tasks.filter(t => t.status !== 'completed' && !t.deleted && !t.archived),
-    [tasks]
-  )
+  // Tasks bereits server-seitig auf open/in_progress gefiltert
+  const openTasks = tasks
 
   const today = new Date()
   const in90 = new Date(today); in90.setDate(today.getDate() + 90)
 
-  // expiringContracts: Alle abgelaufenen Verträge PLUS Verträge die in den nächsten 90 Tagen ablaufen
+  // expiringContracts: aktive Verträge die in den nächsten 90 Tagen ablaufen (bereits server-seitig auf active gefiltert)
   const expiringContracts = useMemo(() =>
     contracts.filter(c => {
-      if (!c.end_date || ['cancelled', 'archived'].includes(c.status)) return false
+      if (!c.end_date) return false
       const d = new Date(c.end_date + 'T00:00:00')
-      return d <= in90
+      return d <= in90 && !c.end_date.startsWith('9999')
     }),
     [contracts]
   )
 
-  const activeLeads = useMemo(() =>
-    leads.filter(l => ['new', 'contacted', 'qualified'].includes(l.status)),
-    [leads]
-  )
+  // leads already filtered server-side to active statuses
+  const activeLeads = leads
 
   const openVerkaufschancen = useMemo(() =>
     verkaufschancen.filter(v => !['gewonnen', 'verloren'].includes(v.status)),

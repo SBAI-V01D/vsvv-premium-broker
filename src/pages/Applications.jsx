@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Plus, Search, MoreHorizontal, Edit, Trash2, FileText, TrendingUp, Clock, CheckCircle, Calendar, Building2, Tag, Archive, Inbox } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 // Helper: formatDate mit Sonderfall für "unbegrenzt"
 const formatDateSafe = (dateStr) => {
@@ -10,7 +11,6 @@ const formatDateSafe = (dateStr) => {
   if (dateStr.startsWith('9999')) return 'Unbegrenzt'
   return new Date(dateStr).toLocaleDateString('de-CH')
 }
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -46,17 +46,18 @@ export default function Applications() {
 
   const { data: applications = [] } = useQuery({
     queryKey: ['applications'],
-    queryFn: () => base44.entities.Application.list('-created_date'),
+    queryFn: () => base44.entities.Application.filter({ archived: false }, '-created_date', 300),
   })
 
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
-    queryFn: () => base44.entities.Customer.list(),
+    queryFn: () => base44.entities.Customer.list('-created_date', 500),
+    staleTime: 5 * 60 * 1000,
   })
 
   const { data: brokers = [] } = useQuery({
     queryKey: ['brokers'],
-    queryFn: () => base44.entities.Broker.filter({ is_active: true }),
+    queryFn: () => base44.entities.Broker.filter({ is_active: true }, '-created_date', 100),
   })
 
   const getCustomer = (customerId) => customers.find(c => c.id === customerId)
@@ -104,9 +105,10 @@ export default function Applications() {
     : '0.0'
   const uniqueBrokers = [...new Set(applications.map(a => a.assigned_broker).filter(Boolean))]
   
-  // Provision berechnen
-  const totalCommission = activeApps.reduce((sum, a) => sum + (a.commission_estimate || 0), 0)
-  const avgCommission = activeApps.length > 0 ? (totalCommission / activeApps.length).toFixed(2) : 0
+  // Provision: nur angenommene/policierte Anträge mit einem effektiven commission_estimate
+  const commissionApps = approvedApps.filter(a => (a.commission_estimate || 0) > 0)
+  const totalCommission = commissionApps.reduce((sum, a) => sum + (a.commission_estimate || 0), 0)
+  const avgCommission = commissionApps.length > 0 ? (totalCommission / commissionApps.length).toFixed(2) : 0
 
 
   // Filtering
@@ -242,7 +244,7 @@ export default function Applications() {
               </div>
               <div>
                 <p className="text-2xl font-bold">CHF {totalCommission.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
-                <p className="text-xs text-muted-foreground">Gesamte erwartete Provision</p>
+                <p className="text-xs text-muted-foreground">Realisierte Provision (policiert)</p>
               </div>
             </div>
           </CardContent>
@@ -254,8 +256,8 @@ export default function Applications() {
                 <TrendingUp className="w-5 h-5 text-cyan-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">CHF {avgCommission.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                <p className="text-xs text-muted-foreground">Durchschnittliche Provision pro Antrag</p>
+                <p className="text-2xl font-bold">CHF {Number(avgCommission).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-xs text-muted-foreground">Ø Provision (policierte Anträge)</p>
               </div>
             </div>
           </CardContent>

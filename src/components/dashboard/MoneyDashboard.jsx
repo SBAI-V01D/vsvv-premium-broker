@@ -52,28 +52,26 @@ function HotLeadRow({ lead, onSelect }) {
 export default function MoneyDashboard() {
   const { data: entries = [] } = useQuery({
     queryKey: ['commissionEntries'],
-    queryFn: () => base44.entities.CommissionEntry.list('-entry_date', 1000),
+    queryFn: () => base44.entities.CommissionEntry.filter({ archived: false }, '-entry_date', 500),
+    staleTime: 2 * 60 * 1000,
   })
 
   const { data: leads = [] } = useQuery({
     queryKey: ['leads-hot'],
-    queryFn: async () => {
-      const all = await base44.entities.Lead.list('-lead_score', 100)
-      return all.filter(l => ['new', 'contacted', 'qualified'].includes(l.status))
-    },
+    queryFn: () => base44.entities.Lead.filter({ status: ['new', 'contacted', 'qualified'] }, '-lead_score', 50),
+    staleTime: 5 * 60 * 1000,
   })
 
   const { data: opps = [] } = useQuery({
     queryKey: ['opportunities-top'],
-    queryFn: async () => {
-      const all = await base44.entities.Verkaufschance.list('-estimated_value', 50)
-      return all.filter(o => ['neu', 'in_ausschreibung', 'offerten_erhalten'].includes(o.status))
-    },
+    queryFn: () => base44.entities.Verkaufschance.filter({ status: ['neu', 'in_ausschreibung', 'offerten_erhalten'] }, '-estimated_value', 50),
+    staleTime: 5 * 60 * 1000,
   })
 
   const { data: contracts = [] } = useQuery({
     queryKey: ['contracts-renewal'],
-    queryFn: () => base44.entities.Contract.list('-renewal_date', 200),
+    queryFn: () => base44.entities.Contract.filter({ status: 'active' }, '-renewal_date', 200),
+    staleTime: 5 * 60 * 1000,
   })
 
   // Calculate KPIs

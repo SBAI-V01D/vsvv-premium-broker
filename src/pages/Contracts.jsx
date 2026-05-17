@@ -35,22 +35,25 @@ export default function Contracts() {
 
   const { data: contracts = [] } = useQuery({
     queryKey: ['contracts'],
-    queryFn: () => base44.entities.Contract.list('-created_date'),
+    queryFn: () => base44.entities.Contract.filter({ archived: false }, '-created_date', 500),
   })
 
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
-    queryFn: () => base44.entities.Customer.list(),
+    queryFn: () => base44.entities.Customer.filter({ archived: false }, '-created_date', 500),
+    staleTime: 5 * 60 * 1000,
   })
 
   const { data: documents = [] } = useQuery({
     queryKey: ['documents'],
-    queryFn: () => base44.entities.Document.list(null, 1000),
+    queryFn: () => base44.entities.Document.list('-created_date', 200),
+    staleTime: 5 * 60 * 1000,
   })
 
   const { data: organizations = [] } = useQuery({
     queryKey: ['organizations'],
-    queryFn: () => base44.entities.Organization.list(),
+    queryFn: () => base44.entities.Organization.list('-created_date', 50),
+    staleTime: 10 * 60 * 1000,
   })
 
   const createMutation = useMutation({

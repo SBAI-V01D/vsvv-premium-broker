@@ -34,13 +34,14 @@ export default function Customers() {
 
   const { data: organizations = [] } = useQuery({
     queryKey: ['organizations'],
-    queryFn: () => base44.entities.Organization.list(),
+    queryFn: () => base44.entities.Organization.list('-created_date', 50),
+    staleTime: 10 * 60 * 1000,
   })
 
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
     queryFn: async () => {
-      const allCustomers = await base44.entities.Customer.list('-created_date', 500)
+      const allCustomers = await base44.entities.Customer.filter({ archived: false }, '-created_date', 500)
       allCustomers.sort((a, b) => {
         const lastCmp = (a.last_name || '').localeCompare(b.last_name || '', 'de', { sensitivity: 'base' })
         if (lastCmp !== 0) return lastCmp

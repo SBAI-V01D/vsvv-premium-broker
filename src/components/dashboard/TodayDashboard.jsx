@@ -199,13 +199,16 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
     [verkaufschancen]
   )
 
-  // Hot Leads
+  // Hot Leads (activeLeads bereits server-seitig auf qualified/contacted/new gefiltert)
   const hotLeads = useMemo(() => activeLeads
     .filter(l => l.status === 'qualified' || (l.lead_score || 0) >= 60)
     .sort((a, b) => (b.lead_score || 0) - (a.lead_score || 0))
     .slice(0, 4),
     [activeLeads]
   )
+
+  // KVG-spezifische aktive Leads (für KPI-Kachel)
+  const newLeadsCount = activeLeads.filter(l => l.status === 'new').length
 
   const overdueCount = urgentTasks.filter(t => daysUntil(t.due_date) !== null && daysUntil(t.due_date) <= 0).length
   const totalUrgent = overdueCount + wiedervorlagen.length
@@ -215,12 +218,12 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
 
       {/* ── Tages-Zusammenfassung ───────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {useMemo(() => [
+        {[
           { label: 'Offene Aufgaben',    value: openTasks.length,          color: 'text-amber-600',  bg: 'bg-amber-50',   path: '/aufgaben',          icon: CheckSquare },
           { label: 'Verkaufschancen',    value: verkaufschancen.filter(v => !['gewonnen','verloren'].includes(v.status)).length, color: 'text-blue-600', bg: 'bg-blue-50', path: '/verkaufschancen', icon: TrendingUp },
-          { label: 'Neue Leads',         value: activeLeads.filter(l => l.status === 'new').length, color: 'text-violet-600', bg: 'bg-violet-50', path: '/leads', icon: Target },
+          { label: 'Neue Leads',         value: newLeadsCount, color: 'text-violet-600', bg: 'bg-violet-50', path: '/leads', icon: Target },
           { label: 'Vertragsabläufe',    value: expiringContracts.length,   color: expiringContracts.length > 0 ? 'text-orange-600' : 'text-muted-foreground', bg: expiringContracts.length > 0 ? 'bg-orange-50' : 'bg-muted', path: '/vertragsablaeufe', icon: RefreshCw },
-        ], [openTasks, verkaufschancen, activeLeads, expiringContracts]).map(k => (
+        ].map(k => (
           <button
             key={k.label}
             onClick={() => navigate(k.path)}
