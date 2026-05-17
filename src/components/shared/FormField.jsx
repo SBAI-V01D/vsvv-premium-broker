@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -114,6 +115,55 @@ export function FormSelect({
         </SelectContent>
       </Select>
     </FormField>
+  )
+}
+
+// ─── Date Input ──────────────────────────────────────────────────────────────
+/**
+ * Native date-input, formatted as YYYY-MM-DD.
+ * Props: same as FormInput plus `min`, `max`.
+ */
+export function FormDateInput({ label, required, error, hint, className, fieldClassName, ...inputProps }) {
+  return (
+    <FormField label={label} required={required} error={error} hint={hint} className={fieldClassName}>
+      <Input
+        type="date"
+        className={cn(error && 'border-destructive focus-visible:ring-destructive', className)}
+        {...inputProps}
+      />
+    </FormField>
+  )
+}
+
+// ─── Checkbox ────────────────────────────────────────────────────────────────
+/**
+ * Props:
+ *  - label: string            — shown next to the checkbox
+ *  - description?: string     — smaller helper text below
+ *  - checked: boolean
+ *  - onCheckedChange: (v: boolean) => void
+ *  - disabled?: boolean
+ *  - error?: string
+ */
+export function FormCheckbox({ label, description, checked, onCheckedChange, disabled, error, fieldClassName }) {
+  const id = React.useId()
+  return (
+    <div className={cn('flex items-start gap-3', fieldClassName)}>
+      <Checkbox
+        id={id}
+        checked={!!checked}
+        onCheckedChange={onCheckedChange}
+        disabled={disabled}
+        className="mt-0.5 flex-shrink-0"
+      />
+      <div className="space-y-0.5 leading-none">
+        <label htmlFor={id} className="text-sm font-medium cursor-pointer select-none">
+          {label}
+        </label>
+        {description && <p className="text-xs text-muted-foreground">{description}</p>}
+        {error && <p className="text-xs text-destructive">{error}</p>}
+      </div>
+    </div>
   )
 }
 

@@ -30,6 +30,13 @@ export {
   FormInput,
   FormTextarea,
   FormSelect,
+  FormDateInput,
+  FormCheckbox,
   FormGroup,
   FormSection,
 } from './FormField'
+
+// Modal + Detail
+export { default as StandardModal }  from './StandardModal'
+export { default as DetailLayout }   from './DetailLayout'
+export { default as DetailCard, DetailField, DetailFieldGrid } from './DetailCard'
