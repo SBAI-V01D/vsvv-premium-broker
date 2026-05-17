@@ -606,79 +606,83 @@ export default function CustomerDetail() {
           {relatedApplications.length === 0 ? (
             <Card><CardContent className="p-6 text-center text-muted-foreground">Keine Anträge vorhanden</CardContent></Card>
           ) : (
-            <div className="space-y-3">
-              {relatedApplications.map(a => {
-                const relatedCustomer = (Array.isArray(allCustomers) ? allCustomers : []).find(x => x.id === a.customer_id)
-                const premiumMonthly = a.estimated_premium_monthly
-                const premiumYearly = a.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12) : null)
-                const ageGroup = a.sparte_data?.age_group
-                const franchise = a.sparte_data?.franchise
-                const model = a.sparte_data?.model
-                const produkte = a.sparte_data?.produkte || []
-                const productType = a.product || a.sparte_data?.product_type
-                const statusKey = a.custom_status || a.status
-                const statusColors = {
-                  angenommen: 'bg-green-100 text-green-700',
-                  policiert: 'bg-green-100 text-green-700',
-                  approved: 'bg-green-100 text-green-700',
-                  eingereicht: 'bg-blue-100 text-blue-700',
-                  in_bearbeitung: 'bg-blue-100 text-blue-700',
-                  in_pruefung: 'bg-amber-100 text-amber-700',
-                  pruefung_erforderlich: 'bg-amber-100 text-amber-700',
-                  abgelehnt: 'bg-red-100 text-red-700',
-                }
-                return (
-                  <Card key={a.id}>
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">{relatedCustomer ? (relatedCustomer.company_name || `${relatedCustomer.first_name} ${relatedCustomer.last_name}`) : a.customer_name}</p>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold text-sm">{a.insurer || '–'}</p>
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                                {getSparteLabel(a.sparte || a.insurance_type) || a.insurance_type}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
-                            {franchise && <span>Franchise: CHF {franchise}</span>}
-                            {model && <span>Modell: {model}</span>}
-                            {a.contract_start_date && <span>ab {new Date(a.contract_start_date).toLocaleDateString('de-CH')}</span>}
-                          </div>
-                          {ageGroup && <p className="text-xs text-muted-foreground mt-1">{ageGroup}</p>}
-                          {produkte.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {produkte.map((p, i) => (
-                                <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                                  {p.name}
-                                </span>
-                              ))}
-                            </div>
-                          )}
+            <Card>
+              <CardContent className="p-0">
+                <div className="hidden md:grid grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  <div>Kunde</div>
+                  <div>Versicherer / Sparte</div>
+                  <div>Policen-Nr</div>
+                  <div>Produkt / Tarif</div>
+                  <div>Vertragsdaten</div>
+                  <div>Jahresprämie</div>
+                  <div>Status</div>
+                </div>
+                {relatedApplications.map((a, idx) => {
+                  const relatedCustomer = (Array.isArray(allCustomers) ? allCustomers : []).find(x => x.id === a.customer_id)
+                  const premiumMonthly = a.estimated_premium_monthly
+                  const premiumYearly = a.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12) : null)
+                  const franchise = a.sparte_data?.franchise
+                  const model = a.sparte_data?.model
+                  const statusKey = a.custom_status || a.status
+                  const statusColors = {
+                    angenommen: 'bg-green-100 text-green-700',
+                    policiert: 'bg-green-100 text-green-700',
+                    approved: 'bg-green-100 text-green-700',
+                    eingereicht: 'bg-blue-100 text-blue-700',
+                    in_bearbeitung: 'bg-blue-100 text-blue-700',
+                    in_pruefung: 'bg-amber-100 text-amber-700',
+                    pruefung_erforderlich: 'bg-amber-100 text-amber-700',
+                    abgelehnt: 'bg-red-100 text-red-700',
+                  }
+                  const formatDate = (d) => d ? new Date(d).toLocaleDateString('de-CH') : '–'
+                  return (
+                    <div key={a.id} className={idx > 0 ? 'border-t border-border' : ''}>
+                      <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors">
+                        {/* Kunde */}
+                        <div className="min-w-0">
+                          <p className="font-semibold text-xs truncate">{relatedCustomer ? (relatedCustomer.company_name || `${relatedCustomer.first_name} ${relatedCustomer.last_name}`) : a.customer_name}</p>
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          {productType && (
-                            <p className="text-xs text-muted-foreground mb-2">{productType}</p>
+                        {/* Versicherer / Sparte */}
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium truncate">{a.insurer || '–'}</p>
+                          {(a.sparte || a.insurance_type) && (
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">{getSparteLabel(a.sparte || a.insurance_type)}</p>
                           )}
-                          {premiumMonthly && (
-                            <p className="text-sm text-muted-foreground">CHF {premiumMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/M.</p>
-                          )}
-                          {premiumYearly && (
-                            <p className="font-bold text-sm">CHF {premiumYearly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}/J.</p>
-                          )}
-                          <p className="text-xs mt-1">
-                            <span className={`px-2 py-0.5 rounded-full font-medium ${statusColors[statusKey] || 'bg-muted text-muted-foreground'}`}>
-                              {statusKey}
-                            </span>
-                          </p>
+                          {franchise && <p className="text-xs text-muted-foreground mt-0.5">Franchise: CHF {franchise}</p>}
+                          {model && <p className="text-xs text-muted-foreground mt-0.5">Modell: {model}</p>}
+                        </div>
+                        {/* Policen-Nr */}
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium">{a.policy_number || '–'}</p>
+                        </div>
+                        {/* Produkt */}
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium">{a.product || '–'}</p>
+                        </div>
+                        {/* Vertragsdaten */}
+                        <div>
+                          {a.contract_start_date && <span className="text-xs text-green-600 font-medium block">{formatDate(a.contract_start_date)}</span>}
+                          {a.contract_end_date && <span className="text-xs text-green-600 font-medium block">{formatDate(a.contract_end_date)}</span>}
+                          {!a.contract_start_date && !a.contract_end_date && <span className="text-xs text-muted-foreground">–</span>}
+                        </div>
+                        {/* Jahresprämie */}
+                        <div>
+                          {premiumYearly ? <p className="text-xs font-semibold">CHF {premiumYearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/J.</p> : null}
+                          {premiumMonthly ? <p className="text-xs text-muted-foreground">CHF {premiumMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/M.</p> : null}
+                          {!premiumYearly && !premiumMonthly && <span className="text-xs text-muted-foreground">–</span>}
+                        </div>
+                        {/* Status */}
+                        <div>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[statusKey] || 'bg-muted text-muted-foreground'}`}>
+                            {statusKey}
+                          </span>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
+                    </div>
+                  )
+                })}
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
