@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── 3. AUTOMATISCHE VERTRAGSERSTELLUNG bei Annahme ───────────────────────
+    // ── 3. AUTOMATISCHE VERTRAGSERSTELLUNG + ERWARTETE PROVISION bei Annahme ──
     if (statusChanged && isNewAcceptance && app.customer_id) {
       // Duplikatschutz: prüfen über linked_application_id (direkt — kein race-window)
       const [existingByLink, existingByCustomer] = await Promise.all([
@@ -103,7 +103,6 @@ Deno.serve(async (req) => {
       const premiumYearly = app.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null);
 
       if (!alreadyLinked) {
-
         // Guard: insurance_type und organization_id sind required auf Contract
         const insuranceType = app.insurance_type || app.sparte || 'other';
         const organizationId = app.organization_id || null;
@@ -132,6 +131,8 @@ Deno.serve(async (req) => {
           custom_status: 'aktiv',
           status: 'active',
           linked_application_id: app.id,
+          // Erwartete Provision vom Antrag übernehmen (kein eigener Wert)
+          commission_amount: app.commission_estimate || null,
           notes: buildContractNotes(app),
         });
 
@@ -140,14 +141,79 @@ Deno.serve(async (req) => {
           linked_contract_id: newContract.id,
         });
 
+        // ── ERWARTETE PROVISION aus application.commission_estimate ──────────
+        // Einzige Quelle für erwartete Provisionen ist der Antrag.
+        // Nur erstellen wenn commission_estimate vorhanden.
+        const commissionEstimate = app.commission_estimate || null;
+        if (commissionEstimate && commissionEstimate > 0) {
+          // Duplikat-Check: kein expected-Eintrag für gleiche Policy/Application
+          const existingExpected = await base44.asServiceRole.entities.CommissionEntry.filter({
+            policy_number: app.policy_number || '',
+          });
+          const hasExpected = existingExpected.some(e =>
+            !e.archived &&
+            !e.is_storno &&
+            (e.provision_status === 'expected' || e.is_expected === true)
+          );
+
+          if (!hasExpected) {
+            const customerData = await base44.asServiceRole.entities.Customer.filter({ id: app.customer_id })
+              .then(r => r[0] || null).catch(() => null);
+
+            await base44.asServiceRole.entities.CommissionEntry.create({
+              // Referenzen
+              policy_id: newContract.id,
+              policy_number: app.policy_number || '',
+              source_application_id: app.id,
+              advisor_id: app.advisor_id || '',
+              advisor_name: app.assigned_broker || '',
+              organization_id: organizationId,
+              organization_name: '',
+              customer_id: app.customer_id,
+              customer_name: app.customer_name || '',
+              insurer: app.insurer || '',
+              product_category: app.sparte || app.insurance_type || '',
+
+              // Prämie als Referenz
+              premium_yearly: premiumYearly || 0,
+              start_date: app.contract_start_date || '',
+
+              // Erwartete Provision — EINZIGE QUELLE: application.commission_estimate
+              company_provision_amount: commissionEstimate,
+              advisor_provision_percentage: null,
+              advisor_provision_amount: null,
+              provision_storno_percentage: 10,
+              provision_payout_amount: null,
+              provision_storno_amount: null,
+
+              // Status: expected = noch nicht fakturiert, nur erwartet
+              provision_status: 'expected',
+              status: 'expected',
+              is_expected: true,
+
+              // Courtage leer (nicht relevant bei automatischer Erstellung)
+              company_courtage_amount: null,
+              advisor_courtage_percentage: null,
+              advisor_courtage_amount: null,
+              courtage_status: 'pending',
+
+              entry_date: new Date().toISOString().split('T')[0],
+              archived: false,
+              is_storno: false,
+              notes: `Erwartete Provision aus Antrag (commission_estimate: CHF ${commissionEstimate}) — wird ersetzt sobald real fakturiert`,
+            });
+          }
+        }
+
         await base44.asServiceRole.entities.SystemLog.create({
           level: 'info',
           source: 'onApplicationUpdate',
-          message: `Vertrag automatisch erstellt: ${app.customer_name} | ${app.insurer} | ID: ${newContract.id}`,
+          message: `Vertrag + erwartete Provision erstellt: ${app.customer_name} | ${app.insurer} | Provision: CHF ${commissionEstimate || 0}`,
           related_entity_type: 'Contract',
           related_entity_id: newContract.id,
           user_email: app.assigned_broker || null,
         });
+
       } else {
         await base44.asServiceRole.entities.SystemLog.create({
           level: 'info',
@@ -157,37 +223,12 @@ Deno.serve(async (req) => {
           related_entity_id: app.id,
         });
       }
-
-      // Commission-Job queuen
-      const existingJobs = await base44.asServiceRole.entities.AutomationQueue.filter({
-        related_entity_id: app.id,
-        job_type: 'commission_calc',
-        status: 'pending',
-      });
-
-      if (existingJobs.length === 0) {
-        await base44.asServiceRole.entities.AutomationQueue.create({
-          job_type: 'commission_calc',
-          status: 'pending',
-          related_entity_type: 'Application',
-          related_entity_id: app.id,
-          payload: JSON.stringify({
-            application_id: app.id,
-            customer_id: app.customer_id,
-            broker_email: app.assigned_broker,
-            sparte: app.sparte || app.insurance_type,
-            premium_yearly: premiumYearly,
-            insurer: app.insurer,
-          }),
-        });
-      }
     }
 
     // ── 4. TASKS mit application_id automatisch auf completed setzen ─────────
     if (statusChanged && newStatus && newStatus !== oldStatus) {
       const linkedTasks = await base44.asServiceRole.entities.Task.filter({ application_id: app.id });
       const openLinkedTasks = linkedTasks.filter(t => t.status !== 'completed');
-      // Parallel statt sequenziell — kein Bottleneck bei vielen Tasks
       if (openLinkedTasks.length > 0) {
         await Promise.all(openLinkedTasks.map(task =>
           base44.asServiceRole.entities.Task.update(task.id, {

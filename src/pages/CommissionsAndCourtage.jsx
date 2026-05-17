@@ -365,16 +365,16 @@ export default function CommissionsAndCourtage() {
 
       {/* Expected Provisions Alert - PROMINENT */}
       {(() => {
-        const expectedCount = activeEntries.filter(e => {
-          const pStatus = e.provision_status || e.status || 'pending'
-          return pStatus === 'erwartet' || pStatus === 'pending' || pStatus === 'earned' || pStatus === 'invoiced'
-        }).length
+        // NUR echte erwartete Provisionen: status === 'expected' ODER is_expected === true
+        // KEINE invoiced/paid/cancelled/rejected Einträge
+        const isExpectedEntry = (e) => {
+          const pStatus = e.provision_status || e.status || ''
+          return e.is_expected === true || pStatus === 'expected' || pStatus === 'erwartet'
+        }
+        const expectedCount = activeEntries.filter(isExpectedEntry).length
         const expectedAmount = activeEntries
-          .filter(e => {
-            const pStatus = e.provision_status || e.status || 'pending'
-            return pStatus === 'erwartet' || pStatus === 'pending' || pStatus === 'earned' || pStatus === 'invoiced'
-          })
-          .reduce((s, e) => s + (e.advisor_provision_amount || 0), 0)
+          .filter(isExpectedEntry)
+          .reduce((s, e) => s + (e.company_provision_amount || e.advisor_provision_amount || 0), 0)
 
         if (expectedCount > 0) {
           return (
