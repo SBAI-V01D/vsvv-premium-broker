@@ -1,9 +1,19 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 // Status-Gruppen
-const ACCEPTED_STATUSES = ['angenommen', 'policiert', 'approved', 'angenommen_vorbehalt', 'conditional_approved'];
+// ACCEPTED: alle Status die einen Vertrag auslösen sollen
+const ACCEPTED_STATUSES = [
+  'angenommen',           // Angenommen
+  'policiert',            // Policiert
+  'approved',             // (Legacy)
+  'angenommen_vorbehalt', // Antrag mit Vorbehalt angenommen
+  'vorbehalt',            // Angenommen mit Vorbehalt
+  'conditional_approved', // (Legacy)
+  'bewilligung_erteilt',  // Bewilligung erteilt
+];
 const REJECTED_STATUSES = ['abgelehnt', 'rejected', 'storniert'];
-const REVIEW_STATUSES   = ['rueckfrage', 'vorbehalt', 'under_review'];
+// REVIEW: Rückfrage/Prüfung → Task erstellen, aber KEIN Vertrag
+const REVIEW_STATUSES   = ['rueckfrage', 'in_pruefung', 'risikopruefung', 'under_review'];
 
 // Hilfsfunktion: Vertragsfeld aus Sparte-Daten aufbauen
 function buildContractNotes(app) {
