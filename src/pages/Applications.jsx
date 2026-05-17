@@ -3,6 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Plus, Search, MoreHorizontal, Edit, Trash2, FileText, TrendingUp, Clock, CheckCircle, Calendar, Building2, Tag, Archive, Inbox } from 'lucide-react'
+
+// Helper: formatDate mit Sonderfall für "unbegrenzt"
+const formatDateSafe = (dateStr) => {
+  if (!dateStr) return '–'
+  if (dateStr.startsWith('9999')) return 'Unbegrenzt'
+  return new Date(dateStr).toLocaleDateString('de-CH')
+}
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -135,117 +142,19 @@ export default function Applications() {
   const handleStatusChange = async ({ status, statusDef, note, metadata }) => {
     if (!statusChanging) return
     const app = statusChanging
-    const prevStatus = getStatus(app)
-    const ACCEPTED_STATUSES = ['angenommen', 'policiert', 'approved', 'angenommen_vorbehalt']
 
-    await base44.entities.StatusHistory.create({
-      entity_type: 'application',
-      entity_id: app.id,
-      customer_id: app.customer_id,
-      from_status: prevStatus,
-      to_status: status,
-      to_status_label: statusDef?.label || status,
-      note,
-      metadata: JSON.stringify(metadata),
-    })
-
-    // Trigger commission sync if status changes to accepted
-    if (!ACCEPTED_STATUSES.includes(prevStatus) && ACCEPTED_STATUSES.includes(status)) {
-      try {
-        await base44.functions.invoke('syncCommissionOnApplicationUpdate', {
-          application_id: app.id,
-          old_application: app,
-          new_application: { ...app, custom_status: status, status_changed_at: new Date().toISOString() },
-        })
-      } catch (err) {
-        console.warn('Commission sync skipped:', err.message)
-      }
-    }
-
-    // Update status_changed_at
-    const now = new Date().toISOString()
-
-    // Auto-create contract if newly accepted and no contract linked yet
-    let linkedContractId = app.linked_contract_id
-    const willCreateContract = ACCEPTED_STATUSES.includes(status) && !ACCEPTED_STATUSES.includes(prevStatus) && !app.linked_contract_id
-    
-    if (willCreateContract) {
-      // Derive yearly premium if missing
-      const premiumMonthly = app.estimated_premium_monthly || null
-      const premiumYearly = app.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null)
-
-      // Build a meaningful product label: use product_type or sparte_data info
-      const productLabel = app.product || app.sparte_data?.product_type || getSparteLabel(app.sparte || app.insurance_type)
-
-      // Kassenmodell normalization
-      const rawModel = app.sparte_data?.model || ''
-      const kassenmodell = (() => {
-        const r = rawModel.toLowerCase()
-        if (r.includes('hausarzt')) return 'Hausarztmodell'
-        if (r.includes('hmo')) return 'HMO'
-        if (r.includes('telmed')) return 'Telmed'
-        if (rawModel) return rawModel
-        return null
-      })()
-
-      const newContract = await base44.entities.Contract.create({
-        customer_id: app.customer_id,
-        customer_name: app.customer_name,
-        primary_customer_id: app.primary_customer_id,
-        is_family_member: app.is_family_member || false,
-        organization_id: app.organization_id || customers.find(c => c.id === app.customer_id)?.organization_id || '',
-        advisor_id: app.advisor_id || customers.find(c => c.id === app.customer_id)?.advisor_id,
-        insurer: app.insurer,
-        insurance_type: app.insurance_type,
-        product: productLabel,
-        policy_number: app.policy_number || '',
-        premium_yearly: premiumYearly,
-        premium_monthly: premiumMonthly,
-        start_date: app.contract_start_date || app.requested_start_date || '',
-        end_date: app.contract_end_date || '',
-        assigned_broker: app.assigned_broker,
-        custom_status: 'aktiv',
-        status: 'active',
-        notes: [
-          `Automatisch erstellt aus Antrag.`,
-          app.sparte_data?.franchise ? `Franchise: CHF ${app.sparte_data.franchise}` : null,
-          kassenmodell ? `Modell: ${kassenmodell}` : null,
-          app.sparte_data?.age_group ? `Kategorie: ${app.sparte_data.age_group}` : null,
-          app.notes || null,
-        ].filter(Boolean).join(' | '),
-      })
-      linkedContractId = newContract.id
-
-      // Update customer category if we know the age group
-      if (app.sparte_data?.age_group && app.customer_id) {
-        const cust = customers.find(c => c.id === app.customer_id)
-        if (cust) {
-          const ageNote = `Kategorie: ${app.sparte_data.age_group}`
-          const updatedNote = cust.notes
-            ? (cust.notes.includes('Kategorie:') ? cust.notes.replace(/Kategorie:\s*\S+/, ageNote) : `${cust.notes}\n${ageNote}`)
-            : ageNote
-          await base44.entities.Customer.update(app.customer_id, { notes: updatedNote })
-          queryClient.invalidateQueries({ queryKey: ['customers'] })
-        }
-      }
-    }
-
+    // Nur Status-Update — Vertragserstellung, Provision & Timeline erfolgen ausschliesslich
+    // serverseitig via "Application Status Change → Contract Creation" Automation (onApplicationUpdate)
     await base44.entities.Application.update(app.id, {
       custom_status: status,
-      insurer: app.insurer || '–',
-      insurance_type: app.insurance_type,
-      customer_id: app.customer_id,
-      linked_contract_id: linkedContractId,
-      status_changed_at: now,
+      status_changed_at: new Date().toISOString(),
     })
-    // Invalidate all related caches immediately — Contracts muss dabei sein!
+
     await queryClient.invalidateQueries({ queryKey: ['applications'] })
     await queryClient.invalidateQueries({ queryKey: ['contracts'] })
     await queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
     await queryClient.invalidateQueries({ queryKey: ['customers'] })
     await queryClient.invalidateQueries({ queryKey: ['tasks'] })
-    // Extra refresh for Contracts page to ensure it reloads
-    queryClient.refetchQueries({ queryKey: ['contracts'] })
     setStatusChanging(null)
   }
 
@@ -254,10 +163,7 @@ export default function Applications() {
     return statusDefs.find(s => s.key === key)
   }
   const getStatusLabel = (app) => getStatusDef(app)?.label || getStatus(app)
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '–'
-    return new Date(dateStr).toLocaleDateString('de-CH')
-  }
+  const formatDate = formatDateSafe
 
   return (
     <div>

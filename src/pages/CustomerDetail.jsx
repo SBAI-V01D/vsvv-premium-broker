@@ -488,6 +488,7 @@ export default function CustomerDetail() {
                   const relatedCustomer = (Array.isArray(allCustomers) ? allCustomers : []).find(x => x.id === c.customer_id)
                   const formatDate = (dateStr) => {
                     if (!dateStr) return '–'
+                    if (dateStr.startsWith('9999')) return 'Unbegrenzt'
                     return new Date(dateStr).toLocaleDateString('de-CH')
                   }
                   return (

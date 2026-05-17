@@ -124,6 +124,7 @@ export default function Contracts() {
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '–'
+    if (dateStr.startsWith('9999')) return 'Unbegrenzt'
     return new Date(dateStr).toLocaleDateString('de-CH')
   }
 
