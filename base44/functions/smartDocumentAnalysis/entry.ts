@@ -165,11 +165,11 @@ Antworte NUR mit JSON, keine Erklärungen.`,
     
     const extracted = await extractFromDocument();
 
-    // 1a. Via Adresse (schnell)
-    if (extracted?.zip_code && extracted?.city) {
+    // 1a. Via Adresse + Nachname (schnell) — null-safe
+    if (extracted?.zip_code && extracted?.city && extracted?.policy_holder_last_name) {
       const familyCandidates = allCustomers
-        .filter(c => !c.is_family_member && c.zip_code === extracted.zip_code)
-        .filter(c => (c.last_name.toLowerCase() === extracted.policy_holder_last_name.toLowerCase()));
+        .filter(c => !c.is_family_member && c.zip_code === extracted.zip_code && c.last_name)
+        .filter(c => c.last_name.toLowerCase() === extracted.policy_holder_last_name.toLowerCase());
 
       if (familyCandidates.length > 0) {
         insights.matchedPrimaryCustomer = familyCandidates[0];
@@ -178,10 +178,10 @@ Antworte NUR mit JSON, keine Erklärungen.`,
       }
     }
 
-    // 1b. Via Familienname + Adresse (Fuzzy)
+    // 1b. Via Familienname (Fuzzy) — null-safe
     if (!insights.matchedPrimaryCustomer && extracted?.policy_holder_last_name) {
       const familyMatches = allCustomers
-        .filter(c => !c.is_family_member)
+        .filter(c => !c.is_family_member && c.last_name)
         .map(c => ({
           customer: c,
           score: similarity(c.last_name, extracted.policy_holder_last_name),
@@ -208,20 +208,27 @@ Antworte NUR mit JSON, keine Erklärungen.`,
         (m.primary_customer_id === insights.matchedPrimaryCustomer.id)
       );
 
-      // Versuche die versicherte Person zu matchen
-      const insuredName = extracted?.insured_first_name || extracted?.policy_holder_first_name;
+      // KRITISCH: Priorisiere insured_first_name (versicherte Person) über policy_holder_first_name
+      // Wenn insured_name vom policy_holder ABWEICHT → Das ist das Familienmitglied!
+      const insuredFirst = extracted?.insured_first_name;
       const insuredLast = extracted?.insured_last_name || extracted?.policy_holder_last_name;
+      const holderFirst = extracted?.policy_holder_first_name;
 
-      if (insuredName && insuredLast) {
+      // Verwende insured als primäre Suchgrösse (versicherte Person = der eigentliche Vertragsinhaber)
+      const searchFirst = insuredFirst || holderFirst;
+      const searchLast = insuredLast;
+
+      if (searchFirst && searchLast) {
         const personMatches = matchedFamily
+          .filter(m => m.first_name && m.last_name)
           .map(m => ({
             person: m,
             score: (
-              similarity(m.first_name, insuredName) * 0.5 +
-              similarity(m.last_name, insuredLast) * 0.5
+              similarity(m.first_name, searchFirst) * 0.5 +
+              similarity(m.last_name, searchLast) * 0.5
             ),
           }))
-          .filter(x => x.score > 0.80)
+          .filter(x => x.score > 0.75)
           .sort((a, b) => b.score - a.score);
 
         if (personMatches.length > 0) {
@@ -244,20 +251,46 @@ Antworte NUR mit JSON, keine Erklärungen.`,
     // PRIORITÄT 3: NEUES FAMILIENMITGLIED ERKANNT?
     // ============================================================
     if (insights.matchedPrimaryCustomer && !insights.matchedPerson) {
-      // Unterschiedliche Personen erkannt
-      if (
-        extracted?.insured_first_name &&
-        extracted?.insured_last_name &&
-        (extracted.insured_first_name.toLowerCase() !== extracted.policy_holder_first_name.toLowerCase() ||
-         extracted.insured_last_name.toLowerCase() !== extracted.policy_holder_last_name.toLowerCase())
-      ) {
-        insights.suggestedFamilyMember = {
-          first_name: extracted.insured_first_name,
-          last_name: extracted.insured_last_name,
-          birthdate: extracted.birthdate,
-          family_role: 'other',
-        };
-        insights.detectionPhase = 'new_family_member_suggested';
+      // Fall A: insured weicht vom policy_holder ab → versicherte Person ist Familienmitglied
+      const insuredDiffersFromHolder = extracted?.insured_first_name && extracted?.policy_holder_first_name &&
+        extracted.insured_first_name.toLowerCase() !== extracted.policy_holder_first_name.toLowerCase();
+
+      // Fall B: insured stimmt mit policy_holder überein → policy_holder selbst ist Familienmitglied
+      // (z.B. Dokument für Kind: VN = Vater, versichert = Kind mit gleichem Nachnamen)
+      const useInsured = extracted?.insured_first_name && insuredDiffersFromHolder;
+      const firstName = useInsured ? extracted.insured_first_name : extracted?.policy_holder_first_name;
+      const lastName = useInsured ? (extracted.insured_last_name || extracted?.policy_holder_last_name) : extracted?.policy_holder_last_name;
+
+      if (firstName && lastName) {
+        // Prüfe ob diese Person bereits im System existiert (als Familienmitglied oder eigener Kunde)
+        const alreadyExists = allCustomers.some(c =>
+          c.first_name && c.last_name &&
+          similarity(c.first_name, firstName) > 0.85 &&
+          similarity(c.last_name, lastName) > 0.85
+        );
+
+        if (!alreadyExists) {
+          insights.suggestedFamilyMember = {
+            first_name: firstName,
+            last_name: lastName,
+            birthdate: extracted?.birthdate || null,
+            family_role: 'other',
+          };
+          insights.detectionPhase = 'new_family_member_suggested';
+        } else {
+          // Person existiert schon – als existierende Person matchen
+          const existingMatch = allCustomers.find(c =>
+            c.first_name && c.last_name &&
+            similarity(c.first_name, firstName) > 0.85 &&
+            similarity(c.last_name, lastName) > 0.85
+          );
+          if (existingMatch) {
+            insights.matchedPerson = existingMatch;
+            insights.personConfidence = 88;
+            insights.personIsInFamily = !!existingMatch.is_family_member;
+            insights.detectionPhase = 'person_in_family_found';
+          }
+        }
       }
     }
 
