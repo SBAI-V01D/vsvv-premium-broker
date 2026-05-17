@@ -1,37 +1,105 @@
-import React from 'react';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import React from 'react'
+import { cn } from '@/lib/utils'
 
-const statusStyles = {
-  aktiv: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  pendent: 'bg-amber-50 text-amber-700 border-amber-200',
-  gekündigt: 'bg-red-50 text-red-700 border-red-200',
-  abgelaufen: 'bg-slate-100 text-slate-600 border-slate-200',
-  inaktiv: 'bg-slate-100 text-slate-600 border-slate-200',
-  interessent: 'bg-blue-50 text-blue-700 border-blue-200',
-  offen: 'bg-amber-50 text-amber-700 border-amber-200',
-  in_bearbeitung: 'bg-blue-50 text-blue-700 border-blue-200',
-  erledigt: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  bezahlt: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  storniert: 'bg-red-50 text-red-700 border-red-200',
-  niedrig: 'bg-slate-100 text-slate-600 border-slate-200',
-  mittel: 'bg-amber-50 text-amber-700 border-amber-200',
-  hoch: 'bg-orange-50 text-orange-700 border-orange-200',
-  dringend: 'bg-red-50 text-red-700 border-red-200',
-};
+/**
+ * Zentrales StatusBadge — ein Status = überall identisch.
+ *
+ * Props:
+ *  - status: string           (Schlüssel — z.B. 'active', 'pending', 'cancelled')
+ *  - label?: string           (Override Label, sonst aus MAP)
+ *  - size?: 'sm' | 'md'      (default 'md')
+ *  - dot?: boolean            (zeigt farbigen Punkt vor Label)
+ *
+ * Unterstützte Status-Schlüssel (erweiterbar):
+ *  Customer:  active, inactive, prospect
+ *  Contract:  active, pending, cancelled, expired, archived
+ *  Application: new, in_progress, waiting, approved, rejected, archived
+ *  Lead:      new, contacted, qualified, converted, lost
+ *  Mandate:   valid, invalid, pending, expired
+ *  General:   open, completed, high, medium, low, urgent
+ */
 
-const labelMap = {
-  in_bearbeitung: 'In Bearbeitung',
-  gekündigt: 'Gekündigt',
-};
+const STATUS_MAP = {
+  // ── Customer ──────────────────────────
+  active:       { label: 'Aktiv',         color: 'green'  },
+  inactive:     { label: 'Inaktiv',       color: 'gray'   },
+  prospect:     { label: 'Interessent',   color: 'blue'   },
 
-export default function StatusBadge({ status }) {
-  if (!status) return null;
-  const style = statusStyles[status] || 'bg-slate-100 text-slate-600 border-slate-200';
-  const label = labelMap[status] || status.charAt(0).toUpperCase() + status.slice(1);
+  // ── Contract ──────────────────────────
+  pending:      { label: 'Ausstehend',    color: 'amber'  },
+  cancelled:    { label: 'Gekündigt',     color: 'red'    },
+  expired:      { label: 'Abgelaufen',    color: 'orange' },
+  archived:     { label: 'Archiviert',    color: 'gray'   },
+
+  // ── Application ───────────────────────
+  new:          { label: 'Neu',           color: 'blue'   },
+  in_progress:  { label: 'In Bearbeitung', color: 'amber' },
+  waiting:      { label: 'Wartend',       color: 'orange' },
+  approved:     { label: 'Genehmigt',     color: 'green'  },
+  rejected:     { label: 'Abgelehnt',     color: 'red'    },
+
+  // ── Lead ──────────────────────────────
+  contacted:    { label: 'Kontaktiert',   color: 'blue'   },
+  qualified:    { label: 'Qualifiziert',  color: 'purple' },
+  converted:    { label: 'Konvertiert',   color: 'green'  },
+  lost:         { label: 'Verloren',      color: 'red'    },
+
+  // ── Mandate ───────────────────────────
+  valid:        { label: 'Gültig',        color: 'green'  },
+  invalid:      { label: 'Ungültig',      color: 'red'    },
+
+  // ── Task / General ────────────────────
+  open:         { label: 'Offen',         color: 'blue'   },
+  completed:    { label: 'Erledigt',      color: 'green'  },
+
+  // ── Priority ──────────────────────────
+  high:         { label: 'Hoch',          color: 'red'    },
+  medium:       { label: 'Mittel',        color: 'amber'  },
+  low:          { label: 'Tief',          color: 'gray'   },
+  urgent:       { label: 'Dringend',      color: 'red'    },
+}
+
+const COLOR_CLASSES = {
+  green:  'bg-green-100  text-green-800  border-green-200',
+  blue:   'bg-blue-100   text-blue-800   border-blue-200',
+  amber:  'bg-amber-100  text-amber-800  border-amber-200',
+  orange: 'bg-orange-100 text-orange-800 border-orange-200',
+  red:    'bg-red-100    text-red-800    border-red-200',
+  purple: 'bg-purple-100 text-purple-800 border-purple-200',
+  gray:   'bg-gray-100   text-gray-600   border-gray-200',
+  teal:   'bg-teal-100   text-teal-800   border-teal-200',
+}
+
+const DOT_CLASSES = {
+  green:  'bg-green-500',
+  blue:   'bg-blue-500',
+  amber:  'bg-amber-500',
+  orange: 'bg-orange-500',
+  red:    'bg-red-500',
+  purple: 'bg-purple-500',
+  gray:   'bg-gray-400',
+  teal:   'bg-teal-500',
+}
+
+export default function StatusBadge({ status, label, size = 'md', dot = false, className }) {
+  const key = (status || '').toLowerCase().replace(/ /g, '_')
+  const config = STATUS_MAP[key] || { label: status || '–', color: 'gray' }
+  const displayLabel = label || config.label
+  const color = config.color
+
   return (
-    <Badge variant="outline" className={cn("text-xs font-medium border", style)}>
-      {label}
-    </Badge>
-  );
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border font-medium whitespace-nowrap',
+        size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs',
+        COLOR_CLASSES[color] || COLOR_CLASSES.gray,
+        className
+      )}
+    >
+      {dot && (
+        <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', DOT_CLASSES[color] || DOT_CLASSES.gray)} />
+      )}
+      {displayLabel}
+    </span>
+  )
 }
