@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { FileText, AlertCircle, ListTodo, FileWarning, ExternalLink, Shield, ClipboardList, AlertTriangle, Clock } from 'lucide-react'
+import { FileText, AlertCircle, ListTodo, FileWarning, ExternalLink, Shield, ClipboardList, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import PriorityBadge, { taskPriorityToLevel } from '@/components/shared/PriorityBadge'
+import { PageHeader, ConfirmDialog } from '@/components/shared'
 
 // Contract workflow task types
 const CONTRACT_TASK_TYPES = ['renewal', 'health_declaration']
@@ -23,6 +24,7 @@ export default function Tasks() {
   const [formData, setFormData] = useState({ status: '', notes: '', file: null, due_date: '', completion_date: '', assigned_to: '' })
   const [currentUser, setCurrentUser] = useState(null)
   const [categoryTab, setCategoryTab] = useState('admin')
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   // Fetch current user
   useEffect(() => {
@@ -125,10 +127,10 @@ export default function Tasks() {
 
   return (
     <div>
-      <div className="mb-6">
-         <h1 className="text-3xl font-bold">Aufgaben</h1>
-         <p className="text-muted-foreground mt-1">{tasks.filter(t => t.status === 'open' || t.status === 'in_progress').length} offene & in Bearbeitung</p>
-       </div>
+      <PageHeader
+        title="Aufgaben"
+        subtitle={`${tasks.filter(t => t.status === 'open' || t.status === 'in_progress').length} offene & in Bearbeitung`}
+      />
 
       {/* Category Tabs */}
       <div className="flex items-center gap-1 mb-6 border-b border-border">
@@ -422,11 +424,7 @@ export default function Tasks() {
           <DialogFooter className="flex justify-between">
             <Button
               variant="destructive"
-              onClick={() => {
-                if (confirm('Aufgabe wirklich löschen?')) {
-                  deleteMutation.mutate(selectedTask.id)
-                }
-              }}
+              onClick={() => setConfirmDelete(true)}
               disabled={deleteMutation.isPending}
             >
               Löschen
@@ -440,6 +438,17 @@ export default function Tasks() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Aufgabe löschen"
+        description="Diese Aufgabe wird unwiderruflich gelöscht. Fortfahren?"
+        confirmLabel="Löschen"
+        variant="danger"
+        onConfirm={() => {
+          if (selectedTask) deleteMutation.mutate(selectedTask.id)
+        }}
+      />
     </div>
   )
 }

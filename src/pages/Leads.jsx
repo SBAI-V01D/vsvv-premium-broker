@@ -2,13 +2,13 @@ import React, { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, TrendingUp, Users, Clock, Search, Target, AlertCircle } from 'lucide-react'
 import LeadForm from '@/components/leads/LeadForm'
 import LeadImportExport from '@/components/leads/LeadImportExport'
+import { PageHeader, KpiCard, StandardTable, StatusBadge } from '@/components/shared'
 
 // Only ACTIVE pipeline stages — converted/lost are excluded from the main view
 const PIPELINE_STAGES = [
@@ -122,22 +122,21 @@ export default function Leads() {
 
   return (
     <div className="space-y-6">
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Lead Pipeline</h1>
-          <p className="text-sm text-muted-foreground mt-1">Nur echte Akquisitions-Leads – aktive Kunden werden automatisch ausgeblendet</p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <LeadImportExport leads={trueLeads} onImport={async (records) => {
-            for (const r of records) await createMutation.mutateAsync(r).catch(() => {})
-            queryClient.invalidateQueries({ queryKey: ['leads'] })
-          }} />
-          <Button onClick={() => { setEditingLead(null); setShowForm(true) }} className="gap-2">
-            <Plus className="w-4 h-4" /> Neuer Lead
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Lead Pipeline"
+        subtitle="Nur echte Akquisitions-Leads – aktive Kunden werden automatisch ausgeblendet"
+        actions={
+          <>
+            <LeadImportExport leads={trueLeads} onImport={async (records) => {
+              for (const r of records) await createMutation.mutateAsync(r).catch(() => {})
+              queryClient.invalidateQueries({ queryKey: ['leads'] })
+            }} />
+            <Button onClick={() => { setEditingLead(null); setShowForm(true) }} className="gap-2">
+              <Plus className="w-4 h-4" /> Neuer Lead
+            </Button>
+          </>
+        }
+      />
 
       {/* EXCLUDED NOTICE */}
       {excludedCount > 0 && (
@@ -165,22 +164,10 @@ export default function Leads() {
 
       {/* KPI ROW */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: 'Total Pipeline', value: activePipelineLeads.length, icon: Users, color: 'text-blue-600' },
-          { label: 'Conversion Rate', value: `${conversionRate}%`, icon: Target, color: 'text-green-600' },
-          { label: 'Konvertiert', value: converted, icon: TrendingUp, color: 'text-emerald-600' },
-          { label: 'Ø Tage im Funnel', value: '–', icon: Clock, color: 'text-amber-600' },
-        ].map(kpi => (
-          <Card key={kpi.label} className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <kpi.icon className={`w-4 h-4 ${kpi.color}`} />
-                <span className="text-xs text-muted-foreground font-medium">{kpi.label}</span>
-              </div>
-              <p className={`text-2xl font-bold ${kpi.color}`}>{kpi.value}</p>
-            </CardContent>
-          </Card>
-        ))}
+        <KpiCard label="Total Pipeline" value={activePipelineLeads.length} icon={Users} color="blue" />
+        <KpiCard label="Conversion Rate" value={`${conversionRate}%`} icon={Target} color="green" />
+        <KpiCard label="Konvertiert" value={converted} icon={TrendingUp} color="green" />
+        <KpiCard label="Ø Tage im Funnel" value="–" icon={Clock} color="amber" />
       </div>
 
       {/* FILTERS + LIST */}
@@ -211,48 +198,37 @@ export default function Leads() {
           </Select>
         </div>
 
-        <Card className="shadow-sm">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b bg-muted/30">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Name</th>
-                    <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">E-Mail</th>
-                    <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Quelle</th>
-                    <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Berater</th>
-                    <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide text-muted-foreground">Status</th>
-                    <th className="px-4 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLeads.length === 0 ? (
-                    <tr><td colSpan={6} className="text-center py-12 text-muted-foreground">Keine Leads in dieser Ansicht</td></tr>
-                  ) : filteredLeads.map(lead => (
-                    <tr key={lead.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors cursor-pointer group" onClick={() => { setEditingLead(lead); setShowForm(true) }}>
-                      <td className="px-4 py-3 font-medium text-blue-600 group-hover:underline">{lead.first_name ? `${lead.first_name} ${lead.last_name}` : lead.name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{lead.email}</td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded-full bg-muted text-xs">{SOURCE_LABELS[lead.source] || lead.source}</span>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs">{lead.advisor_name || '—'}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${ALL_STATUS_COLORS[lead.status]}`}>
-                          {ALL_STATUS_LABELS[lead.status]}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setEditingLead(lead); setShowForm(true) }}>
-                          Bearbeiten
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        <StandardTable
+          data={filteredLeads}
+          emptyTitle="Keine Leads in dieser Ansicht"
+          emptyDescription="Filter anpassen oder neuen Lead erfassen."
+          onRowClick={(lead) => { setEditingLead(lead); setShowForm(true) }}
+          columns={[
+            {
+              key: 'first_name',
+              label: 'Name',
+              render: (_, lead) => (
+                <span className="font-medium text-primary">
+                  {lead.first_name ? `${lead.first_name} ${lead.last_name}` : lead.name}
+                </span>
+              ),
+            },
+            { key: 'email', label: 'E-Mail', render: (v) => <span className="text-muted-foreground">{v}</span> },
+            {
+              key: 'source',
+              label: 'Quelle',
+              render: (v) => (
+                <span className="px-2 py-0.5 rounded-full bg-muted text-xs">{SOURCE_LABELS[v] || v}</span>
+              ),
+            },
+            { key: 'advisor_name', label: 'Berater', render: (v) => <span className="text-xs text-muted-foreground">{v || '—'}</span> },
+            {
+              key: 'status',
+              label: 'Status',
+              render: (v) => <StatusBadge status={v} label={ALL_STATUS_LABELS[v]} />,
+            },
+          ]}
+        />
       </div>
 
       <LeadForm

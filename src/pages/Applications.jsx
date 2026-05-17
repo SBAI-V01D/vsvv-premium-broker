@@ -2,8 +2,8 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Search, MoreHorizontal, Edit, Trash2, FileText, TrendingUp, Clock, CheckCircle, Calendar, Building2, Tag, Archive, Inbox } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Plus, Search, Edit, Trash2, FileText, TrendingUp, Clock, CheckCircle, Calendar, Building2, Tag, Archive, Inbox } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 
 // Helper: formatDate mit Sonderfall für "unbegrenzt"
 const formatDateSafe = (dateStr) => {
@@ -14,12 +14,13 @@ const formatDateSafe = (dateStr) => {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import ApplicationForm from '../components/applications/ApplicationForm'
 import ApplicationDocumentsPanel from '../components/applications/ApplicationDocumentsPanel'
 import StatusBadge from '@/components/status/StatusBadge'
 import StatusChangeDialog from '@/components/status/StatusChangeDialog'
+import { PageHeader, KpiCard, ActionMenu, ConfirmDialog } from '@/components/shared'
 import SparteFilterButtons from '../components/applications/SparteFilterButtons'
 import { getSparteLabel, ALL_SPARTEN } from '@/lib/insuranceSparten'
 
@@ -167,101 +168,38 @@ export default function Applications() {
   const getStatusLabel = (app) => getStatusDef(app)?.label || getStatus(app)
   const formatDate = formatDateSafe
 
+  const [confirmDeleteApp, setConfirmDeleteApp] = useState(null)
+
   return (
     <div>
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Versicherungsanträge</h1>
-          <p className="text-muted-foreground mt-1">{pendingApps.length} pendente · {archivedApps.length} archivierte Anträge</p>
-        </div>
-        <div className="flex gap-2">
+      <PageHeader
+        title="Versicherungsanträge"
+        subtitle={`${pendingApps.length} pendente · ${archivedApps.length} archivierte Anträge`}
+        actions={
           <Button onClick={() => { setEditing(null); setShowForm(true) }}>
             <Plus className="w-4 h-4 mr-2" /> Neuer Antrag
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{activeApps.length}</p>
-                <p className="text-xs text-muted-foreground">Total Anträge (aktiv)</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{openApps.length}</p>
-                <p className="text-xs text-muted-foreground">Offen / In Bearbeitung</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{approvedApps.length}</p>
-                <p className="text-xs text-muted-foreground">Angenommen / Policiert</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{closureRate}%</p>
-                <p className="text-xs text-muted-foreground">Abschlussquote</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">CHF {totalCommission.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
-                <p className="text-xs text-muted-foreground">Realisierte Provision (policiert)</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-cyan-50 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-cyan-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">CHF {Number(avgCommission).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                <p className="text-xs text-muted-foreground">Ø Provision (policierte Anträge)</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <KpiCard label="Total aktiv" value={activeApps.length} icon={FileText} color="blue" />
+        <KpiCard label="Offen / In Bearbeitung" value={openApps.length} icon={Clock} color="amber" />
+        <KpiCard label="Angenommen / Policiert" value={approvedApps.length} icon={CheckCircle} color="green" />
+        <KpiCard label="Abschlussquote" value={`${closureRate}%`} icon={TrendingUp} color="purple" />
+        <KpiCard
+          label="Realisierte Provision"
+          value={`CHF ${totalCommission.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+          icon={TrendingUp}
+          color="green"
+        />
+        <KpiCard
+          label="Ø Provision"
+          value={`CHF ${Number(avgCommission).toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+          icon={TrendingUp}
+          color="blue"
+        />
       </div>
 
       {/* Auswertungs-Button */}
@@ -513,62 +451,20 @@ export default function Applications() {
                       >
                         <FileText className="w-4 h-4" />
                       </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {app.customer_id && (
-                            <DropdownMenuItem onClick={() => navigate(`/kunden/${app.customer_id}`)}>
-                              👤 Kunde öffnen
-                            </DropdownMenuItem>
-                          )}
-                          {(() => {
-                            const cust = getCustomer(app.customer_id)
-                            return cust?.email ? (
-                              <DropdownMenuItem asChild>
-                                <a href={`mailto:${cust.email}`}>
-                                  ✉️ E-Mail
-                                </a>
-                              </DropdownMenuItem>
-                            ) : null
-                          })()}
-                          {(() => {
-                            const cust = getCustomer(app.customer_id)
-                            return cust?.phone ? (
-                              <DropdownMenuItem onClick={() => window.location.href = `tel:${cust.phone}`}>
-                                ☎️ Anrufen
-                              </DropdownMenuItem>
-                            ) : null
-                          })()}
-                          <DropdownMenuItem onClick={() => setStatusChanging(app)}>Status ändern</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => { setEditing(app); setShowForm(true) }}>
-                            <Edit className="w-4 h-4 mr-2" /> Bearbeiten
-                          </DropdownMenuItem>
-                          {activeTab === 'pending' && !ACCEPTED_KEYS.includes(getStatus(app)) && (
-                            <DropdownMenuItem onClick={() => {
-                              updateMutation.mutate({ id: app.id, data: { custom_status: 'angenommen', status_changed_at: new Date().toISOString() } })
-                            }}>
-                              <Archive className="w-4 h-4 mr-2" /> Archivieren (angenommen)
-                            </DropdownMenuItem>
-                          )}
-                          {activeTab === 'archived' && ARCHIVED_KEYS.includes(getStatus(app)) && (
-                            <DropdownMenuItem onClick={() => {
-                              updateMutation.mutate({ id: app.id, data: { custom_status: 'in_pruefung', status_changed_at: new Date().toISOString() } })
-                            }}>
-                              <Inbox className="w-4 h-4 mr-2" /> Zurück zu Pendent
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => { if (confirm('Antrag wirklich löschen?')) deleteMutation.mutate(app.id) }}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" /> Löschen
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <ActionMenu items={[
+                        ...(app.customer_id ? [{ label: 'Kunde öffnen', onClick: () => navigate(`/kunden/${app.customer_id}`) }] : []),
+                        ...(getCustomer(app.customer_id)?.email ? [{ label: 'E-Mail senden', onClick: () => window.location.href = `mailto:${getCustomer(app.customer_id).email}` }] : []),
+                        ...(getCustomer(app.customer_id)?.phone ? [{ label: 'Anrufen', onClick: () => window.location.href = `tel:${getCustomer(app.customer_id).phone}` }] : []),
+                        { label: 'Status ändern', onClick: () => setStatusChanging(app), separator: true },
+                        { label: 'Bearbeiten', icon: Edit, onClick: () => { setEditing(app); setShowForm(true) } },
+                        ...(activeTab === 'pending' && !ACCEPTED_KEYS.includes(getStatus(app))
+                          ? [{ label: 'Archivieren (angenommen)', icon: Archive, onClick: () => updateMutation.mutate({ id: app.id, data: { custom_status: 'angenommen', status_changed_at: new Date().toISOString() } }) }]
+                          : []),
+                        ...(activeTab === 'archived' && ARCHIVED_KEYS.includes(getStatus(app))
+                          ? [{ label: 'Zurück zu Pendent', icon: Inbox, onClick: () => updateMutation.mutate({ id: app.id, data: { custom_status: 'in_pruefung', status_changed_at: new Date().toISOString() } }) }]
+                          : []),
+                        { label: 'Löschen', icon: Trash2, variant: 'destructive', separator: true, onClick: () => setConfirmDeleteApp(app) },
+                      ]} />
                     </div>
                   </div>
 
@@ -589,6 +485,16 @@ export default function Applications() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={!!confirmDeleteApp}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteApp(null) }}
+        title="Antrag löschen"
+        description="Dieser Antrag wird unwiderruflich gelöscht. Fortfahren?"
+        confirmLabel="Löschen"
+        variant="danger"
+        onConfirm={() => { if (confirmDeleteApp) deleteMutation.mutate(confirmDeleteApp.id) }}
+      />
 
       {/* Status Dialog */}
       <StatusChangeDialog
