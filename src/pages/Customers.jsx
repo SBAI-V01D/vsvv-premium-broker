@@ -1,20 +1,22 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Search, MoreHorizontal, Edit, Trash2, ChevronDown, ChevronUp, User, Building2, ArrowRight, Upload, Download } from 'lucide-react'
+import { Plus, Edit, Trash2, ChevronDown, ChevronUp, User, Building2, ArrowRight, Upload, Download } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+// DropdownMenu retained for "Neuer Kunde" type selector
 import CustomerForm from '../components/customers/CustomerForm'
 import CompanyForm from '../components/customers/CompanyForm'
 import FastImportWizard from '../components/customers/FastImportWizard'
-import EmailLink from '../components/common/EmailLink'
-import { STATUS_LABELS, FAMILY_ROLE_LABELS, label } from '@/lib/labels'
+import { FAMILY_ROLE_LABELS, label } from '@/lib/labels'
 import { searchCustomers } from '@/lib/customerSearch'
+import PageHeader from '@/components/shared/PageHeader'
+import FilterBar from '@/components/shared/FilterBar'
+import EmptyState from '@/components/shared/EmptyState'
+import ActionMenu from '@/components/shared/ActionMenu'
 
 export default function Customers() {
   const navigate = useNavigate()
@@ -170,85 +172,63 @@ export default function Customers() {
     link.click()
   }
 
+  const privateCount = primaryCustomers.filter(c => c.customer_type !== 'business').length
+  const businessCount = primaryCustomers.filter(c => c.customer_type === 'business').length
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Kunden</h1>
-          <p className="text-muted-foreground mt-1">{primaryCustomers.length} Hauptkunden</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="w-4 h-4 mr-2" /> Exportieren
-          </Button>
-          <Button variant="outline" onClick={() => setShowImport(true)}>
-            <Upload className="w-4 h-4 mr-2" /> Importieren
-          </Button>
-          {/* DISABLED: Unsafe cleanup removed */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" /> Neuer Kunde
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}>
-                <User className="w-4 h-4 mr-2 text-blue-600" /> Privatkunde
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}>
-                <Building2 className="w-4 h-4 mr-2 text-purple-600" /> Firmenkunde
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+      <PageHeader
+        title="Kunden"
+        subtitle={`${primaryCustomers.length} Hauptkunden`}
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={handleExport}>
+              <Download className="w-4 h-4 mr-1.5" /> Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
+              <Upload className="w-4 h-4 mr-1.5" /> Import
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm">
+                  <Plus className="w-4 h-4 mr-1.5" /> Neuer Kunde
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}>
+                  <User className="w-4 h-4 mr-2 text-blue-600" /> Privatkunde
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}>
+                  <Building2 className="w-4 h-4 mr-2 text-purple-600" /> Firmenkunde
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        }
+      />
 
-      {/* Kundentyp Filter */}
-      <div className="flex gap-2 mb-4">
-        {[
-          { key: 'all', label: 'Alle' },
-          { key: 'private', label: 'Privatkunden' },
-          { key: 'business', label: 'Unternehmen' },
-        ].map(f => (
-          <button
-            key={f.key}
-            onClick={() => setFilterType(f.key)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-              filterType === f.key
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-background text-muted-foreground border-border hover:bg-muted'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Name, E-Mail, Stadt, Kundennummer... (Fuzzy-Suche)"
+        filters={[
+          { key: 'all', label: 'Alle', count: primaryCustomers.length },
+          { key: 'private', label: 'Privatkunden', count: privateCount },
+          { key: 'business', label: 'Unternehmen', count: businessCount },
+        ]}
+        activeFilter={filterType}
+        onFilterChange={setFilterType}
+      />
 
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Name, E-Mail, Stadt, Beruf, Kundennummer... (Fuzzy-Suche)"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-9"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-6">
+      <div className="space-y-3">
         {filtered.length === 0 ? (
           <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              Keine Kunden gefunden
+            <CardContent className="p-0">
+              <EmptyState
+                icon={User}
+                title="Keine Kunden gefunden"
+                description={search ? 'Suche anpassen oder Filter zurücksetzen.' : 'Noch keine Kunden erfasst.'}
+              />
             </CardContent>
           </Card>
         ) : (
@@ -315,31 +295,13 @@ export default function Customers() {
                        onClick={() => navigate(`/kunden/${customer.id}/360`)}
                        className="flex-shrink-0"
                      >
-                       <ArrowRight className="w-4 h-4" /> 360
+                       <ArrowRight className="w-4 h-4 mr-1" /> 360
                      </Button>
 
-                    <DropdownMenu>
-                       <DropdownMenuTrigger asChild>
-                         <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                           <MoreHorizontal className="w-4 h-4" />
-                         </Button>
-                       </DropdownMenuTrigger>
-                       <DropdownMenuContent align="end">
-                         <DropdownMenuItem onClick={() => { setEditing(customer); setShowForm(true); }}>
-                           <Edit className="w-4 h-4 mr-2" /> Bearbeiten
-                         </DropdownMenuItem>
-                         <DropdownMenuItem
-                           className="text-destructive"
-                           onClick={() => {
-                             if (confirm('Kunde und alle Familienmitglieder löschen?')) {
-                               deleteMutation.mutate(customer.id)
-                             }
-                           }}
-                         >
-                           <Trash2 className="w-4 h-4 mr-2" /> Löschen
-                         </DropdownMenuItem>
-                       </DropdownMenuContent>
-                     </DropdownMenu>
+                     <ActionMenu items={[
+                       { label: 'Bearbeiten', icon: Edit, onClick: () => { setEditing(customer); setShowForm(true) } },
+                       { label: 'Löschen', icon: Trash2, variant: 'destructive', separator: true, onClick: () => { if (confirm('Kunde und alle Familienmitglieder löschen?')) deleteMutation.mutate(customer.id) } },
+                     ]} />
                   </div>
 
                   {/* FAMILIENMITGLIEDER */}
@@ -374,28 +336,10 @@ export default function Customers() {
                             Familienmitglied
                           </span>
 
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => { setEditing(member); setShowForm(true); }}>
-                                <Edit className="w-4 h-4 mr-2" /> Bearbeiten
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => {
-                                  if (confirm('Familienmitglied löschen?')) {
-                                    deleteMutation.mutate(member.id)
-                                  }
-                                }}
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" /> Löschen
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <ActionMenu items={[
+                            { label: 'Bearbeiten', icon: Edit, onClick: () => { setEditing(member); setShowForm(true) } },
+                            { label: 'Löschen', icon: Trash2, variant: 'destructive', separator: true, onClick: () => { if (confirm('Familienmitglied löschen?')) deleteMutation.mutate(member.id) } },
+                          ]} />
                         </div>
                       ))}
                     </div>

@@ -2,18 +2,20 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Search, MoreHorizontal, Edit, Trash2, FileText, Calendar, Building2, Tag, Download, Upload } from 'lucide-react'
+import { Plus, Edit, Trash2, FileText, Calendar, Building2, Tag, Download, Upload, User } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import ContractForm from '../components/contracts/ContractForm'
 import ContractDocumentsPanel from '../components/contracts/ContractDocumentsPanel'
 import PolicyUploadWizard from '../components/contracts/PolicyUploadWizard'
 import { getSparteLabel } from '@/lib/insuranceSparten'
 import StatusBadge from '@/components/status/StatusBadge'
 import StatusChangeDialog from '@/components/status/StatusChangeDialog'
+import PageHeader from '@/components/shared/PageHeader'
+import FilterBar from '@/components/shared/FilterBar'
+import EmptyState from '@/components/shared/EmptyState'
+import ActionMenu from '@/components/shared/ActionMenu'
 
 export default function Contracts() {
   const navigate = useNavigate()
@@ -191,38 +193,32 @@ export default function Contracts() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Verträge ({filtered.length})</h1>
-          <p className="text-muted-foreground mt-1">{contracts.length} Verträge insgesamt</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="w-4 h-4 mr-2" /> Exportieren
-          </Button>
-          <Button variant="outline" onClick={() => setShowImport(true)}>
-            <Upload className="w-4 h-4 mr-2" /> Importieren
-          </Button>
-          <Button variant="outline" onClick={() => setShowUploadWizard(true)} className="gap-2">
-            <FileText className="w-4 h-4" /> Police hochladen
-          </Button>
-          <Button onClick={() => { setEditing(null); setShowForm(true); }}>
-            <Plus className="w-4 h-4 mr-2" /> Neuer Vertrag
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={`Verträge (${filtered.length})`}
+        subtitle={`${contracts.length} Verträge insgesamt`}
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={handleExport}>
+              <Download className="w-4 h-4 mr-1.5" /> Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
+              <Upload className="w-4 h-4 mr-1.5" /> Import
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowUploadWizard(true)}>
+              <FileText className="w-4 h-4 mr-1.5" /> Police
+            </Button>
+            <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }}>
+              <Plus className="w-4 h-4 mr-1.5" /> Neuer Vertrag
+            </Button>
+          </>
+        }
+      />
 
-      <div className="flex flex-wrap gap-3 mb-6">
-        <div className="relative flex-1 min-w-48">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Suche (Kunde, Versicherer, Police...)"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-      </div>
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Suche (Kunde, Versicherer, Police...)"
+      />
 
       <Card>
         <CardContent className="p-0">
@@ -237,7 +233,11 @@ export default function Contracts() {
           </div>
 
           {filtered.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground">Keine Verträge gefunden</div>
+            <EmptyState
+              icon={FileText}
+              title="Keine Verträge gefunden"
+              description={search ? 'Suche anpassen oder Filter zurücksetzen.' : 'Noch keine Verträge erfasst.'}
+            />
           ) : (
             filtered.map((contract, idx) => {
               const docsOpen = expandedDocs === contract.id
@@ -349,51 +349,21 @@ export default function Contracts() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground"
-                        onClick={() => setExpandedDocs(docsOpen ? null : contract.id)}
-                        title="Dokumente"
-                      >
-                        <FileText className="w-4 h-4" />
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {contract.customer_id && (
-                            <DropdownMenuItem onClick={() => navigate(`/kunden/${contract.customer_id}`)}>
-                              👤 Kunde öffnen
-                            </DropdownMenuItem>
-                          )}
-                          {customer?.email && (
-                            <DropdownMenuItem asChild>
-                              <a href={`mailto:${customer.email}`}>
-                                ✉️ E-Mail
-                              </a>
-                            </DropdownMenuItem>
-                          )}
-                          {customer?.phone && (
-                            <DropdownMenuItem onClick={() => window.location.href = `tel:${customer.phone}`}>
-                              ☎️ Anrufen
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem onClick={() => setStatusChanging(contract)}>Status ändern</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => { setEditing(contract); setShowForm(true) }}>
-                            <Edit className="w-4 h-4 mr-2" /> Bearbeiten
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => { if (confirm('Vertrag wirklich löschen?')) deleteMutation.mutate(contract.id) }}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" /> Löschen
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                     <Button
+                       variant="ghost"
+                       size="icon"
+                       className="h-7 w-7 text-muted-foreground"
+                       onClick={() => setExpandedDocs(docsOpen ? null : contract.id)}
+                       title="Dokumente"
+                     >
+                       <FileText className="w-4 h-4" />
+                     </Button>
+                     <ActionMenu items={[
+                       ...(contract.customer_id ? [{ label: 'Kunde öffnen', icon: User, onClick: () => navigate(`/kunden/${contract.customer_id}`) }] : []),
+                       { label: 'Status ändern', onClick: () => setStatusChanging(contract) },
+                       { label: 'Bearbeiten', icon: Edit, onClick: () => { setEditing(contract); setShowForm(true) } },
+                       { label: 'Löschen', icon: Trash2, variant: 'destructive', separator: true, onClick: () => { if (confirm('Vertrag wirklich löschen?')) deleteMutation.mutate(contract.id) } },
+                     ]} />
                     </div>
                   </div>
 
