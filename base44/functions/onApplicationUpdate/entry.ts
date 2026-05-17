@@ -97,17 +97,12 @@ Deno.serve(async (req) => {
 
     // ── 3. AUTOMATISCHE VERTRAGSERSTELLUNG + ERWARTETE PROVISION bei Annahme ──
     if (statusChanged && isNewAcceptance && app.customer_id) {
-      // Duplikatschutz: prüfen über linked_application_id (direkt — kein race-window)
-      const [existingByLink, existingByCustomer] = await Promise.all([
-        base44.asServiceRole.entities.Contract.filter({ linked_application_id: app.id }),
-        base44.asServiceRole.entities.Contract.filter({ customer_id: app.customer_id }),
-      ]);
-      const existingContracts = [...existingByLink, ...existingByCustomer];
-
-      const alreadyLinked = existingContracts.some(c =>
-        c.linked_application_id === app.id ||
-        (app.linked_contract_id && c.id === app.linked_contract_id)
-      );
+      // Duplikatschutz: nur prüfen ob für DIESEN Antrag bereits ein Vertrag existiert
+      // Felder: source_application_id (auf Contract) ODER linked_contract_id (auf Application)
+      const existingBySource = await base44.asServiceRole.entities.Contract.filter({ source_application_id: app.id });
+      const alreadyLinked =
+        existingBySource.length > 0 ||
+        !!(app.linked_contract_id);
 
       const premiumMonthly = app.estimated_premium_monthly || null;
       const premiumYearly = app.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null);
@@ -115,10 +110,18 @@ Deno.serve(async (req) => {
       if (!alreadyLinked) {
         // Guard: insurance_type und organization_id sind required auf Contract
         const insuranceType = app.insurance_type || app.sparte || 'other';
-        const organizationId = app.organization_id || null;
-        if (!organizationId) {
-          console.warn(`[onApplicationUpdate] Kein organization_id auf Antrag ${app.id} — Vertragserstellung übersprungen`);
-          return Response.json({ ok: true, skipped: 'no organization_id', application_id: app.id });
+        let finalOrgId = (app.organization_id && app.organization_id.trim()) ? app.organization_id : null;
+        if (!finalOrgId) {
+          // Fallback: organization_id vom Kunden holen
+          const customerRec = await base44.asServiceRole.entities.Customer.filter({ id: app.customer_id })
+            .then(r => r[0] || null).catch(() => null);
+          finalOrgId = (customerRec?.organization_id && customerRec.organization_id.trim()) ? customerRec.organization_id : null;
+          if (!finalOrgId) {
+            console.warn(`[onApplicationUpdate] Kein organization_id auf Antrag ${app.id} und Kunde — Vertragserstellung übersprungen`);
+            return Response.json({ ok: true, skipped: 'no organization_id', application_id: app.id });
+          }
+          // organization_id auf Antrag reparieren
+          await base44.asServiceRole.entities.Application.update(app.id, { organization_id: finalOrgId });
         }
 
         const newContract = await base44.asServiceRole.entities.Contract.create({
@@ -126,7 +129,8 @@ Deno.serve(async (req) => {
           customer_name: app.customer_name,
           primary_customer_id: app.primary_customer_id || app.customer_id,
           is_family_member: app.is_family_member || false,
-          organization_id: organizationId,
+          organization_id: finalOrgId,
+          source_application_id: app.id,
           insurer: app.insurer,
           insurance_type: insuranceType,
           sparte: app.sparte || insuranceType,
@@ -177,7 +181,7 @@ Deno.serve(async (req) => {
               source_application_id: app.id,
               advisor_id: app.advisor_id || '',
               advisor_name: app.assigned_broker || '',
-              organization_id: organizationId,
+              organization_id: finalOrgId,
               organization_name: '',
               customer_id: app.customer_id,
               customer_name: app.customer_name || '',
