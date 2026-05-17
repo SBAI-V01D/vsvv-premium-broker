@@ -1,401 +1,381 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+/**
+ * SMART DOCUMENT ANALYSIS — Enterprise Edition
+ *
+ * Ablauf:
+ * 1. KI extrahiert alle relevanten Felder aus dem Dokument
+ * 2. Kundenerkennung nach Priorität (kein hartes Auto-Matching über Namen allein)
+ * 3. Gibt strukturierte Analyse-Ergebnisse zurück für manuelle Bestätigung im UI
+ *
+ * WICHTIG: Diese Funktion erstellt KEINE Kunden, Anträge oder Verträge.
+ * Sie gibt nur Vorschläge zurück. Die Erstellung erfolgt nach manueller Bestätigung.
+ */
+
 Deno.serve(async (req) => {
+  const base44 = createClientFromRequest(req);
+
   try {
-    const base44 = createClientFromRequest(req);
-    const { file_url, document_id } = await req.json();
+    const { file_url, document_type } = await req.json();
 
     if (!file_url) {
       return Response.json({ error: 'file_url erforderlich' }, { status: 400 });
     }
 
-    // ============================================================
-    // INTELLIGENCE: PRIORITÄT 1 → 5 (Familie-zentrisch, nicht Person-zentrisch)
-    // ============================================================
+    // ================================================================
+    // SCHRITT 1: KI-EXTRAKTION
+    // ================================================================
+    let extracted = null;
+    try {
+      extracted = await base44.asServiceRole.integrations.Core.InvokeLLM({
+        prompt: `Analysiere dieses Versicherungsdokument präzise. Dokumenttyp-Hinweis: "${document_type || 'unbekannt'}".
 
-    // Lade alle Daten
-    const [allCustomers, allContracts] = await Promise.all([
-      base44.asServiceRole.entities.Customer.list(null, 500),
-      base44.asServiceRole.entities.Contract.list(null, 1000)
-    ]);
+Extrahiere ALLE folgenden Felder soweit im Dokument vorhanden:
 
-    const insights = {
-      // Phase Information
-      detectionPhase: null,
-      requiresKIAnalysis: false,
+DOKUMENTINFO:
+- document_subtype: Erkannter Untertyp: "neuantrag" (neuer Antrag), "aenderungsantrag" (Änderung/Mutation), "erneuerungsantrag" (Verlängerung/Erneuerung), "police" (fertige Police), "kuendigung", "offerte", "rechnung", "korrespondenz"
+- document_confidence: Konfidenz der Dokumenterkennung (0.0–1.0)
 
-      // Erkannte Daten
-      extractedData: null,
+VERSICHERUNGSNEHMER (Vertragsinhaber):
+- policy_holder_first_name: Vorname des Versicherungsnehmers
+- policy_holder_last_name: Nachname des Versicherungsnehmers
+- policy_holder_birthdate: Geburtsdatum VN im Format YYYY-MM-DD
+- policy_holder_email: E-Mail VN
+- policy_holder_phone: Telefon VN
+- policy_holder_street: Strasse + Nr VN
+- policy_holder_zip_code: PLZ VN
+- policy_holder_city: Ort VN
 
-      // PRIORITÄT 1: Familie erkannt?
-      familyDetected: null,
-      matchedPrimaryCustomer: null,
+VERSICHERTE PERSON (falls abweichend vom VN):
+- insured_first_name: Vorname versicherte Person
+- insured_last_name: Nachname versicherte Person
+- insured_birthdate: Geburtsdatum versicherte Person YYYY-MM-DD
+- insured_ahv_number: AHV-Nummer versicherte Person
+- insured_is_different: true wenn versicherte Person ≠ Versicherungsnehmer, sonst false
 
-      // PRIORITÄT 2: Person erkannt?
-      matchedPerson: null,
-      personIsInFamily: false,
+VERSICHERUNGSDATEN:
+- insurer: Versicherungsgesellschaft (z.B. "CSS", "Helsana", "AXA", "Zurich", "Swica", "Sanitas")
+- policy_number: Policennummer oder Antragsnummer
+- insurance_type: EXAKTER Wert aus: "health", "life", "property", "liability", "motor", "other"
+  Regeln: KVG/Krankenpflege/Zusatz/Spital/VVG-Gesundheit = "health"; Auto/Kasko/MF = "motor"; Hausrat/Gebäude = "property"; Haftpflicht = "liability"; Leben/Rente = "life"; sonst "other"
+- sparte: Exakte Sparte (z.B. "kvg", "vvg", "uvg", "bvg", "mf", "haftpflicht", "leben", "kvg_vvg")
+- product: Produktname/Tarif (z.B. "Hausarztmodell", "COMPLETA PLUS", "TOP")
+- franchise: Franchise-Betrag in CHF falls vorhanden (z.B. 300, 500, 1000)
+- model: Versicherungsmodell (z.B. "Hausarztmodell", "Telmed", "Standard")
+- coverage_type: Deckungstyp/Kategorie (z.B. "Erwachsene ab 26 Jahre", "Kind 0-18 Jahre", "Jugendliche 19-25 Jahre")
 
-      // PRIORITÄT 3: Neues Familienmitglied?
-      suggestedFamilyMember: null,
+PRÄMIEN:
+- premium_monthly: Monatsprämie als Zahl in CHF
+- premium_yearly: Jahresprämie als Zahl in CHF (falls nur Monatsprämie: mal 12)
+- payment_interval: Zahlungsintervall ("monatlich", "vierteljährlich", "halbjährlich", "jährlich")
 
-      // PRIORITÄT 4: Vertrag erkannt?
-      suggestedContract: null,
-      suggestedContractInsurer: null,
-      suggestedContractType: null,
+VERTRAGSDATEN:
+- start_date: Vertragsbeginn YYYY-MM-DD
+- end_date: Vertragsende YYYY-MM-DD (falls vorhanden)
+- contract_duration: Vertragsdauer in Jahren (falls angegeben)
+- health_declaration_required: true/false ob Gesundheitsfragen zu beantworten sind
 
-      // PRIORITÄT 5: Neuer Hauptkontakt?
-      suggestedPrimaryCustomer: null,
+VERMITTLER:
+- broker_name: Name des Vermittlers/Brokers
+- broker_number: Vermittlernummer
 
-      // UI-Hilfsdaten
-      availablePrimaryCustomers: [],
-      availableFamilyMembers: [],
-      
-      // Konfidenz auf jeder Stufe
-      familyConfidence: 0,
-      personConfidence: 0,
-      contractConfidence: 0,
-    };
+PROVISION:
+- commission_estimate: Geschätzte Jahresprovision in CHF (falls angegeben oder berechenbar)
 
-    // ============================================================
-    // KI EXTRAKTION (nur wenn nötig später)
-    // ============================================================
-    let extractedData = null;
+Antworte NUR mit JSON, keine Erklärungen. Felder die nicht gefunden werden: null.`,
+        file_urls: [file_url],
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            document_subtype: { type: ['string', 'null'] },
+            document_confidence: { type: ['number', 'null'] },
+            policy_holder_first_name: { type: ['string', 'null'] },
+            policy_holder_last_name: { type: ['string', 'null'] },
+            policy_holder_birthdate: { type: ['string', 'null'] },
+            policy_holder_email: { type: ['string', 'null'] },
+            policy_holder_phone: { type: ['string', 'null'] },
+            policy_holder_street: { type: ['string', 'null'] },
+            policy_holder_zip_code: { type: ['string', 'null'] },
+            policy_holder_city: { type: ['string', 'null'] },
+            insured_first_name: { type: ['string', 'null'] },
+            insured_last_name: { type: ['string', 'null'] },
+            insured_birthdate: { type: ['string', 'null'] },
+            insured_ahv_number: { type: ['string', 'null'] },
+            insured_is_different: { type: ['boolean', 'null'] },
+            insurer: { type: ['string', 'null'] },
+            policy_number: { type: ['string', 'null'] },
+            insurance_type: { type: ['string', 'null'] },
+            sparte: { type: ['string', 'null'] },
+            product: { type: ['string', 'null'] },
+            franchise: { type: ['number', 'null'] },
+            model: { type: ['string', 'null'] },
+            coverage_type: { type: ['string', 'null'] },
+            premium_monthly: { type: ['number', 'null'] },
+            premium_yearly: { type: ['number', 'null'] },
+            payment_interval: { type: ['string', 'null'] },
+            start_date: { type: ['string', 'null'] },
+            end_date: { type: ['string', 'null'] },
+            contract_duration: { type: ['number', 'null'] },
+            health_declaration_required: { type: ['boolean', 'null'] },
+            broker_name: { type: ['string', 'null'] },
+            broker_number: { type: ['string', 'null'] },
+            commission_estimate: { type: ['number', 'null'] },
+          }
+        },
+        model: 'gemini_3_flash'
+      });
+    } catch (aiErr) {
+      console.error('[smartDocumentAnalysis] KI-Extraktion fehlgeschlagen:', aiErr.message);
+      return Response.json({
+        success: false,
+        error: 'KI-Analyse fehlgeschlagen: ' + aiErr.message,
+        extracted: null,
+        customerMatches: [],
+        detectionPhase: 'extraction_failed',
+      });
+    }
 
-    const extractFromDocument = async () => {
-      if (extractedData) return extractedData;
+    // ================================================================
+    // SCHRITT 2: KUNDENERKENNUNG — STRENGE PRIORITÄTSREIHENFOLGE
+    // Kein hartes Auto-Matching nur über Namen!
+    // ================================================================
 
-      insights.requiresKIAnalysis = true;
+    const allCustomers = await base44.asServiceRole.entities.Customer.list(null, 500);
+    const allContracts = await base44.asServiceRole.entities.Contract.list(null, 1000);
 
-      try {
-        extractedData = await base44.integrations.Core.InvokeLLM({
-          prompt: `Analysiere dieses Versicherungsdokument und extrahiere folgende Felder:
+    const customerMatches = [];
+    let detectionPhase = 'no_match';
 
-1. policy_holder_first_name: Vorname des Versicherungsnehmers
-2. policy_holder_last_name: Nachname des Versicherungsnehmers
-3. insured_first_name: Vorname der versicherten Person (falls abweichend vom VN)
-4. insured_last_name: Nachname der versicherten Person (falls abweichend vom VN)
-5. birthdate: Geburtsdatum im Format YYYY-MM-DD
-6. street: Strasse und Hausnummer
-7. zip_code: Postleitzahl
-8. city: Ort
-9. email: E-Mail-Adresse
-10. phone: Telefonnummer
-11. insurer: Name der Versicherungsgesellschaft (z.B. "Helsana", "CSS", "AXA", "Zurich", "Swica", "Sanitas")
-12. policy_number: Policennummer oder Vertragsnummer
-13. insurance_type: Versicherungsart als EXAKTER Wert aus: "life", "health", "property", "liability", "motor", "other" — Regeln: KVG/Krankenpflege/Zusatz/Spital = "health"; Auto/Kasko/MF = "motor"; Hausrat/Gebäude = "property"; Haftpflicht = "liability"; Lebensversicherung/Rente = "life"; sonst "other"
-14. premium_yearly: Jahresprämie als Zahl in CHF (falls nur Monatsprämie angegeben, mal 12 rechnen)
-15. product: Produktname oder Tarifbezeichnung (z.B. "COMPLETA PLUS", "TOP", "Hausarztversicherung Profit"). Falls mehrere Produkte: das Hauptprodukt nennen.
-16. sparte: Versicherungssparte (z.B. "KVG", "VVG", "UVG", "BVG", "MF", "Haftpflicht", "Leben"). Falls KVG und VVG kombiniert: "KVG/VVG"
-17. start_date: Vertragsbeginn im Format YYYY-MM-DD (z.B. aus "Police gültig ab:", "Vertragsbeginn:", "gültig ab:")
-
-Antworte NUR mit JSON, keine Erklärungen.`,
-          file_urls: [file_url],
-          response_json_schema: {
-            type: 'object',
-            properties: {
-              policy_holder_first_name: { type: ['string', 'null'] },
-              policy_holder_last_name: { type: ['string', 'null'] },
-              insured_first_name: { type: ['string', 'null'] },
-              insured_last_name: { type: ['string', 'null'] },
-              birthdate: { type: ['string', 'null'] },
-              street: { type: ['string', 'null'] },
-              zip_code: { type: ['string', 'null'] },
-              city: { type: ['string', 'null'] },
-              email: { type: ['string', 'null'] },
-              phone: { type: ['string', 'null'] },
-              insurer: { type: ['string', 'null'] },
-              policy_number: { type: ['string', 'null'] },
-              insurance_type: { type: ['string', 'null'] },
-              premium_yearly: { type: ['number', 'null'] },
-              product: { type: ['string', 'null'] },
-              sparte: { type: ['string', 'null'] },
-              start_date: { type: ['string', 'null'] },
-            }
-          },
-          model: 'gemini_3_flash'
-        });
-
-        insights.extractedData = extractedData;
-        return extractedData;
-      } catch (error) {
-        console.error('KI-Extraktion fehlgeschlagen:', error);
-        return null;
-      }
-    };
-
-    // ============================================================
-    // HELPER: Similarity & Matching
-    // ============================================================
-    const similarity = (str1, str2) => {
-      if (!str1 || !str2) return 0;
-      const s1 = str1.toLowerCase().trim();
-      const s2 = str2.toLowerCase().trim();
+    const similarity = (a, b) => {
+      if (!a || !b) return 0;
+      const s1 = a.toLowerCase().trim();
+      const s2 = b.toLowerCase().trim();
       if (s1 === s2) return 1;
       const longer = s1.length > s2.length ? s1 : s2;
       const shorter = s1.length > s2.length ? s2 : s1;
-      if (longer.length === 0) return 1;
-      const editDistance = levenshteinDistance(longer, shorter);
-      return (longer.length - editDistance) / longer.length;
-    };
-
-    const levenshteinDistance = (s1, s2) => {
-      const costs = [];
-      for (let i = 0; i <= s1.length; i++) {
-        let lastValue = i;
-        for (let j = 0; j <= s2.length; j++) {
-          if (i === 0) costs[j] = j;
-          else if (j > 0) {
-            let newValue = costs[j - 1];
-            if (s1.charAt(i - 1) !== s2.charAt(j - 1)) {
-              newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
-            }
-            costs[j - 1] = lastValue;
-            lastValue = newValue;
-          }
+      const costs = Array.from({ length: shorter.length + 1 }, (_, i) => i);
+      for (let i = 1; i <= longer.length; i++) {
+        let prev = i;
+        for (let j = 1; j <= shorter.length; j++) {
+          const val = longer[i-1] === shorter[j-1] ? costs[j-1]
+            : Math.min(costs[j-1], prev, costs[j]) + 1;
+          costs[j-1] = prev;
+          prev = val;
         }
-        if (i > 0) costs[s2.length] = lastValue;
+        costs[shorter.length] = prev;
       }
-      return costs[s2.length];
+      return (longer.length - costs[shorter.length]) / longer.length;
     };
 
-    // ============================================================
-    // PRIORITÄT 1: FAMILIE ERKANNT?
-    // ============================================================
-    // Über: Adresse, Familienname, bestehende Verträge, Policennummer
-    
-    const extracted = await extractFromDocument();
+    const addMatch = (customer, matchType, confidence, notes) => {
+      // Vermeide Duplikate
+      if (!customerMatches.find(m => m.customer.id === customer.id)) {
+        customerMatches.push({ customer, matchType, confidence, notes });
+      }
+    };
 
-    // 1a. Via Adresse + Nachname (schnell) — null-safe
-    if (extracted?.zip_code && extracted?.city && extracted?.policy_holder_last_name) {
-      const familyCandidates = allCustomers
-        .filter(c => !c.is_family_member && c.zip_code === extracted.zip_code && c.last_name)
-        .filter(c => c.last_name.toLowerCase() === extracted.policy_holder_last_name.toLowerCase());
+    // PRIORITÄT 1: Kundennummer (wenn im Dokument erwähnt)
+    // (Kundennummer wird aus policy_number oder broker_number inferiert – direkt nicht extrahiert)
 
-      if (familyCandidates.length > 0) {
-        insights.matchedPrimaryCustomer = familyCandidates[0];
-        insights.familyConfidence = 92;
-        insights.detectionPhase = 'family_via_address';
+    // PRIORITÄT 2: Policennummer → Vertrag → Kunde
+    if (extracted.policy_number) {
+      const contractMatch = allContracts.find(c =>
+        c.policy_number && c.policy_number.replace(/[^0-9]/g,'') === extracted.policy_number.replace(/[^0-9]/g,'')
+      );
+      if (contractMatch) {
+        const customer = allCustomers.find(c => c.id === contractMatch.customer_id);
+        if (customer) {
+          addMatch(customer, 'policy_number', 99, `Policennummer ${extracted.policy_number} → Vertrag gefunden`);
+          detectionPhase = 'matched_via_policy_number';
+        }
       }
     }
 
-    // 1b. Via Familienname (Fuzzy) — null-safe
-    if (!insights.matchedPrimaryCustomer && extracted?.policy_holder_last_name) {
-      const familyMatches = allCustomers
-        .filter(c => !c.is_family_member && c.last_name)
+    // PRIORITÄT 3: E-Mail
+    if (extracted.policy_holder_email) {
+      const emailMatches = allCustomers.filter(c =>
+        c.email && c.email.toLowerCase() === extracted.policy_holder_email.toLowerCase()
+      );
+      emailMatches.forEach(c => addMatch(c, 'email', 97, `E-Mail: ${extracted.policy_holder_email}`));
+      if (emailMatches.length > 0 && detectionPhase === 'no_match') detectionPhase = 'matched_via_email';
+    }
+
+    // PRIORITÄT 4: Telefonnummer
+    if (extracted.policy_holder_phone) {
+      const phone = extracted.policy_holder_phone.replace(/[^0-9]/g, '');
+      const phoneMatches = allCustomers.filter(c => {
+        const cp = (c.phone || c.mobile || '').replace(/[^0-9]/g, '');
+        return cp && cp.length >= 9 && cp === phone;
+      });
+      phoneMatches.forEach(c => addMatch(c, 'phone', 90, `Telefon: ${extracted.policy_holder_phone}`));
+      if (phoneMatches.length > 0 && detectionPhase === 'no_match') detectionPhase = 'matched_via_phone';
+    }
+
+    // PRIORITÄT 5: Vorname + Nachname + Geburtsdatum
+    const searchFirstName = extracted.insured_is_different ? extracted.insured_first_name : extracted.policy_holder_first_name;
+    const searchLastName = extracted.insured_is_different ? extracted.insured_last_name : extracted.policy_holder_last_name;
+    const searchBirthdate = extracted.insured_is_different ? extracted.insured_birthdate : extracted.policy_holder_birthdate;
+
+    if (searchFirstName && searchLastName && searchBirthdate) {
+      const nameGdMatches = allCustomers.filter(c => {
+        const fnSim = similarity(c.first_name, searchFirstName);
+        const lnSim = similarity(c.last_name, searchLastName);
+        const bdMatch = c.birthdate === searchBirthdate;
+        return fnSim > 0.85 && lnSim > 0.85 && bdMatch;
+      });
+      nameGdMatches.forEach(c => {
+        const conf = Math.round((similarity(c.first_name, searchFirstName) + similarity(c.last_name, searchLastName)) / 2 * 100);
+        addMatch(c, 'name_birthdate', Math.min(conf, 95), `Name + GD: ${searchFirstName} ${searchLastName} ${searchBirthdate}`);
+      });
+      if (nameGdMatches.length > 0 && detectionPhase === 'no_match') detectionPhase = 'matched_via_name_birthdate';
+    }
+
+    // PRIORITÄT 6: Adresse (Strasse + PLZ)
+    if (extracted.policy_holder_zip_code && extracted.policy_holder_street) {
+      const addressMatches = allCustomers.filter(c => {
+        if (!c.zip_code || !c.street) return false;
+        const zipMatch = c.zip_code === extracted.policy_holder_zip_code;
+        const streetSim = similarity(c.street, extracted.policy_holder_street);
+        return zipMatch && streetSim > 0.75;
+      });
+      addressMatches.forEach(c => addMatch(c, 'address', 75, `Adresse: ${extracted.policy_holder_street}, ${extracted.policy_holder_zip_code}`));
+      if (addressMatches.length > 0 && detectionPhase === 'no_match') detectionPhase = 'matched_via_address';
+    }
+
+    // PRIORITÄT 7: Fuzzy Name (nur als HINWEIS, kein sicheres Match — Confidence max 70)
+    if (customerMatches.length === 0 && searchFirstName && searchLastName) {
+      const fuzzyMatches = allCustomers
         .map(c => ({
           customer: c,
-          score: similarity(c.last_name, extracted.policy_holder_last_name),
+          score: (similarity(c.first_name, searchFirstName) * 0.5 + similarity(c.last_name, searchLastName) * 0.5),
         }))
-        .filter(x => x.score > 0.90)
-        .sort((a, b) => b.score - a.score);
+        .filter(x => x.score > 0.80)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3);
 
-      if (familyMatches.length > 0) {
-        insights.matchedPrimaryCustomer = familyMatches[0].customer;
-        insights.familyConfidence = Math.round(familyMatches[0].score * 100);
-        insights.detectionPhase = 'family_via_lastname';
+      fuzzyMatches.forEach(({ customer, score }) => {
+        addMatch(customer, 'fuzzy_name', Math.round(score * 70), `Ähnlicher Name (unsicher): ${customer.first_name} ${customer.last_name}`);
+      });
+      if (fuzzyMatches.length > 0) detectionPhase = 'fuzzy_name_only';
+    }
+
+    // ================================================================
+    // SCHRITT 3: FAMILIENSTRUKTUR ANALYSIEREN
+    // ================================================================
+    const primaryCustomers = allCustomers.filter(c => !c.is_family_member);
+    const availablePrimaryCustomers = primaryCustomers.map(c => ({
+      id: c.id,
+      first_name: c.first_name,
+      last_name: c.last_name,
+      customer_number: c.customer_number,
+      city: c.city,
+      zip_code: c.zip_code,
+      organization_id: c.organization_id,
+      advisor_id: c.advisor_id,
+    }));
+
+    // Wenn ein Match gefunden: Familie laden
+    let matchedPrimaryCustomer = null;
+    let availableFamilyMembers = [];
+
+    if (customerMatches.length > 0) {
+      const bestMatch = customerMatches[0].customer;
+      const primaryId = bestMatch.is_family_member ? bestMatch.primary_customer_id : bestMatch.id;
+
+      if (primaryId) {
+        matchedPrimaryCustomer = allCustomers.find(c => c.id === primaryId) || null;
+        availableFamilyMembers = allCustomers
+          .filter(c => c.id === primaryId || c.primary_customer_id === primaryId)
+          .map(c => ({
+            id: c.id,
+            first_name: c.first_name,
+            last_name: c.last_name,
+            family_role: c.family_role,
+            birthdate: c.birthdate,
+            is_family_member: c.is_family_member,
+            organization_id: c.organization_id,
+            advisor_id: c.advisor_id,
+          }));
       }
     }
 
-    // ============================================================
-    // PRIORITÄT 2: PERSON IN FAMILIE ERKANNT?
-    // ============================================================
-    let matchedFamily = [];
-    
-    if (insights.matchedPrimaryCustomer) {
-      // Hole alle Familienmitglieder
-      matchedFamily = allCustomers.filter(m =>
-        (m.id === insights.matchedPrimaryCustomer.id) ||
-        (m.primary_customer_id === insights.matchedPrimaryCustomer.id)
-      );
-
-      // KRITISCH: Priorisiere insured_first_name (versicherte Person) über policy_holder_first_name
-      // Wenn insured_name vom policy_holder ABWEICHT → Das ist das Familienmitglied!
-      const insuredFirst = extracted?.insured_first_name;
-      const insuredLast = extracted?.insured_last_name || extracted?.policy_holder_last_name;
-      const holderFirst = extracted?.policy_holder_first_name;
-
-      // Verwende insured als primäre Suchgrösse (versicherte Person = der eigentliche Vertragsinhaber)
-      const searchFirst = insuredFirst || holderFirst;
-      const searchLast = insuredLast;
-
-      if (searchFirst && searchLast) {
-        const personMatches = matchedFamily
-          .filter(m => m.first_name && m.last_name)
-          .map(m => ({
-            person: m,
-            score: (
-              similarity(m.first_name, searchFirst) * 0.5 +
-              similarity(m.last_name, searchLast) * 0.5
-            ),
-          }))
-          .filter(x => x.score > 0.75)
-          .sort((a, b) => b.score - a.score);
-
-        if (personMatches.length > 0) {
-          insights.matchedPerson = personMatches[0].person;
-          insights.personConfidence = Math.round(personMatches[0].score * 100);
-          insights.personIsInFamily = true;
-          insights.detectionPhase = 'person_in_family_found';
-        }
-      }
-
-      insights.availableFamilyMembers = matchedFamily.map(m => ({
-        id: m.id,
-        first_name: m.first_name,
-        last_name: m.last_name,
-        family_role: m.family_role,
-      }));
-    }
-
-    // ============================================================
-    // PRIORITÄT 3: NEUES FAMILIENMITGLIED ERKANNT?
-    // ============================================================
-    if (insights.matchedPrimaryCustomer && !insights.matchedPerson) {
-      // Fall A: insured weicht vom policy_holder ab → versicherte Person ist Familienmitglied
-      const insuredDiffersFromHolder = extracted?.insured_first_name && extracted?.policy_holder_first_name &&
-        extracted.insured_first_name.toLowerCase() !== extracted.policy_holder_first_name.toLowerCase();
-
-      // Fall B: insured stimmt mit policy_holder überein → policy_holder selbst ist Familienmitglied
-      // (z.B. Dokument für Kind: VN = Vater, versichert = Kind mit gleichem Nachnamen)
-      const useInsured = extracted?.insured_first_name && insuredDiffersFromHolder;
-      const firstName = useInsured ? extracted.insured_first_name : extracted?.policy_holder_first_name;
-      const lastName = useInsured ? (extracted.insured_last_name || extracted?.policy_holder_last_name) : extracted?.policy_holder_last_name;
-
-      if (firstName && lastName) {
-        // Prüfe ob diese Person bereits im System existiert (als Familienmitglied oder eigener Kunde)
-        const alreadyExists = allCustomers.some(c =>
-          c.first_name && c.last_name &&
-          similarity(c.first_name, firstName) > 0.85 &&
-          similarity(c.last_name, lastName) > 0.85
-        );
-
-        if (!alreadyExists) {
-          insights.suggestedFamilyMember = {
-            first_name: firstName,
-            last_name: lastName,
-            birthdate: extracted?.birthdate || null,
-            family_role: 'other',
-          };
-          insights.detectionPhase = 'new_family_member_suggested';
-        } else {
-          // Person existiert schon – als existierende Person matchen
-          const existingMatch = allCustomers.find(c =>
-            c.first_name && c.last_name &&
-            similarity(c.first_name, firstName) > 0.85 &&
-            similarity(c.last_name, lastName) > 0.85
-          );
-          if (existingMatch) {
-            insights.matchedPerson = existingMatch;
-            insights.personConfidence = 88;
-            insights.personIsInFamily = !!existingMatch.is_family_member;
-            insights.detectionPhase = 'person_in_family_found';
-          }
-        }
-      }
-    }
-
-    // ============================================================
-    // PRIORITÄT 4: VERTRAG ERKANNT?
-    // ============================================================
-    // Normalisiere insurance_type aus KI-Text auf gültigen Enum-Wert
-    const normalizeInsuranceType = (raw) => {
-      if (!raw) return 'other';
-      const r = raw.toLowerCase();
-      if (r.includes('kranken') || r.includes('health') || r.includes('kvg') || r.includes('vvg') || r.includes('zusatz') || r.includes('krankenpflege')) return 'health';
-      if (r.includes('leben') || r.includes('life') || r.includes('rente') || r.includes('vorsorge')) return 'life';
-      if (r.includes('haftpflicht') || r.includes('liability') || r.includes('haftung')) return 'liability';
-      if (r.includes('motor') || r.includes('fahrzeug') || r.includes('auto') || r.includes('kfz') || r.includes('kasko')) return 'motor';
-      if (r.includes('sach') || r.includes('property') || r.includes('hausrat') || r.includes('gebäude')) return 'property';
-      return 'other';
+    // ================================================================
+    // SCHRITT 4: DOKUMENTTYP NORMALISIEREN
+    // ================================================================
+    const subtypeMap = {
+      neuantrag: 'neuantrag',
+      'neuer antrag': 'neuantrag',
+      antrag: 'neuantrag',
+      aenderungsantrag: 'aenderungsantrag',
+      änderungsantrag: 'aenderungsantrag',
+      'änderung': 'aenderungsantrag',
+      mutation: 'aenderungsantrag',
+      erneuerungsantrag: 'erneuerungsantrag',
+      erneuerung: 'erneuerungsantrag',
+      'verlängerung': 'erneuerungsantrag',
+      verlaengerung: 'erneuerungsantrag',
+      police: 'police',
+      kuendigung: 'kuendigung',
+      offerte: 'offerte',
+      rechnung: 'rechnung',
+      korrespondenz: 'korrespondenz',
     };
+    const rawSubtype = (extracted.document_subtype || document_type || '').toLowerCase();
+    const normalizedSubtype = subtypeMap[rawSubtype] || 'neuantrag';
 
-    if (extracted?.insurer) {
-      const normalizedType = normalizeInsuranceType(extracted.insurance_type);
-
-      // Bestehende Verträge checken (nur wenn Kunde bekannt)
-      const existingContracts = (insights.matchedPerson?.id || insights.matchedPrimaryCustomer?.id)
-        ? allContracts.filter(c => 
-            c.customer_id === (insights.matchedPerson?.id || insights.matchedPrimaryCustomer?.id)
-          )
-        : [];
-
-      // Nur dann überspringen wenn identischer Vertrag (Versicherer + Policennummer) bereits existiert
-      const alreadyExists = extracted.policy_number
-        ? existingContracts.find(c =>
-            c.policy_number && c.policy_number === extracted.policy_number
-          )
-        : false;
-
-      if (alreadyExists) {
-        // Vertrag existiert bereits → trotzdem Daten zurückgeben für Update-Möglichkeit
-        insights.existingContractId = alreadyExists.id;
-        insights.suggestedContract = {
-          insurer: extracted.insurer,
-          insurance_type: normalizedType,
-          premium_yearly: extracted.premium_yearly,
-          policy_number: extracted.policy_number,
-          product: extracted.product || null,
-          sparte: extracted.sparte || null,
-          start_date: extracted.start_date || null,
-        };
-        insights.contractAlreadyExists = true;
-        insights.contractConfidence = 95;
-        insights.detectionPhase = 'contract_already_exists';
-      } else {
-        insights.suggestedContract = {
-          insurer: extracted.insurer,
-          insurance_type: normalizedType,
-          premium_yearly: extracted.premium_yearly,
-          policy_number: extracted.policy_number,
-          product: extracted.product || null,
-          sparte: extracted.sparte || null,
-          start_date: extracted.start_date || null,
-        };
-        insights.contractConfidence = 85;
-        insights.detectionPhase = 'new_contract_detected';
-      }
-    }
-
-    // ============================================================
-    // PRIORITÄT 5: NEUER HAUPTKONTAKT? (Nur wenn alles else fehlschlägt)
-    // ============================================================
-    if (!insights.matchedPrimaryCustomer && extracted) {
-      insights.suggestedPrimaryCustomer = {
-        first_name: extracted.policy_holder_first_name,
-        last_name: extracted.policy_holder_last_name,
-        email: extracted.email,
-        phone: extracted.phone,
-        birthdate: extracted.birthdate,
-        street: extracted.street,
-        zip_code: extracted.zip_code,
-        city: extracted.city,
-      };
-      insights.detectionPhase = 'new_primary_customer_last_resort';
-
-      // Verfügbare Hauptkunden für manuelle Auswahl
-      insights.availablePrimaryCustomers = allCustomers
-        .filter(c => !c.is_family_member)
-        .map(c => ({
-          id: c.id,
-          first_name: c.first_name,
-          last_name: c.last_name,
-          customer_number: c.customer_number,
-        }));
-    } else if (!insights.matchedPrimaryCustomer) {
-      // Keine Extraktion möglich
-      insights.detectionPhase = 'extraction_failed';
-    }
+    // Berechne Jahresprämie
+    const premiumYearly = extracted.premium_yearly
+      || (extracted.premium_monthly ? Math.round(extracted.premium_monthly * 12 * 100) / 100 : null);
 
     return Response.json({
       success: true,
-      insights,
+      extracted: {
+        // Dokumentinfo
+        document_subtype: normalizedSubtype,
+        document_confidence: extracted.document_confidence || 0.8,
+        // Versicherungsnehmer
+        policy_holder_first_name: extracted.policy_holder_first_name,
+        policy_holder_last_name: extracted.policy_holder_last_name,
+        policy_holder_birthdate: extracted.policy_holder_birthdate,
+        policy_holder_email: extracted.policy_holder_email,
+        policy_holder_phone: extracted.policy_holder_phone,
+        policy_holder_street: extracted.policy_holder_street,
+        policy_holder_zip_code: extracted.policy_holder_zip_code,
+        policy_holder_city: extracted.policy_holder_city,
+        // Versicherte Person
+        insured_first_name: extracted.insured_first_name,
+        insured_last_name: extracted.insured_last_name,
+        insured_birthdate: extracted.insured_birthdate,
+        insured_ahv_number: extracted.insured_ahv_number,
+        insured_is_different: extracted.insured_is_different || false,
+        // Versicherungsdaten
+        insurer: extracted.insurer,
+        policy_number: extracted.policy_number,
+        insurance_type: extracted.insurance_type || 'other',
+        sparte: extracted.sparte ? extracted.sparte.toLowerCase() : null,
+        product: extracted.product,
+        franchise: extracted.franchise,
+        model: extracted.model,
+        coverage_type: extracted.coverage_type,
+        premium_monthly: extracted.premium_monthly,
+        premium_yearly: premiumYearly,
+        payment_interval: extracted.payment_interval,
+        start_date: extracted.start_date,
+        end_date: extracted.end_date,
+        health_declaration_required: extracted.health_declaration_required || false,
+        broker_name: extracted.broker_name,
+        commission_estimate: extracted.commission_estimate,
+      },
+      // Matching-Ergebnisse
+      customerMatches,
+      detectionPhase,
+      matchedPrimaryCustomer,
+      availableFamilyMembers,
+      availablePrimaryCustomers,
     });
 
   } catch (error) {
-    console.error('smartDocumentAnalysis Fehler:', error);
-    return Response.json({
-      success: false,
-      error: error.message,
-    }, { status: 500 });
+    console.error('[smartDocumentAnalysis] ERROR:', error.message);
+    return Response.json({ success: false, error: error.message }, { status: 500 });
   }
 });

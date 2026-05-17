@@ -3,12 +3,14 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 /**
  * ON DOCUMENT UPLOAD — Entity Automation (Document.create)
  *
- * Pipeline:
- * 1. KI-Klassifizierung (Dokumenttyp + Kundendaten)
- * 2. Kundenzuordnung (E-Mail → Policen-Nr → Name/GD)
- * 3. EINE Broker-Aufgabe (Duplikatschutz: max 1 offene Task pro Dokument)
- * 4. Bei Kündigung: Verkaufschance (nur wenn keine mit contract verknüpft)
- * 5. Systemlog
+ * ENTERPRISE: Nur Klassifizierung + Logging.
+ * KEINE automatische Kundenzuweisung oder Antrags-/Vertragserstellung.
+ * Die Kundenzuweisung erfolgt manuell nach KI-Analyse im SmartDocumentReview-Wizard.
+ *
+ * Aufgaben:
+ * 1. Dokumenttyp klassifizieren
+ * 2. Dokument-Metadaten aktualisieren
+ * 3. Systemlog schreiben
  */
 
 Deno.serve(async (req) => {
@@ -23,250 +25,82 @@ Deno.serve(async (req) => {
       return Response.json({ skipped: true, reason: 'No document_id or file_url' });
     }
 
-    // Nur neue Dokumente (nicht schon verarbeitet)
+    // Nur neue Dokumente (stage: uploaded)
     if (docData.processing_stage && docData.processing_stage !== 'uploaded') {
-      return Response.json({ skipped: true, reason: `Already at stage: ${docData.processing_stage}` });
+      return Response.json({ skipped: true, reason: `Already processed: ${docData.processing_stage}` });
     }
 
     console.log(`[onDocumentUpload] START doc=${documentId} file=${docData.name}`);
 
-    // ── STEP 1: KI-Klassifizierung ────────────────────────────────────────
+    // ── STEP 1: KI-Schnellklassifizierung (nur Kategorie, keine Kundenzuweisung) ──
     let classification = null;
     try {
       classification = await base44.asServiceRole.integrations.Core.InvokeLLM({
-        prompt: `Analysiere dieses Versicherungsdokument präzise.
+        prompt: `Klassifiziere dieses Versicherungsdokument.
 
-DATEINAME PRIORITÄT: "${docData.name || 'unbekannt'}"
-Wenn der Dateiname Hinweise enthält (z.B. "Antrag", "Police", "Kündigung"), priorisiere diese Klassifizierung.
+DATEINAME: "${docData.name || 'unbekannt'}"
 
-Erkenne:
-1. document_category: Genauer Dokumententyp:
-   - "police" (Versicherungspolice / Vertrag)
-   - "antrag" (Antrag / Offerte zur Unterschrift)
-   - "offerte" (Angebot ohne Unterschrift)
-   - "kuendigung" (Kündigung)
-   - "rechnung" (Rechnung / Prämienrechnung)
-   - "schadensmeldung" (Schadenmeldung)
-   - "gesundheitsdeklaration" (Gesundheitsdeklaration)
-   - "vollmacht" (Vollmacht / Maklervollmacht)
-   - "mahnung" (Mahnung / Zahlungserinnerung)
-   - "korrespondenz" (sonstige Korrespondenz)
+Erkenne NUR:
+1. document_category: Einer von: "neuantrag", "aenderungsantrag", "erneuerungsantrag", "police", "kuendigung", "rechnung", "schadensmeldung", "gesundheitsdeklaration", "vollmacht", "mahnung", "offerte", "korrespondenz"
+2. confidence: Konfidenz 0.0–1.0
+3. summary: Kurze Beschreibung (max. 100 Zeichen)
 
-2. customer_data: Alle Kundendaten die du findest
-3. insurance_data: Alle Versicherungsdaten`,
+Antworte NUR mit JSON.`,
         file_urls: [docData.file_url],
         response_json_schema: {
           type: 'object',
           properties: {
             document_category: { type: 'string' },
             confidence: { type: 'number' },
-            customer_data: {
-              type: 'object',
-              properties: {
-                first_name: { type: ['string', 'null'] },
-                last_name: { type: ['string', 'null'] },
-                company_name: { type: ['string', 'null'] },
-                email: { type: ['string', 'null'] },
-                phone: { type: ['string', 'null'] },
-                birthdate: { type: ['string', 'null'] },
-                ahv_number: { type: ['string', 'null'] },
-              }
-            },
-            insurance_data: {
-              type: 'object',
-              properties: {
-                insurer: { type: ['string', 'null'] },
-                policy_number: { type: ['string', 'null'] },
-                insurance_type: { type: ['string', 'null'] },
-                product: { type: ['string', 'null'] },
-                premium_monthly: { type: ['number', 'null'] },
-                premium_yearly: { type: ['number', 'null'] },
-                start_date: { type: ['string', 'null'] },
-                end_date: { type: ['string', 'null'] },
-              }
-            },
-            summary: { type: 'string' }
+            summary: { type: 'string' },
           },
           required: ['document_category', 'confidence']
         },
         model: 'gemini_3_flash'
       });
     } catch (aiErr) {
-      console.warn(`[onDocumentUpload] AI failed: ${aiErr.message}`);
+      console.warn(`[onDocumentUpload] KI-Klassifizierung fehlgeschlagen: ${aiErr.message}`);
     }
 
     const category = classification?.document_category || 'korrespondenz';
     const confidence = classification?.confidence || 0;
-    const customerData = classification?.customer_data || {};
-    const insuranceData = classification?.insurance_data || {};
 
-    // ── STEP 2: Dokument aktualisieren ───────────────────────────────────
-    const classificationStatus = confidence >= 0.85 ? 'klassifiziert' : 'pruefung_erforderlich';
-
-    // Mapping KI-Kategorie → Document.category
-    const categoryMapping = {
-      antrag:               'vertrag',
-      offerte:              'vertrag',
-      police:               'police',
-      kuendigung:           'korrespondenz',
-      rechnung:             'rechnung',
-      schadensmeldung:      'schadenfall',
-      gesundheitsdeklaration: 'sonstiges',
-      vollmacht:            'sonstiges',
-      mahnung:              'korrespondenz',
-      korrespondenz:        'korrespondenz',
+    // ── STEP 2: Dokument-Metadaten aktualisieren ─────────────────────────────
+    const categoryToDocCategory = {
+      neuantrag:          'application',
+      aenderungsantrag:   'application',
+      erneuerungsantrag:  'application',
+      police:             'contract',
+      kuendigung:         'correspondence',
+      rechnung:           'invoice',
+      schadensmeldung:    'claim',
+      gesundheitsdeklaration: 'other',
+      vollmacht:          'other',
+      mahnung:            'correspondence',
+      offerte:            'application',
+      korrespondenz:      'correspondence',
     };
-    const mappedCategory = categoryMapping[category] || 'sonstiges';
 
-    await base44.asServiceRole.entities.Document.update(documentId, {
-      doc_type: ['antrag', 'offerte'].includes(category) ? 'antrag' : 'anlage',
-      category: mappedCategory,
-      classification_status: classificationStatus,
-      classification_confidence: confidence,
-      classification_reason: classification?.summary || `Automatisch klassifiziert als: ${category}`,
-      processing_stage: 'parsed',
-    });
+    const isAntrag = ['neuantrag', 'aenderungsantrag', 'erneuerungsantrag', 'offerte'].includes(category);
+    const classificationStatus = confidence >= 0.80 ? 'klassifiziert' : 'pruefung_erforderlich';
 
-    // ── STEP 3: Kundenzuordnung (E-Mail → Policen-Nr → Name) ────────────
-    let matchedCustomer = null;
-
-    if (customerData.email) {
-      const res = await base44.asServiceRole.entities.Customer.filter({ email: customerData.email });
-      if (res.length > 0) matchedCustomer = res[0];
-    }
-
-    if (!matchedCustomer && insuranceData.policy_number) {
-      const contracts = await base44.asServiceRole.entities.Contract.filter({ policy_number: insuranceData.policy_number });
-      if (contracts.length > 0 && contracts[0].customer_id) {
-        const res = await base44.asServiceRole.entities.Customer.filter({ id: contracts[0].customer_id });
-        if (res.length > 0) matchedCustomer = res[0];
-      }
-    }
-
-    if (!matchedCustomer && customerData.first_name && customerData.last_name) {
-      const res = await base44.asServiceRole.entities.Customer.filter({
-        first_name: customerData.first_name,
-        last_name: customerData.last_name,
-      });
-      if (res.length > 0) {
-        matchedCustomer = res.find(c => !customerData.birthdate || !c.birthdate || c.birthdate === customerData.birthdate) || res[0];
-      }
-    }
-
-    if (matchedCustomer) {
-      const customerName = matchedCustomer.company_name ||
-        `${matchedCustomer.first_name || ''} ${matchedCustomer.last_name || ''}`.trim();
-      // Wenn Kunde erfolgreich zugeordnet: Status auf "klassifiziert" setzen
-      // (auch wenn KI-Konfidenz < 85% war — die Zuordnung ist die fachliche Validierung)
+    // Nur updaten wenn noch keine customer_id gesetzt (d.h. noch nicht manuell verarbeitet)
+    if (!docData.customer_id) {
       await base44.asServiceRole.entities.Document.update(documentId, {
-        customer_id: matchedCustomer.id,
-        customer_name: customerName,
-        processing_stage: 'customer_mapped',
-        classification_status: 'klassifiziert', // Upgrade nach erfolgreicher Zuordnung
+        doc_type: isAntrag ? 'antrag' : 'anlage',
+        category: categoryToDocCategory[category] || 'other',
+        classification_status: classificationStatus,
+        classification_confidence: confidence,
+        classification_reason: classification?.summary || `Automatisch klassifiziert: ${category}`,
+        processing_stage: 'parsed',
       });
     }
 
-    // ── STEP 4: EINE Broker-Aufgabe (Duplikatschutz) ─────────────────────
-    // Prüfe ob bereits eine offene Task für dieses Dokument existiert
-    const existingDocTask = await base44.asServiceRole.entities.Task.filter({
-      customer_id: matchedCustomer?.id || null,
-    }).then(tasks => tasks.filter(t =>
-      t.status !== 'completed' &&
-      t.notes?.includes(documentId)
-    )).catch(() => []);
-
-    if (existingDocTask.length === 0) {
-      const resolvedName = matchedCustomer
-        ? (matchedCustomer.company_name || `${matchedCustomer.first_name || ''} ${matchedCustomer.last_name || ''}`.trim())
-        : (customerData.company_name || (customerData.first_name && customerData.last_name
-            ? `${customerData.first_name} ${customerData.last_name}`.trim()
-            : insuranceData.insurer || docData.name));
-
-      const nameInTitle = resolvedName ? ` (${resolvedName})` : '';
-      const taskTitleMap = {
-        police:               `Police prüfen${nameInTitle}`,
-        antrag:               `Antrag prüfen & verarbeiten${nameInTitle}`,
-        kuendigung:           `Kündigung bearbeiten${nameInTitle}`,
-        schadensmeldung:      `Schadenmeldung prüfen${nameInTitle}`,
-        gesundheitsdeklaration: `Gesundheitsdeklaration prüfen${nameInTitle}`,
-        rechnung:             `Rechnung prüfen${nameInTitle}`,
-        mahnung:              `Mahnung dringend bearbeiten${nameInTitle}`,
-        offerte:              `Offerte prüfen${nameInTitle}`,
-      };
-
-      const isUrgent = ['kuendigung', 'mahnung', 'schadensmeldung'].includes(category);
-      const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + (isUrgent ? 1 : 3));
-
-      // Antrag: verknüpfte Application suchen
-      let linkedApplicationId = null;
-      let linkedApplicationName = null;
-      if (['antrag', 'offerte'].includes(category) && matchedCustomer) {
-        const apps = await base44.asServiceRole.entities.Application.filter({ customer_id: matchedCustomer.id });
-        const openApp = apps.find(a => !['archived'].includes(a.status));
-        if (openApp) {
-          linkedApplicationId = openApp.id;
-          linkedApplicationName = `${openApp.insurer || ''} – ${openApp.sparte || openApp.insurance_type || ''}`.trim();
-        }
-      }
-
-      await base44.asServiceRole.entities.Task.create({
-        title: taskTitleMap[category] || `Dokument prüfen: ${docData.name}`,
-        description: `Automatisch bei Dokumenten-Upload erstellt.\nKategorie: ${category} | Konfidenz: ${Math.round(confidence * 100)}%\n${classification?.summary || ''}`,
-        customer_id: matchedCustomer?.id || null,
-        customer_name: resolvedName || null,
-        application_id: linkedApplicationId,
-        application_name: linkedApplicationName,
-        status: 'open',
-        priority: isUrgent ? 'urgent' : confidence < 0.7 ? 'high' : 'medium',
-        due_date: dueDate.toISOString().split('T')[0],
-        task_type: category === 'gesundheitsdeklaration' ? 'health_declaration'
-          : category === 'antrag' ? 'onboarding' : 'general',
-        notes: JSON.stringify({
-          document_id: documentId,
-          category,
-          insurer: insuranceData.insurer,
-          policy_number: insuranceData.policy_number,
-          confidence,
-        }),
-      });
-    } else {
-      console.log(`[onDocumentUpload] Task already exists for doc=${documentId}, skipping`);
-    }
-
-    // ── STEP 5: Bei Kündigung → Verkaufschance (nur wenn nicht schon vorhanden) ─
-    if (category === 'kuendigung' && matchedCustomer) {
-      const contracts = await base44.asServiceRole.entities.Contract.filter({ customer_id: matchedCustomer.id });
-      const activeContract = contracts.find(c => c.status === 'active');
-      if (activeContract) {
-        // Duplikatschutz: kein offener VS mit diesem Vertrag
-        const existingVs = await base44.asServiceRole.entities.Verkaufschance.filter({
-          linked_contract_id: activeContract.id,
-        });
-        const hasOpenVs = existingVs.some(v => !['gewonnen', 'verloren'].includes(v.status));
-        if (!hasOpenVs) {
-          const resolvedName = matchedCustomer.company_name ||
-            `${matchedCustomer.first_name || ''} ${matchedCustomer.last_name || ''}`.trim();
-          await base44.asServiceRole.entities.Verkaufschance.create({
-            customer_id: matchedCustomer.id,
-            customer_name: resolvedName,
-            organization_id: matchedCustomer.organization_id,
-            sparte: activeContract.sparte || activeContract.insurance_type,
-            status: 'neu',
-            linked_contract_id: activeContract.id,
-            title: `Kündigung — Ersatz suchen (${resolvedName})`,
-            estimated_value: activeContract.premium_yearly || 0,
-            notes: `Automatisch aus Kündigung erstellt (Dokument-Upload).`,
-          });
-        }
-      }
-    }
-
-    // ── STEP 6: SystemLog ─────────────────────────────────────────────────
+    // ── STEP 3: Systemlog ────────────────────────────────────────────────────
     await base44.asServiceRole.entities.SystemLog.create({
       level: classificationStatus === 'klassifiziert' ? 'info' : 'warn',
       source: 'onDocumentUpload',
-      message: `${docData.name} → ${category} (${Math.round(confidence * 100)}%)${matchedCustomer ? ` | Kunde: ${matchedCustomer.id}` : ' | Kein Kunde gefunden'}`,
+      message: `${docData.name || documentId} → ${category} (${Math.round(confidence * 100)}%) | Wartet auf manuelle Kundenzuweisung`,
       related_entity_type: 'Document',
       related_entity_id: documentId,
     });
@@ -277,7 +111,7 @@ Erkenne:
       category,
       confidence,
       classification_status: classificationStatus,
-      matched_customer_id: matchedCustomer?.id || null,
+      note: 'Kundenzuweisung erfolgt manuell über SmartDocumentReview-Wizard',
     });
 
   } catch (error) {
