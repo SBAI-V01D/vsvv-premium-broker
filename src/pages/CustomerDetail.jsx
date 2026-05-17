@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Link, useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useRef } from 'react'
 import html2pdf from 'html2pdf.js'
 import { useAccessControl } from '@/hooks/useAccessControl'
-import { ArrowLeft, Plus, Edit, Mail, Phone, MapPin, LayoutDashboard, ExternalLink, MoreHorizontal, Landmark } from 'lucide-react'
+import { Plus, Edit, Mail, Phone, MapPin, LayoutDashboard, MoreHorizontal, Landmark } from 'lucide-react'
 import AiInsightsPanel from '../components/customers/AiInsightsPanel'
 import ActivityTimeline from '../components/customers/ActivityTimeline'
 import AutoAISummary from '../components/customers/AutoAISummary'
@@ -17,11 +17,11 @@ import HouseholdActionStrip from '../components/customers/HouseholdActionStrip'
 import ContractsBySparteGroup from '../components/contracts/ContractsBySparteGroup'
 import CoverageGapsPanel from '../components/contracts/CoverageGapsPanel'
 import CustomerDashboardCompact from '../components/customers/CustomerDashboardCompact'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { ActionMenu, StandardModal } from '@/components/shared'
 import CustomerForm from '../components/customers/CustomerForm'
 import DocumentsTab from '../components/documents/DocumentsTab'
 import ContractForm from '../components/contracts/ContractForm'
@@ -234,20 +234,24 @@ export default function CustomerDetail() {
 
   return (
     <div>
-      <Link to="/kunden" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4">
-        <ArrowLeft className="w-4 h-4" /> Zurück
-      </Link>
+      {/* Back + Header */}
+      <button
+        onClick={() => navigate('/kunden')}
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
+      >
+        ← Zurück
+      </button>
 
       <div className="flex justify-between items-start mb-6">
         <div className="flex items-center gap-4 flex-1">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl flex-shrink-0">
             {customer.company_name ? customer.company_name[0] : `${customer.first_name?.[0] || ''}${customer.last_name?.[0] || ''}`}
           </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</h1>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-1 flex-wrap">
+              <h1 className="text-2xl font-bold">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</h1>
               {customer.customer_number && (
-                <span className="text-lg bg-primary/10 text-primary px-3 py-1 rounded-lg font-mono font-bold">
+                <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-md font-mono text-sm font-bold">
                   {customer.customer_number}
                 </span>
               )}
@@ -255,20 +259,20 @@ export default function CustomerDetail() {
             {customer.company_name && (customer.contact_person_firstname || customer.contact_person_lastname) && (
               <p className="text-sm text-muted-foreground">Kontakt: {customer.contact_person_firstname} {customer.contact_person_lastname}</p>
             )}
-            <p className="text-muted-foreground mt-1"><EmailLink email={customer.email} /></p>
+            <p className="text-sm text-muted-foreground mt-0.5"><EmailLink email={customer.email} /></p>
           </div>
         </div>
-        <div className="flex gap-2 flex-shrink-0">
-          <Button variant="outline" onClick={() => navigate(`/kunden/${id}/360`)}>
-            <LayoutDashboard className="w-4 h-4 mr-2" /> 360° Ansicht
+        <div className="flex gap-2 flex-shrink-0 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => navigate(`/kunden/${id}/360`)}>
+            <LayoutDashboard className="w-4 h-4 mr-1.5" /> 360° Ansicht
           </Button>
           {!customer?.is_family_member && (
-            <Button variant="outline" onClick={() => setShowAddFamilyMember(true)}>
-              <Plus className="w-4 h-4 mr-2" /> Familienmitglied
+            <Button variant="outline" size="sm" onClick={() => setShowAddFamilyMember(true)}>
+              <Plus className="w-4 h-4 mr-1.5" /> Familienmitglied
             </Button>
           )}
-          <Button variant="outline" onClick={() => setShowEdit(true)}>
-            <Edit className="w-4 h-4 mr-2" /> Bearbeiten
+          <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>
+            <Edit className="w-4 h-4 mr-1.5" /> Bearbeiten
           </Button>
         </div>
       </div>
@@ -579,21 +583,10 @@ export default function CustomerDetail() {
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-1">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setEditingContract(c)}>
-                                <Edit className="w-4 h-4 mr-2" /> Bearbeiten
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setStatusChangingContract(c)}>Status ändern</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+                        <ActionMenu items={[
+                          { label: 'Bearbeiten', icon: Edit, onClick: () => setEditingContract(c) },
+                          { label: 'Status ändern', onClick: () => setStatusChangingContract(c) },
+                        ]} />
                       </div>
                     </div>
                   )
@@ -758,40 +751,42 @@ export default function CustomerDetail() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={showEdit} onOpenChange={setShowEdit}>
-         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-           <DialogHeader>
-             <DialogTitle>Kunde bearbeiten</DialogTitle>
-           </DialogHeader>
-           <div className="space-y-6">
-             <CustomerForm
-               customer={customer}
-               primaryCustomers={allCustomers.filter(c => !c.is_family_member)}
-               onSave={(data) => updateCustomerMutation.mutate({ id: customer.id, data })}
-               onCancel={() => setShowEdit(false)}
-               saving={updateCustomerMutation.isPending}
-             />
-             <div className="border-t pt-6">
-               <PortalActivationPanel customer={customer} />
-             </div>
-           </div>
-         </DialogContent>
-       </Dialog>
+      <StandardModal
+        open={showEdit}
+        onOpenChange={setShowEdit}
+        title="Kunde bearbeiten"
+        size="lg"
+        hideFooter
+      >
+        <div className="space-y-6">
+          <CustomerForm
+            customer={customer}
+            primaryCustomers={allCustomers.filter(c => !c.is_family_member)}
+            onSave={(data) => updateCustomerMutation.mutate({ id: customer.id, data })}
+            onCancel={() => setShowEdit(false)}
+            saving={updateCustomerMutation.isPending}
+          />
+          <div className="border-t pt-6">
+            <PortalActivationPanel customer={customer} />
+          </div>
+        </div>
+      </StandardModal>
 
-       <Dialog open={!!editingContract} onOpenChange={(open) => { if (!open) setEditingContract(null) }}>
-         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-           <DialogHeader>
-             <DialogTitle>Vertrag bearbeiten</DialogTitle>
-           </DialogHeader>
-           <ContractForm
-             contract={editingContract}
-             customers={allCustomers}
-             onSave={handleContractSave}
-             onCancel={() => setEditingContract(null)}
-             saving={updateContractMutation.isPending}
-           />
-         </DialogContent>
-       </Dialog>
+      <StandardModal
+        open={!!editingContract}
+        onOpenChange={(open) => { if (!open) setEditingContract(null) }}
+        title="Vertrag bearbeiten"
+        size="lg"
+        hideFooter
+      >
+        <ContractForm
+          contract={editingContract}
+          customers={allCustomers}
+          onSave={handleContractSave}
+          onCancel={() => setEditingContract(null)}
+          saving={updateContractMutation.isPending}
+        />
+      </StandardModal>
 
        <StatusChangeDialog
           open={!!statusChangingContract}

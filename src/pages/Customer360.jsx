@@ -11,8 +11,7 @@ import { cn } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { StandardModal, KpiCard, EmptyState } from '@/components/shared'
 import {
   ArrowLeft, Phone, Mail, MapPin, Plus, FileText, TrendingUp,
   CheckCircle2, Clock, AlertCircle, Download, ChevronRight,
@@ -211,10 +210,10 @@ export default function Customer360() {
           <div className="space-y-4">
             {/* KPI Streifen */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <KpiTile label="Aktive Policen"  value={metrics.active.length}                color="text-primary" onClick={() => setActiveSection('vertraege')} />
-              <KpiTile label="Jahresprämie"    value={`CHF ${Math.round(metrics.totalPremium).toLocaleString('de-CH')}`} color="text-emerald-600" onClick={() => setActiveSection('vertraege')} />
-              <KpiTile label="Offene Chancen"  value={metrics.openVs.length}                color="text-blue-600" onClick={() => setActiveSection('verkaufschancen')} />
-              <KpiTile label="Aufgaben offen"  value={metrics.openTasks.length}             color={metrics.overdueTasks.length > 0 ? 'text-red-600' : 'text-amber-600'} onClick={() => setActiveSection('aufgaben')} />
+              <KpiCard label="Aktive Policen" value={metrics.active.length} color="blue" onClick={() => setActiveSection('vertraege')} />
+              <KpiCard label="Jahresprämie" value={`CHF ${Math.round(metrics.totalPremium).toLocaleString('de-CH')}`} color="green" onClick={() => setActiveSection('vertraege')} />
+              <KpiCard label="Offene Chancen" value={metrics.openVs.length} color="blue" onClick={() => setActiveSection('verkaufschancen')} />
+              <KpiCard label="Aufgaben offen" value={metrics.openTasks.length} color={metrics.overdueTasks.length > 0 ? 'red' : 'amber'} onClick={() => setActiveSection('aufgaben')} />
             </div>
 
             {/* Kontakt */}
@@ -339,7 +338,7 @@ export default function Customer360() {
               </Button>
             </div>
             {verkaufschancen.length === 0 ? (
-              <EmptyState icon={TrendingUp} text="Keine Verkaufschancen" action="Erste Chance erfassen" onAction={() => setShowVsForm(true)} />
+              <EmptyState icon={TrendingUp} title="Keine Verkaufschancen" action={<Button size="sm" variant="outline" onClick={() => setShowVsForm(true)}><Plus className="w-3.5 h-3.5 mr-1" /> Erste Chance erfassen</Button>} />
             ) : (
               <div className="space-y-2">
                 {verkaufschancen.map(vs => {
@@ -413,7 +412,7 @@ export default function Customer360() {
         {activeSection === 'vertraege' && (
           <div className="space-y-2">
             {contracts.length === 0 ? (
-              <EmptyState icon={Shield} text="Keine Verträge" />
+              <EmptyState icon={Shield} title="Keine Verträge" />
             ) : contracts.map((c, idx) => {
               const today = new Date()
               const daysLeft = c.end_date ? differenceInDays(parseISO(c.end_date), today) : null
@@ -473,7 +472,7 @@ export default function Customer360() {
         {activeSection === 'aufgaben' && (
           <div className="space-y-2">
             {tasks.length === 0 ? (
-              <EmptyState icon={CheckCircle2} text="Keine Aufgaben" />
+              <EmptyState icon={CheckCircle2} title="Keine Aufgaben" />
             ) : (
               tasks.map(t => {
                 const overdue = t.status !== 'completed' && t.due_date && new Date(t.due_date) < new Date()
@@ -502,7 +501,7 @@ export default function Customer360() {
         {activeSection === 'dokumente' && (
           <div className="space-y-2">
             {documents.length === 0 ? (
-              <EmptyState icon={FileText} text="Keine Dokumente" />
+              <EmptyState icon={FileText} title="Keine Dokumente" />
             ) : documents.map(doc => (
               <Card key={doc.id}>
                 <CardContent className="p-3 flex items-center gap-3">
@@ -526,57 +525,37 @@ export default function Customer360() {
 
       </div>
 
-      {/* ── Neue Verkaufschance Dialog ──────────────────────────────────── */}
-      <Dialog open={showVsForm} onOpenChange={setShowVsForm}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Neue Verkaufschance für {customer.first_name} {customer.last_name}</DialogTitle>
-          </DialogHeader>
-          <VerkaufschanceForm
-            customer={customer}
-            onSave={d => createVsMutation.mutate(d)}
-            onCancel={() => setShowVsForm(false)}
-            saving={createVsMutation.isPending}
-          />
-        </DialogContent>
-      </Dialog>
+      <StandardModal
+        open={showVsForm}
+        onOpenChange={setShowVsForm}
+        title={`Neue Verkaufschance für ${customer.first_name} ${customer.last_name}`}
+        size="md"
+        hideFooter
+      >
+        <VerkaufschanceForm
+          customer={customer}
+          onSave={d => createVsMutation.mutate(d)}
+          onCancel={() => setShowVsForm(false)}
+          saving={createVsMutation.isPending}
+        />
+      </StandardModal>
 
-      {/* ── Verkaufschance Detail Dialog ─────────────────────────────────── */}
       {selectedVs && (
-        <Dialog open={!!selectedVs} onOpenChange={o => { if (!o) setSelectedVsId(null) }}>
-          <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto p-0">
-            <DialogHeader className="sr-only"><DialogTitle>Verkaufschance</DialogTitle></DialogHeader>
-            <VerkaufschanceDetail
-              verkaufschance={selectedVs}
-              customer={customer}
-              onClose={() => setSelectedVsId(null)}
-              onUpdated={() => queryClient.invalidateQueries({ queryKey: ['verkaufschancen', customerId] })}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
-    </div>
-  )
-}
-
-function KpiTile({ label, value, color, onClick }) {
-  return (
-    <button onClick={onClick} className="p-3 bg-card border border-border rounded-xl text-left hover:shadow-sm hover:border-primary/30 transition-all">
-      <p className={cn('text-2xl font-black leading-none', color)}>{value}</p>
-      <p className="text-xs text-muted-foreground mt-1">{label}</p>
-    </button>
-  )
-}
-
-function EmptyState({ icon: Icon, text, action, onAction }) {
-  return (
-    <div className="py-12 text-center rounded-xl border-2 border-dashed border-border">
-      <Icon className="w-8 h-8 mx-auto mb-2 opacity-20" />
-      <p className="text-sm text-muted-foreground">{text}</p>
-      {action && onAction && (
-        <Button size="sm" variant="outline" className="mt-3" onClick={onAction}>
-          <Plus className="w-3.5 h-3.5 mr-1" /> {action}
-        </Button>
+        <StandardModal
+          open={!!selectedVs}
+          onOpenChange={o => { if (!o) setSelectedVsId(null) }}
+          title="Verkaufschance"
+          size="xl"
+          hideFooter
+          className="p-0"
+        >
+          <VerkaufschanceDetail
+            verkaufschance={selectedVs}
+            customer={customer}
+            onClose={() => setSelectedVsId(null)}
+            onUpdated={() => queryClient.invalidateQueries({ queryKey: ['verkaufschancen', customerId] })}
+          />
+        </StandardModal>
       )}
     </div>
   )
