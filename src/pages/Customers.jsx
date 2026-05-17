@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
+import CustomerMergeDialog from '@/components/customers/CustomerMergeDialog'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Edit, Trash2, ChevronDown, ChevronUp, User, Building2, ArrowRight, Upload, Download } from 'lucide-react'
+import { Plus, Edit, Trash2, ChevronDown, ChevronUp, User, Building2, ArrowRight, Upload, Download, Users } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -27,6 +28,7 @@ export default function Customers() {
   const [search, setSearch] = useState('')
   const [expandedFamily, setExpandedFamily] = useState(null)
   const [showImport, setShowImport] = useState(false)
+  const [showMerge, setShowMerge] = useState(false)
   const queryClient = useQueryClient()
 
   const { data: currentUser } = useQuery({
@@ -184,6 +186,9 @@ export default function Customers() {
           <>
             <Button variant="outline" size="sm" onClick={handleExport}>
               <Download className="w-4 h-4 mr-1.5" /> Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowMerge(true)} className="text-amber-700 border-amber-300 hover:bg-amber-50">
+              <Users className="w-4 h-4 mr-1.5" /> Kunden zusammenführen
             </Button>
             <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
               <Upload className="w-4 h-4 mr-1.5" /> Import
@@ -389,6 +394,11 @@ export default function Customers() {
           setSearch('')
           setFilterType('all')
         }}
+      />
+
+      <CustomerMergeDialog
+        open={showMerge}
+        onOpenChange={setShowMerge}
       />
     </div>
   )
