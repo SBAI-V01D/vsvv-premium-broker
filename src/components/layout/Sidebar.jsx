@@ -196,7 +196,7 @@ export default function Sidebar({ onNavigate }) {
                       <span className={cn(
                         'text-[9px] font-bold rounded-full flex items-center justify-center flex-shrink-0 leading-none',
                         collapsed ? 'absolute top-0.5 right-0.5 min-w-[14px] h-[14px] px-[3px]' : 'min-w-[16px] h-[16px] px-[4px]',
-                        'bg-red-500 text-white'
+                        'bg-amber-500 text-white'
                       )}>
                         {badges[item.path]}
                       </span>

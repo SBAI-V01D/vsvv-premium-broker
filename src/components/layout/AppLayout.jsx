@@ -10,7 +10,7 @@ export default function AppLayout() {
   const location = useLocation()
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] flex">
+    <div className="min-h-screen bg-background flex">
       {/* Mobile overlay */}
       {mobileSidebarOpen && (
         <div
@@ -31,11 +31,11 @@ export default function AppLayout() {
       {/* Main content — offset by sidebar width */}
       <div className="flex-1 flex flex-col min-w-0 lg:ml-[232px]">
         {/* Desktop topbar with search */}
-        <div className="hidden lg:flex items-center gap-4 px-6 h-12 border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-30">
+        <div className="hidden lg:flex items-center gap-4 px-6 h-[52px] border-b border-border bg-card/90 backdrop-blur-md sticky top-0 z-30" style={{ boxShadow: '0 1px 0 0 hsl(216 14% 88%)' }}>
           <QuickSearchBar />
           <div className="ml-auto flex items-center gap-2">
-            <span className="text-[10px] text-muted-foreground font-medium bg-muted px-2 py-1 rounded-md">
-              {new Date().toLocaleDateString('de-CH', { weekday: 'short', day: '2-digit', month: 'short' })}
+            <span className="text-[11px] text-muted-foreground/70 font-medium">
+              {new Date().toLocaleDateString('de-CH', { weekday: 'long', day: '2-digit', month: 'long' })}
             </span>
           </div>
         </div>
