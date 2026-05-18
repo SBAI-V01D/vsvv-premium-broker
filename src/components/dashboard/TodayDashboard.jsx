@@ -170,11 +170,10 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
     } catch { return false }
   }), [verkaufschancen])
 
-  // Chancen die jetzt Aktion brauchen
+  // Alle aktiven Verkaufschancen
   const actionableVs = useMemo(() => verkaufschancen
-    .filter(v => ['offerten_erhalten', 'kunde_entscheidet', 'beratung_erfolgt'].includes(v.status))
-    .sort((a, b) => (daysUntil(a.expected_close_date) ?? 999) - (daysUntil(b.expected_close_date) ?? 999))
-    .slice(0, 8),
+    .filter(v => !['gewonnen', 'verloren'].includes(v.status))
+    .sort((a, b) => (daysUntil(a.expected_close_date) ?? 999) - (daysUntil(b.expected_close_date) ?? 999)),
     [verkaufschancen]
   )
 
@@ -214,7 +213,7 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
   }), [sortedTasks])
 
   const overdueCount = taskCounts.overdue
-  const allEmpty = openTasks.length === 0 && actionableVs.length === 0 && expiringContracts.length === 0
+  const allEmpty = openTasks.length === 0 && actionableVs.length === 0 && contracts.length === 0
 
   return (
     <div className="space-y-3">

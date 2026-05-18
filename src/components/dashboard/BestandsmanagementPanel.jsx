@@ -49,9 +49,9 @@ const SEV = {
 const FILTER_TABS = [
   { key: 'all',      label: 'Alle' },
   { key: 'expired',  label: 'Abgelaufen' },
-  { key: '30',       label: 'In 30 Tagen' },
-  { key: '60',       label: 'In 60 Tagen' },
-  { key: '90',       label: 'In 90 Tagen' },
+  { key: '30',       label: '≤ 30 Tage' },
+  { key: '90',       label: '≤ 90 Tage' },
+  { key: '365',      label: '≤ 1 Jahr' },
 ]
 
 function ContractRow({ contract, topIssue, onCustomer, onCreateVs }) {
@@ -95,20 +95,26 @@ export default function BestandsmanagementPanel({ contracts = [] }) {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['verkaufschancen'] }); navigate('/verkaufschancen') },
   })
 
-  // Alle relevanten Verträge (expired + ablaufend in 90d + Kündigungsfrist)
+  // Alle relevanten Verträge: expired + alle mit end_date oder cancellation_deadline
   const allActionable = useMemo(() => {
     return contracts
       .filter(c => {
         if (['cancelled', 'archived'].includes(c.status)) return false
         if (c.process_status === 'erledigt') return false
         if (c.status === 'expired') return true
-        const endDays = c.end_date ? Math.ceil((new Date(c.end_date) - new Date()) / 86400000) : null
-        const cancelDays = c.cancellation_deadline ? Math.ceil((new Date(c.cancellation_deadline) - new Date()) / 86400000) : null
-        if (endDays !== null && endDays <= 90) return true
-        if (cancelDays !== null && cancelDays >= -30 && cancelDays <= 90) return true
+        // Alle Verträge mit Ablaufdatum oder Kündigungsfrist anzeigen
+        if (c.end_date || c.cancellation_deadline) return true
         return false
       })
-      .map(c => ({ contract: c, topIssue: calcTopIssue(c) }))
+      .map(c => {
+        const issue = calcTopIssue(c)
+        // Verträge ohne dringendes Issue: neutrales Issue erstellen
+        if (!issue && c.end_date) {
+          const endDays = Math.ceil((new Date(c.end_date) - new Date()) / 86400000)
+          return { contract: c, topIssue: { type: 'ablauf', label: `Läuft in ${endDays}d ab`, severity: 'yellow', days: endDays } }
+        }
+        return { contract: c, topIssue: issue }
+      })
       .filter(i => i.topIssue !== null)
       .sort((a, b) => {
         const ord = { critical: 0, red: 1, orange: 2, yellow: 3 }
@@ -122,9 +128,9 @@ export default function BestandsmanagementPanel({ contracts = [] }) {
   // Filter anwenden
   const filtered = useMemo(() => {
     if (activeFilter === 'all') return allActionable
-    if (activeFilter === 'expired') return allActionable.filter(i => i.topIssue.days <= 0)
+    if (activeFilter === 'expired') return allActionable.filter(i => (i.topIssue.days ?? 0) <= 0)
     const limit = parseInt(activeFilter)
-    return allActionable.filter(i => i.topIssue.days > 0 && i.topIssue.days <= limit)
+    return allActionable.filter(i => (i.topIssue.days ?? 0) > 0 && (i.topIssue.days ?? 0) <= limit)
   }, [allActionable, activeFilter])
 
   // Counts für Tab-Badges
@@ -132,8 +138,8 @@ export default function BestandsmanagementPanel({ contracts = [] }) {
     all:     allActionable.length,
     expired: allActionable.filter(i => i.topIssue.days <= 0).length,
     '30':    allActionable.filter(i => i.topIssue.days > 0 && i.topIssue.days <= 30).length,
-    '60':    allActionable.filter(i => i.topIssue.days > 0 && i.topIssue.days <= 60).length,
     '90':    allActionable.filter(i => i.topIssue.days > 0 && i.topIssue.days <= 90).length,
+    '365':   allActionable.filter(i => i.topIssue.days > 0 && i.topIssue.days <= 365).length,
   }), [allActionable])
 
   const criticalCount = allActionable.filter(i => i.topIssue.severity === 'critical' || i.topIssue.severity === 'red').length
