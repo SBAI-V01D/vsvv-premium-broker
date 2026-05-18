@@ -176,14 +176,12 @@ export default function CustomerDetail() {
   const householdCustomerIds = householdMembers.map(m => m.id).filter(Boolean)
   const allHouseholdContracts = contracts.filter(c => householdCustomerIds.includes(c.customer_id))
 
-  // Für Tab-Ansicht: Familienmitglied sieht nur eigene Verträge; Hauptkontakt sieht alle
-  const customerIds = customer?.is_family_member
-    ? [customer?.id].filter(Boolean)
-    : householdCustomerIds
-  const relatedContracts = contracts.filter(c => customerIds.includes(c.customer_id))
-  const relatedApplications = applications.filter(a => customerIds.includes(a.customer_id))
-  const relatedMessages = (Array.isArray(allCustomers) ? allCustomers : []).filter(c => customerIds.includes(c.id)).flatMap(c => c.messages || [])
-  const relatedDocuments = allDocuments.filter(d => customerIds.includes(d.customer_id))
+  // Für Tab-Ansicht: Jeder Kunde sieht nur seine eigenen Verträge (nicht die der Familie)
+  // Familienverträge sind über das Familien-Tab und das Cockpit sichtbar
+  const relatedContracts = contracts.filter(c => c.customer_id === customer?.id)
+  const relatedApplications = applications.filter(a => a.customer_id === customer?.id)
+  const relatedMessages = (Array.isArray(allCustomers) ? allCustomers : []).filter(c => c.id === customer?.id).flatMap(c => c.messages || [])
+  const relatedDocuments = allDocuments.filter(d => d.customer_id === customer?.id)
   const custTasks = tasks.filter(t => t.customer_id === customer?.id && ['open', 'in_progress', 'waiting'].includes(t.status))
 
   const updateCustomerMutation = useMutation({
