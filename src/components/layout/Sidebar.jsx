@@ -123,7 +123,7 @@ export default function Sidebar({ onNavigate }) {
         </div>
         {!collapsed && (
           <div className="min-w-0">
-            <p className="text-[14px] font-bold text-white/90 tracking-tight leading-none">BrokerOS</p>
+            <p className="text-[13px] font-bold text-white/90 tracking-tight leading-none">Swiss Premium Broker</p>
             <p className="text-[9px] text-white/40 font-medium tracking-[0.14em] uppercase mt-0.5">Insurance Platform</p>
           </div>
         )}

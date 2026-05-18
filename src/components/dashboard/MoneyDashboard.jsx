@@ -73,7 +73,7 @@ export default function MoneyDashboard() {
   })
   const { data: contracts = [] } = useQuery({
     queryKey: ['contracts-renewal'],
-    queryFn: () => base44.entities.Contract.filter({ status: 'active' }, '-renewal_date', 200),
+    queryFn: () => base44.entities.Contract.filter({ status: ['active', 'expired'] }, '-renewal_date', 500),
     staleTime: 5 * 60 * 1000,
   })
 
@@ -110,18 +110,18 @@ export default function MoneyDashboard() {
         {/* Finance KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <FinanceKpi
-            label="Offene Courtagen"
-            value={formatCHF(kpis.courtageOpen)}
-            sub={`${entries.filter(e => e.courtage_status !== 'paid').length} Abrechnungen`}
-            icon={TrendingUp}
-            colorClass="bg-blue-50/70 border-blue-200/60 text-blue-800"
-          />
-          <FinanceKpi
             label="Offene Provisionen"
             value={formatCHF(kpis.provisionOpen)}
             sub={`${entries.filter(e => e.provision_status !== 'paid').length} Abrechnungen`}
             icon={TrendingUp}
             colorClass="bg-emerald-50/70 border-emerald-200/60 text-emerald-800"
+          />
+          <FinanceKpi
+            label="Offene Courtagen"
+            value={formatCHF(kpis.courtageOpen)}
+            sub={`${entries.filter(e => e.courtage_status !== 'paid').length} Abrechnungen`}
+            icon={TrendingUp}
+            colorClass="bg-blue-50/70 border-blue-200/60 text-blue-800"
           />
           <FinanceKpi
             label="Total Offen"

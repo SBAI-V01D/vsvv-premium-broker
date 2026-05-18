@@ -25,7 +25,7 @@ export default function Dashboard() {
 
   // ── Daten laden ───────────────────────────────────────────────────────────
   const { data: tasks = [] }           = useQuery({ queryKey: ['tasks'],           queryFn: () => base44.entities.Task.filter({ status: ['open', 'in_progress'] }, '-due_date', 100) })
-  const { data: contracts = [] }       = useQuery({ queryKey: ['contracts'],       queryFn: () => base44.entities.Contract.filter({ status: 'active' }, '-end_date', 200) })
+  const { data: contracts = [] }       = useQuery({ queryKey: ['contracts'],       queryFn: () => base44.entities.Contract.filter({ status: ['active', 'expired'] }, '-end_date', 500) })
   const { data: leads = [] }           = useQuery({ queryKey: ['leads'],           queryFn: () => base44.entities.Lead.filter({ status: ['new', 'contacted', 'qualified'] }, '-lead_score', 50) })
   const { data: verkaufschancen = [] } = useQuery({ queryKey: ['verkaufschancen'], queryFn: () => base44.entities.Verkaufschance.list('-created_date', 100) })
 

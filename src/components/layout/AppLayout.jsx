@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
-import QuickSearchBar from './QuickSearchBar'
 import { Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -30,14 +29,11 @@ export default function AppLayout() {
 
       {/* Main content — offset by sidebar width */}
       <div className="flex-1 flex flex-col min-w-0 lg:ml-[224px]">
-        {/* Desktop topbar with search */}
-        <div className="hidden lg:flex items-center gap-4 px-6 h-[50px] border-b border-border/70 bg-card/95 backdrop-blur-sm sticky top-0 z-30">
-          <QuickSearchBar />
-          <div className="ml-auto flex items-center gap-2">
-            <span className="text-[11px] text-muted-foreground/60 font-medium tabular-nums">
-              {new Date().toLocaleDateString('de-CH', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
-            </span>
-          </div>
+        {/* Desktop topbar */}
+        <div className="hidden lg:flex items-center justify-end gap-4 px-6 h-[50px] border-b border-border/70 bg-card/95 backdrop-blur-sm sticky top-0 z-30">
+          <span className="text-[11px] text-muted-foreground/60 font-medium tabular-nums">
+            {new Date().toLocaleDateString('de-CH', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+          </span>
         </div>
 
         {/* Mobile topbar */}
@@ -48,10 +44,7 @@ export default function AppLayout() {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <span className="font-semibold text-sm">BrokerOS</span>
-          <div className="flex-1">
-            <QuickSearchBar />
-          </div>
+          <span className="font-semibold text-sm">Swiss Premium Broker</span>
         </div>
 
         {/* Page content */}
