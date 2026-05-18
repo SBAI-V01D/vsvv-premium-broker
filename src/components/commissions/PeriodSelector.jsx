@@ -80,7 +80,7 @@ const calculatePeriod = (presetId, startDate = null, endDate = null) => {
 const formatDateForInput = (date) => date.toISOString().split('T')[0]
 const formatDateDisplay = (date) => date.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-export default function PeriodSelector({ onPeriodChange, initialPeriod = 'this_month' }) {
+export default function PeriodSelector({ onPeriodChange, initialPeriod = 'last_12m' }) {
   const [selectedPreset, setSelectedPreset] = useState(initialPeriod)
   const [customStart, setCustomStart] = useState(formatDateForInput(new Date()))
   const [customEnd, setCustomEnd] = useState(formatDateForInput(new Date()))

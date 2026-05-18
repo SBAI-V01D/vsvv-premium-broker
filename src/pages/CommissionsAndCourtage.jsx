@@ -53,12 +53,12 @@ export default function CommissionsAndCourtage() {
   const [formErrors, setFormErrors] = useState({})
   const [submitAttempted, setSubmitAttempted] = useState(false)
 
-  // Initialize period with this month
+  // Initialize period with last 12 months
   const defaultPeriod = useMemo(() => {
     const today = new Date()
     return {
-      start: new Date(today.getFullYear(), today.getMonth(), 1),
-      end: new Date(today.getFullYear(), today.getMonth() + 1, 0)
+      start: new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000),
+      end: today
     }
   }, [])
 
@@ -439,7 +439,7 @@ export default function CommissionsAndCourtage() {
       <div className="bg-card border border-border/60 rounded-lg px-4 py-3">
         <PeriodSelector 
           onPeriodChange={setPeriodFilter}
-          initialPeriod="this_month"
+          initialPeriod="last_12m"
         />
       </div>
 
