@@ -1,6 +1,6 @@
 /**
- * BestandsmanagementPanel — Renewal-Center im Dashboard
- * Prozesshorizont 120 Tage, intelligente Priorisierung
+ * BestandsmanagementPanel — Direkt sichtbare Vertragsablauf-Tabelle im Dashboard
+ * Keine Akkordeons, kein Aufklappen, alles sofort sichtbar
  */
 import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -8,110 +8,198 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { cn } from '@/lib/utils'
 import { getSparteLabel } from '@/lib/insuranceSparten'
-import { ChevronRight, Repeat2, CheckCircle2, ArrowRight, AlertTriangle, Zap } from 'lucide-react'
+import {
+  Repeat2, AlertTriangle, Zap, Clock, CalendarClock, TrendingUp,
+  Phone, X, CheckCircle2
+} from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
 
 const daysUntil = (d) => d ? Math.ceil((new Date(d) - new Date()) / 86400000) : null
-const fmtDate = (d) => d ? new Date(d).toLocaleDateString('de-CH') : '–'
+const fmtDate   = (d) => d ? new Date(d).toLocaleDateString('de-CH') : '–'
+const fmtCHF    = (n) => n > 0 ? `CHF ${Number(n).toLocaleString('de-CH')}` : null
 
-/**
- * Severity-Logik:
- * expired   = abgelaufen (dunkelrot, höchste Priorität)
- * critical  = ≤ 30 Tage (rot)
- * urgent    = 30–60 Tage (orange)
- * warning   = 60–90 Tage (amber)
- * process   = 90–120 Tage (blau/neutral)
- */
-function calcTopIssue(contract) {
+function analyzeContract(contract) {
   const endDays    = daysUntil(contract.end_date)
   const cancelDays = daysUntil(contract.cancellation_deadline)
+  const actions = []
 
   if (contract.status === 'expired' || (endDays !== null && endDays < 0)) {
     const seit = endDays !== null ? Math.abs(endDays) : 0
-    return { type: 'expired', label: `+${seit}d überfällig`, severity: 'expired', days: endDays ?? -1 }
+    actions.push({ type: 'expired', label: `Seit ${seit}d abgelaufen`, severity: 'expired', days: endDays ?? -1 })
   }
-
-  // Kündigungsfrist prüfen
-  if (cancelDays !== null && cancelDays >= 0 && cancelDays <= 120) {
-    let sev = cancelDays <= 30 ? 'critical' : cancelDays <= 60 ? 'urgent' : cancelDays <= 90 ? 'warning' : 'process'
-    return { type: 'kuendigung', label: `Kündigung in ${cancelDays}d`, severity: sev, days: cancelDays }
+  if (cancelDays !== null && cancelDays >= -30 && cancelDays <= 120) {
+    let sev = cancelDays <= 0 ? 'expired' : cancelDays <= 30 ? 'critical' : cancelDays <= 60 ? 'urgent' : cancelDays <= 90 ? 'warning' : 'process'
+    actions.push({ type: 'kuendigung', label: cancelDays <= 0 ? 'Kündigungsfrist abgelaufen' : `Kündigungsfrist in ${cancelDays}d`, severity: sev, days: cancelDays })
   }
-
-  // Ablaufdatum
   if (endDays !== null && endDays >= 0 && endDays <= 120) {
     let sev = endDays <= 30 ? 'critical' : endDays <= 60 ? 'urgent' : endDays <= 90 ? 'warning' : 'process'
-    return { type: 'ablauf', label: `Ablauf in ${endDays}d`, severity: sev, days: endDays }
+    actions.push({ type: 'ablauf', label: `Ablauf in ${endDays}d`, severity: sev, days: endDays })
   }
 
-  return null
+  const order = { expired: 0, critical: 1, urgent: 2, warning: 3, process: 4 }
+  actions.sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9))
+  return actions
 }
 
 const SEV = {
-  expired:  { bg: 'bg-red-950/5', border: 'border-red-300', badge: 'bg-red-700 text-white',         dot: 'bg-red-700',    text: 'text-red-800' },
-  critical: { bg: 'bg-red-50',    border: 'border-red-200', badge: 'bg-red-500 text-white',          dot: 'bg-red-500',    text: 'text-red-700' },
-  urgent:   { bg: 'bg-orange-50', border: 'border-orange-200', badge: 'bg-orange-500 text-white',    dot: 'bg-orange-500', text: 'text-orange-700' },
-  warning:  { bg: 'bg-amber-50',  border: 'border-amber-200',  badge: 'bg-amber-400 text-white',     dot: 'bg-amber-400',  text: 'text-amber-700' },
-  process:  { bg: 'bg-blue-50/60',border: 'border-blue-200',   badge: 'bg-blue-100 text-blue-700',   dot: 'bg-blue-400',   text: 'text-blue-700' },
+  expired:  { bar: 'bg-red-700',    badge: 'bg-red-700 text-white',      countText: 'text-red-800',    rowBg: 'bg-red-50/60',    borderL: 'border-l-red-600',    label: 'Abgelaufen',      dot: 'bg-red-700' },
+  critical: { bar: 'bg-red-500',    badge: 'bg-red-500 text-white',      countText: 'text-red-700',    rowBg: 'bg-red-50/40',    borderL: 'border-l-red-400',    label: 'Kritisch',        dot: 'bg-red-500' },
+  urgent:   { bar: 'bg-orange-500', badge: 'bg-orange-500 text-white',   countText: 'text-orange-700', rowBg: 'bg-orange-50/40', borderL: 'border-l-orange-400', label: 'Dringend',        dot: 'bg-orange-500' },
+  warning:  { bar: 'bg-amber-400',  badge: 'bg-amber-400 text-white',    countText: 'text-amber-700',  rowBg: 'bg-amber-50/40',  borderL: 'border-l-amber-400',  label: 'Bald fällig',     dot: 'bg-amber-400' },
+  process:  { bar: 'bg-blue-400',   badge: 'bg-blue-100 text-blue-700',  countText: 'text-blue-700',   rowBg: 'bg-blue-50/30',   borderL: 'border-l-blue-300',   label: 'In Vorbereitung', dot: 'bg-blue-400' },
 }
 
-const FILTER_TABS = [
-  { key: 'all',      label: 'Alle' },
-  { key: 'expired',  label: 'Abgelaufen' },
-  { key: 'critical', label: '≤ 30 Tage' },
-  { key: 'urgent',   label: '≤ 60 Tage' },
-  { key: 'process',  label: '≤ 120 Tage' },
-]
+const PROCESS_STATUS = {
+  neu:                       { label: 'Neu',              color: 'bg-slate-100 text-slate-600' },
+  pruefung_offen:            { label: 'Prüfung offen',    color: 'bg-amber-100 text-amber-700' },
+  kunde_kontaktieren:        { label: 'Kontaktieren',     color: 'bg-blue-100 text-blue-700' },
+  verlaengerung_vorbereiten: { label: 'Verlängerung',     color: 'bg-violet-100 text-violet-700' },
+  beratung_erfolgt:          { label: 'Beraten',          color: 'bg-teal-100 text-teal-700' },
+  erledigt:                  { label: 'Erledigt',         color: 'bg-green-100 text-green-700' },
+}
 
-function ContractRow({ contract, topIssue, onCustomer, onCreateVs }) {
-  const s = SEV[topIssue.severity] || SEV.process
-  const isOverdue = (topIssue.days ?? 0) <= 0
-  const dayAbs = Math.abs(topIssue.days ?? 0)
+// ── Tabellenzeile ──────────────────────────────────────────────────────────────
+function ContractRow({ item, onNavigate, onCreateVs, onStatusChange }) {
+  const { contract, topAction } = item
+  const cfg = SEV[topAction.severity] || SEV.process
+  const cancelDays = daysUntil(contract.cancellation_deadline)
+  const endDays    = daysUntil(contract.end_date)
+  const kuendigungAction = item.actions.find(a => a.type === 'kuendigung')
+  const ablaufAction     = item.actions.find(a => a.type === 'ablauf' || a.type === 'expired')
+  const dayAbs = Math.abs(topAction.days ?? 0)
 
   return (
     <div
       className={cn(
-        'flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer hover:shadow-xs transition-all group',
-        s.bg, s.border,
-        topIssue.severity === 'expired' && 'border-l-2'
+        'grid items-center border-b border-border/50 hover:bg-muted/30 transition-colors border-l-[3px]',
+        cfg.rowBg, cfg.borderL
       )}
-      onClick={() => onCustomer(contract)}
+      style={{ gridTemplateColumns: '160px 120px 1fr 100px 100px 80px 130px 110px' }}
     >
-      <div className={cn('w-2 h-2 rounded-full flex-shrink-0', s.dot)} />
-      <div className="flex-1 min-w-0">
-        <p className={cn('text-[12.5px] font-semibold truncate', s.text)}>{contract.customer_name || '–'}</p>
-        <p className="text-[11px] text-muted-foreground truncate">
-          {contract.insurer}
-          {(contract.sparte || contract.insurance_type) ? ` · ${getSparteLabel(contract.sparte || contract.insurance_type)}` : ''}
-        </p>
-      </div>
-      {/* Tag-Badge */}
-      <span className={cn(
-        'text-[9px] font-bold px-2 py-0.5 rounded-full flex-shrink-0',
-        s.badge
-      )}>
-        {isOverdue ? `+${dayAbs}d` : `${dayAbs}d`}
-      </span>
-      <button
-        onClick={(e) => { e.stopPropagation(); onCreateVs(contract) }}
-        className="flex-shrink-0 text-[10px] px-2 py-1 bg-primary/10 text-primary rounded-md font-bold hover:bg-primary/20 transition-colors"
+      {/* Kunde */}
+      <div
+        className="py-2 px-3 cursor-pointer min-w-0"
+        onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}/360`)}
       >
-        + Chance
-      </button>
+        <p className="text-[12px] font-bold truncate hover:text-primary transition-colors leading-tight">{contract.customer_name || '–'}</p>
+        <p className="text-[10px] text-muted-foreground truncate">{contract.policy_number || '–'}</p>
+      </div>
+
+      {/* Versicherer / Sparte */}
+      <div className="py-2 px-2 min-w-0">
+        <p className="text-[11px] font-semibold truncate">{contract.insurer || '–'}</p>
+        <p className="text-[10px] text-muted-foreground truncate">{getSparteLabel(contract.sparte || contract.insurance_type) || '–'}</p>
+      </div>
+
+      {/* Countdown */}
+      <div className="py-2 px-2 min-w-0">
+        {ablaufAction && (
+          <p className={cn('text-[11px] font-bold leading-tight', cfg.countText)}>
+            {ablaufAction.type === 'expired'
+              ? `Abgelaufen vor ${dayAbs} Tagen`
+              : `Ablauf in ${endDays} Tagen`}
+          </p>
+        )}
+        {kuendigungAction && (
+          <p className="text-[10px] text-muted-foreground leading-tight">
+            {(cancelDays ?? 0) <= 0
+              ? 'Kündigungsfrist abgelaufen'
+              : `Kündigung in ${cancelDays} Tagen`}
+          </p>
+        )}
+      </div>
+
+      {/* Ablaufdatum */}
+      <div className="py-2 px-2">
+        <p className="text-[11px] font-medium">{fmtDate(contract.end_date)}</p>
+        <p className="text-[9px] text-muted-foreground">Ablauf</p>
+      </div>
+
+      {/* Kündigungsfrist */}
+      <div className="py-2 px-2">
+        <p className="text-[11px] font-medium">{fmtDate(contract.cancellation_deadline)}</p>
+        <p className="text-[9px] text-muted-foreground">Kündigung</p>
+      </div>
+
+      {/* Prämie */}
+      <div className="py-2 px-2">
+        {fmtCHF(contract.premium_yearly) && (
+          <p className="text-[10px] font-semibold text-emerald-700 leading-tight">{fmtCHF(contract.premium_yearly)}</p>
+        )}
+        <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-bold inline-block mt-0.5', cfg.badge)}>{cfg.label}</span>
+      </div>
+
+      {/* Prozess-Status */}
+      <div className="py-2 px-2" onClick={e => e.stopPropagation()}>
+        <Select value={contract.process_status || 'neu'} onValueChange={(v) => onStatusChange(contract.id, v)}>
+          <SelectTrigger className="h-6 text-[10px] border-border w-full bg-transparent px-1.5">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(PROCESS_STATUS).map(([k, v]) => (
+              <SelectItem key={k} value={k} className="text-xs">{v.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Aktionen */}
+      <div className="py-2 px-2 flex items-center gap-1 justify-end" onClick={e => e.stopPropagation()}>
+        {contract.customer_id && (
+          <button
+            onClick={() => onNavigate(`/kunden/${contract.customer_id}/360`)}
+            className="text-[9px] px-1.5 py-1 bg-primary/10 text-primary rounded font-bold hover:bg-primary/20 transition-colors flex items-center gap-0.5 whitespace-nowrap"
+          >
+            <Phone className="w-2.5 h-2.5" /> Öffnen
+          </button>
+        )}
+        <button
+          onClick={() => onCreateVs(contract)}
+          className="text-[9px] px-1.5 py-1 bg-primary text-primary-foreground rounded font-bold hover:bg-primary/90 transition-colors flex items-center gap-0.5 whitespace-nowrap"
+        >
+          <Zap className="w-2.5 h-2.5" /> Chance
+        </button>
+      </div>
     </div>
   )
 }
 
+// ── Tabellen-Header ────────────────────────────────────────────────────────────
+function TableHeader() {
+  return (
+    <div
+      className="grid text-[9px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/60 border-b border-border"
+      style={{ gridTemplateColumns: '160px 120px 1fr 100px 100px 80px 130px 110px' }}
+    >
+      <div className="py-2 px-3">Kunde / Police</div>
+      <div className="py-2 px-2">Versicherer / Sparte</div>
+      <div className="py-2 px-2">Countdown</div>
+      <div className="py-2 px-2">Ablauf</div>
+      <div className="py-2 px-2">Kündigung</div>
+      <div className="py-2 px-2">Prämie</div>
+      <div className="py-2 px-2">Status</div>
+      <div className="py-2 px-2 text-right">Aktion</div>
+    </div>
+  )
+}
+
+// ── MAIN ──────────────────────────────────────────────────────────────────────
 export default function BestandsmanagementPanel({ contracts = [] }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [expanded, setExpanded] = useState(true)
-  const [activeFilter, setActiveFilter] = useState('all')
+  const [search, setSearch] = useState('')
+  const [filterSeverity, setFilterSeverity] = useState('all')
 
   const createVsMutation = useMutation({
     mutationFn: (data) => base44.entities.Verkaufschance.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['verkaufschancen'] }); navigate('/verkaufschancen') },
   })
+  const updateContractMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Contract.update(id, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contracts'] }),
+  })
 
-  // Alle Verträge im 120-Tage-Horizont + bereits abgelaufene
   const allActionable = useMemo(() => {
     return contracts
       .filter(c => {
@@ -125,40 +213,43 @@ export default function BestandsmanagementPanel({ contracts = [] }) {
         return false
       })
       .map(c => {
-        const issue = calcTopIssue(c)
-        return { contract: c, topIssue: issue }
+        const actions = analyzeContract(c)
+        return { contract: c, actions, topAction: actions[0] }
       })
-      .filter(i => i.topIssue !== null)
+      .filter(i => i.actions.length > 0)
       .sort((a, b) => {
         const ord = { expired: 0, critical: 1, urgent: 2, warning: 3, process: 4 }
-        const ao = ord[a.topIssue.severity] ?? 9
-        const bo = ord[b.topIssue.severity] ?? 9
+        const ao = ord[a.topAction?.severity] ?? 9
+        const bo = ord[b.topAction?.severity] ?? 9
         if (ao !== bo) return ao - bo
-        return (a.topIssue.days ?? 999) - (b.topIssue.days ?? 999)
+        return (a.topAction?.days ?? 999) - (b.topAction?.days ?? 999)
       })
   }, [contracts])
 
   const filtered = useMemo(() => {
-    if (activeFilter === 'all') return allActionable
-    if (activeFilter === 'expired') return allActionable.filter(i => i.topIssue.severity === 'expired')
-    if (activeFilter === 'critical') return allActionable.filter(i => ['expired','critical'].includes(i.topIssue.severity))
-    if (activeFilter === 'urgent') return allActionable.filter(i => ['expired','critical','urgent'].includes(i.topIssue.severity))
-    if (activeFilter === 'process') return allActionable // already all ≤ 120d
-    return allActionable
-  }, [allActionable, activeFilter])
+    return allActionable.filter(item => {
+      if (filterSeverity !== 'all') {
+        const sev = item.topAction?.severity
+        if (filterSeverity === 'critical' && !['expired', 'critical'].includes(sev)) return false
+        if (filterSeverity === 'urgent' && sev !== 'urgent') return false
+        if (filterSeverity === 'warning' && sev !== 'warning') return false
+      }
+      if (search) {
+        const q = search.toLowerCase()
+        const c = item.contract
+        if (!(c.customer_name?.toLowerCase().includes(q) || c.insurer?.toLowerCase().includes(q) || c.policy_number?.toLowerCase().includes(q))) return false
+      }
+      return true
+    })
+  }, [allActionable, filterSeverity, search])
 
-  const counts = useMemo(() => ({
-    all:      allActionable.length,
-    expired:  allActionable.filter(i => i.topIssue.severity === 'expired').length,
-    critical: allActionable.filter(i => ['expired','critical'].includes(i.topIssue.severity)).length,
-    urgent:   allActionable.filter(i => ['expired','critical','urgent'].includes(i.topIssue.severity)).length,
-    process:  allActionable.length,
+  const stats = useMemo(() => ({
+    expired:  allActionable.filter(i => i.topAction?.severity === 'expired').length,
+    critical: allActionable.filter(i => i.topAction?.severity === 'critical').length,
+    urgent:   allActionable.filter(i => i.topAction?.severity === 'urgent').length,
+    warning:  allActionable.filter(i => i.topAction?.severity === 'warning').length,
+    process:  allActionable.filter(i => i.topAction?.severity === 'process').length,
   }), [allActionable])
-
-  const expiredCount  = counts.expired
-  const criticalCount = allActionable.filter(i => ['expired','critical'].includes(i.topIssue.severity)).length
-
-  const handleCustomer = (contract) => navigate(contract.customer_id ? `/kunden/${contract.customer_id}/360` : '/vertragsablaeufe')
 
   const handleCreateVs = async (contract) => {
     await createVsMutation.mutateAsync({
@@ -174,103 +265,119 @@ export default function BestandsmanagementPanel({ contracts = [] }) {
     })
   }
 
+  const handleStatusChange = (contractId, newStatus) => {
+    updateContractMutation.mutate({ id: contractId, data: { process_status: newStatus } })
+  }
+
   if (allActionable.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
+      <div className="rounded-xl border border-border bg-card shadow-xs">
         <div className="flex items-center gap-3 px-4 py-3">
           <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
             <Repeat2 className="w-3.5 h-3.5 text-emerald-600" />
           </div>
-          <span className="text-[13px] font-bold flex-1">Renewal-Center</span>
+          <span className="text-[13px] font-bold flex-1">Vertragsabläufe & Kündigungen</span>
           <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-          <button onClick={() => navigate('/vertragsablaeufe')} className="text-[10px] text-primary font-semibold hover:underline">Übersicht →</button>
+          <span className="text-[11px] text-emerald-600 font-medium">Kein Handlungsbedarf in 120 Tagen ✓</span>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden shadow-xs">
+    <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
       {/* Header */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors text-left"
-      >
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-muted/20">
         <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0',
-          expiredCount > 0 ? 'bg-red-100' : criticalCount > 0 ? 'bg-red-100' : 'bg-orange-100'
+          stats.expired > 0 ? 'bg-red-100' : stats.critical > 0 ? 'bg-red-100' : 'bg-orange-100'
         )}>
           <Repeat2 className={cn('w-3.5 h-3.5',
-            expiredCount > 0 ? 'text-red-700' : criticalCount > 0 ? 'text-red-600' : 'text-orange-600'
+            stats.expired > 0 ? 'text-red-700' : stats.critical > 0 ? 'text-red-600' : 'text-orange-600'
           )} />
         </div>
-        <span className="text-[13px] font-bold flex-1">Renewal-Center</span>
+        <span className="text-[13px] font-bold flex-1">Vertragsabläufe & Kündigungen</span>
 
-        {/* Badges */}
-        {expiredCount > 0 && (
-          <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 bg-red-700 text-white rounded-full">
-            <AlertTriangle className="w-2.5 h-2.5" /> {expiredCount} abgelaufen
-          </span>
-        )}
-        {criticalCount > expiredCount && (
-          <span className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 bg-red-500 text-white rounded-full">
-            <Zap className="w-2.5 h-2.5" /> {criticalCount - expiredCount} kritisch
-          </span>
-        )}
-        {criticalCount === 0 && allActionable.length > 0 && (
-          <span className="text-[9px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded-full font-medium">{allActionable.length}</span>
-        )}
-        <ChevronRight className={cn('w-3.5 h-3.5 text-muted-foreground/60 transition-transform', expanded && 'rotate-90')} />
-      </button>
-
-      {expanded && (
-        <div className="px-4 pb-3.5">
-          {/* Filter Tabs */}
-          <div className="flex gap-1 mb-3 overflow-x-auto scrollbar-none">
-            {FILTER_TABS.map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveFilter(tab.key)}
-                className={cn(
-                  'flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full border whitespace-nowrap transition-colors flex-shrink-0',
-                  activeFilter === tab.key
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
-                )}
-              >
-                {tab.label}
-                {counts[tab.key] > 0 && (
-                  <span className={cn('text-[9px] font-bold', activeFilter === tab.key ? 'text-primary-foreground/80' : 'text-muted-foreground')}>
-                    {counts[tab.key]}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Liste */}
-          <div className="space-y-1.5">
-            {filtered.length === 0 ? (
-              <p className="py-4 text-center text-[12px] text-muted-foreground">Keine Einträge</p>
-            ) : (
-              filtered.map(({ contract, topIssue }) => (
-                <ContractRow
-                  key={contract.id}
-                  contract={contract}
-                  topIssue={topIssue}
-                  onCustomer={handleCustomer}
-                  onCreateVs={handleCreateVs}
-                />
-              ))
-            )}
-          </div>
-
-          <div className="mt-2.5">
-            <button onClick={() => navigate('/vertragsablaeufe')} className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
-              <ArrowRight className="w-3 h-3" /> Renewal-Center öffnen
+        {/* Status-Badges */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {stats.expired > 0 && (
+            <button
+              onClick={() => setFilterSeverity(f => f === 'critical' ? 'all' : 'critical')}
+              className={cn('flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full transition-colors',
+                filterSeverity === 'critical' ? 'bg-red-700 text-white ring-2 ring-red-300' : 'bg-red-700 text-white hover:bg-red-800'
+              )}
+            >
+              <AlertTriangle className="w-2.5 h-2.5" /> {stats.expired} abgelaufen
             </button>
-          </div>
+          )}
+          {stats.critical > 0 && (
+            <button
+              onClick={() => setFilterSeverity(f => f === 'critical' ? 'all' : 'critical')}
+              className="flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+            >
+              <Zap className="w-2.5 h-2.5" /> {stats.critical} kritisch
+            </button>
+          )}
+          {stats.urgent > 0 && (
+            <button
+              onClick={() => setFilterSeverity(f => f === 'urgent' ? 'all' : 'urgent')}
+              className={cn('text-[9px] font-bold px-2 py-0.5 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors',
+                filterSeverity === 'urgent' && 'ring-2 ring-orange-300'
+              )}
+            >
+              {stats.urgent} dringend
+            </button>
+          )}
+          {stats.warning > 0 && (
+            <button
+              onClick={() => setFilterSeverity(f => f === 'warning' ? 'all' : 'warning')}
+              className={cn('text-[9px] font-bold px-2 py-0.5 bg-amber-400 text-white rounded-full hover:bg-amber-500 transition-colors',
+                filterSeverity === 'warning' && 'ring-2 ring-amber-300'
+              )}
+            >
+              {stats.warning} bald fällig
+            </button>
+          )}
+          {(filterSeverity !== 'all' || search) && (
+            <button
+              onClick={() => { setFilterSeverity('all'); setSearch('') }}
+              className="text-[9px] px-1.5 py-0.5 bg-muted text-muted-foreground rounded-full hover:bg-muted/80 transition-colors flex items-center gap-0.5"
+            >
+              <X className="w-2.5 h-2.5" /> Alle
+            </button>
+          )}
         </div>
-      )}
+
+        {/* Suche */}
+        <Input
+          placeholder="Suchen..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-32 h-7 text-xs"
+        />
+
+        <span className="text-[10px] text-muted-foreground whitespace-nowrap">{filtered.length} / {allActionable.length}</span>
+      </div>
+
+      {/* Tabelle */}
+      <div className="overflow-x-auto">
+        <TableHeader />
+        <div>
+          {filtered.map(item => (
+            <ContractRow
+              key={item.contract.id}
+              item={item}
+              onNavigate={navigate}
+              onCreateVs={handleCreateVs}
+              onStatusChange={handleStatusChange}
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="py-8 text-center text-[12px] text-muted-foreground">
+              Keine Einträge für diesen Filter
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
