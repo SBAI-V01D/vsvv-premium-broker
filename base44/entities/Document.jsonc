@@ -142,5 +142,101 @@
   "required": [
     "name",
     "file_url"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "broker"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "assistenz"
+          }
+        },
+        {
+          "data.uploaded_by_role": "customer",
+          "data.customer_id": "{{user.id}}"
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "data.customer_id": "{{user.id}}"
+        },
+        {
+          "data.primary_customer_id": "{{user.id}}"
+        },
+        {
+          "data.access_level": "all_internal",
+          "user_condition": {
+            "$ne": "anonymous"
+          }
+        },
+        {
+          "data.access_level": "team_visible",
+          "user_condition": {
+            "role": "broker"
+          },
+          "data.organization_id": "{{user.data.organization_id}}"
+        },
+        {
+          "data.access_level": "assigned_advisors_only",
+          "$or": [
+            {
+              "data.access_advisors": {
+                "$in": [
+                  "{{user.id}}"
+                ]
+              }
+            },
+            {
+              "data.access_teams": {
+                "$in": [
+                  "{{user.data.team_id}}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "created_by": "{{user.email}}"
+        },
+        {
+          "data.access_advisors": {
+            "$in": [
+              "{{user.id}}"
+            ]
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }
