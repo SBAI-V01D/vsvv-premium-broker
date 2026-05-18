@@ -11,7 +11,6 @@ import {
 } from 'lucide-react'
 import DocumentTypeBadge from '@/components/documents/DocumentTypeBadge'
 import DocumentTagBadge from '@/components/documents/DocumentTagBadge'
-import DocumentUploadDialog from '@/components/documents/DocumentUploadDialog'
 import DocumentReviewPanel from '@/components/documents/DocumentReviewPanel'
 import SmartDocumentUpload from '@/components/documents/SmartDocumentUpload'
 
@@ -43,7 +42,6 @@ export default function Documents() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState('all')
-  const [uploadOpen, setUploadOpen] = useState(false)
   const [smartUploadOpen, setSmartUploadOpen] = useState(false)
   const [reviewDoc, setReviewDoc] = useState(null)
 
@@ -230,11 +228,8 @@ export default function Documents() {
              </>
            )}
            <Button onClick={() => setSmartUploadOpen(true)} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
-             <Plus className="w-4 h-4" /> Smart Upload
-           </Button>
-           <Button onClick={() => setUploadOpen(true)} variant="outline" className="gap-2">
-             <Plus className="w-4 h-4" /> Standard Upload
-           </Button>
+              <Plus className="w-4 h-4" /> Dokument hochladen
+            </Button>
          </div>
       </div>
 
@@ -446,12 +441,6 @@ export default function Documents() {
           )}
         </CardContent>
       </Card>
-
-      <DocumentUploadDialog
-        open={uploadOpen}
-        onOpenChange={setUploadOpen}
-        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['documents'] })}
-      />
 
       <SmartDocumentUpload
         open={smartUploadOpen}
