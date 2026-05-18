@@ -332,5 +332,107 @@
     "last_name",
     "email",
     "organization_id"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "broker"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "assistenz"
+          }
+        }
+      ]
+    },
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "id": "{{user.id}}"
+        },
+        {
+          "data.primary_customer_id": "{{user.id}}"
+        },
+        {
+          "data.access_level": "all_internal",
+          "user_condition": {
+            "$ne": "anonymous"
+          }
+        },
+        {
+          "data.access_level": "team_visible",
+          "data.organization_id": "{{user.data.organization_id}}"
+        },
+        {
+          "data.access_level": "assigned_advisors_only",
+          "$or": [
+            {
+              "data.primary_advisor_id": "{{user.id}}"
+            },
+            {
+              "data.assigned_advisors": {
+                "$in": [
+                  "{{user.id}}"
+                ]
+              }
+            },
+            {
+              "data.assigned_assistants": {
+                "$in": [
+                  "{{user.id}}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        {
+          "id": "{{user.id}}"
+        },
+        {
+          "data.primary_advisor_id": "{{user.id}}"
+        },
+        {
+          "data.assigned_advisors": {
+            "$in": [
+              "{{user.id}}"
+            ]
+          }
+        },
+        {
+          "data.assigned_assistants": {
+            "$in": [
+              "{{user.id}}"
+            ]
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }
