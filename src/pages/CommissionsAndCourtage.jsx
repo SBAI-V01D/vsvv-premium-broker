@@ -475,8 +475,8 @@ export default function CommissionsAndCourtage() {
       {/* Main Tabs */}
       <Tabs defaultValue="provisions">
         <TabsList className="flex-wrap h-auto gap-0.5">
-          <TabsTrigger value="provisions" className="text-sm">Provisionen <span className="ml-1.5 text-[10px] opacity-60">({filteredEntries.length})</span></TabsTrigger>
-          <TabsTrigger value="courtage" className="text-sm">Courtagen <span className="ml-1.5 text-[10px] opacity-60">({filteredEntries.length})</span></TabsTrigger>
+          <TabsTrigger value="provisions" className="text-sm">Provisionen <span className="ml-1.5 text-[10px] opacity-60">({filteredEntries.filter(e => { const ne = normalizeLegacyEntry(e); return ne.company_provision_amount > 0 || ne.advisor_provision_amount > 0; }).length})</span></TabsTrigger>
+          <TabsTrigger value="courtage" className="text-sm">Courtagen <span className="ml-1.5 text-[10px] opacity-60">({filteredEntries.filter(e => { const ne = normalizeLegacyEntry(e); return ne.company_courtage_amount > 0 || ne.advisor_courtage_amount > 0; }).length})</span></TabsTrigger>
           <TabsTrigger value="berater" className="text-sm">Berater <span className="ml-1.5 text-[10px] opacity-60">({brokerStats.length})</span></TabsTrigger>
           <TabsTrigger value="storno" className="text-sm">Stornos <span className="ml-1.5 text-[10px] opacity-60">({stornoEntries.length})</span></TabsTrigger>
           <TabsTrigger value="intelligence" className="flex items-center gap-1.5 text-sm">
