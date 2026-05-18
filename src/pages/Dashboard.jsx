@@ -25,7 +25,11 @@ export default function Dashboard() {
 
   // ── Daten laden ───────────────────────────────────────────────────────────
   const { data: tasks = [] }           = useQuery({ queryKey: ['tasks'],           queryFn: () => base44.entities.Task.filter({ status: ['open', 'in_progress'] }, '-due_date', 100) })
-  const { data: contracts = [] }       = useQuery({ queryKey: ['contracts'],       queryFn: () => base44.entities.Contract.filter({ status: ['active', 'expired'] }, '-end_date', 500) })
+  const { data: contracts = [] }       = useQuery({ queryKey: ['contracts'],       queryFn: async () => {
+    // Use service role via backend function to bypass RLS
+    const res = await base44.functions.invoke('getAllContractsForDashboard', {})
+    return res.data?.data || res.data || []
+  }})
   const { data: leads = [] }           = useQuery({ queryKey: ['leads'],           queryFn: () => base44.entities.Lead.filter({ status: ['new', 'contacted', 'qualified'] }, '-lead_score', 50) })
   const { data: verkaufschancen = [] } = useQuery({ queryKey: ['verkaufschancen'], queryFn: () => base44.entities.Verkaufschance.list('-created_date', 100) })
 
