@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import {
-  Search, Plus, Settings, Download, AlertTriangle, History, BarChart2, RefreshCw
+  Search, Plus, Settings, Download, AlertTriangle, History, BarChart2, RefreshCw, ChevronRight, TrendingUp
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
@@ -47,6 +47,7 @@ export default function CommissionsAndCourtage() {
   const [showForm, setShowForm] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAuditLog, setShowAuditLog] = useState(false)
+  const [showExpectedModal, setShowExpectedModal] = useState(false)
   const [editingEntry, setEditingEntry] = useState(null)
   const [formData, setFormData] = useState({})
   const [formErrors, setFormErrors] = useState({})
@@ -332,84 +333,115 @@ export default function CommissionsAndCourtage() {
   const isSaving = createMutation.isPending || updateMutation.isPending
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
       {/* Header */}
       <div className="flex justify-between items-center flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Provisionen & Courtagen
-            {!loadingEntries && <span className="text-muted-foreground text-lg font-normal ml-2">({activeEntries.length})</span>}
+          <h1 className="text-xl font-semibold text-foreground tracking-tight">
+            Provisionen & Courtagen
+            {!loadingEntries && <span className="text-muted-foreground text-sm font-normal ml-2">· {activeEntries.length} Einträge</span>}
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Gesellschaftscourtagen · Beraterprovision · Revisionssichere Verwaltung
+          <p className="text-muted-foreground mt-0.5 text-xs">
+            Beraterprovision · Gesellschaftscourtagen · Revisionssichere Verwaltung
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-1.5 flex-wrap">
           <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })} variant="outline" size="sm" title="Daten neu laden">
-            <RefreshCw className="w-4 h-4 mr-1.5 md:mr-2" /><span className="hidden md:inline">Aktualisieren</span>
+            <RefreshCw className="w-3.5 h-3.5 md:mr-1.5" /><span className="hidden md:inline text-xs">Aktualisieren</span>
           </Button>
           <Button onClick={() => setShowAuditLog(true)} variant="outline" size="sm">
-            <History className="w-4 h-4 mr-1.5 md:mr-2" /><span className="hidden md:inline">Audit Log</span>
+            <History className="w-3.5 h-3.5 md:mr-1.5" /><span className="hidden md:inline text-xs">Audit Log</span>
           </Button>
           <Button onClick={handleCSVExport} variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-1.5 md:mr-2" /><span className="hidden md:inline">Export</span>
+            <Download className="w-3.5 h-3.5 md:mr-1.5" /><span className="hidden md:inline text-xs">Export</span>
           </Button>
           <Button onClick={() => setShowSettings(true)} variant="outline" size="sm">
-            <Settings className="w-4 h-4 mr-1.5 md:mr-2" /><span className="hidden md:inline">Einstellungen</span>
+            <Settings className="w-3.5 h-3.5 md:mr-1.5" /><span className="hidden md:inline text-xs">Einstellungen</span>
           </Button>
-          <Button onClick={handleNewEntry}>
-            <Plus className="w-4 h-4 mr-1.5 md:mr-2" /><span className="hidden sm:inline">Neue Abrechnung</span><span className="sm:hidden">Neu</span>
+          <Button onClick={handleNewEntry} size="sm">
+            <Plus className="w-3.5 h-3.5 mr-1.5" /><span className="hidden sm:inline">Neue Abrechnung</span><span className="sm:hidden">Neu</span>
           </Button>
         </div>
       </div>
 
-      {/* Expected Provisions Alert - PROMINENT */}
+      {/* Expected Provisions — soft KPI card */}
       {(() => {
-        // NUR echte erwartete Provisionen: status === 'expected' ODER is_expected === true
-        // KEINE invoiced/paid/cancelled/rejected Einträge
         const isExpectedEntry = (e) => {
           const pStatus = e.provision_status || e.status || ''
           return e.is_expected === true || pStatus === 'expected' || pStatus === 'erwartet'
         }
-        const expectedCount = activeEntries.filter(isExpectedEntry).length
-        const expectedAmount = activeEntries
-          .filter(isExpectedEntry)
-          .reduce((s, e) => s + (e.company_provision_amount || e.advisor_provision_amount || 0), 0)
+        const expectedEntries = activeEntries.filter(isExpectedEntry)
+        const expectedCount = expectedEntries.length
+        const expectedAmount = expectedEntries.reduce((s, e) => s + (e.company_provision_amount || e.advisor_provision_amount || 0), 0)
 
-        if (expectedCount > 0) {
-          return (
-            <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4 space-y-2">
-              <div className="flex items-start gap-3">
-                <div className="text-3xl">💰</div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-amber-900 text-lg">{expectedCount} erwartete Provisionen</h3>
-                  <p className="text-amber-800 text-sm mt-1">
-                    Gesamtbetrag: <span className="font-bold text-base">{formatCHF(expectedAmount)}</span> · Diese Provisionen sind aus aktiven Verträgen ausstehend
-                  </p>
-                  <Button 
-                   onClick={() => { 
-                     setFilterStatus('erwartet')
-                     setTimeout(() => document.querySelector('[value="provisions"]')?.click(), 100)
-                   }}
-                   className="mt-3 bg-amber-600 hover:bg-amber-700"
-                  >
-                   📋 Erwartete Provisionen anzeigen
-                  </Button>
+        if (expectedCount === 0) return null
+        return (
+          <>
+            <button
+              onClick={() => setShowExpectedModal(true)}
+              className="w-full text-left flex items-center justify-between px-4 py-3 bg-emerald-50/80 border border-emerald-200/70 rounded-lg hover:bg-emerald-50 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-emerald-900">{expectedCount} erwartete Provisionen ausstehend</p>
+                  <p className="text-xs text-emerald-700 mt-0.5">Gesamtbetrag: <span className="font-semibold">{formatCHF(expectedAmount)}</span> · Aus aktiven Verträgen</p>
                 </div>
               </div>
-            </div>
-          )
-        }
-        return null
+              <ChevronRight className="w-4 h-4 text-emerald-500 group-hover:translate-x-0.5 transition-transform" />
+            </button>
+
+            {/* Expected Provisions Detail Modal */}
+            <Dialog open={showExpectedModal} onOpenChange={setShowExpectedModal}>
+              <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                    Erwartete Provisionen ({expectedCount})
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                  <div className="flex items-center justify-between px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-lg mb-3">
+                    <span className="text-sm text-emerald-800">Gesamt ausstehend</span>
+                    <span className="font-semibold text-emerald-900">{formatCHF(expectedAmount)}</span>
+                  </div>
+                  {expectedEntries.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8 text-sm">Keine erwarteten Provisionen</p>
+                  ) : expectedEntries.map(e => (
+                    <div key={e.id} className="flex items-center justify-between px-3 py-2.5 bg-card border border-border/60 rounded-lg hover:bg-muted/30 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{e.customer_name || '—'}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{e.insurer} · {e.product_category || e.sparte || '—'} · {e.advisor_name || '—'}</p>
+                      </div>
+                      <div className="text-right ml-4 flex-shrink-0">
+                        <p className="text-sm font-semibold text-emerald-700">{formatCHF(e.company_provision_amount || e.advisor_provision_amount || 0)}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{formatDate(e.entry_date)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowExpectedModal(false)}>Schliessen</Button>
+                  <Button onClick={() => { setFilterStatus('erwartet'); setShowExpectedModal(false) }} className="bg-emerald-600 hover:bg-emerald-700">
+                    In Tabelle filtern
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </>
+        )
       })()}
 
       {/* Period Selector */}
-       <div className="bg-muted/20 p-4 rounded-lg border border-border">
-          <PeriodSelector 
-            onPeriodChange={setPeriodFilter}
-            initialPeriod="this_month"
-          />
-        </div>
+      <div className="bg-card border border-border/60 rounded-lg px-4 py-3">
+        <PeriodSelector 
+          onPeriodChange={setPeriodFilter}
+          initialPeriod="this_month"
+        />
+      </div>
 
       {/* KPI Bar */}
        <CommissionKPIBar 
@@ -418,37 +450,37 @@ export default function CommissionsAndCourtage() {
          period={actualPeriod}
        />
 
-      {/* Storno Banner - 🔴 CRITICAL: Use central storno analysis */}
-       {stornoEntries.length > 0 && (() => {
-         const stornoAnalysis = calcStornoByDimension(stornoEntries, 'advisor_id', 'advisor_name')
-         const totalStornoCourtage = stornoAnalysis.reduce((s, d) => s + d.commissionLost, 0)  // Total from all dimensions
-         const totalStornoProvision = stornoEntries.reduce((s, e) => {
-           const ne = normalizeLegacyEntry(e)
-           return s + (ne.advisor_provision_amount || 0)
-         }, 0)
-         return (
-           <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-             <span>
-               <strong>{stornoEntries.length} stornierte</strong> Einträge ·
-               Courtage-Verlust Berater: <strong>{formatCHF(totalStornoCourtage)}</strong>
-               {totalStornoProvision > 0 && (
-                 <span> · Provisions-Verlust: <strong>{formatCHF(totalStornoProvision)}</strong></span>
-               )}
-             </span>
-           </div>
-         )
-       })()}
+      {/* Storno Banner */}
+      {stornoEntries.length > 0 && (() => {
+        const stornoAnalysis = calcStornoByDimension(stornoEntries, 'advisor_id', 'advisor_name')
+        const totalStornoCourtage = stornoAnalysis.reduce((s, d) => s + d.commissionLost, 0)
+        const totalStornoProvision = stornoEntries.reduce((s, e) => {
+          const ne = normalizeLegacyEntry(e)
+          return s + (ne.advisor_provision_amount || 0)
+        }, 0)
+        return (
+          <div className="flex items-center gap-3 px-3 py-2.5 bg-rose-50/60 border border-rose-200/60 rounded-lg text-xs text-rose-700">
+            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>
+              <strong>{stornoEntries.length} stornierte</strong> Einträge ·
+              Courtage-Verlust: <strong>{formatCHF(totalStornoCourtage)}</strong>
+              {totalStornoProvision > 0 && (
+                <span> · Provisions-Verlust: <strong>{formatCHF(totalStornoProvision)}</strong></span>
+              )}
+            </span>
+          </div>
+        )
+      })()}
 
       {/* Main Tabs */}
       <Tabs defaultValue="provisions">
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="provisions">Provisionen ({filteredEntries.length})</TabsTrigger>
-          <TabsTrigger value="courtage">Courtagen ({filteredEntries.length})</TabsTrigger>
-          <TabsTrigger value="berater">Berater ({brokerStats.length})</TabsTrigger>
-          <TabsTrigger value="storno">Stornos ({stornoEntries.length})</TabsTrigger>
-          <TabsTrigger value="intelligence" className="flex items-center gap-1">
-            <BarChart2 className="w-3.5 h-3.5" /> BI & Analytics
+        <TabsList className="flex-wrap h-auto gap-0.5">
+          <TabsTrigger value="provisions" className="text-sm">Provisionen <span className="ml-1.5 text-[10px] opacity-60">({filteredEntries.length})</span></TabsTrigger>
+          <TabsTrigger value="courtage" className="text-sm">Courtagen <span className="ml-1.5 text-[10px] opacity-60">({filteredEntries.length})</span></TabsTrigger>
+          <TabsTrigger value="berater" className="text-sm">Berater <span className="ml-1.5 text-[10px] opacity-60">({brokerStats.length})</span></TabsTrigger>
+          <TabsTrigger value="storno" className="text-sm">Stornos <span className="ml-1.5 text-[10px] opacity-60">({stornoEntries.length})</span></TabsTrigger>
+          <TabsTrigger value="intelligence" className="flex items-center gap-1.5 text-sm">
+            <BarChart2 className="w-3 h-3" /> Analytics
           </TabsTrigger>
         </TabsList>
 
