@@ -114,22 +114,7 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Quick Actions */}
-        <div className="flex gap-1.5 flex-wrap justify-end">
-          {[
-            { label: '+ Lead',    path: '/leads' },
-            { label: '+ Chance',  path: '/verkaufschancen' },
-            { label: '+ Aufgabe', path: '/aufgaben' },
-          ].map(a => (
-            <button
-              key={a.label}
-              onClick={() => navigate(a.path)}
-              className="px-3 py-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-primary/[0.04] transition-all text-xs font-medium shadow-xs"
-            >
-              {a.label}
-            </button>
-          ))}
-        </div>
+
       </div>
 
       {urgentCount > 0 && (
