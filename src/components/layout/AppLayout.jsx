@@ -29,13 +29,13 @@ export default function AppLayout() {
       </div>
 
       {/* Main content — offset by sidebar width */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-[232px]">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-[224px]">
         {/* Desktop topbar with search */}
-        <div className="hidden lg:flex items-center gap-4 px-6 h-[52px] border-b border-border bg-card/90 backdrop-blur-md sticky top-0 z-30" style={{ boxShadow: '0 1px 0 0 hsl(216 14% 88%)' }}>
+        <div className="hidden lg:flex items-center gap-4 px-6 h-[50px] border-b border-border/70 bg-card/95 backdrop-blur-sm sticky top-0 z-30">
           <QuickSearchBar />
           <div className="ml-auto flex items-center gap-2">
-            <span className="text-[11px] text-muted-foreground/70 font-medium">
-              {new Date().toLocaleDateString('de-CH', { weekday: 'long', day: '2-digit', month: 'long' })}
+            <span className="text-[11px] text-muted-foreground/60 font-medium tabular-nums">
+              {new Date().toLocaleDateString('de-CH', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
             </span>
           </div>
         </div>

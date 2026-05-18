@@ -98,48 +98,49 @@ export default function Dashboard() {
     }).length
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-5">
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="pb-4 border-b border-border space-y-3">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{greeting()} 👋</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {new Date().toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long' })}
-              {urgentCount > 0 && (
-                <span className="ml-2 text-red-600 font-semibold">· {urgentCount} dringende Aktion(en)</span>
-              )}
-            </p>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="flex gap-1.5 flex-wrap justify-end">
-            {[
-              { label: '+ Lead',    path: '/leads' },
-              { label: '+ Chance',  path: '/verkaufschancen' },
-              { label: '+ Aufgabe', path: '/aufgaben' },
-            ].map(a => (
-              <button
-                key={a.label}
-                onClick={() => navigate(a.path)}
-                className="px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors text-xs font-medium"
-              >
-                {a.label}
-              </button>
-            ))}
-          </div>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-[22px] font-bold tracking-tight text-foreground">{greeting()}</h1>
+          <p className="text-[12px] text-muted-foreground mt-0.5">
+            {new Date().toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long' })}
+            {urgentCount > 0 && (
+              <span className="ml-2 inline-flex items-center gap-1 text-amber-700 font-semibold">
+                · {urgentCount} Aktion{urgentCount > 1 ? 'en' : ''} ausstehend
+              </span>
+            )}
+          </p>
         </div>
 
-        {urgentCount > 0 && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
-            <span className="text-xs font-bold text-red-700">⚡ {urgentCount} dringende Aktion(en) — sofort handeln</span>
-          </div>
-        )}
+        {/* Quick Actions */}
+        <div className="flex gap-1.5 flex-wrap justify-end">
+          {[
+            { label: '+ Lead',    path: '/leads' },
+            { label: '+ Chance',  path: '/verkaufschancen' },
+            { label: '+ Aufgabe', path: '/aufgaben' },
+          ].map(a => (
+            <button
+              key={a.label}
+              onClick={() => navigate(a.path)}
+              className="px-3 py-1.5 rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-primary/[0.04] transition-all text-xs font-medium shadow-xs"
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {urgentCount > 0 && (
+        <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200/80">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
+          <span className="text-xs font-semibold text-amber-800">{urgentCount} dringende Aktion{urgentCount > 1 ? 'en' : ''} — bitte prüfen</span>
+        </div>
+      )}
+
       {/* ── Dashboard Content ────────────────────────────────────────────── */}
-      <div className="pt-5 space-y-6">
+      <div className="space-y-5">
         {/* 💰 MONEY DASHBOARD – Geld & Vertrieb im Fokus */}
         <MoneyDashboard />
         
