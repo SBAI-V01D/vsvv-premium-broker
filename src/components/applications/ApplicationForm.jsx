@@ -446,8 +446,8 @@ export default function ApplicationForm({ application, customers = [], brokers =
         <Select value={form.assigned_broker} onValueChange={v => set('assigned_broker', v)}>
           <SelectTrigger className="mt-1"><SelectValue placeholder="Berater auswählen" /></SelectTrigger>
           <SelectContent>
-            {brokers.map(b => (
-              <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>
+            {brokers.filter(b => b.status === 'active' || b.is_active).map(b => (
+              <SelectItem key={b.id} value={b.name || b.email}>{b.name || `${b.firstname || ''} ${b.lastname || ''}`.trim()}</SelectItem>
             ))}
           </SelectContent>
         </Select>
