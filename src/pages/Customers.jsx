@@ -242,10 +242,10 @@ export default function Customers() {
             const isExpanded = expandedFamily === customer.id || autoExpanded.has(customer.id)
 
             return (
-              <Card key={customer.id} className="overflow-hidden">
+              <Card key={customer.id} className="overflow-hidden shadow-xs">
                 <CardContent className="p-0">
                   {/* HAUPTKUNDE */}
-                  <div className="bg-gradient-to-r from-primary/5 to-transparent p-4 flex items-center justify-between gap-4 border-b-2 border-primary/20">
+                  <div className="p-4 flex items-center justify-between gap-4 border-b border-border/70 bg-card">
                     <div className="flex-1 min-w-0 flex items-center gap-3">
                       {familyMembers.length > 0 && (
                         <button
@@ -257,13 +257,13 @@ export default function Customers() {
                       )}
                       <Link to={`/kunden/${customer.id}`} className="flex-1 min-w-0 hover:text-primary group">
                         <div className="flex items-center gap-2">
-                          <p className="font-bold text-base group-hover:text-primary">
+                          <p className="font-semibold text-[14px] group-hover:text-primary">
                             {customer.customer_type === 'business'
                               ? (customer.company_name || `${customer.last_name} ${customer.first_name}`)
                               : `${customer.last_name} ${customer.first_name}`}
                           </p>
                           {customer.customer_number && (
-                            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded font-mono font-medium">
+                            <span className="text-[11px] bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded font-mono font-medium">
                               {customer.customer_number}
                             </span>
                           )}
@@ -279,16 +279,16 @@ export default function Customers() {
 
                     <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
                       {familyMembers.length > 0 && (
-                        <span className="text-xs bg-primary text-primary-foreground px-3 py-1 rounded-full font-medium">
-                          {familyMembers.length} Familienmitglieder
+                        <span className="text-[11px] bg-blue-50 text-blue-700 border border-blue-200/70 px-2.5 py-0.5 rounded-full font-medium">
+                          {familyMembers.length} Familienmitgl.
                         </span>
                       )}
                       {customer.customer_type === 'business' ? (
-                        <span className="text-xs bg-purple-100 text-purple-700 border border-purple-200 px-3 py-1 rounded-full font-medium flex items-center gap-1">
+                        <span className="badge-purple text-[11px] px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1">
                           <Building2 className="w-3 h-3" /> Unternehmen
                         </span>
                       ) : (
-                        <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 rounded-full font-medium flex items-center gap-1">
+                        <span className="badge-info text-[11px] px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1">
                           <User className="w-3 h-3" /> Privatkunde
                         </span>
                       )}
@@ -311,12 +311,12 @@ export default function Customers() {
 
                   {/* FAMILIENMITGLIEDER */}
                   {isExpanded && familyMembers.length > 0 && (
-                    <div className="bg-slate-50/50">
+                    <div className="bg-muted/30">
                       {familyMembers.map((member, memberIdx) => (
                         <div
                           key={member.id}
-                          className={`p-4 pl-14 flex items-center justify-between gap-4 hover:bg-slate-100/80 transition-colors ${
-                            memberIdx < familyMembers.length - 1 ? 'border-b border-border' : ''
+                          className={`p-3.5 pl-14 flex items-center justify-between gap-4 hover:bg-muted/50 transition-colors ${
+                            memberIdx < familyMembers.length - 1 ? 'border-b border-border/50' : ''
                           }`}
                         >
                           <Link to={`/kunden/${member.id}`} className="flex-1 min-w-0 hover:text-primary group">
@@ -337,9 +337,9 @@ export default function Customers() {
                             {member.city || '–'}
                           </div>
 
-                          <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded font-medium flex-shrink-0">
-                            Familienmitglied
-                          </span>
+                          <span className="badge-warning text-[11px] px-2.5 py-0.5 rounded-full font-medium flex-shrink-0">
+                             Familienmitglied
+                           </span>
 
                           <ActionMenu items={[
                             { label: 'Bearbeiten', icon: Edit, onClick: () => { setEditing(member); setShowForm(true) } },

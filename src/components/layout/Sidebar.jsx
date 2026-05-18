@@ -106,9 +106,9 @@ export default function Sidebar({ onNavigate }) {
     <aside
       className={cn(
         'fixed left-0 top-0 h-screen flex flex-col z-50 transition-all duration-300',
-        // Warm dark slate-blue — professional, modern, calmer than deep navy
-        'bg-[#1a2236]',
-        'border-r border-white/[0.07]',
+        // Trust blue — harmonized with dashboard KPI tiles (blue-50/blue-800 palette)
+        'bg-[#1e3a5f]',
+        'border-r border-white/[0.08]',
         collapsed ? 'w-[60px]' : 'w-[224px]'
       )}
       style={{ boxShadow: '2px 0 20px 0 rgba(0,0,0,0.14)' }}
@@ -124,7 +124,7 @@ export default function Sidebar({ onNavigate }) {
         {!collapsed && (
           <div className="min-w-0">
             <p className="text-[14px] font-bold text-white/90 tracking-tight leading-none">BrokerOS</p>
-            <p className="text-[9px] text-white/28 font-medium tracking-[0.14em] uppercase mt-0.5">Insurance Platform</p>
+            <p className="text-[9px] text-white/40 font-medium tracking-[0.14em] uppercase mt-0.5">Insurance Platform</p>
           </div>
         )}
       </div>
@@ -134,7 +134,7 @@ export default function Sidebar({ onNavigate }) {
         {navGroups.map((group) => (
           <div key={group.label} className="mb-0.5">
             {!collapsed ? (
-              <p className="px-4 pt-4 pb-1.5 text-[9px] font-semibold uppercase tracking-[0.13em] text-white/22 select-none">
+              <p className="px-4 pt-4 pb-1.5 text-[9px] font-semibold uppercase tracking-[0.13em] text-white/35 select-none">
                 {group.label}
               </p>
             ) : (
@@ -160,7 +160,7 @@ export default function Sidebar({ onNavigate }) {
                         collapsed ? 'justify-center h-9 w-9 mx-auto' : 'gap-2.5 px-3 py-[7px]',
                         isActive
                           ? 'bg-blue-500/[0.18] text-white'
-                          : 'text-white/45 hover:text-white/80 hover:bg-white/[0.06]'
+                          : 'text-white/55 hover:text-white/85 hover:bg-white/[0.09]'
                       )}
                     >
                       {/* Active left bar */}
@@ -172,7 +172,7 @@ export default function Sidebar({ onNavigate }) {
                         className={cn(
                           'flex-shrink-0 transition-colors',
                           collapsed ? 'w-[17px] h-[17px]' : 'w-[14px] h-[14px]',
-                          isActive ? 'text-blue-300' : 'text-white/38 group-hover:text-white/65'
+                          isActive ? 'text-blue-200' : 'text-white/45 group-hover:text-white/70'
                         )}
                         strokeWidth={isActive ? 2.2 : 1.8}
                       />
@@ -180,7 +180,7 @@ export default function Sidebar({ onNavigate }) {
                       {!collapsed && (
                         <span className={cn(
                           'text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em]',
-                          isActive ? 'text-white/90' : 'text-white/50 group-hover:text-white/80'
+                          isActive ? 'text-white/95' : 'text-white/60 group-hover:text-white/85'
                         )}>
                           {item.label}
                         </span>
@@ -231,10 +231,10 @@ export default function Sidebar({ onNavigate }) {
               <User className="w-3 h-3 text-blue-300/80" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[11.5px] font-semibold text-white/75 truncate leading-tight">
+              <p className="text-[11.5px] font-semibold text-white/80 truncate leading-tight">
                 {currentUser.full_name || currentUser.email}
               </p>
-              <p className="text-[9.5px] text-white/28 font-medium">{roleLabel}</p>
+              <p className="text-[9.5px] text-white/45 font-medium">{roleLabel}</p>
             </div>
           </div>
         </div>

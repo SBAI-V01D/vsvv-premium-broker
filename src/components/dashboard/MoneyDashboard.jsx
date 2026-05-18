@@ -225,9 +225,20 @@ export default function MoneyDashboard() {
               {kpis.risks === 0 ? (
                 <p className="text-center text-[11px] text-muted-foreground py-2">Keine Risiken</p>
               ) : (
-                <p className="text-[12px] text-rose-700 font-semibold">
-                  {kpis.risks} Vertrag{kpis.risks > 1 ? 'e' : ''} mit erhöhtem Risiko
-                </p>
+                <button
+                  onClick={() => navigate('/vertraege')}
+                  className="w-full text-left group"
+                >
+                  <p className="text-[12px] text-rose-700 font-semibold">
+                    {kpis.risks} Vertrag{kpis.risks > 1 ? 'e' : ''} mit erhöhtem Risiko
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                    Verträge mit hohem Churn-Risiko oder überhöhter Prämie (pricing_status = high).
+                  </p>
+                  <p className="text-[11px] text-primary/70 group-hover:text-primary font-medium mt-1.5 flex items-center gap-1 transition-colors">
+                    Verträge anzeigen <ArrowRight className="w-3 h-3" />
+                  </p>
+                </button>
               )}
             </div>
           </div>
