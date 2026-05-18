@@ -110,6 +110,8 @@ Deno.serve(async (req) => {
 
     const isNewAcceptance = ACCEPTED_STATUSES.includes(newStatus) && !ACCEPTED_STATUSES.includes(oldStatus);
 
+    const startTime = Date.now();
+
     // ── 1. STATUS CHANGE LOGGING + TIMELINE ──────────────────────────────────
     await base44.asServiceRole.entities.SystemLog.create({
       level: 'info',
@@ -118,6 +120,19 @@ Deno.serve(async (req) => {
       related_entity_type: 'Application',
       related_entity_id: app.id,
       user_email: app.assigned_broker || null,
+    });
+
+    // AUDIT LOG: Status-Transition
+    await base44.functions.invoke('auditLogWrite', {
+      entity_type: 'Application',
+      entity_id: app.id,
+      action: 'update',
+      source: 'onApplicationUpdate',
+      trigger_reason: `status_change:${oldStatus || 'neu'}→${newStatus}`,
+      old_values: { status: oldStatus, custom_status: old_data?.custom_status },
+      new_values: { status: newStatus, custom_status: app.custom_status },
+      summary: `Antrag-Status geändert: ${oldStatus || 'neu'} → ${newStatus}`,
+      duration_ms: Date.now() - startTime,
     });
 
     if (app.customer_id) {
@@ -173,6 +188,21 @@ Deno.serve(async (req) => {
           related_entity_id: app.id,
           details: JSON.stringify({ guardReason: guardResult.reason, existingContractId: guardResult.existingContractId }),
         });
+
+        // AUDIT LOG: Guard-Hit (BLOCKED)
+        await base44.functions.invoke('auditLogWrite', {
+          entity_type: 'Contract',
+          entity_id: guardResult.existingContractId,
+          action: 'automation',
+          source: 'onApplicationUpdate',
+          trigger_reason: `status_change_to_${newStatus}`,
+          guard_result: 'blocked',
+          guard_reason: guardResult.reason,
+          old_values: { application_id: app.id, status: newStatus },
+          new_values: {},
+          summary: `Contract-Erstellung blockiert: ${guardResult.reason}`,
+          duration_ms: Date.now() - startTime,
+        });
         
         // Skip — aber erfolgreich abgeschlossen (idempotent)
         return Response.json({
@@ -207,6 +237,7 @@ Deno.serve(async (req) => {
       const premiumYearly = app.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null);
 
       // CONTRACT CREATE — einmalig, atomar, durch Guard geschützt
+      const contractCreateStart = Date.now();
       const newContract = await base44.asServiceRole.entities.Contract.create({
         customer_id: app.customer_id,
         customer_name: app.customer_name,
@@ -231,10 +262,31 @@ Deno.serve(async (req) => {
         commission_amount: app.commission_estimate || null,
         notes: buildContractNotes(app),
       });
+      const contractCreateDuration = Date.now() - contractCreateStart;
 
       // Antrag mit Contract verknüpfen (idempotent update)
       await base44.asServiceRole.entities.Application.update(app.id, {
         linked_contract_id: newContract.id,
+      });
+
+      // AUDIT LOG: Contract Created
+      await base44.functions.invoke('auditLogWrite', {
+        entity_type: 'Contract',
+        entity_id: newContract.id,
+        action: 'create',
+        source: 'onApplicationUpdate',
+        trigger_reason: `application_approved:${newStatus}`,
+        guard_result: 'allowed',
+        guard_reason: 'all_guards_passed',
+        old_values: {},
+        new_values: {
+          source_application_id: app.id,
+          customer_id: app.customer_id,
+          insurer: app.insurer,
+          status: 'active',
+        },
+        summary: `Contract erstellt aus Antrag ${app.id}: ${app.customer_name} - ${app.insurer}`,
+        duration_ms: contractCreateDuration,
       });
 
       // Erwartete Provision erstellen — NUR wenn Contract neu erstellt wurde
