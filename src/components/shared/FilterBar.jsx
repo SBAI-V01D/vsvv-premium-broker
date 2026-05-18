@@ -25,15 +25,15 @@ export default function FilterBar({
   extra,
 }) {
   return (
-    <div className="flex flex-col sm:flex-row gap-3 mb-5">
+    <div className="flex flex-col sm:flex-row gap-2.5 mb-4">
       {/* Suche */}
       <div className="relative flex-1 min-w-0">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
         <Input
           placeholder={placeholder}
           value={search}
           onChange={e => onSearchChange(e.target.value)}
-          className="pl-9 pr-8"
+          className="pl-8 pr-8 h-8 text-sm"
         />
         {search && (
           <button

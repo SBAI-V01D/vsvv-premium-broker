@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Plus, Edit, Trash2, ChevronDown, ChevronUp, User, Building2, ArrowRight, Upload, Download, Users } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Card, CardContent } from '@/components/ui/card'
+
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -225,27 +225,22 @@ export default function Customers() {
         onFilterChange={setFilterType}
       />
 
-      <div className="space-y-3">
+      <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
         {filtered.length === 0 ? (
-          <Card>
-            <CardContent className="p-0">
-              <EmptyState
-                icon={User}
-                title="Keine Kunden gefunden"
-                description={search ? 'Suche anpassen oder Filter zurücksetzen.' : 'Noch keine Kunden erfasst.'}
-              />
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={User}
+            title="Keine Kunden gefunden"
+            description={search ? 'Suche anpassen oder Filter zurücksetzen.' : 'Noch keine Kunden erfasst.'}
+          />
         ) : (
           filtered.map((customer, idx) => {
             const familyMembers = getFamilyMembers(customer.id)
             const isExpanded = expandedFamily === customer.id || autoExpanded.has(customer.id)
 
             return (
-              <Card key={customer.id} className="overflow-hidden shadow-xs">
-                <CardContent className="p-0">
+              <div key={customer.id} className={idx > 0 ? 'border-t border-border/60' : ''}>
                   {/* HAUPTKUNDE */}
-                  <div className="p-4 flex items-center justify-between gap-4 border-b border-border/70 bg-card">
+                  <div className="px-4 py-2.5 flex items-center justify-between gap-4 bg-card hover:bg-muted/20 transition-colors">
                     <div className="flex-1 min-w-0 flex items-center gap-3">
                       {familyMembers.length > 0 && (
                         <button
@@ -294,14 +289,12 @@ export default function Customers() {
                       )}
                     </div>
 
-                    <Button
-                       size="sm"
-                       variant="outline"
-                       onClick={() => navigate(`/kunden/${customer.id}/360`)}
-                       className="flex-shrink-0"
-                     >
-                       <ArrowRight className="w-4 h-4 mr-1" /> 360
-                     </Button>
+                    <button
+                      onClick={() => navigate(`/kunden/${customer.id}/360`)}
+                      className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border text-xs text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-primary/[0.03] transition-all"
+                    >
+                      <ArrowRight className="w-3 h-3" /> 360°
+                    </button>
 
                      <ActionMenu items={[
                        { label: 'Bearbeiten', icon: Edit, onClick: () => { setEditing(customer); setShowForm(true) } },
@@ -311,12 +304,12 @@ export default function Customers() {
 
                   {/* FAMILIENMITGLIEDER */}
                   {isExpanded && familyMembers.length > 0 && (
-                    <div className="bg-muted/30">
+                    <div className="bg-muted/20 border-t border-border/40">
                       {familyMembers.map((member, memberIdx) => (
                         <div
                           key={member.id}
-                          className={`p-3.5 pl-14 flex items-center justify-between gap-4 hover:bg-muted/50 transition-colors ${
-                            memberIdx < familyMembers.length - 1 ? 'border-b border-border/50' : ''
+                          className={`px-4 py-2 pl-14 flex items-center justify-between gap-4 hover:bg-muted/40 transition-colors ${
+                            memberIdx < familyMembers.length - 1 ? 'border-b border-border/40' : ''
                           }`}
                         >
                           <Link to={`/kunden/${member.id}`} className="flex-1 min-w-0 hover:text-primary group">
@@ -349,8 +342,7 @@ export default function Customers() {
                       ))}
                     </div>
                   )}
-                </CardContent>
-              </Card>
+              </div>
             )
           })
         )}

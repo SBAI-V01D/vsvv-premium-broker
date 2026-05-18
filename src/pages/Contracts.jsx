@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Plus, Edit, Trash2, FileText, Calendar, Building2, Tag, Download, Upload, User } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
+
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import ContractForm from '../components/contracts/ContractForm'
@@ -220,9 +220,9 @@ export default function Contracts() {
         placeholder="Suche (Kunde, Versicherer, Police...)"
       />
 
-      <Card className="shadow-xs">
-        <CardContent className="p-0">
-          <div className="hidden md:grid grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-2.5 border-b border-border bg-slate-50/60 text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+      <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
+        <div className="p-0">
+          <div className="hidden md:grid grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/30 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-wide">
             <div>Kunde</div>
             <div>Sparte / Versicherer</div>
             <div>Produkt / Tarif</div>
@@ -245,7 +245,7 @@ export default function Contracts() {
               const customer = getCustomer(contract.customer_id)
               return (
                 <div key={contract.id} className={idx > 0 ? 'border-t border-border' : ''}>
-                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-slate-50/70 transition-colors group">
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-2.5 items-center hover:bg-muted/20 transition-colors group">
                     {/* Kunde */}
                     <div className="min-w-0">
                       <p className="font-semibold text-sm truncate">
@@ -375,8 +375,8 @@ export default function Contracts() {
               )
             })
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <StatusChangeDialog
         open={!!statusChanging}
