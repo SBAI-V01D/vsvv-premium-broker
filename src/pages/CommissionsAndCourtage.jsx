@@ -526,7 +526,10 @@ export default function CommissionsAndCourtage() {
             </Select>
           </div>
           <CommissionTablePaginated
-            entries={filteredEntries}
+            entries={filteredEntries.filter(e => {
+              const ne = normalizeLegacyEntry(e);
+              return ne.company_provision_amount > 0 || ne.advisor_provision_amount > 0;
+            })}
             loading={loadingEntries}
             onEdit={handleEditEntry}
             onArchive={(entry) => archiveMutation.mutate({ id: entry.id, entry })}
