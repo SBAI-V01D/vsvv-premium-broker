@@ -174,11 +174,10 @@ export default function CustomerDetail() {
 
   // Alle Verträge des gesamten Haushalts (für PDF & Hauptkontakt-Ansicht)
   const householdCustomerIds = householdMembers.map(m => m.id).filter(Boolean)
-  const allHouseholdContracts = contracts.filter(c => householdCustomerIds.includes(c.customer_id))
+  const allHouseholdContracts = contracts.filter(c => householdCustomerIds.includes(c.customer_id) && !c.archived)
 
-  // Für Tab-Ansicht: Jeder Kunde sieht nur seine eigenen Verträge (nicht die der Familie)
-  // Familienverträge sind über das Familien-Tab und das Cockpit sichtbar
-  const relatedContracts = contracts.filter(c => c.customer_id === customer?.id)
+  // Für Tab-Ansicht: Jeder Kunde sieht nur seine eigenen, nicht-archivierten Verträge
+  const relatedContracts = contracts.filter(c => c.customer_id === customer?.id && !c.archived)
   const relatedApplications = applications.filter(a => a.customer_id === customer?.id)
   const relatedMessages = (Array.isArray(allCustomers) ? allCustomers : []).filter(c => c.id === customer?.id).flatMap(c => c.messages || [])
   const relatedDocuments = allDocuments.filter(d => d.customer_id === customer?.id)
