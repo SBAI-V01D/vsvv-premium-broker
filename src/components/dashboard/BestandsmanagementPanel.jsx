@@ -28,12 +28,12 @@ function analyzeContract(contract) {
     const seit = endDays !== null ? Math.abs(endDays) : 0
     actions.push({ type: 'expired', label: `Seit ${seit}d abgelaufen`, severity: 'expired', days: endDays ?? -1 })
   }
-  if (cancelDays !== null && cancelDays >= -30 && cancelDays <= 120) {
-    let sev = cancelDays <= 0 ? 'expired' : cancelDays <= 30 ? 'critical' : cancelDays <= 60 ? 'urgent' : cancelDays <= 90 ? 'warning' : 'process'
+  if (cancelDays !== null && cancelDays >= -30 && cancelDays <= 180) {
+    let sev = cancelDays <= 0 ? 'expired' : cancelDays <= 30 ? 'critical' : cancelDays <= 60 ? 'urgent' : cancelDays <= 90 ? 'warning' : cancelDays <= 150 ? 'process' : 'early'
     actions.push({ type: 'kuendigung', label: cancelDays <= 0 ? 'Kündigungsfrist abgelaufen' : `Kündigungsfrist in ${cancelDays}d`, severity: sev, days: cancelDays })
   }
-  if (endDays !== null && endDays >= 0 && endDays <= 120) {
-    let sev = endDays <= 30 ? 'critical' : endDays <= 60 ? 'urgent' : endDays <= 90 ? 'warning' : 'process'
+  if (endDays !== null && endDays >= 0 && endDays <= 180) {
+    let sev = endDays <= 30 ? 'critical' : endDays <= 60 ? 'urgent' : endDays <= 90 ? 'warning' : endDays <= 150 ? 'process' : 'early'
     actions.push({ type: 'ablauf', label: `Ablauf in ${endDays}d`, severity: sev, days: endDays })
   }
 
@@ -48,6 +48,7 @@ const SEV = {
   urgent:   { bar: 'bg-orange-500', badge: 'bg-orange-500 text-white',   countText: 'text-orange-700', rowBg: 'bg-orange-50/40', borderL: 'border-l-orange-400', label: 'Dringend',        dot: 'bg-orange-500' },
   warning:  { bar: 'bg-amber-400',  badge: 'bg-amber-400 text-white',    countText: 'text-amber-700',  rowBg: 'bg-amber-50/40',  borderL: 'border-l-amber-400',  label: 'Bald fällig',     dot: 'bg-amber-400' },
   process:  { bar: 'bg-blue-400',   badge: 'bg-blue-100 text-blue-700',  countText: 'text-blue-700',   rowBg: 'bg-blue-50/30',   borderL: 'border-l-blue-300',   label: 'In Vorbereitung', dot: 'bg-blue-400' },
+  early:    { bar: 'bg-slate-300',  badge: 'bg-slate-100 text-slate-600', countText: 'text-slate-600', rowBg: 'bg-slate-50/20', borderL: 'border-l-slate-300',   label: 'Früh',            dot: 'bg-slate-300' },
 }
 
 const PROCESS_STATUS = {
@@ -208,8 +209,8 @@ export default function BestandsmanagementPanel({ contracts = [] }) {
         if (c.status === 'expired') return true
         const endDays = daysUntil(c.end_date)
         const cancelDays = daysUntil(c.cancellation_deadline)
-        if (endDays !== null && endDays <= 120) return true
-        if (cancelDays !== null && cancelDays <= 120) return true
+        if (endDays !== null && endDays <= 180) return true
+        if (cancelDays !== null && cancelDays <= 180) return true
         return false
       })
       .map(c => {

@@ -30,12 +30,12 @@ function analyzeContract(contract) {
     const seit = endDays !== null ? Math.abs(endDays) : 0
     actions.push({ type: 'expired', label: `Seit ${seit}d abgelaufen`, severity: 'expired', days: endDays ?? -1 })
   }
-  if (cancelDays !== null && cancelDays >= -30 && cancelDays <= 120) {
-    let sev = cancelDays <= 0 ? 'expired' : cancelDays <= 30 ? 'critical' : cancelDays <= 60 ? 'urgent' : cancelDays <= 90 ? 'warning' : 'process'
+  if (cancelDays !== null && cancelDays >= -30 && cancelDays <= 180) {
+    let sev = cancelDays <= 0 ? 'expired' : cancelDays <= 30 ? 'critical' : cancelDays <= 60 ? 'urgent' : cancelDays <= 90 ? 'warning' : cancelDays <= 150 ? 'process' : 'early'
     actions.push({ type: 'kuendigung', label: cancelDays <= 0 ? 'Kündigungsfrist abgelaufen' : `Kündigungsfrist in ${cancelDays}d`, severity: sev, days: cancelDays })
   }
-  if (endDays !== null && endDays >= 0 && endDays <= 120) {
-    let sev = endDays <= 30 ? 'critical' : endDays <= 60 ? 'urgent' : endDays <= 90 ? 'warning' : 'process'
+  if (endDays !== null && endDays >= 0 && endDays <= 180) {
+    let sev = endDays <= 30 ? 'critical' : endDays <= 60 ? 'urgent' : endDays <= 90 ? 'warning' : endDays <= 150 ? 'process' : 'early'
     actions.push({ type: 'ablauf', label: `Ablauf in ${endDays}d`, severity: sev, days: endDays })
   }
 
@@ -51,6 +51,7 @@ const SEV = {
   urgent:   { bar: 'bg-orange-500', badge: 'bg-orange-500 text-white',       countText: 'text-orange-700',rowBg: 'bg-orange-50/40',borderL: 'border-l-orange-400', label: 'Dringend',        dot: 'bg-orange-500' },
   warning:  { bar: 'bg-amber-400',  badge: 'bg-amber-400 text-white',        countText: 'text-amber-700', rowBg: 'bg-amber-50/40', borderL: 'border-l-amber-400',  label: 'Bald fällig',     dot: 'bg-amber-400' },
   process:  { bar: 'bg-blue-400',   badge: 'bg-blue-100 text-blue-700',      countText: 'text-blue-700',  rowBg: 'bg-blue-50/30',  borderL: 'border-l-blue-300',   label: 'In Vorbereitung', dot: 'bg-blue-400' },
+  early:    { bar: 'bg-slate-300',  badge: 'bg-slate-100 text-slate-600',   countText: 'text-slate-600', rowBg: 'bg-slate-50/20', borderL: 'border-l-slate-300',   label: 'Früh',            dot: 'bg-slate-300' },
 }
 
 const PROCESS_STATUS = {
@@ -270,8 +271,8 @@ export default function Vertragsablaeufe() {
         if (c.status === 'expired') return true
         const endDays = daysUntil(c.end_date)
         const cancelDays = daysUntil(c.cancellation_deadline)
-        if (endDays !== null && endDays <= 120) return true
-        if (cancelDays !== null && cancelDays <= 120) return true
+        if (endDays !== null && endDays <= 180) return true
+        if (cancelDays !== null && cancelDays <= 180) return true
         return false
       })
       .map(c => {
@@ -280,7 +281,7 @@ export default function Vertragsablaeufe() {
       })
       .filter(item => item.actions.length > 0)
       .sort((a, b) => {
-        const order = { expired: 0, critical: 1, urgent: 2, warning: 3, process: 4 }
+        const order = { expired: 0, critical: 1, urgent: 2, warning: 3, process: 4, early: 5 }
         const ao = order[a.topAction?.severity] ?? 9
         const bo = order[b.topAction?.severity] ?? 9
         if (ao !== bo) return ao - bo
@@ -311,6 +312,7 @@ export default function Vertragsablaeufe() {
     urgent:   actionableItems.filter(i => i.topAction?.severity === 'urgent').length,
     warning:  actionableItems.filter(i => i.topAction?.severity === 'warning').length,
     process:  actionableItems.filter(i => i.topAction?.severity === 'process').length,
+    early:    actionableItems.filter(i => i.topAction?.severity === 'early').length,
     totalPremium: actionableItems.reduce((s, i) => s + (i.contract.premium_yearly || 0), 0),
   }), [actionableItems])
 
@@ -319,6 +321,7 @@ export default function Vertragsablaeufe() {
   const urgentItems   = filtered.filter(i => i.topAction?.severity === 'urgent')
   const warningItems  = filtered.filter(i => i.topAction?.severity === 'warning')
   const processItems  = filtered.filter(i => i.topAction?.severity === 'process')
+  const earlyItems    = filtered.filter(i => i.topAction?.severity === 'early')
 
   const handleCreateVs = async (contract) => {
     setCreating(true)
@@ -374,7 +377,7 @@ export default function Vertragsablaeufe() {
             Renewal-Center
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Kundenbindung · Kündigungsfristen · Verlängerungen — Prozesshorizont 120 Tage
+            Kundenbindung · Kündigungsfristen · Verlängerungen — Prozesshorizont 180 Tage
           </p>
         </div>
         <div className="flex gap-2">
@@ -401,9 +404,12 @@ export default function Vertragsablaeufe() {
         <KpiTile label="Bald fällig" sublabel="60–90 Tage" value={stats.warning}
           valueColor="text-amber-700" bg="bg-amber-50" border="border-amber-200"
           active={filterSeverity === 'warning'} onClick={() => setFilterSeverity(f => f === 'warning' ? 'all' : 'warning')} icon={CalendarClock} />
-        <KpiTile label="In Vorbereitung" sublabel="90–120 Tage" value={stats.process}
+        <KpiTile label="In Vorbereitung" sublabel="90–150 Tage" value={stats.process}
           valueColor="text-blue-700" bg="bg-blue-50/60" border="border-blue-200"
           active={filterSeverity === 'process'} onClick={() => setFilterSeverity(f => f === 'process' ? 'all' : 'process')} icon={TrendingUp} />
+        <KpiTile label="Früh" sublabel="150–180 Tage" value={stats.early}
+          valueColor="text-slate-600" bg="bg-slate-50/60" border="border-slate-200"
+          active={filterSeverity === 'early'} onClick={() => setFilterSeverity(f => f === 'early' ? 'all' : 'early')} icon={CalendarClock} />
         {stats.totalPremium > 0 && (
           <div className="flex-1 min-w-[160px] p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-left">
             <TrendingUp className="w-3.5 h-3.5 text-emerald-600 mb-1" />
@@ -429,7 +435,8 @@ export default function Vertragsablaeufe() {
             <SelectItem value="critical">Kritisch / Abgelaufen</SelectItem>
             <SelectItem value="urgent">Dringend (30–60d)</SelectItem>
             <SelectItem value="warning">Bald fällig (60–90d)</SelectItem>
-            <SelectItem value="process">In Vorbereitung</SelectItem>
+            <SelectItem value="process">In Vorbereitung (90–150d)</SelectItem>
+            <SelectItem value="early">Früh (150–180d)</SelectItem>
           </SelectContent>
         </Select>
         <Select value={filterProcessStatus} onValueChange={setFilterProcessStatus}>
@@ -461,7 +468,7 @@ export default function Vertragsablaeufe() {
             {actionableItems.length === 0 ? 'Alle Verträge stabil' : 'Keine Einträge für diesen Filter'}
           </p>
           <p className="text-sm text-emerald-600 mt-1">
-            {actionableItems.length === 0 ? 'Kein Handlungsbedarf in den nächsten 120 Tagen ✓' : 'Filter anpassen.'}
+            {actionableItems.length === 0 ? 'Kein Handlungsbedarf in den nächsten 180 Tagen ✓' : 'Filter anpassen.'}
           </p>
         </div>
       ) : (
@@ -472,7 +479,8 @@ export default function Vertragsablaeufe() {
             {renderGroup(criticalItems, Zap,           'Kritisch — Handlung innerhalb 30 Tage',           'text-red-700',    'bg-red-50')}
             {renderGroup(urgentItems,   Clock,         'Dringend — 30 bis 60 Tage',                       'text-orange-700', 'bg-orange-50')}
             {renderGroup(warningItems,  CalendarClock, 'Bald fällig — 60 bis 90 Tage',                    'text-amber-700',  'bg-amber-50')}
-            {renderGroup(processItems,  TrendingUp,    'In Vorbereitung — 90 bis 120 Tage',               'text-blue-700',   'bg-blue-50/60')}
+            {renderGroup(processItems,  TrendingUp,    'In Vorbereitung — 90 bis 150 Tage',               'text-blue-700',   'bg-blue-50/60')}
+            {renderGroup(earlyItems,    CalendarClock, 'Früh — 150 bis 180 Tage',                         'text-slate-600',  'bg-slate-50/40')}
           </div>
         </div>
       )}
