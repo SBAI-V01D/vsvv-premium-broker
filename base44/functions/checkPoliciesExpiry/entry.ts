@@ -21,14 +21,12 @@ const daysUntil = (dateStr) => {
   return Math.ceil((new Date(dateStr + 'T00:00:00Z') - new Date()) / 86400000);
 };
 
-// Strikte Duplikatprüfung: contract_id + task_type, fallback auf customer_id + task_type + insurer im Titel
-const hasOpenTask = (existingTasks, contract, taskType, titleFragment) => {
+// Strikte Duplikatprüfung: contract_id + task_type (atomar)
+const hasOpenTask = (existingTasks, contractId, taskType) => {
   return existingTasks.some(t => {
     if (t.status === 'completed') return false;
-    if (t.contract_id && t.contract_id === contract.id && t.task_type === taskType) return true;
-    if (!t.contract_id && t.customer_id === contract.customer_id && t.task_type === taskType) {
-      if (titleFragment && t.title?.includes(titleFragment)) return true;
-    }
+    // Primär: contract_id + task_type (eindeutig)
+    if (t.contract_id === contractId && t.task_type === taskType) return true;
     return false;
   });
 };
@@ -87,7 +85,7 @@ Deno.serve(async (req) => {
 
       // ── 2. 90 Tage vor Ablauf: Prüfungs-Aufgabe ────────────────────────
       if (endDays !== null && endDays <= 90 && endDays > 60 && c.status === 'active') {
-        if (!hasOpenTask(existingTasks, c, 'renewal', insurer)) {
+        if (!hasOpenTask(existingTasks, c.id, 'renewal')) {
           await base44.asServiceRole.entities.Task.create({
             title: `Vertragsablauf prüfen — ${insurer} (${c.customer_name || ''})`,
             description: `Vertrag läuft in ${endDays} Tagen ab. Verlängerung oder Kündigung prüfen.`,
@@ -111,7 +109,7 @@ Deno.serve(async (req) => {
 
       // ── 3. 60 Tage: Kundenkontakt-Aufgabe ──────────────────────────────
       if (endDays !== null && endDays <= 60 && endDays > 30 && c.status === 'active') {
-        if (!hasOpenTask(existingTasks, c, 'follow_up', insurer)) {
+        if (!hasOpenTask(existingTasks, c.id, 'follow_up')) {
           await base44.asServiceRole.entities.Task.create({
             title: `Kunde kontaktieren — ${insurer} Verlängerung (${c.customer_name || ''})`,
             description: `Vertrag läuft in ${endDays} Tagen ab. Kunden anrufen und Verlängerungsoptionen besprechen.`,
@@ -135,7 +133,7 @@ Deno.serve(async (req) => {
 
       // ── 4. 30 Tage: Dringende Beratung + Verkaufschance ────────────────
       if (endDays !== null && endDays <= 30 && endDays >= 0 && c.status === 'active') {
-        if (!hasOpenTask(existingTasks, c, 'consultation', insurer)) {
+        if (!hasOpenTask(existingTasks, c.id, 'consultation')) {
           await base44.asServiceRole.entities.Task.create({
             title: `DRINGEND: Beratung ${insurer} (${c.customer_name || ''})`,
             description: `Vertrag läuft in ${endDays} Tagen ab! Sofortige Beratung und Entscheid notwendig.`,
@@ -179,13 +177,7 @@ Deno.serve(async (req) => {
 
       // ── 5. Kündigungsfrist <= 30 Tage: Urgente Aufgabe ─────────────────
       if (cancelDays !== null && cancelDays <= 30 && cancelDays >= -30) {
-        const hasCancelTask = existingTasks.some(t =>
-          t.status !== 'completed' &&
-          t.contract_id === c.id &&
-          t.task_type === 'general' &&
-          t.title?.includes('Kündigungsfrist')
-        );
-        if (!hasCancelTask) {
+        if (!hasOpenTask(existingTasks, c.id, 'general')) {
           await base44.asServiceRole.entities.Task.create({
             title: `Kündigungsfrist läuft ab — ${insurer} (${c.customer_name || ''})`,
             description: cancelDays <= 0
