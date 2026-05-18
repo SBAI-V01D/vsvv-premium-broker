@@ -1,8 +1,37 @@
 # ENTERPRISE AUDIT SCHEMA — Architecture Design
 
 **Stand:** 2026-05-18  
-**Version:** 0.1 (DRAFT)  
-**Status:** 📝 ZUR DISKUSSION
+**Version:** 1.0 (FINAL)  
+**Status:** ✅ IMPLEMENTIERUNGSBEREIT
+
+---
+
+## ZUSAMMENFASSUNG — Enterprise Audit Architecture
+
+### ✅ SCHEMA-VOLLSTÄNDIGKEIT
+- 10 Core-Bereiche (Identification, Timestamp, Trigger, Process, Guard, Entity, State, Side-Effects, Impact, Metadata)
+- 7 Enterprise-Ergänzungen (Process vs Event, Actor-Type, Decision-Engine, Business-Severity, Snapshot-Light, Retry/Recovery, Anomaly-Prep)
+- Audit-Levels (1-4) zur Vermeidung von Log-Flut
+
+### ✅ USE-CASE-FÄHIGKEIT
+- Guard-Hit-Rate monitoren ✅
+- Lifecycle-Transitions nachvollziehen ✅
+- Process-Chains korrelieren ✅
+- Anomalien erkennen (vorbereitet) ✅
+- Financial-Impact reporten ✅
+
+### ✅ ENTITY-LIFECYCLES ABGEDECKT
+- Contract Lifecycle ✅
+- Application Lifecycle ✅
+- Commission Lifecycle ✅
+- Renewal Lifecycle ✅
+- Task Lifecycle ✅
+
+### ✅ IMPLEMENTIERUNGSPLAN
+- 6 Phasen (Woche 1-7)
+- Pilot-Integration in 2 Automationen (Phase 1)
+- Rollout auf alle Automationen (Phase 2-4)
+- Dashboard + Monitoring (Phase 5-6)
 
 ---
 
@@ -475,102 +504,285 @@ open → in_progress → completed
 
 ---
 
-## IMPLEMENTATION PRIORITIES
+## IMPLEMENTATION ROADMAP — Finalisiert
 
-### Phase 1: Core Schema (WOCHEN 1)
-- [ ] `auditLogWrite` Function um Core-Felder erweitern
-- [ ] `audit_id`, `correlation_id`, `process_id` generieren
-- [ ] `trigger_type`, `trigger_source` dokumentieren
-- [ ] `decision`, `guard_result` integrieren
-- [ ] In `onApplicationUpdate` integrieren
-- [ ] In `handleStornoOfAutomaticProvision` integrieren
+### Phase 1: Core Schema + Helper (WOCHEN 1) ✅ READY
+- [ ] `auditLogWrite` Function um **alle** Felder erweitern (v1.0 Schema)
+- [ ] Helper-Functions erstellen:
+  - [ ] `generateCorrelationId(processType, entityId)`
+  - [ ] `generateProcessId(lifecycleType)`
+  - [ ] `generateAuditId(automationId, sequence)`
+- [ ] `actor_type` + `actor_id` integrieren
+- [ ] `decision_code` + `decision_logic` integrieren
+- [ ] `business_severity` + `technical_severity` trennen
+- [ ] `audit_level` (1-4) implementieren
+- [ ] In `onApplicationUpdate` integrieren (Pilot)
+- [ ] In `handleStornoOfAutomaticProvision` integrieren (Pilot)
 
-### Phase 2: Guard-Monitoring (WOCHEN 2)
-- [ ] `logGuardEvaluation` Function erstellen
+---
+
+### Phase 2: Guard-Monitoring + Financial Impact (WOCHEN 2)
+- [ ] `logGuardEvaluation` Helper erstellen
 - [ ] `guard_evaluated`, `guard_result`, `guard_reason` tracken
-- [ ] `business_impact.financial_impact_chf` berechnen
-- [ ] In allen Guards integrieren
+- [ ] `business_impact.financial_impact_chf` berechnen (bei Storno: CHF-Wert)
+- [ ] In allen Guards integrieren:
+  - [ ] `no_existing_storno` (handleStorno)
+  - [ ] `contract_exists_by_source` (onApplicationUpdate)
+  - [ ] `not_already_cancelled` (handleStorno)
+- [ ] Guard-Hit-Query testen: `{ guard_result: "blocked" }`
 
-### Phase 3: Lifecycle-Tracking (WOCHEN 3)
+---
+
+### Phase 3: Lifecycle-Tracking + State Snapshots (WOCHEN 3)
 - [ ] `state_transition`, `state_history` implementieren
-- [ ] Contract-Lifecycle als erstes modellieren
+- [ ] `previous_state_summary`, `new_state_summary` (Snapshot Light)
+- [ ] Contract-Lifecycle als erstes modellieren:
+  - [ ] Status-Transitions tracken
+  - [ ] Process-Stage dokumentieren
 - [ ] Application-Lifecycle modellieren
 - [ ] Commission-Lifecycle modellieren
+- [ ] Lifecycle-Query testen: `{ process_id: "contract_lifecycle_789" }`
 
-### Phase 4: Side-Effects & Correlation (WOCHEN 4)
+---
+
+### Phase 4: Correlation + Side-Effects (WOCHEN 4)
 - [ ] `side_effects` Array implementieren
 - [ ] `correlation_id` über Automationen hinweg teilen
+  - [ ] Application → Contract: gleiche correlation_id
+  - [ ] Contract → Commission: gleiche correlation_id
 - [ ] `related_entities` dokumentieren
 - [ ] Process-Chains nachvollziehbar machen
-
-### Phase 5: Admin Dashboard (WOCHEN 5-6)
-- [ ] Audit-Log Viewer UI
-- [ ] Guard-Hit-Rate Widget
-- [ ] Lifecycle-Transition Timeline
-- [ ] Financial-Impact Report
-- [ ] CSV-Export
+- [ ] Correlation-Query testen: `{ correlation_id: "corr_..." }`
 
 ---
 
-## OFFENE FRAGEN — Zur Diskussion
-
-### 1. Schema-Komplexität
-**Frage:** Ist das Schema zu komplex für den Start?
-
-**Option A:** Vollständig implementieren (alle Felder)
-- Vorteil: Zukunftssicher, alle Use Cases abgedeckt
-- Nachteil: Höhere initiale Komplexität
-
-**Option B:** Minimal starten (Core-Felder), erweitern
-- Vorteil: Schnellere Implementierung
-- Nachteil: Spätere Migration nötig
-
-**Empfehlung:** Option A — Schema ist die DNA, später teuer zu ändern.
+### Phase 5: Retry/Recovery + Anomaly Prep (WOCHEN 5)
+- [ ] `retry_attempt`, `recovered`, `recovery_strategy` implementieren
+- [ ] `anomaly_detected`, `anomaly_type`, `anomaly_score` vorbereiten
+- [ ] Retry-Logic in kritischen Automationen
+- [ ] Anomaly-Thresholds definieren (später aktivierbar)
 
 ---
 
-### 2. Correlation-ID Generierung
-**Frage:** Wie generieren wir `correlation_id` konsistent?
-
-**Option A:** Zentraler Generator (`generateCorrelationId()`)
-- Vorteil: Einheitliches Format, wiederverwendbar
-- Nachteil: Zusätzliche Function
-
-**Option B:** Jede Automation generiert selbst
-- Vorteil: Dezentral, flexibel
-- Nachteil: Inkonsistenzen möglich
-
-**Empfehlung:** Option A — Zentrale Konsistenz ist wichtiger.
-
----
-
-### 3. Storage & Querying
-**Frage:** Wie speichern/queryen wir effizient?
-
-**Option A:** AuditLog Entity (Base44)
-- Vorteil: Einfach, Base44-Features
-- Nachteil: Performance bei großen Mengen?
-
-**Option B:** Externer Log-Service (später)
-- Vorteil: Skalierbar, spezialisiert
-- Nachteil: Komplexität, Kosten
-
-**Empfehlung:** Option A für Start, Option B bei Scale.
+### Phase 6: Admin Dashboard + Audit-Levels (WOCHEN 6-7)
+- [ ] Audit-Log Viewer UI (Admin-Page)
+- [ ] Filter nach:
+  - [ ] Entity-Type
+  - [ ] Guard-Result
+  - [ ] Audit-Level (1-4)
+  - [ ] Zeitraum
+- [ ] Guard-Hit-Rate Widget (KPI: CHF geschützt)
+- [ ] Lifecycle-Transition Timeline (Visualisierung)
+- [ ] Financial-Impact Report (Summen, Guards)
+- [ ] CSV-Export (Compliance)
+- [ ] Audit-Level-Steering (UI: Level 1-2 default, 3-4 temporär)
 
 ---
 
-### 4. Guard-Monitoring als eigenes Schema?
-**Frage:** Sollen Guard-Hits separat gespeichert werden?
+## ERGÄNZUNGEN — Enterprise Verfeinerungen
 
-**Option A:** Im AuditLog integriert (wie oben)
-- Vorteil: Einheitliches Schema, Korrelation einfach
-- Nachteil: AuditLog wird größer
+### 1. PROCESS vs EVENT — Strikte Trennung
 
-**Option B:** Eigenes `GuardLog` Entity
-- Vorteil: Spezialisiert, effizient querybar
-- Nachteil: Zwei Synchronisationspunkte
+**WICHTIG:** Ein Prozess kann mehrere Events umfassen.
 
-**Empfehlung:** Option A — Integration ist eleganter.
+```javascript
+{
+  // PROCESS (höhergestellt)
+  "process_id": "contract_lifecycle_789",
+  "process_type": "contract_lifecycle",
+  "process_stage": "cancellation_storno",
+  
+  // EVENT (untergeordnet)
+  "event_id": "evt_001",
+  "event_type": "commission_storno_created",
+  "event_sequence": 1
+}
+```
+
+**Regel:** `process_id` ist die Klammer — mehrere Events teilen einen Prozess.
+
+---
+
+### 2. ACTOR-TYPE — Human vs System Aktionen
+
+**NEU:** `actor_type` + `actor_id`
+
+```javascript
+{
+  "actor_type": "user" | "automation" | "scheduler" | "system" | "migration" | "api",
+  "actor_id": "p.adam@vsvv.ch" | "onApplicationUpdate" | "6a01c612300a5ddad0b6e46e",
+  "actor_name": "Peter Adam" | "Application Update Automation" | "Daily Expiry Check"
+}
+```
+
+**Vorteil:** Später analysierbar: Probleme nur durch Automationen? Nur manuelle Eingriffe?
+
+---
+
+### 3. DECISION ENGINE — Warum wurde entschieden?
+
+**NEU:** `decision_code` + `decision_logic`
+
+```javascript
+{
+  "decision_code": "blocked_duplicate_contract" | "skipped_existing_storno" | "allowed_transition" | "rejected_invalid_state",
+  "decision_logic": "Guard 'no_existing_storno' evaluated: existing_storno_id=123, blocked=true"
+}
+```
+
+**Vorteil:** Exakte Nachvollziehbarkeit der Entscheidungslogik.
+
+---
+
+### 4. BUSINESS SEVERITY — Nicht nur technisch
+
+**ERWEITERT:** `business_severity` separat von `technical_severity`
+
+```javascript
+{
+  "business_severity": {
+    "type": "financial" | "compliance" | "customer_impact" | "operational" | "critical",
+    "level": "critical" | "high" | "medium" | "low" | "info"
+  },
+  "technical_severity": {
+    "type": "error" | "warning" | "info" | "debug",
+    "level": "critical" | "high" | "medium" | "low"
+  }
+}
+```
+
+**Beispiel:** Doppelstorno = `business_severity: financial/critical`, aber `technical_severity: info`
+
+---
+
+### 5. SNAPSHOT LIGHT — State-Zusammenfassung
+
+**NEU:** Kompakte State-Snapshots (keine JSON-Monster)
+
+```javascript
+{
+  "previous_state_summary": {
+    "status": "active",
+    "premium_yearly": 1200,
+    "commission_status": "expected"
+  },
+  "new_state_summary": {
+    "status": "cancelled",
+    "premium_yearly": 1200,
+    "commission_status": "storno"
+  }
+}
+```
+
+**Regel:** Nur relevante Business-Felder, nicht gesamte Entity.
+
+---
+
+### 6. RETRY / RECOVERY — Fehlertoleranz
+
+**NEU:** Retry-Tracking für Resilience
+
+```javascript
+{
+  "retry_attempt": 0,
+  "retry_of_event_id": null,
+  "recovered": false,
+  "recovery_strategy": null, // "retry", "fallback", "manual_intervention"
+  "original_error": null
+}
+```
+
+**Vorteil:** Fehlertoleranz analysierbar, Recovery-Patterns erkennbar.
+
+---
+
+### 7. ANOMALY FLAG — Vorbereitung für Monitoring
+
+**NEU:** Anomaly-Indikatoren (vorbereitet, nicht aktiv)
+
+```javascript
+{
+  "anomaly_detected": false,
+  "anomaly_type": null, // "duplicate_spike", "task_flood", "renewal_loop", "status_churn"
+  "anomaly_score": null, // 0-100, ML-basiert später
+  "anomaly_threshold_exceeded": false
+}
+```
+
+**Vorteil:** Infrastruktur für zukünftiges AI-Monitoring vorhanden.
+
+---
+
+### 8. AUDIT-LEVELS — Intelligente Filterung
+
+**NEU:** Audit-Level zur Vermeidung von Log-Flut
+
+```javascript
+{
+  "audit_level": 1 | 2 | 3 | 4,
+  "audit_level_name": "critical_business" | "lifecycle_transition" | "guard_decision" | "debug_verbose"
+}
+```
+
+**Level-Definition:**
+
+| Level | Name | Was wird geloggt? | Beispiel |
+|-------|------|-------------------|----------|
+| **1** | `critical_business` | Nur kritische Business-Events | Storno, Doppelvertrag blockiert, Payment |
+| **2** | `lifecycle_transition` | Status-Übergänge, Lifecycle-Events | Contract created, Application approved |
+| **3** | `guard_decision` | Guard-Evaluierungen (allowed/blocked) | Guard evaluated, decision made |
+| **4** | `debug_verbose` | Vollständige Details (temporär) | Nur für Debugging, nicht production |
+
+**Vorteil:** Production nur Level 1-2, Debugging temporär Level 3-4.
+
+---
+
+## OFFENE FRAGEN — BEANTWORTET
+
+### 1. Schema-Komplexität ✅ BEANTWORTET
+**Entscheidung:** Vollständig implementieren (alle Felder)
+
+**Begründung:**
+- Correlation, Lifecycle, Guard-Tracking später extrem teuer zu refaktoren
+- Audit-DNA muss jetzt sauber sein
+- Komplexität durch Audit-Levels beherrschbar (production nur Level 1-2)
+
+---
+
+### 2. Correlation-ID Generierung ✅ BEANTWORTET
+**Entscheidung:** Zentraler Generator (`generateCorrelationId()`)
+
+**Implementierung:**
+```javascript
+// Helper-Function
+function generateCorrelationId(processType, entityId) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '').slice(0, 15);
+  const random = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `corr_${processType}_${entityId}_${timestamp}${random}`;
+}
+
+// Beispiel: corr_contract_lifecycle_789_20260518T100000ZA1B2
+```
+
+---
+
+### 3. Storage & Querying ✅ BEANTWORTET
+**Entscheidung:** AuditLog Entity (Base44) für Start
+
+**Begründung:**
+- Einfach, schnell, transparent
+- Base44-Features (Filter, Sort, Query) nutzbar
+- Bei >100k Events/Monat: externer Service evaluieren
+
+---
+
+### 4. Guard-Monitoring ✅ BEANTWORTET
+**Entscheidung:** Im AuditLog integriert
+
+**Begründung:**
+- Einheitliches Schema
+- Korrelation einfach (gleiche audit_id)
+- Guard-Hits via Query filterbar: `{ guard_evaluated: "no_existing_storno" }`
 
 ---
 
