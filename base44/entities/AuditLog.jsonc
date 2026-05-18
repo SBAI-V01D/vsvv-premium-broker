@@ -2,6 +2,104 @@
   "name": "AuditLog",
   "type": "object",
   "properties": {
+    "audit_schema_version": {
+      "type": "string",
+      "default": "1.0",
+      "description": "Audit Schema Version (frozen)"
+    },
+    "audit_id": {
+      "type": "string",
+      "description": "Eindeutige Audit-ID (z.B. AUD-20260518-001A2B)"
+    },
+    "audit_level": {
+      "type": "number",
+      "enum": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "default": 2,
+      "description": "1=Critical Business, 2=Lifecycle, 3=Guard, 4=Debug"
+    },
+    "audit_level_name": {
+      "type": "string",
+      "enum": [
+        "critical_business",
+        "lifecycle_transition",
+        "guard_decision",
+        "debug_verbose"
+      ],
+      "default": "lifecycle_transition",
+      "description": "Lesbarer Audit-Level Name"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Wann das Event stattfand"
+    },
+    "trigger_type": {
+      "type": "string",
+      "enum": [
+        "entity_create",
+        "entity_update",
+        "entity_delete",
+        "scheduled",
+        "manual",
+        "api",
+        "migration"
+      ],
+      "description": "Was l\u00f6ste das Event aus?"
+    },
+    "trigger_source": {
+      "type": "string",
+      "description": "Automation-Name, Function-Name, oder User-Email"
+    },
+    "actor_type": {
+      "type": "string",
+      "enum": [
+        "user",
+        "automation",
+        "scheduler",
+        "system",
+        "migration",
+        "api"
+      ],
+      "description": "Typ des Akteurs"
+    },
+    "actor_id": {
+      "type": "string",
+      "description": "User-ID, Automation-Name, oder System-ID"
+    },
+    "actor_name": {
+      "type": "string",
+      "description": "Lesbarer Name (z.B. 'Peter Adam', 'Application Update Automation')"
+    },
+    "process_id": {
+      "type": "string",
+      "description": "Prozess-Klammer (z.B. CTL-20260518-789A1B f\u00fcr Contract Lifecycle)"
+    },
+    "process_type": {
+      "type": "string",
+      "description": "Prozess-Typ (z.B. 'contract_lifecycle', 'renewal', 'commission_storno')"
+    },
+    "process_stage": {
+      "type": "string",
+      "description": "Prozess-Stage (z.B. 'cancellation_storno', 'renewal_task_creation')"
+    },
+    "event_id": {
+      "type": "string",
+      "description": "Eindeutige Event-ID innerhalb des Prozesses"
+    },
+    "event_type": {
+      "type": "string",
+      "description": "Event-Typ (z.B. 'commission_storno_created', 'task_renewal_created')"
+    },
+    "event_sequence": {
+      "type": "number",
+      "default": 1,
+      "description": "Sequenz-Nummer im Prozess"
+    },
     "entity_type": {
       "type": "string",
       "enum": [
@@ -9,13 +107,16 @@
         "application",
         "contract",
         "commission",
-        "task"
+        "task",
+        "document",
+        "organization",
+        "advisor"
       ],
-      "description": "Entity type that was changed"
+      "description": "Betroffene Entity"
     },
     "entity_id": {
       "type": "string",
-      "description": "ID of the changed entity"
+      "description": "ID der betroffenen Entity"
     },
     "action": {
       "type": "string",
@@ -24,65 +125,217 @@
         "update",
         "delete",
         "archive",
-        "restore"
+        "restore",
+        "block",
+        "skip",
+        "allow",
+        "reject"
       ],
-      "description": "Action performed"
+      "description": "Ausgef\u00fchrte Aktion"
     },
-    "changed_by": {
+    "decision_code": {
       "type": "string",
-      "description": "Email of user who made the change"
+      "description": "Standardisierter Decision-Code (z.B. 'CONTRACT_CREATE_BLOCKED_DUPLICATE')"
     },
-    "changed_at": {
+    "decision_logic": {
       "type": "string",
-      "format": "date-time",
-      "description": "When the change was made"
+      "description": "Warum wurde entschieden? (Guard-Evaluation, Business-Logic)"
     },
-    "old_values": {
+    "guard_evaluated": {
+      "type": "string",
+      "description": "Welcher Guard wurde evaluiert? (z.B. 'no_existing_storno')"
+    },
+    "guard_result": {
+      "type": "string",
+      "enum": [
+        "allowed",
+        "blocked",
+        "skipped",
+        "error"
+      ],
+      "description": "Guard-Ergebnis"
+    },
+    "guard_reason": {
+      "type": "string",
+      "description": "Warum Guard allowed/blocked?"
+    },
+    "business_severity_type": {
+      "type": "string",
+      "enum": [
+        "financial",
+        "compliance",
+        "customer_impact",
+        "operational",
+        "critical"
+      ],
+      "description": "Business-Impact Typ"
+    },
+    "business_severity_level": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low",
+        "info"
+      ],
+      "description": "Business-Impact Level"
+    },
+    "technical_severity_type": {
+      "type": "string",
+      "enum": [
+        "error",
+        "warning",
+        "info",
+        "debug"
+      ],
+      "description": "Technischer Schweregrad"
+    },
+    "technical_severity_level": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low"
+      ],
+      "description": "Technischer Level"
+    },
+    "previous_state_summary": {
       "type": "object",
-      "description": "Previous values of changed fields",
+      "description": "Kompakter State-Snapshot (vorher)",
       "additionalProperties": true
     },
-    "new_values": {
+    "new_state_summary": {
       "type": "object",
-      "description": "New values of changed fields",
+      "description": "Kompakter State-Snapshot (nachher)",
       "additionalProperties": true
     },
-    "summary": {
+    "side_effects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "entity_type": {
+            "type": "string"
+          },
+          "entity_id": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Nebeneffekte (z.B. Task erstellt, Commission storniert)"
+    },
+    "business_impact_financial_chf": {
+      "type": "number",
+      "description": "Finanzieller Impact in CHF (z.B. gesch\u00fctzte Commission)"
+    },
+    "business_impact_description": {
       "type": "string",
-      "description": "Human-readable summary of change"
+      "description": "Beschreibung des Business-Impacts"
+    },
+    "retry_attempt": {
+      "type": "number",
+      "default": 0,
+      "description": "Retry-Versuch (0 = erster Versuch)"
+    },
+    "retry_of_event_id": {
+      "type": "string",
+      "description": "Original Event-ID bei Retry"
+    },
+    "recovered": {
+      "type": "boolean",
+      "default": false,
+      "description": "Wurde erfolgreich recovered?"
+    },
+    "recovery_strategy": {
+      "type": "string",
+      "enum": [
+        "retry",
+        "fallback",
+        "manual_intervention",
+        null
+      ],
+      "description": "Welche Recovery-Strategie?"
+    },
+    "original_error": {
+      "type": "string",
+      "description": "Originaler Fehler (bei Recovery)"
+    },
+    "anomaly_detected": {
+      "type": "boolean",
+      "default": false,
+      "description": "Anomalie erkannt? (vorbereitet)"
+    },
+    "anomaly_type": {
+      "type": "string",
+      "enum": [
+        null,
+        "duplicate_spike",
+        "task_flood",
+        "renewal_loop",
+        "status_churn"
+      ],
+      "description": "Typ der Anomalie"
+    },
+    "anomaly_score": {
+      "type": "number",
+      "description": "Anomalie-Score 0-100 (ML-basiert sp\u00e4ter)"
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Durchg\u00e4ngige Prozess-Kette (lesbar, z.B. CTL-20260518-789A1B)"
+    },
+    "related_entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "entity_type": {
+            "type": "string"
+          },
+          "entity_id": {
+            "type": "string"
+          },
+          "relationship": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Verwandte Entities (z.B. Application \u2192 Contract)"
     },
     "ip_address": {
       "type": "string",
-      "description": "IP address of change origin"
+      "description": "IP-Adresse (bei User/API-Triggers)"
+    },
+    "duration_ms": {
+      "type": "number",
+      "description": "Ausf\u00fchrungsdauer in Millisekunden"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Fehlermeldung (bei error/warning)"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Zus\u00e4tzliche kontextspezifische Metadaten",
+      "additionalProperties": true
     }
   },
   "required": [
+    "audit_schema_version",
+    "audit_id",
+    "timestamp",
+    "trigger_type",
+    "actor_type",
     "entity_type",
     "entity_id",
-    "action",
-    "changed_by",
-    "changed_at"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+    "action"
+  ]
 }
