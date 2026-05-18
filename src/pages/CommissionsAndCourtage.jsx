@@ -452,11 +452,13 @@ export default function CommissionsAndCourtage() {
 
       {/* Storno Banner */}
       {stornoEntries.length > 0 && (() => {
-        const stornoAnalysis = calcStornoByDimension(stornoEntries, 'advisor_id', 'advisor_name')
-        const totalStornoCourtage = stornoAnalysis.reduce((s, d) => s + d.commissionLost, 0)
+        const totalStornoCourtage = stornoEntries.reduce((s, e) => {
+          const ne = normalizeLegacyEntry(e)
+          return s + Math.abs(ne.advisor_courtage_amount || 0)
+        }, 0)
         const totalStornoProvision = stornoEntries.reduce((s, e) => {
           const ne = normalizeLegacyEntry(e)
-          return s + (ne.advisor_provision_amount || 0)
+          return s + Math.abs(ne.advisor_provision_amount || 0)
         }, 0)
         return (
           <div className="flex items-center gap-3 px-3 py-2.5 bg-rose-50/60 border border-rose-200/60 rounded-lg text-xs text-rose-700">
