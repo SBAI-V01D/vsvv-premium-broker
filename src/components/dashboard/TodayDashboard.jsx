@@ -5,15 +5,11 @@
  */
 import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { base44 } from '@/api/base44Client'
 import { cn } from '@/lib/utils'
-import { format, parseISO, isToday, isBefore, differenceInDays } from 'date-fns'
-import { de } from 'date-fns/locale'
+import { parseISO, isToday, isBefore } from 'date-fns'
 import {
-  CheckSquare, TrendingUp, Users, Phone, Clock, AlertTriangle,
-  ArrowRight, Plus, Star, Trophy, Target, RefreshCw, CalendarClock,
-  ChevronRight, Circle, CheckCircle2, Zap
+  CheckSquare, TrendingUp, Target, RefreshCw, CalendarClock,
+  ChevronRight, CheckCircle2, ArrowRight, Plus
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import BestandsmanagementPanel from './BestandsmanagementPanel'
@@ -151,32 +147,19 @@ function Section({ title, icon: Icon, iconColor, count, urgentCount, children, c
   )
 }
 
+const TASK_FILTERS = [
+  { key: 'all',      label: 'Alle' },
+  { key: 'overdue',  label: 'Überfällig' },
+  { key: 'today',    label: 'Heute' },
+  { key: 'week',     label: 'Diese Woche' },
+  { key: 'later',    label: 'Später' },
+]
+
 // ── MAIN ─────────────────────────────────────────────────────────────────────
 export default function TodayDashboard({ openTasks, expiringContracts, contracts = [], activeLeads, verkaufschancen, tasks = [], onTaskClick, onTaskComplete }) {
   const navigate = useNavigate()
   const today = new Date()
-
-  // Aufgaben nach Priorität sortieren
-  const urgentTasks = useMemo(() => openTasks
-    .filter(t => {
-      const d = daysUntil(t.due_date)
-      return (d !== null && d <= 3) || t.priority === 'urgent' || t.priority === 'high'
-    })
-    .sort((a, b) => (daysUntil(a.due_date) ?? 999) - (daysUntil(b.due_date) ?? 999))
-    .slice(0, 8),
-    [openTasks]
-  )
-
-  const laterTasks = useMemo(() => openTasks
-    .filter(t => {
-      const d = daysUntil(t.due_date)
-      return d === null || d > 3
-    })
-    .filter(t => t.priority !== 'urgent' && t.priority !== 'high')
-    .sort((a, b) => (daysUntil(a.due_date) ?? 999) - (daysUntil(b.due_date) ?? 999))
-    .slice(0, 5),
-    [openTasks]
-  )
+  const [taskFilter, setTaskFilter] = useState('all')
 
   // Wiedervorlagen heute
   const wiedervorlagen = useMemo(() => verkaufschancen.filter(v => {
@@ -191,11 +174,11 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
   const actionableVs = useMemo(() => verkaufschancen
     .filter(v => ['offerten_erhalten', 'kunde_entscheidet', 'beratung_erfolgt'].includes(v.status))
     .sort((a, b) => (daysUntil(a.expected_close_date) ?? 999) - (daysUntil(b.expected_close_date) ?? 999))
-    .slice(0, 6),
+    .slice(0, 8),
     [verkaufschancen]
   )
 
-  // Hot Leads (activeLeads bereits server-seitig auf qualified/contacted/new gefiltert)
+  // Hot Leads
   const hotLeads = useMemo(() => activeLeads
     .filter(l => l.status === 'qualified' || (l.lead_score || 0) >= 60)
     .sort((a, b) => (b.lead_score || 0) - (a.lead_score || 0))
@@ -203,11 +186,35 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
     [activeLeads]
   )
 
-  // KVG-spezifische aktive Leads (für KPI-Kachel)
   const newLeadsCount = activeLeads.filter(l => l.status === 'new').length
 
-  const overdueCount = urgentTasks.filter(t => daysUntil(t.due_date) !== null && daysUntil(t.due_date) <= 0).length
-  const totalUrgent = overdueCount + wiedervorlagen.length
+  // Aufgaben sortiert nach Fälligkeit
+  const sortedTasks = useMemo(() =>
+    [...openTasks].sort((a, b) => (daysUntil(a.due_date) ?? 999) - (daysUntil(b.due_date) ?? 999)),
+    [openTasks]
+  )
+
+  // Aufgaben-Filter
+  const filteredTasks = useMemo(() => {
+    if (taskFilter === 'all') return sortedTasks
+    if (taskFilter === 'overdue') return sortedTasks.filter(t => { const d = daysUntil(t.due_date); return d !== null && d <= 0 })
+    if (taskFilter === 'today') return sortedTasks.filter(t => { const d = daysUntil(t.due_date); return d !== null && d === 0 })
+    if (taskFilter === 'week') return sortedTasks.filter(t => { const d = daysUntil(t.due_date); return d !== null && d > 0 && d <= 7 })
+    if (taskFilter === 'later') return sortedTasks.filter(t => { const d = daysUntil(t.due_date); return d === null || d > 7 })
+    return sortedTasks
+  }, [sortedTasks, taskFilter])
+
+  // Counts für Task-Filter-Badges
+  const taskCounts = useMemo(() => ({
+    all:     sortedTasks.length,
+    overdue: sortedTasks.filter(t => { const d = daysUntil(t.due_date); return d !== null && d <= 0 }).length,
+    today:   sortedTasks.filter(t => { const d = daysUntil(t.due_date); return d !== null && d === 0 }).length,
+    week:    sortedTasks.filter(t => { const d = daysUntil(t.due_date); return d !== null && d > 0 && d <= 7 }).length,
+    later:   sortedTasks.filter(t => { const d = daysUntil(t.due_date); return d === null || d > 7 }).length,
+  }), [sortedTasks])
+
+  const overdueCount = taskCounts.overdue
+  const allEmpty = openTasks.length === 0 && actionableVs.length === 0 && expiringContracts.length === 0
 
   return (
     <div className="space-y-3">
@@ -250,10 +257,10 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
         </div>
       )}
 
-      {/* ── Vertragsabläufe / Bestandsmanagement ── PROMINENT ── */}
+      {/* 1. Vertragsabläufe */}
       <BestandsmanagementPanel contracts={contracts} />
 
-      {/* ── Dringende Aufgaben ───────────────────────────────────────────── */}
+      {/* 2. Aufgaben mit Filter-Tabs */}
       <Section
         title="Aufgaben"
         icon={CheckSquare}
@@ -261,55 +268,66 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
         count={openTasks.length}
         urgentCount={overdueCount}
         cta={
-          <div className="flex items-center justify-between">
-            {openTasks.length > urgentTasks.length + laterTasks.length && (
-              <span className="text-xs text-muted-foreground">+{openTasks.length - urgentTasks.length - laterTasks.length} weitere</span>
-            )}
-            <button onClick={() => navigate('/aufgaben')} className="flex items-center gap-1 text-xs text-primary hover:underline font-medium ml-auto">
-              <ArrowRight className="w-3 h-3" /> Alle Aufgaben
-            </button>
-          </div>
+          <button onClick={() => navigate('/aufgaben')} className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
+            <ArrowRight className="w-3 h-3" /> Alle Aufgaben
+          </button>
         }
       >
-        {urgentTasks.length === 0 && laterTasks.length === 0 ? null : (
-          <div className="space-y-2">
-            {urgentTasks.map(t => (
-              <TaskRow key={t.id} task={t} onComplete={onTaskComplete} onOpen={onTaskClick} />
-            ))}
-            {laterTasks.length > 0 && urgentTasks.length > 0 && (
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest pt-1 pb-0.5 font-semibold">Weitere</p>
-            )}
-            {laterTasks.map(t => (
+        {/* Filter-Tabs */}
+        <div className="flex gap-1 mb-2.5 overflow-x-auto scrollbar-none">
+          {TASK_FILTERS.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setTaskFilter(tab.key)}
+              className={cn(
+                'flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full border whitespace-nowrap transition-colors flex-shrink-0',
+                taskFilter === tab.key
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+              )}
+            >
+              {tab.label}
+              {taskCounts[tab.key] > 0 && (
+                <span className={cn('text-[9px] font-bold', taskFilter === tab.key ? 'text-primary-foreground/80' : 'text-muted-foreground')}>
+                  {taskCounts[tab.key]}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+        {filteredTasks.length === 0 ? (
+          <p className="py-4 text-center text-[12px] text-muted-foreground">Keine Aufgaben in diesem Zeitraum</p>
+        ) : (
+          <div className="space-y-1.5">
+            {filteredTasks.map(t => (
               <TaskRow key={t.id} task={t} onComplete={onTaskComplete} onOpen={onTaskClick} />
             ))}
           </div>
         )}
       </Section>
 
-      {/* ── Verkaufschancen mit Handlungsbedarf ─────────────────────────── */}
-      {actionableVs.length > 0 && (
-        <Section
-          title="Verkaufschancen — Jetzt handeln"
-          icon={TrendingUp}
-          iconColor="bg-blue-100 text-blue-600"
-          count={actionableVs.length}
-          cta={
-            <button onClick={() => navigate('/verkaufschancen')} className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
-              <ArrowRight className="w-3 h-3" /> Alle Verkaufschancen
-            </button>
-          }
-        >
-          <div className="space-y-2">
+      {/* 3. Verkaufschancen — eigenständiger Bereich */}
+      <Section
+        title="Verkaufschancen"
+        icon={TrendingUp}
+        iconColor="bg-blue-100 text-blue-600"
+        count={actionableVs.length}
+        cta={
+          <button onClick={() => navigate('/verkaufschancen')} className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
+            <ArrowRight className="w-3 h-3" /> Alle Verkaufschancen
+          </button>
+        }
+      >
+        {actionableVs.length === 0 ? null : (
+          <div className="space-y-1.5">
             {actionableVs.map(vs => (
               <VsRow key={vs.id} vs={vs} onClick={() => navigate('/verkaufschancen')} />
             ))}
           </div>
-        </Section>
-      )}
+        )}
+      </Section>
 
-
-
-      {/* ── Heiße Leads ─────────────────────────────────────────────────── */}
+      {/* 4. Heiße Leads */}
       {hotLeads.length > 0 && (
         <Section
           title="Hot Leads"
@@ -322,7 +340,7 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
             </button>
           }
         >
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {hotLeads.map(l => (
               <button
                 key={l.id}
@@ -345,8 +363,8 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
         </Section>
       )}
 
-      {/* Alle erledigt State */}
-      {totalUrgent === 0 && openTasks.length === 0 && actionableVs.length === 0 && expiringContracts.length === 0 && (
+      {/* Alles erledigt */}
+      {allEmpty && (
         <div className="py-10 text-center rounded-xl border border-dashed border-emerald-200/80 bg-emerald-50/20">
           <CheckCircle2 className="w-10 h-10 mx-auto mb-2.5 text-emerald-400/80" />
           <p className="text-[14px] font-bold text-emerald-700">Alles unter Kontrolle</p>
