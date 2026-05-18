@@ -263,7 +263,7 @@ export default function Applications() {
           <SelectTrigger className="w-44"><SelectValue placeholder="Alle Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Alle Status</SelectItem>
-            {statusDefs.filter(s => s.is_active !== false).map(s => <SelectItem key={s.id} value={s.key}>{s.label}</SelectItem>)}
+            {statusDefs.map(s => <SelectItem key={s.id} value={s.key}>{s.label}</SelectItem>)}
           </SelectContent>
         </Select>
         {uniqueBrokers.length > 0 && (

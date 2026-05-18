@@ -13,7 +13,7 @@ const COLOR_DOT = {
 }
 
 export default function StatusSelect({ value, onChange, statusDefinitions = [], placeholder = 'Status wählen' }) {
-  const active = statusDefinitions.filter(s => s.is_active !== false)
+  const active = [...statusDefinitions]
     .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
 
   return (
