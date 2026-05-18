@@ -10,8 +10,8 @@ import { base44 } from '@/api/base44Client'
 import { cn } from '@/lib/utils'
 import { getSparteLabel } from '@/lib/insuranceSparten'
 import {
-  FileWarning, ChevronRight, TrendingUp, Shield, CheckCircle2,
-  Phone, ArrowRight, AlertTriangle
+  ChevronRight, TrendingUp, Shield, CheckCircle2,
+  ArrowRight, AlertTriangle
 } from 'lucide-react'
 
 const daysUntil = (d) => d ? Math.ceil((new Date(d) - new Date()) / 86400000) : null
@@ -22,18 +22,29 @@ function calcContractPriority(contract) {
   const endDays = daysUntil(contract.end_date)
   const cancelDays = daysUntil(contract.cancellation_deadline)
 
-  if (cancelDays !== null && cancelDays >= -30 && cancelDays <= 90) {
-    if (cancelDays <= 0)       issues.push({ type: 'kuendigung', label: 'Kündigungsfrist abgelaufen', severity: 'critical', days: cancelDays })
-    else if (cancelDays <= 30) issues.push({ type: 'kuendigung', label: `Kündigung in ${cancelDays}d`, severity: 'red', days: cancelDays })
-    else if (cancelDays <= 60) issues.push({ type: 'kuendigung', label: `Kündigung in ${cancelDays}d`, severity: 'orange', days: cancelDays })
-    else                       issues.push({ type: 'kuendigung', label: `Kündigung in ${cancelDays}d`, severity: 'yellow', days: cancelDays })
-  }
+  // Abgelaufener Vertrag (status=expired) — immer kritisch anzeigen
+  if (contract.status === 'expired') {
+    const abgelaufenSeit = endDays !== null ? Math.abs(endDays) : null
+    const label = abgelaufenSeit !== null
+      ? `Abgelaufen vor ${abgelaufenSeit}d`
+      : 'Vertrag abgelaufen'
+    issues.push({ type: 'ablauf', label, severity: 'critical', days: endDays ?? 0 })
+  } else {
+    // Aktiver Vertrag: Kündigungsfrist
+    if (cancelDays !== null && cancelDays >= -30 && cancelDays <= 90) {
+      if (cancelDays <= 0)       issues.push({ type: 'kuendigung', label: 'Kündigungsfrist abgelaufen', severity: 'critical', days: cancelDays })
+      else if (cancelDays <= 30) issues.push({ type: 'kuendigung', label: `Kündigung in ${cancelDays}d`, severity: 'red', days: cancelDays })
+      else if (cancelDays <= 60) issues.push({ type: 'kuendigung', label: `Kündigung in ${cancelDays}d`, severity: 'orange', days: cancelDays })
+      else                       issues.push({ type: 'kuendigung', label: `Kündigung in ${cancelDays}d`, severity: 'yellow', days: cancelDays })
+    }
 
-  if (endDays !== null && !['cancelled', 'archived'].includes(contract.status)) {
-    if (endDays >= -30 && endDays <= 0)      issues.push({ type: 'ablauf', label: 'Vertrag abgelaufen', severity: 'critical', days: endDays })
-    else if (endDays > 0 && endDays <= 30)   issues.push({ type: 'ablauf', label: `Läuft in ${endDays}d ab`, severity: 'red', days: endDays })
-    else if (endDays > 30 && endDays <= 60)  issues.push({ type: 'ablauf', label: `Läuft in ${endDays}d ab`, severity: 'orange', days: endDays })
-    else if (endDays > 60 && endDays <= 90)  issues.push({ type: 'ablauf', label: `Läuft in ${endDays}d ab`, severity: 'yellow', days: endDays })
+    // Aktiver Vertrag: Ablaufdatum
+    if (endDays !== null) {
+      if (endDays <= 0)           issues.push({ type: 'ablauf', label: 'Vertrag abgelaufen', severity: 'critical', days: endDays })
+      else if (endDays <= 30)     issues.push({ type: 'ablauf', label: `Läuft in ${endDays}d ab`, severity: 'red', days: endDays })
+      else if (endDays <= 60)     issues.push({ type: 'ablauf', label: `Läuft in ${endDays}d ab`, severity: 'orange', days: endDays })
+      else if (endDays <= 90)     issues.push({ type: 'ablauf', label: `Läuft in ${endDays}d ab`, severity: 'yellow', days: endDays })
+    }
   }
 
   const order = { critical: 0, red: 1, orange: 2, yellow: 3 }
@@ -50,48 +61,36 @@ const SEV = {
 
 function ContractRow({ contract, topIssue, onCustomer, onCreateVs }) {
   const s = SEV[topIssue.severity] || SEV.yellow
+  const dayAbs = Math.abs(topIssue.days ?? 0)
+  const isOverdue = (topIssue.days ?? 0) <= 0
+
   return (
     <div
-      className={cn('flex items-center gap-3 px-3 py-2.5 rounded-xl border border-l-4 cursor-pointer hover:shadow-sm transition-all', s.bg, s.border)}
+      className={cn('flex items-center gap-3 px-3.5 py-2.5 rounded-lg border cursor-pointer hover:shadow-xs transition-all group', s.bg, s.border)}
       onClick={() => onCustomer(contract)}
     >
-      {/* Countdown box */}
-      <div className={cn('w-11 h-10 rounded-lg flex flex-col items-center justify-center flex-shrink-0 text-white font-black text-sm', s.barBg)}>
-        {topIssue.days !== null ? (
-          <>
-            <span className="text-base leading-none">{Math.abs(topIssue.days)}</span>
-            <span className="text-[7px] font-bold leading-none mt-0.5">{topIssue.days <= 0 ? 'ÜBER' : 'Tage'}</span>
-          </>
-        ) : <FileWarning className="w-4 h-4" />}
-      </div>
+      {/* Status dot */}
+      <div className={cn('w-2 h-2 rounded-full flex-shrink-0', s.barBg)} />
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold truncate leading-tight">{contract.customer_name || '–'}</p>
+        <p className={cn('text-[12.5px] font-semibold truncate', s.text)}>{contract.customer_name || '–'}</p>
         <p className="text-[11px] text-muted-foreground truncate">
-          {contract.insurer} · {getSparteLabel(contract.sparte || contract.insurance_type) || '–'}
-        </p>
-        <p className={cn('text-[11px] font-semibold mt-0.5', s.text)}>
-          {topIssue.type === 'kuendigung' ? '⚠ ' : ''}{topIssue.label}
+          {contract.insurer}{contract.sparte || contract.insurance_type ? ` · ${getSparteLabel(contract.sparte || contract.insurance_type)}` : ''}
         </p>
       </div>
 
-      {/* Quick actions */}
-      <div className="flex flex-col gap-1 flex-shrink-0 items-end" onClick={e => e.stopPropagation()}>
-        {contract.customer_id && (
-          <button
-            onClick={() => onCustomer(contract)}
-            className="flex items-center gap-1 text-[10px] px-2 py-1 bg-primary/10 text-primary rounded-lg font-bold hover:bg-primary/20 transition-colors"
-          >
-            <Phone className="w-3 h-3" /> Kunde
-          </button>
-        )}
-        <button
-          onClick={(e) => { e.stopPropagation(); onCreateVs(contract) }}
-          className="text-[10px] px-2 py-1 bg-primary text-primary-foreground rounded-lg font-bold hover:bg-primary/90 transition-colors"
-        >
-          + Chance
-        </button>
-      </div>
+      {/* Tage-Badge */}
+      <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0', s.badge)}>
+        {isOverdue ? `+${dayAbs}d` : `${dayAbs}d`}
+      </span>
+
+      {/* + Chance Button */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onCreateVs(contract) }}
+        className="flex-shrink-0 text-[10px] px-2 py-1 bg-primary/10 text-primary rounded-md font-bold hover:bg-primary/20 transition-colors"
+      >
+        + Chance
+      </button>
     </div>
   )
 }
@@ -114,11 +113,14 @@ export default function BestandsmanagementPanel({ contracts = [] }) {
       .filter(c => {
         if (['cancelled', 'archived'].includes(c.status)) return false
         if (c.process_status === 'erledigt') return false
-        if (c.status === 'expired') {
-          const cd = c.cancellation_deadline ? Math.ceil((new Date(c.cancellation_deadline) - new Date()) / 86400000) : null
-          return cd !== null && cd >= -30 && cd <= 90
-        }
-        return true
+        // Abgelaufene Verträge immer einschliessen
+        if (c.status === 'expired') return true
+        // Aktive Verträge: nur wenn sie in den nächsten 90 Tagen ablaufen oder Kündigungsfrist relevant
+        const endDays = c.end_date ? Math.ceil((new Date(c.end_date) - new Date()) / 86400000) : null
+        const cancelDays = c.cancellation_deadline ? Math.ceil((new Date(c.cancellation_deadline) - new Date()) / 86400000) : null
+        if (endDays !== null && endDays <= 90) return true
+        if (cancelDays !== null && cancelDays >= -30 && cancelDays <= 90) return true
+        return false
       })
       .map(c => ({ contract: c, issues: calcContractPriority(c) }))
       .filter(i => i.issues.length > 0)
