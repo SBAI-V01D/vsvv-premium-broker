@@ -13,6 +13,7 @@ import DossierFamilieTab from './tabs/DossierFamilieTab';
 import DossierPolicenTab from './tabs/DossierPolicenTab';
 import DossierVergleichTab from './tabs/DossierVergleichTab';
 import DossierPlaceholderTab from './tabs/DossierPlaceholderTab';
+import DossierExportTab from './tabs/DossierExportTab';
 
 const TABS = [
   { key: 'stammdaten',  label: 'Stammdaten',   icon: '📋', phase: 1 },
@@ -61,7 +62,8 @@ export default function DossierBuilder({ dossierId, onSaved }) {
   const isTabEnabled = (tab) => {
     if (tab.phase === 1) return true;
     if (tab.phase === 2) return !!dossierId;
-    return false; // Phase 3+ locked
+    if (tab.phase === 4) return !!dossierId; // Export/PDF aktiviert in Phase 4
+    return false; // Phase 3 (Empfehlung) noch gesperrt
   };
 
   return (
@@ -130,7 +132,7 @@ export default function DossierBuilder({ dossierId, onSaved }) {
           <DossierPlaceholderTab tab={TABS.find(t => t.key === 'empfehlung')} />
         )}
         {activeTab === 'export' && (
-          <DossierPlaceholderTab tab={TABS.find(t => t.key === 'export')} />
+          <DossierExportTab dossier={dossier} />
         )}
       </div>
     </div>

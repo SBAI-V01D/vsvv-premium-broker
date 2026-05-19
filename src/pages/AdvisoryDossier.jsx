@@ -64,10 +64,10 @@ export default function AdvisoryDossier() {
         )}
       </div>
 
-      {/* Phase-3 Notice */}
+      {/* Phase-4 Notice */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
-        <strong>Phase 3 — Vergleichs- &amp; Berechnungslogik:</strong> Prämienvergleich, Einsparungsberechnung, Side-by-Side-Vergleich und Leistungsbewertung aktiv.
-        PDF-Export, Automationen und KI-Empfehlungen folgen in späteren Phasen.
+        <strong>Phase 4 — PDF-Infrastruktur:</strong> Druckvorschau, Snapshot-System und versionierte Dossierarchivierung aktiv. Tab «Export / PDF» im Builder verfügbar.
+        KI-Empfehlungen, Mailversand und Automationen folgen in späteren Phasen.
       </div>
 
       {/* Content */}
