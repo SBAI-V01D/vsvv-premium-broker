@@ -257,6 +257,15 @@ Deno.serve(async (req) => {
       const premiumMonthly = app.estimated_premium_monthly || null;
       const premiumYearly = app.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null);
 
+      // Kündigungsfrist berechnen: Vertragsende minus 3 Monate (Standard)
+      const rawEndDate = app.contract_end_date || app.requested_start_date || null;
+      let cancellationDeadline = null;
+      if (rawEndDate) {
+        const endDateObj = new Date(rawEndDate + 'T00:00:00');
+        endDateObj.setMonth(endDateObj.getMonth() - 3);
+        cancellationDeadline = endDateObj.toISOString().slice(0, 10);
+      }
+
       // CONTRACT CREATE — einmalig, atomar, durch Guard geschützt
       const contractCreateStart = Date.now();
       const newContract = await base44.asServiceRole.entities.Contract.create({
@@ -276,6 +285,7 @@ Deno.serve(async (req) => {
         premium_monthly: premiumMonthly,
         start_date: app.contract_start_date || app.requested_start_date || '',
         end_date: app.contract_end_date || '',
+        cancellation_deadline: cancellationDeadline || '',
         assigned_broker: app.assigned_broker || '',
         advisor_id: app.advisor_id || null,
         custom_status: 'aktiv',
