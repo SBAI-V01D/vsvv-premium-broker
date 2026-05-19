@@ -146,19 +146,38 @@ export default function Applications() {
     if (!statusChanging) return
     const app = statusChanging
 
-    // Nur Status-Update — Vertragserstellung, Provision & Timeline erfolgen ausschliesslich
-    // serverseitig via "Application Status Change → Contract Creation" Automation (onApplicationUpdate)
+    const APPROVED_KEYS = ['angenommen', 'policiert', 'approved', 'angenommen_vorbehalt', 'bewilligung_erteilt']
+    const isApproval = APPROVED_KEYS.includes(status?.toLowerCase())
+
     await base44.entities.Application.update(app.id, {
       custom_status: status,
       status_changed_at: new Date().toISOString(),
     })
 
+    setStatusChanging(null)
+
+    // Sofort erste Invalidierung
     await queryClient.invalidateQueries({ queryKey: ['applications'] })
     await queryClient.invalidateQueries({ queryKey: ['contracts'] })
-    await queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
     await queryClient.invalidateQueries({ queryKey: ['customers'] })
     await queryClient.invalidateQueries({ queryKey: ['tasks'] })
-    setStatusChanging(null)
+    await queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
+
+    // Bei Genehmigung: Backend-Automation braucht ~1-3s für Vertragserstellung
+    // Deshalb nochmals nach 1.5s und 3.5s refreshen
+    if (isApproval) {
+      setTimeout(async () => {
+        await queryClient.invalidateQueries({ queryKey: ['contracts'] })
+        await queryClient.invalidateQueries({ queryKey: ['applications'] })
+        await queryClient.invalidateQueries({ queryKey: ['customers'] })
+        await queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      }, 1500)
+      setTimeout(async () => {
+        await queryClient.invalidateQueries({ queryKey: ['contracts'] })
+        await queryClient.invalidateQueries({ queryKey: ['applications'] })
+        await queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
+      }, 3500)
+    }
   }
 
   const getStatusDef = (app) => {
