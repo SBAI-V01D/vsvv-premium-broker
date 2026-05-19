@@ -1,0 +1,107 @@
+{
+  "name": "AdvisoryDossier",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Read-link zu Customer (kein Cascade, kein Trigger)"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Kundenname (Cache)"
+    },
+    "advisor_id": {
+      "type": "string",
+      "description": "Berater-ID"
+    },
+    "organization_id": {
+      "type": "string",
+      "description": "Organisations-ID"
+    },
+    "title": {
+      "type": "string",
+      "description": "Dossier-Titel (z.B. 'Krankenversicherungsvergleich 2026')"
+    },
+    "dossier_type": {
+      "type": "string",
+      "enum": [
+        "kk_vergleich",
+        "vorsorge",
+        "sachversicherung",
+        "gesamtdossier"
+      ],
+      "default": "kk_vergleich",
+      "description": "Dossier-Typ"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "entwurf",
+        "in_bearbeitung",
+        "bereit",
+        "archiviert"
+      ],
+      "default": "entwurf",
+      "description": "Dossier-Status"
+    },
+    "valid_from": {
+      "type": "string",
+      "format": "date",
+      "description": "G\u00fcltig ab"
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date",
+      "description": "G\u00fcltig bis"
+    },
+    "total_current_premium": {
+      "type": "number",
+      "description": "Aktuelle Gesamtpr\u00e4mie CHF/Monat"
+    },
+    "total_proposed_premium": {
+      "type": "number",
+      "description": "Vorgeschlagene Gesamtpr\u00e4mie CHF/Monat"
+    },
+    "savings_monthly": {
+      "type": "number",
+      "description": "Monatliche Einsparung CHF"
+    },
+    "recommendation_notes": {
+      "type": "string",
+      "description": "Beratungsnotiz / Empfehlung"
+    },
+    "linked_verkaufschance_id": {
+      "type": "string",
+      "description": "Optionaler Read-Link zu Verkaufschance (kein Cascade)"
+    },
+    "version": {
+      "type": "number",
+      "default": 1,
+      "description": "Versionsnummer"
+    },
+    "is_latest": {
+      "type": "boolean",
+      "default": true,
+      "description": "Ist aktuelle Version"
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false,
+      "description": "Archiviert"
+    },
+    "archived_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Archivierungszeitpunkt"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Interne Notizen"
+    }
+  },
+  "required": [
+    "customer_id",
+    "title",
+    "dossier_type"
+  ]
+}

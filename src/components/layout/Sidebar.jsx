@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
   ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink,
-  Target, User, Briefcase, TrendingUp, RefreshCw, Lock, Menu
+  Target, User, Briefcase, TrendingUp, RefreshCw, Lock, Menu, BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -80,6 +80,12 @@ const navGroups = [
       { label: 'Berater & Partner',     icon: Briefcase, path: '/berater-organisation' },
       { label: 'Team & Zugriffsrechte', icon: Lock,      path: '/admin/team-zugriffsrechte', adminOnly: true },
       { label: 'System',                icon: Menu,      path: '/admin-logs' },
+    ],
+  },
+  {
+    label: 'Beta',
+    items: [
+      { label: 'Beratungsdossiers', icon: BookOpen, path: '/beratungsdossier', adminOnly: true },
     ],
   },
 ];

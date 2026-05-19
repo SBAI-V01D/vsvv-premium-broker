@@ -37,6 +37,7 @@ import PartnerDetail from './pages/PartnerDetail'
 import Verkaufschancen from './pages/Verkaufschancen'
 import Vertragsablaeufe from './pages/Vertragsablaeufe'
 import AdminTeamAccess from './pages/AdminTeamAccess'
+import AdvisoryDossier from './pages/AdvisoryDossier'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -123,6 +124,8 @@ const AuthenticatedApp = () => {
         <Route path="/verkaufschancen" element={<Verkaufschancen />} />
         <Route path="/vertragsablaeufe" element={<Vertragsablaeufe />} />
         <Route path="/admin/team-zugriffsrechte" element={<AdminTeamAccess />} />
+        {/* AdvisoryDossierEngine — Phase 1 — Admin-Only */}
+        <Route path="/beratungsdossier" element={<AdvisoryDossier />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

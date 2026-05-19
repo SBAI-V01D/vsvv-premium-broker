@@ -1,0 +1,34 @@
+{
+  "name": "DossierSnapshot",
+  "type": "object",
+  "properties": {
+    "dossier_id": {
+      "type": "string",
+      "description": "Zugeh\u00f6riges Dossier (kein Cascade)"
+    },
+    "version": {
+      "type": "number",
+      "description": "Snapshot-Versionsnummer"
+    },
+    "snapshot_data": {
+      "type": "string",
+      "description": "JSON-Blob des vollst\u00e4ndigen Dossier-Zustands"
+    },
+    "pdf_url": {
+      "type": "string",
+      "description": "URL zum generierten PDF (nach Export)"
+    },
+    "created_by_name": {
+      "type": "string",
+      "description": "Name des Erstellers (Cache)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Snapshot-Notizen"
+    }
+  },
+  "required": [
+    "dossier_id",
+    "version"
+  ]
+}
