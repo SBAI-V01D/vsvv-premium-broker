@@ -1,6 +1,6 @@
 /**
- * Renewal-Center — Kompaktes Arbeits-Cockpit
- * Alle Vertragsabläufe & Kündigungen direkt sichtbar, intelligent priorisiert
+ * Renewal-Center — Broker-Tagescockpit
+ * Priorisierte Übersicht aller Vertragsabläufe & Kündigungsfristen
  */
 import React, { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -10,15 +10,16 @@ import { getSparteLabel } from '@/lib/insuranceSparten'
 import { cn } from '@/lib/utils'
 import {
   Repeat2, CheckCircle2, RefreshCw, AlertTriangle, Clock,
-  TrendingUp, Zap, ChevronRight, Target, Shield, Phone, X, CalendarClock
+  TrendingUp, Zap, ChevronRight, Target, Shield, X, CalendarClock,
+  User, ArrowRight, MoreHorizontal
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const daysUntil = (d) => d ? Math.ceil((new Date(d) - new Date()) / 86400000) : null
-const fmtDate   = (d) => d ? new Date(d).toLocaleDateString('de-CH') : '–'
+const daysUntil = (d) => d ? Math.ceil((new Date(d + 'T00:00:00') - new Date()) / 86400000) : null
+const fmtDate   = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('de-CH') : '–'
 const fmtCHF    = (n) => n > 0 ? `CHF ${Number(n).toLocaleString('de-CH')}` : null
 
 function analyzeContract(contract) {
@@ -27,134 +28,144 @@ function analyzeContract(contract) {
   const actions = []
 
   if (contract.status === 'expired' || (endDays !== null && endDays < 0)) {
-    const seit = endDays !== null ? Math.abs(endDays) : 0
-    actions.push({ type: 'expired', label: `Seit ${seit}d abgelaufen`, severity: 'expired', days: endDays ?? -1 })
+    actions.push({ type: 'expired', label: `Abgelaufen`, severity: 'expired', days: endDays ?? -1 })
   }
   if (cancelDays !== null && cancelDays >= -30 && cancelDays <= 180) {
-    let sev = cancelDays <= 0 ? 'expired' : cancelDays <= 30 ? 'critical' : cancelDays <= 60 ? 'urgent' : cancelDays <= 90 ? 'warning' : cancelDays <= 150 ? 'process' : 'early'
-    actions.push({ type: 'kuendigung', label: cancelDays <= 0 ? 'Kündigungsfrist abgelaufen' : `Kündigungsfrist in ${cancelDays}d`, severity: sev, days: cancelDays })
+    const sev = cancelDays <= 0 ? 'expired' : cancelDays <= 30 ? 'critical' : cancelDays <= 60 ? 'urgent' : cancelDays <= 90 ? 'warning' : cancelDays <= 150 ? 'process' : 'early'
+    actions.push({ type: 'kuendigung', severity: sev, days: cancelDays })
   }
   if (endDays !== null && endDays >= 0 && endDays <= 180) {
-    let sev = endDays <= 30 ? 'critical' : endDays <= 60 ? 'urgent' : endDays <= 90 ? 'warning' : endDays <= 150 ? 'process' : 'early'
-    actions.push({ type: 'ablauf', label: `Ablauf in ${endDays}d`, severity: sev, days: endDays })
+    const sev = endDays <= 30 ? 'critical' : endDays <= 60 ? 'urgent' : endDays <= 90 ? 'warning' : endDays <= 150 ? 'process' : 'early'
+    actions.push({ type: 'ablauf', severity: sev, days: endDays })
   }
 
-  const order = { expired: 0, critical: 1, urgent: 2, warning: 3, process: 4 }
+  const order = { expired: 0, critical: 1, urgent: 2, warning: 3, process: 4, early: 5 }
   actions.sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9))
   return actions
 }
 
 // ── Design-Tokens ─────────────────────────────────────────────────────────────
 const SEV = {
-  expired:  { bar: 'bg-red-700',    badge: 'bg-red-700 text-white',          countText: 'text-red-800',   rowBg: 'bg-red-50/60',   borderL: 'border-l-red-600',    label: 'Abgelaufen',      dot: 'bg-red-700' },
-  critical: { bar: 'bg-red-500',    badge: 'bg-red-500 text-white',          countText: 'text-red-700',   rowBg: 'bg-red-50/40',   borderL: 'border-l-red-400',    label: 'Kritisch',        dot: 'bg-red-500' },
-  urgent:   { bar: 'bg-orange-500', badge: 'bg-orange-500 text-white',       countText: 'text-orange-700',rowBg: 'bg-orange-50/40',borderL: 'border-l-orange-400', label: 'Dringend',        dot: 'bg-orange-500' },
-  warning:  { bar: 'bg-amber-400',  badge: 'bg-amber-400 text-white',        countText: 'text-amber-700', rowBg: 'bg-amber-50/40', borderL: 'border-l-amber-400',  label: 'Bald fällig',     dot: 'bg-amber-400' },
-  process:  { bar: 'bg-blue-400',   badge: 'bg-blue-100 text-blue-700',      countText: 'text-blue-700',  rowBg: 'bg-blue-50/30',  borderL: 'border-l-blue-300',   label: 'In Vorbereitung', dot: 'bg-blue-400' },
-  early:    { bar: 'bg-slate-300',  badge: 'bg-slate-100 text-slate-600',   countText: 'text-slate-600', rowBg: 'bg-slate-50/20', borderL: 'border-l-slate-300',   label: 'Früh',            dot: 'bg-slate-300' },
+  expired:  { badge: 'bg-red-700 text-white',        countText: 'text-red-700',    rowBg: 'hover:bg-red-50/50',   borderL: 'border-l-red-500',    label: 'Abgelaufen',      barColor: 'bg-red-500',    kpiBg: 'bg-red-50', kpiBorder: 'border-red-200', kpiText: 'text-red-700' },
+  critical: { badge: 'bg-red-500 text-white',        countText: 'text-red-600',    rowBg: 'hover:bg-red-50/40',   borderL: 'border-l-red-400',    label: 'Kritisch',        barColor: 'bg-red-400',    kpiBg: 'bg-red-50', kpiBorder: 'border-red-200', kpiText: 'text-red-600' },
+  urgent:   { badge: 'bg-orange-500 text-white',     countText: 'text-orange-600', rowBg: 'hover:bg-orange-50/40',borderL: 'border-l-orange-400', label: 'Dringend',        barColor: 'bg-orange-400', kpiBg: 'bg-orange-50', kpiBorder: 'border-orange-200', kpiText: 'text-orange-600' },
+  warning:  { badge: 'bg-amber-400 text-white',      countText: 'text-amber-700',  rowBg: 'hover:bg-amber-50/40', borderL: 'border-l-amber-400',  label: 'Bald fällig',     barColor: 'bg-amber-400',  kpiBg: 'bg-amber-50', kpiBorder: 'border-amber-200', kpiText: 'text-amber-700' },
+  process:  { badge: 'bg-blue-100 text-blue-700',    countText: 'text-blue-700',   rowBg: 'hover:bg-blue-50/30',  borderL: 'border-l-blue-300',   label: 'Vorbereitung',    barColor: 'bg-blue-300',   kpiBg: 'bg-blue-50', kpiBorder: 'border-blue-200', kpiText: 'text-blue-700' },
+  early:    { badge: 'bg-slate-100 text-slate-600',  countText: 'text-slate-600',  rowBg: 'hover:bg-slate-50/30', borderL: 'border-l-slate-300',  label: 'Früh',            barColor: 'bg-slate-300',  kpiBg: 'bg-slate-50', kpiBorder: 'border-slate-200', kpiText: 'text-slate-600' },
 }
 
 const PROCESS_STATUS = {
-  neu:                       { label: 'Neu',                    color: 'bg-slate-100 text-slate-600' },
-  pruefung_offen:            { label: 'Prüfung offen',          color: 'bg-amber-100 text-amber-700' },
-  kunde_kontaktieren:        { label: 'Kontaktieren',           color: 'bg-blue-100 text-blue-700' },
-  verlaengerung_vorbereiten: { label: 'Verlängerung',           color: 'bg-violet-100 text-violet-700' },
-  beratung_erfolgt:          { label: 'Beraten',                color: 'bg-teal-100 text-teal-700' },
-  erledigt:                  { label: 'Erledigt',               color: 'bg-green-100 text-green-700' },
+  neu:                       { label: 'Neu',             color: 'text-slate-500' },
+  pruefung_offen:            { label: 'Prüfung offen',   color: 'text-amber-600' },
+  kunde_kontaktieren:        { label: 'Kontaktieren',    color: 'text-blue-600' },
+  verlaengerung_vorbereiten: { label: 'Verlängerung',    color: 'text-violet-600' },
+  beratung_erfolgt:          { label: 'Beraten',         color: 'text-teal-600' },
+  erledigt:                  { label: 'Erledigt',        color: 'text-green-600' },
 }
 
-const NEXT_ACTION = {
-  expired:    'Rückgewinnung prüfen',
-  kuendigung: 'Kündigen oder verlängern',
-  ablauf:     'Offerten einholen',
+// ── Countdown Bar ─────────────────────────────────────────────────────────────
+function CountdownBar({ days, maxDays = 180, color }) {
+  const pct = Math.max(0, Math.min(100, ((maxDays - Math.max(days, 0)) / maxDays) * 100))
+  return (
+    <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+      <div className={cn('h-full rounded-full transition-all', color)} style={{ width: `${pct}%` }} />
+    </div>
+  )
 }
 
-// ── Cockpit Row — kompakte Zeile ──────────────────────────────────────────────
+// ── Cockpit Row ───────────────────────────────────────────────────────────────
 function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange }) {
-  const { contract, topAction } = item
+  const { contract, topAction, actions } = item
   const cfg = SEV[topAction.severity] || SEV.process
-  const psCfg = PROCESS_STATUS[contract.process_status] || PROCESS_STATUS.neu
-  const isOverdue = (topAction.days ?? 0) <= 0
-  const dayAbs = Math.abs(topAction.days ?? 0)
-
-  // Countdown-Text für Kündigungsfrist und Ablauf
-  const cancelDays = daysUntil(contract.cancellation_deadline)
   const endDays    = daysUntil(contract.end_date)
-  const kuendigungAction = item.actions.find(a => a.type === 'kuendigung')
-  const ablaufAction     = item.actions.find(a => a.type === 'ablauf' || a.type === 'expired')
+  const cancelDays = daysUntil(contract.cancellation_deadline)
+  const ablaufAction     = actions.find(a => a.type === 'ablauf' || a.type === 'expired')
+  const kuendigungAction = actions.find(a => a.type === 'kuendigung')
+  const isExpired = contract.status === 'expired' || (endDays !== null && endDays < 0)
 
   return (
-    <div className={cn(
-      'grid items-center border-b border-border/50 hover:bg-muted/30 transition-colors border-l-[3px]',
-      cfg.rowBg, cfg.borderL
-    )}
-    style={{ gridTemplateColumns: '3px 180px 130px 1fr 110px 110px 120px 150px 120px' }}
+    <div
+      className={cn(
+        'grid items-center border-b border-border/40 transition-colors cursor-pointer border-l-[3px]',
+        cfg.rowBg, cfg.borderL
+      )}
+      style={{ gridTemplateColumns: '200px 140px 1fr 100px 100px 100px 160px 110px' }}
     >
-      {/* Severity dot + spacer */}
-      <div />
-
       {/* Kunde */}
       <div
-        className="py-2.5 px-3 cursor-pointer min-w-0"
+        className="py-2.5 px-3 min-w-0"
         onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}/360`)}
       >
-        <p className="text-[12.5px] font-bold truncate hover:text-primary transition-colors leading-tight">{contract.customer_name || '–'}</p>
-        <p className="text-[10px] text-muted-foreground truncate">{contract.policy_number || '–'}</p>
+        <p className="text-[12px] font-semibold truncate hover:text-primary transition-colors leading-tight">{contract.customer_name || '–'}</p>
+        <p className="text-[10px] text-muted-foreground truncate">{contract.insurer || '–'} · {getSparteLabel(contract.sparte || contract.insurance_type) || '–'}</p>
       </div>
 
-      {/* Versicherer / Sparte */}
+      {/* Police */}
       <div className="py-2.5 px-2 min-w-0">
-        <p className="text-[11.5px] font-semibold truncate">{contract.insurer || '–'}</p>
-        <p className="text-[10px] text-muted-foreground truncate">{getSparteLabel(contract.sparte || contract.insurance_type) || '–'}</p>
+        <p className="text-[10px] text-muted-foreground font-mono truncate">{contract.policy_number || '–'}</p>
+        {fmtCHF(contract.premium_yearly) && (
+          <p className="text-[11px] font-semibold text-emerald-700 leading-tight mt-0.5">{fmtCHF(contract.premium_yearly)}</p>
+        )}
       </div>
 
-      {/* Countdown-Info: Ablauf + Kündigung */}
-      <div className="py-2.5 px-2 min-w-0">
+      {/* Countdown */}
+      <div className="py-2.5 px-3 min-w-0 space-y-1">
+        {/* Ablauf */}
         {ablaufAction && (
-          <p className={cn('text-[11px] font-bold leading-tight', cfg.countText)}>
-            {ablaufAction.type === 'expired'
-              ? `Abgelaufen vor ${dayAbs} Tagen`
-              : `Ablauf in ${endDays} Tagen`}
-          </p>
+          <div>
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="text-[10px] text-muted-foreground">Ablauf</span>
+              <span className={cn('text-[11px] font-bold', cfg.countText)}>
+                {isExpired
+                  ? `vor ${Math.abs(endDays ?? 0)}d`
+                  : endDays !== null ? `${endDays}d` : fmtDate(contract.end_date)}
+              </span>
+            </div>
+            {!isExpired && endDays !== null && (
+              <CountdownBar days={endDays} color={cfg.barColor} />
+            )}
+          </div>
         )}
-        {kuendigungAction && kuendigungAction !== ablaufAction && (
-          <p className="text-[10px] text-muted-foreground leading-tight">
-            {(cancelDays ?? 0) <= 0
-              ? 'Kündigungsfrist abgelaufen'
-              : `Kündigungsfrist in ${cancelDays} Tagen`}
-          </p>
+        {/* Kündigung */}
+        {kuendigungAction && (
+          <div>
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="text-[10px] text-muted-foreground">Kündigung</span>
+              <span className={cn('text-[10px] font-semibold', (cancelDays ?? 1) <= 0 ? 'text-red-600' : 'text-slate-600')}>
+                {(cancelDays ?? 1) <= 0 ? 'Abgelaufen' : `${cancelDays}d`}
+              </span>
+            </div>
+            {(cancelDays ?? 0) > 0 && (
+              <CountdownBar days={cancelDays} color={cfg.barColor} />
+            )}
+          </div>
         )}
-        {!ablaufAction && kuendigungAction && (
-          <p className={cn('text-[11px] font-bold leading-tight', cfg.countText)}>
-            {kuendigungAction.label}
-          </p>
+        {!ablaufAction && !kuendigungAction && (
+          <p className="text-[10px] text-muted-foreground">–</p>
         )}
       </div>
 
       {/* Ablaufdatum */}
-      <div className="py-2.5 px-2">
+      <div className="py-2.5 px-2 text-center">
         <p className="text-[11px] font-medium">{fmtDate(contract.end_date)}</p>
         <p className="text-[9px] text-muted-foreground">Ablauf</p>
       </div>
 
       {/* Kündigungsfrist */}
-      <div className="py-2.5 px-2">
+      <div className="py-2.5 px-2 text-center">
         <p className="text-[11px] font-medium">{fmtDate(contract.cancellation_deadline)}</p>
-        <p className="text-[9px] text-muted-foreground">Kündigung</p>
+        <p className="text-[9px] text-muted-foreground">Kündigung bis</p>
       </div>
 
-      {/* Prämie + Dringlichkeit */}
-      <div className="py-2.5 px-2">
-        {fmtCHF(contract.premium_yearly) && (
-          <p className="text-[11px] font-semibold text-emerald-700 leading-tight">{fmtCHF(contract.premium_yearly)}</p>
-        )}
-        <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-bold inline-block mt-0.5', cfg.badge)}>{cfg.label}</span>
+      {/* Priorität */}
+      <div className="py-2.5 px-2 text-center">
+        <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-bold inline-block', cfg.badge)}>{cfg.label}</span>
       </div>
 
-      {/* Prozess-Status + Nächster Schritt */}
-      <div className="py-2.5 px-2" onClick={e => e.stopPropagation()}>
+      {/* Prozess-Status */}
+      <div className="py-2 px-2" onClick={e => e.stopPropagation()}>
         <Select value={contract.process_status || 'neu'} onValueChange={(v) => onStatusChange(contract.id, v)}>
-          <SelectTrigger className="h-6 text-[10px] border-border w-full bg-transparent px-1.5">
+          <SelectTrigger className="h-6 text-[10px] border-0 bg-transparent px-0 shadow-none focus:ring-0 w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -163,59 +174,53 @@ function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange }) {
             ))}
           </SelectContent>
         </Select>
-        <p className="text-[9px] text-muted-foreground mt-0.5 truncate">{NEXT_ACTION[topAction.type] || '–'}</p>
       </div>
 
       {/* Aktionen */}
       <div className="py-2 px-2 flex items-center gap-1 justify-end" onClick={e => e.stopPropagation()}>
-        {contract.customer_id && (
-          <button
-            onClick={() => onNavigate(`/kunden/${contract.customer_id}/360`)}
-            className="text-[9px] px-1.5 py-1 bg-primary/10 text-primary rounded font-bold hover:bg-primary/20 transition-colors flex items-center gap-0.5 whitespace-nowrap"
-          >
-            <Phone className="w-2.5 h-2.5" /> Öffnen
-          </button>
-        )}
+        <button
+          onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}/360`)}
+          className="text-[9px] px-2 py-1 border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors whitespace-nowrap"
+        >
+          <User className="w-2.5 h-2.5 inline mr-0.5" />360°
+        </button>
         <button
           onClick={() => onCreateVs(contract)}
-          className="text-[9px] px-1.5 py-1 bg-primary text-primary-foreground rounded font-bold hover:bg-primary/90 transition-colors flex items-center gap-0.5 whitespace-nowrap"
+          className="text-[9px] px-2 py-1 bg-primary text-primary-foreground rounded font-semibold hover:bg-primary/90 transition-colors whitespace-nowrap"
         >
-          <Zap className="w-2.5 h-2.5" /> Chance
+          <ArrowRight className="w-2.5 h-2.5 inline mr-0.5" />Chance
         </button>
       </div>
     </div>
   )
 }
 
-// ── KPI Tile ──────────────────────────────────────────────────────────────────
-function KpiTile({ label, value, sublabel, valueColor, bg, border, active, onClick, icon: Icon }) {
+// ── KPI Card (klickbar) ───────────────────────────────────────────────────────
+function KpiCard({ label, sublabel, value, icon: Icon, cfg, active, onClick }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        'p-3 rounded-xl border text-left transition-all hover:shadow-sm flex-1',
-        bg, border,
-        active && 'ring-2 ring-primary ring-offset-1 shadow-sm'
+        'p-3 rounded-xl border text-left transition-all hover:shadow-sm flex-1 min-w-[100px] relative',
+        cfg.kpiBg, cfg.kpiBorder,
+        active && 'ring-2 ring-primary ring-offset-1'
       )}
     >
-      <div className="flex items-center justify-between mb-1">
-        {Icon && <Icon className={cn('w-3.5 h-3.5', valueColor)} />}
-        {active && <X className="w-3 h-3 text-muted-foreground/60" />}
-      </div>
-      <p className={cn('text-2xl font-black leading-none', valueColor)}>{value}</p>
-      <p className="text-[11px] font-semibold text-foreground mt-1">{label}</p>
+      {active && <X className="absolute top-2 right-2 w-3 h-3 text-muted-foreground" />}
+      <p className={cn('text-2xl font-black leading-none', cfg.kpiText)}>{value}</p>
+      <p className="text-[11px] font-semibold text-foreground mt-1 leading-tight">{label}</p>
       {sublabel && <p className="text-[9px] text-muted-foreground mt-0.5">{sublabel}</p>}
     </button>
   )
 }
 
 // ── Section Divider ───────────────────────────────────────────────────────────
-function SectionDivider({ icon: Icon, label, count, colorClass, bgClass }) {
+function SectionDivider({ icon: Icon, label, count, cfg }) {
   return (
-    <div className={cn('flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold', bgClass, colorClass)}>
-      <Icon className="w-3.5 h-3.5" />
-      {label}
-      <span className="ml-auto font-black">{count}</span>
+    <div className={cn('flex items-center gap-2 px-3 py-2 text-[11px] font-semibold', cfg.kpiBg)}>
+      <div className={cn('w-1.5 h-1.5 rounded-full', cfg.barColor)} />
+      <span className={cfg.kpiText}>{label}</span>
+      <span className={cn('ml-auto font-bold tabular-nums', cfg.kpiText)}>{count}</span>
     </div>
   )
 }
@@ -224,18 +229,69 @@ function SectionDivider({ icon: Icon, label, count, colorClass, bgClass }) {
 function TableHeader() {
   return (
     <div
-      className="grid text-[9px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/60 border-b border-border px-0"
-      style={{ gridTemplateColumns: '3px 180px 130px 1fr 110px 110px 120px 150px 120px' }}
+      className="grid text-[9px] font-bold uppercase tracking-wider text-muted-foreground bg-slate-50/80 border-b border-border"
+      style={{ gridTemplateColumns: '200px 140px 1fr 100px 100px 100px 160px 110px' }}
     >
-      <div />
-      <div className="py-2 px-3">Kunde / Police</div>
-      <div className="py-2 px-2">Versicherer / Sparte</div>
-      <div className="py-2 px-2">Countdown</div>
-      <div className="py-2 px-2">Ablaufdatum</div>
-      <div className="py-2 px-2">Kündigung bis</div>
-      <div className="py-2 px-2">Prämie / Priorität</div>
-      <div className="py-2 px-2">Status / Nächster Schritt</div>
-      <div className="py-2 px-2 text-right">Aktion</div>
+      <div className="py-2.5 px-3">Kunde / Versicherer</div>
+      <div className="py-2.5 px-2">Police / Prämie</div>
+      <div className="py-2.5 px-3">Countdown</div>
+      <div className="py-2.5 px-2 text-center">Ablauf</div>
+      <div className="py-2.5 px-2 text-center">Kündigung</div>
+      <div className="py-2.5 px-2 text-center">Priorität</div>
+      <div className="py-2.5 px-2">Prozess-Status</div>
+      <div className="py-2.5 px-2 text-right">Aktion</div>
+    </div>
+  )
+}
+
+// ── Tagespension (Heute) ──────────────────────────────────────────────────────
+function TodayPanel({ items }) {
+  const today = items.filter(i => {
+    const sev = i.topAction?.severity
+    return sev === 'expired' || sev === 'critical'
+  })
+  if (today.length === 0) return null
+
+  return (
+    <div className="rounded-xl border border-red-200 bg-red-50/30 overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-red-200/70 bg-red-50/60">
+        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+        <span className="text-[11px] font-bold text-red-700 uppercase tracking-wide">Heute handeln</span>
+        <span className="text-[10px] text-red-600 font-semibold ml-1">{today.length} Fälle</span>
+        <span className="ml-auto text-[10px] text-red-600">{fmtCHF(today.reduce((s, i) => s + (i.contract.premium_yearly || 0), 0))} Prämienvolumen</span>
+      </div>
+      <div className="divide-y divide-red-100">
+        {today.slice(0, 5).map(item => {
+          const endDays = daysUntil(item.contract.end_date)
+          const cancelDays = daysUntil(item.contract.cancellation_deadline)
+          return (
+            <div key={item.contract.id} className="flex items-center gap-3 px-4 py-2.5 text-xs">
+              <div className="flex-1 min-w-0">
+                <span className="font-semibold">{item.contract.customer_name || '–'}</span>
+                <span className="text-muted-foreground mx-1.5">·</span>
+                <span className="text-muted-foreground">{item.contract.insurer || '–'}</span>
+              </div>
+              {endDays !== null && endDays < 0 && (
+                <span className="text-red-600 font-bold">Abgelaufen vor {Math.abs(endDays)}d</span>
+              )}
+              {endDays !== null && endDays >= 0 && endDays <= 30 && (
+                <span className="text-red-600 font-bold">Ablauf in {endDays}d</span>
+              )}
+              {cancelDays !== null && cancelDays <= 30 && cancelDays >= 0 && (
+                <span className="text-red-500">Kündigung in {cancelDays}d</span>
+              )}
+              {fmtCHF(item.contract.premium_yearly) && (
+                <span className="text-emerald-700 font-semibold shrink-0">{fmtCHF(item.contract.premium_yearly)}</span>
+              )}
+            </div>
+          )
+        })}
+        {today.length > 5 && (
+          <div className="px-4 py-2 text-[10px] text-red-600 font-semibold">
+            + {today.length - 5} weitere kritische Fälle
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -247,7 +303,6 @@ export default function Vertragsablaeufe() {
   const [filterSeverity, setFilterSeverity] = useState('all')
   const [filterProcessStatus, setFilterProcessStatus] = useState('all')
   const [search, setSearch] = useState('')
-  const [creating, setCreating] = useState(false)
 
   const { data: contracts = [], isLoading } = useQuery({
     queryKey: ['contracts'],
@@ -256,7 +311,7 @@ export default function Vertragsablaeufe() {
 
   const createVsMutation = useMutation({
     mutationFn: (data) => base44.entities.Verkaufschance.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['verkaufschancen'] }); setCreating(false) },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['verkaufschancen'] }); navigate('/verkaufschancen') },
   })
   const updateContractMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Contract.update(id, data),
@@ -296,6 +351,7 @@ export default function Vertragsablaeufe() {
       if (filterSeverity === 'urgent'  && sev !== 'urgent')  return false
       if (filterSeverity === 'warning' && sev !== 'warning') return false
       if (filterSeverity === 'process' && sev !== 'process') return false
+      if (filterSeverity === 'early'   && sev !== 'early')   return false
     }
     if (filterProcessStatus !== 'all' && item.contract.process_status !== filterProcessStatus) return false
     if (search) {
@@ -316,16 +372,17 @@ export default function Vertragsablaeufe() {
     totalPremium: actionableItems.reduce((s, i) => s + (i.contract.premium_yearly || 0), 0),
   }), [actionableItems])
 
-  const expiredItems  = filtered.filter(i => i.topAction?.severity === 'expired')
-  const criticalItems = filtered.filter(i => i.topAction?.severity === 'critical')
-  const urgentItems   = filtered.filter(i => i.topAction?.severity === 'urgent')
-  const warningItems  = filtered.filter(i => i.topAction?.severity === 'warning')
-  const processItems  = filtered.filter(i => i.topAction?.severity === 'process')
-  const earlyItems    = filtered.filter(i => i.topAction?.severity === 'early')
+  const groups = {
+    expired:  filtered.filter(i => i.topAction?.severity === 'expired'),
+    critical: filtered.filter(i => i.topAction?.severity === 'critical'),
+    urgent:   filtered.filter(i => i.topAction?.severity === 'urgent'),
+    warning:  filtered.filter(i => i.topAction?.severity === 'warning'),
+    process:  filtered.filter(i => i.topAction?.severity === 'process'),
+    early:    filtered.filter(i => i.topAction?.severity === 'early'),
+  }
 
-  const handleCreateVs = async (contract) => {
-    setCreating(true)
-    await createVsMutation.mutateAsync({
+  const handleCreateVs = (contract) => {
+    createVsMutation.mutate({
       customer_id:     contract.customer_id,
       customer_name:   contract.customer_name,
       organization_id: contract.organization_id,
@@ -336,7 +393,6 @@ export default function Vertragsablaeufe() {
       estimated_value: contract.premium_yearly || 0,
       notes: `Aus Vertragsablauf erstellt. Ablauf: ${fmtDate(contract.end_date)}`,
     })
-    navigate('/verkaufschancen')
   }
 
   const handleStatusChange = (contractId, newStatus) => {
@@ -345,12 +401,21 @@ export default function Vertragsablaeufe() {
 
   const hasFilters = search || filterSeverity !== 'all' || filterProcessStatus !== 'all'
 
-  // Render a group of rows with section header
-  const renderGroup = (items, icon, label, colorClass, bgClass) => {
+  const renderGroup = (key) => {
+    const items = groups[key]
     if (items.length === 0) return null
+    const cfg = SEV[key]
+    const labels = {
+      expired:  'Bereits abgelaufen — sofort handeln',
+      critical: 'Kritisch — innerhalb 30 Tage',
+      urgent:   'Dringend — 30 bis 60 Tage',
+      warning:  'Bald fällig — 60 bis 90 Tage',
+      process:  'In Vorbereitung — 90 bis 150 Tage',
+      early:    'Früh — 150 bis 180 Tage',
+    }
     return (
-      <div key={label}>
-        <SectionDivider icon={icon} label={label} count={items.length} colorClass={colorClass} bgClass={bgClass} />
+      <div key={key}>
+        <SectionDivider label={labels[key]} count={items.length} cfg={cfg} />
         {items.map(item => (
           <CockpitRow
             key={item.contract.id}
@@ -365,19 +430,19 @@ export default function Vertragsablaeufe() {
   }
 
   return (
-    <div className="space-y-4 pb-6">
+    <div className="space-y-4 pb-6 page-enter">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+          <h1 className="text-xl font-bold tracking-tight flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
               <Repeat2 className="w-4 h-4 text-orange-600" />
             </div>
             Renewal-Center
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Kundenbindung · Kündigungsfristen · Verlängerungen — Prozesshorizont 180 Tage
+            Kundenbindung · Kündigungsfristen · Verlängerungen · 180-Tage-Horizont
           </p>
         </div>
         <div className="flex gap-2">
@@ -391,51 +456,44 @@ export default function Vertragsablaeufe() {
       </div>
 
       {/* ── KPI Strip ── */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
-        <KpiTile label="Abgelaufen" sublabel="Sofort handeln" value={stats.expired}
-          valueColor="text-red-800" bg="bg-red-50" border={stats.expired > 0 ? 'border-red-300' : 'border-red-100'}
-          active={filterSeverity === 'critical'} onClick={() => setFilterSeverity(f => f === 'critical' ? 'all' : 'critical')} icon={AlertTriangle} />
-        <KpiTile label="Kritisch" sublabel="≤ 30 Tage" value={stats.critical}
-          valueColor="text-red-600" bg="bg-red-50" border="border-red-200"
-          active={filterSeverity === 'critical'} onClick={() => setFilterSeverity(f => f === 'critical' ? 'all' : 'critical')} icon={Zap} />
-        <KpiTile label="Dringend" sublabel="30–60 Tage" value={stats.urgent}
-          valueColor="text-orange-600" bg="bg-orange-50" border="border-orange-200"
-          active={filterSeverity === 'urgent'} onClick={() => setFilterSeverity(f => f === 'urgent' ? 'all' : 'urgent')} icon={Clock} />
-        <KpiTile label="Bald fällig" sublabel="60–90 Tage" value={stats.warning}
-          valueColor="text-amber-700" bg="bg-amber-50" border="border-amber-200"
-          active={filterSeverity === 'warning'} onClick={() => setFilterSeverity(f => f === 'warning' ? 'all' : 'warning')} icon={CalendarClock} />
-        <KpiTile label="In Vorbereitung" sublabel="90–150 Tage" value={stats.process}
-          valueColor="text-blue-700" bg="bg-blue-50/60" border="border-blue-200"
-          active={filterSeverity === 'process'} onClick={() => setFilterSeverity(f => f === 'process' ? 'all' : 'process')} icon={TrendingUp} />
-        <KpiTile label="Früh" sublabel="150–180 Tage" value={stats.early}
-          valueColor="text-slate-600" bg="bg-slate-50/60" border="border-slate-200"
-          active={filterSeverity === 'early'} onClick={() => setFilterSeverity(f => f === 'early' ? 'all' : 'early')} icon={CalendarClock} />
+      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
+        <KpiCard label="Abgelaufen"     sublabel="Sofort handeln"  value={stats.expired}  icon={AlertTriangle} cfg={SEV.expired}  active={filterSeverity === 'critical'} onClick={() => setFilterSeverity(f => f === 'critical' ? 'all' : 'critical')} />
+        <KpiCard label="Kritisch"       sublabel="≤ 30 Tage"       value={stats.critical} icon={Zap}           cfg={SEV.critical} active={filterSeverity === 'critical'} onClick={() => setFilterSeverity(f => f === 'critical' ? 'all' : 'critical')} />
+        <KpiCard label="Dringend"       sublabel="30–60 Tage"      value={stats.urgent}   icon={Clock}         cfg={SEV.urgent}   active={filterSeverity === 'urgent'}   onClick={() => setFilterSeverity(f => f === 'urgent' ? 'all' : 'urgent')} />
+        <KpiCard label="Bald fällig"    sublabel="60–90 Tage"      value={stats.warning}  icon={CalendarClock} cfg={SEV.warning}  active={filterSeverity === 'warning'}  onClick={() => setFilterSeverity(f => f === 'warning' ? 'all' : 'warning')} />
+        <KpiCard label="Vorbereitung"   sublabel="90–150 Tage"     value={stats.process}  icon={TrendingUp}    cfg={SEV.process}  active={filterSeverity === 'process'}  onClick={() => setFilterSeverity(f => f === 'process' ? 'all' : 'process')} />
+        <KpiCard label="Früh"           sublabel="150–180 Tage"    value={stats.early}    icon={CalendarClock} cfg={SEV.early}    active={filterSeverity === 'early'}    onClick={() => setFilterSeverity(f => f === 'early' ? 'all' : 'early')} />
         {stats.totalPremium > 0 && (
-          <div className="flex-1 min-w-[160px] p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-left">
+          <div className="flex-1 min-w-[150px] p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-left">
             <TrendingUp className="w-3.5 h-3.5 text-emerald-600 mb-1" />
-            <p className="text-[13px] font-black text-emerald-800 leading-none">{fmtCHF(stats.totalPremium)}</p>
-            <p className="text-[10px] font-semibold text-emerald-700 mt-1">Jahresprämien im Prozess</p>
+            <p className="text-lg font-black text-emerald-800 leading-none">{fmtCHF(stats.totalPremium)}</p>
+            <p className="text-[10px] font-semibold text-emerald-700 mt-1">Prämienvolumen</p>
             <p className="text-[9px] text-emerald-600">{actionableItems.length} Verträge</p>
           </div>
         )}
       </div>
 
+      {/* ── Heute handeln Panel ── */}
+      <TodayPanel items={actionableItems} />
+
       {/* ── Filter Bar ── */}
       <div className="flex gap-2 flex-wrap items-center">
-        <Input
-          placeholder="Kunde, Versicherer, Police..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="max-w-[220px] h-8 text-xs"
-        />
+        <div className="relative">
+          <Input
+            placeholder="Kunde, Versicherer, Police..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-[220px] h-8 text-xs pl-3"
+          />
+        </div>
         <Select value={filterSeverity} onValueChange={setFilterSeverity}>
-          <SelectTrigger className="w-40 h-8 text-xs"><SelectValue placeholder="Dringlichkeit" /></SelectTrigger>
+          <SelectTrigger className="w-44 h-8 text-xs"><SelectValue placeholder="Dringlichkeit" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Alle Dringlichkeiten</SelectItem>
             <SelectItem value="critical">Kritisch / Abgelaufen</SelectItem>
             <SelectItem value="urgent">Dringend (30–60d)</SelectItem>
             <SelectItem value="warning">Bald fällig (60–90d)</SelectItem>
-            <SelectItem value="process">In Vorbereitung (90–150d)</SelectItem>
+            <SelectItem value="process">Vorbereitung (90–150d)</SelectItem>
             <SelectItem value="early">Früh (150–180d)</SelectItem>
           </SelectContent>
         </Select>
@@ -456,13 +514,13 @@ export default function Vertragsablaeufe() {
         <span className="ml-auto text-xs text-muted-foreground">{filtered.length} von {actionableItems.length} Verträgen</span>
       </div>
 
-      {/* ── Cockpit List ── */}
+      {/* ── Cockpit Liste ── */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-16 text-muted-foreground">
-          <RefreshCw className="w-5 h-5 animate-spin mr-2" /> Lädt...
+        <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+          <RefreshCw className="w-4 h-4 animate-spin" /> Lädt...
         </div>
       ) : filtered.length === 0 ? (
-        <div className="py-16 text-center rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/30">
+        <div className="py-16 text-center rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/20">
           <CheckCircle2 className="w-10 h-10 mx-auto mb-3 text-emerald-400" />
           <p className="text-base font-bold text-emerald-700">
             {actionableItems.length === 0 ? 'Alle Verträge stabil' : 'Keine Einträge für diesen Filter'}
@@ -475,12 +533,7 @@ export default function Vertragsablaeufe() {
         <div className="rounded-xl border border-border overflow-hidden bg-card shadow-xs overflow-x-auto">
           <TableHeader />
           <div>
-            {renderGroup(expiredItems,  AlertTriangle, 'Bereits abgelaufen — Sofortiger Handlungsbedarf', 'text-red-800',    'bg-red-100/80')}
-            {renderGroup(criticalItems, Zap,           'Kritisch — Handlung innerhalb 30 Tage',           'text-red-700',    'bg-red-50')}
-            {renderGroup(urgentItems,   Clock,         'Dringend — 30 bis 60 Tage',                       'text-orange-700', 'bg-orange-50')}
-            {renderGroup(warningItems,  CalendarClock, 'Bald fällig — 60 bis 90 Tage',                    'text-amber-700',  'bg-amber-50')}
-            {renderGroup(processItems,  TrendingUp,    'In Vorbereitung — 90 bis 150 Tage',               'text-blue-700',   'bg-blue-50/60')}
-            {renderGroup(earlyItems,    CalendarClock, 'Früh — 150 bis 180 Tage',                         'text-slate-600',  'bg-slate-50/40')}
+            {['expired', 'critical', 'urgent', 'warning', 'process', 'early'].map(renderGroup)}
           </div>
         </div>
       )}
