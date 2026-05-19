@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { User, Mail, Phone, Building2, Globe, UserCheck, FileText, Tag, Calendar, Upload, X, Paperclip, TrendingUp } from 'lucide-react'
 import { base44 } from '@/api/base44Client'
 import LeadAiDocumentAnalysis from './LeadAiDocumentAnalysis'
+import { useQueryClient } from '@tanstack/react-query'
 
 const SOURCE_LABELS = {
   website: 'Website',
@@ -46,6 +47,7 @@ const EMPTY_FORM = {
 }
 
 export default function LeadForm({ open, onClose, onSubmit, lead, advisors = [], isPending }) {
+  const queryClient = useQueryClient()
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
   const [uploading, setUploading] = useState(false)
@@ -416,6 +418,12 @@ export default function LeadForm({ open, onClose, onSubmit, lead, advisors = [],
                   try {
                     const response = await base44.functions.invoke('convertLeadToCustomer', { lead_id: lead.id })
                     if (response.data.success) {
+                      // Invalidate ALL relevant queries immediately
+                      await Promise.all([
+                        queryClient.invalidateQueries({ queryKey: ['leads'] }),
+                        queryClient.invalidateQueries({ queryKey: ['customers'] }),
+                        queryClient.invalidateQueries({ queryKey: ['verkaufschancen'] }),
+                      ])
                       onClose()
                       // Navigation zur Verkaufschance-Erstellung mit dem neuen Kunden
                       window.location.href = `/verkaufschancen?new=true&customer_id=${response.data.customer_id}&lead_id=${lead.id}`

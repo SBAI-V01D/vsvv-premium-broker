@@ -68,6 +68,25 @@ Deno.serve(async (req) => {
 
     console.log(`[convertLeadToCustomer] ✅ Customer created: ${newCustomer.id}`);
 
+    // AUTO-CREATE Verkaufschance basierend auf Lead-Daten
+    const { addMonths } = await import('npm:date-fns');
+    const verkaufschanceData = {
+      customer_id: newCustomer.id,
+      customer_name: `${firstName} ${lastName}`.trim(),
+      title: `Neugeschäft aus Lead ${lead.name || lead.email}`,
+      sparte: 'krankenkasse', // Default, kann angepasst werden
+      insurance_type: 'health',
+      status: 'neu',
+      priority: 'medium',
+      estimated_value: 0, // Wird später aktualisiert
+      expected_close_date: addMonths(new Date(), 3).toISOString().split('T')[0],
+      assigned_broker: user.email,
+      notes: `Automatisch erstellt aus Lead-Konvertierung. Original-Quelle: ${lead.source || 'manuell'}`,
+    }
+
+    const verkaufschance = await base44.entities.Verkaufschance.create(verkaufschanceData)
+    console.log(`[convertLeadToCustomer] ✅ Verkaufschance created: ${verkaufschance.id}`)
+
     // Update lead + mark job done in parallel
     await Promise.all([
       base44.entities.Lead.update(lead_id, {
@@ -78,13 +97,14 @@ Deno.serve(async (req) => {
       base44.entities.AutomationQueue.update(job.id, { status: 'completed' }),
     ]);
 
-    console.log(`[convertLeadToCustomer] ✅ Lead converted`);
+    console.log(`[convertLeadToCustomer] ✅ Lead converted`)
 
     return Response.json({
       success: true,
       lead_id,
       customer_id: newCustomer.id,
-      message: 'Lead erfolgreich konvertiert zu Kunde',
+      verkaufschance_id: verkaufschance.id,
+      message: 'Lead erfolgreich konvertiert zu Kunde + Verkaufschance erstellt',
     });
   } catch (error) {
     console.error(`[convertLeadToCustomer] ERROR: ${error.message}`);
