@@ -1,183 +1,520 @@
 /**
- * DossierAiUpload — Phase 5.4
- * KI-gestützte Offerten-/Policenanalyse via LLM.
- * STRENG ISOLIERT:
- *   - Kein direktes Speichern ohne Benutzerbestätigung
- *   - Kein Write auf CRM-Entities
- *   - Nur Write auf ComparisonEntry nach expliziter Bestätigung
- *   - Confidence-Werte pro Feld sichtbar
- *   - Unsichere Felder (confidence < 0.7) visuell markiert
+ * DossierAiUpload — Phase B
  *
- * Sicherheits-Guards:
- *   - Max. Dateigrösse: 10 MB
- *   - Nur PDF/Bild-Formate
- *   - Rate-Limit: 1 Analyse gleichzeitig
+ * Vollständige Upload-Session-Pipeline:
+ *   Upload → Analyse → Vorschau → Korrektur → Bestätigung → Persistierung
+ *
+ * Sicherheits-Prinzipien (unveränderlich):
+ *   - Kein direktes Speichern ohne explizite Benutzerbestätigung
+ *   - Kein Write auf CRM-Entities
+ *   - Alle KI-Daten sind initial als "ungeprüft" markiert
+ *   - Jedes Feld einzeln editierbar vor der Übernahme
+ *   - Nur Write auf ComparisonEntry nach Bestätigung
+ *
+ * Phase B Erweiterungen:
+ *   - Multi-Produkt-Extraktion (mehrere Produkte pro Dokument)
+ *   - Personen-Erkennung aus Dokument
+ *   - Gruppen-Logik: KVG + VVG pro Gesamtlösung
+ *   - Erweitertes Confidence-System (rot/amber/grün)
+ *   - Gesamttotal-Berechnung pro Person
  */
 import React, { useState, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Upload, Sparkles, AlertTriangle, Check, X, Info, Loader2, FileText } from 'lucide-react';
+import {
+  Upload, Sparkles, AlertTriangle, Check, X, Info,
+  Loader2, FileText, ChevronDown, ChevronUp, Shield,
+  User, RefreshCw, CheckCircle, AlertCircle, Eye
+} from 'lucide-react';
 
+// ── Konstanten ────────────────────────────────────────────────────────────────
 const MAX_FILE_SIZE_MB = 10;
 const ALLOWED_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
 
-const SECTION_OPTIONS = [
-  { value: 'grundversicherung', label: 'Grundversicherung (KVG)' },
-  { value: 'zusatzversicherung', label: 'Zusatzversicherung (VVG)' },
+const GRUPPE_OPTIONS = [
+  { value: 'aktuelle_loesung', label: 'Aktuelle Lösung' },
+  { value: 'optimiert',        label: 'Optimiert' },
+  { value: 'angebot_1',        label: 'Angebot 1' },
+  { value: 'angebot_2',        label: 'Angebot 2' },
+  { value: 'angebot_3',        label: 'Angebot 3' },
+  { value: 'manuell',          label: 'Ohne Gruppe' },
 ];
 
-// ── Confidence-Anzeige ────────────────────────────────────────────────────────
-function ConfidenceBadge({ confidence }) {
+// ── Confidence-Hilfsfunktionen ─────────────────────────────────────────────
+function confLevel(v) {
+  if (v == null) return 'unknown';
+  if (v >= 0.82) return 'high';
+  if (v >= 0.60) return 'medium';
+  return 'low';
+}
+
+function ConfidencePill({ confidence }) {
   if (confidence == null) return null;
+  const level = confLevel(confidence);
   const pct = Math.round(confidence * 100);
-  const cls =
-    pct >= 85 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-    pct >= 65 ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                'bg-red-50 text-red-700 border-red-200';
+  const cfg = {
+    high:    { cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: '✓' },
+    medium:  { cls: 'bg-amber-50 text-amber-700 border-amber-200', icon: '?' },
+    low:     { cls: 'bg-red-50 text-red-700 border-red-200', icon: '!' },
+    unknown: { cls: 'bg-slate-100 text-slate-500 border-slate-200', icon: '–' },
+  }[level];
   return (
-    <span className={`text-[9px] font-semibold border px-1.5 py-0.5 rounded-full ml-1.5 ${cls}`}>
-      {pct}%
+    <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold border px-1.5 py-0.5 rounded-full ${cfg.cls}`}>
+      {cfg.icon} {pct}%
     </span>
   );
 }
 
-// ── Einzelnes editierbares Feld mit Confidence ────────────────────────────────
-function AiField({ label, fieldKey, value, confidence, type = 'text', options, onChange }) {
-  const isLowConf = confidence != null && confidence < 0.7;
-  const inputCls = `w-full border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring
-    ${isLowConf ? 'border-amber-300 bg-amber-50/50 focus:ring-amber-400' : 'border-input bg-background'}`;
+function ConfidenceBar({ confidence }) {
+  if (confidence == null) return null;
+  const level = confLevel(confidence);
+  const pct = Math.round(confidence * 100);
+  const barCls = level === 'high' ? 'bg-emerald-500' : level === 'medium' ? 'bg-amber-400' : 'bg-red-400';
+  return (
+    <div className="flex items-center gap-1.5 mt-0.5">
+      <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${barCls}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className={`text-[9px] font-medium ${level === 'high' ? 'text-emerald-600' : level === 'medium' ? 'text-amber-600' : 'text-red-600'}`}>
+        {pct}%
+      </span>
+    </div>
+  );
+}
+
+// ── Editierbares KI-Feld ──────────────────────────────────────────────────────
+function AiField({ label, fieldKey, value, confidence, type = 'text', options, onChange, required }) {
+  const level = confLevel(confidence);
+  const borderCls =
+    level === 'low'     ? 'border-red-300 bg-red-50/40' :
+    level === 'medium'  ? 'border-amber-300 bg-amber-50/30' :
+                          'border-input bg-background';
+  const inputCls = `w-full border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring ${borderCls}`;
 
   return (
     <div>
-      <label className="flex items-center text-[10px] text-muted-foreground mb-0.5 uppercase tracking-wide">
-        {label}
-        <ConfidenceBadge confidence={confidence} />
-        {isLowConf && (
-          <span className="ml-1.5 text-amber-600 flex items-center gap-0.5">
-            <AlertTriangle className="w-2.5 h-2.5" />
-            <span className="text-[9px]">Bitte prüfen</span>
+      <div className="flex items-center gap-1.5 mb-0.5">
+        <label className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">
+          {label}{required && ' *'}
+        </label>
+        <ConfidencePill confidence={confidence} />
+        {level === 'low' && (
+          <span className="text-[9px] text-red-600 flex items-center gap-0.5">
+            <AlertCircle className="w-2.5 h-2.5" /> Bitte prüfen
           </span>
         )}
-      </label>
+        {level === 'medium' && (
+          <span className="text-[9px] text-amber-600 flex items-center gap-0.5">
+            <Eye className="w-2.5 h-2.5" /> Überprüfen
+          </span>
+        )}
+      </div>
       {options ? (
         <select className={inputCls} value={value || ''} onChange={e => onChange(fieldKey, e.target.value)}>
           {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       ) : (
-        <input
-          className={inputCls}
-          type={type}
-          value={value ?? ''}
-          onChange={e => onChange(fieldKey, e.target.value)}
-        />
+        <input className={inputCls} type={type} value={value ?? ''} step={type === 'number' ? '0.05' : undefined}
+          onChange={e => onChange(fieldKey, e.target.value)} />
+      )}
+      {confidence != null && <ConfidenceBar confidence={confidence} />}
+    </div>
+  );
+}
+
+// ── Konfidenz-Zusammenfassung ─────────────────────────────────────────────────
+function ConfidenceSummary({ products }) {
+  const allConfs = products.flatMap(p =>
+    Object.values(p.confidence || {}).filter(v => v != null)
+  );
+  if (allConfs.length === 0) return null;
+  const avg = allConfs.reduce((a, b) => a + b, 0) / allConfs.length;
+  const lowCount = allConfs.filter(v => v < 0.60).length;
+  const medCount = allConfs.filter(v => v >= 0.60 && v < 0.82).length;
+  const highCount = allConfs.filter(v => v >= 0.82).length;
+  const level = confLevel(avg);
+
+  return (
+    <div className={`rounded-lg border px-4 py-3 flex items-center gap-4 flex-wrap text-xs
+      ${level === 'high' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
+        level === 'medium' ? 'bg-amber-50 border-amber-200 text-amber-800' :
+        'bg-red-50 border-red-200 text-red-800'}`}>
+      <div className="flex items-center gap-1.5 font-semibold">
+        {level === 'high' ? <CheckCircle className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+        Gesamt-Konfidenz: {Math.round(avg * 100)}%
+      </div>
+      <div className="flex items-center gap-3 text-[10px]">
+        {highCount > 0 && <span className="text-emerald-700">✓ {highCount} sicher</span>}
+        {medCount > 0  && <span className="text-amber-700">? {medCount} prüfen</span>}
+        {lowCount > 0  && <span className="text-red-700">! {lowCount} unsicher</span>}
+      </div>
+      {lowCount > 0 && (
+        <span className="text-[10px] font-medium">
+          Bitte rot markierte Felder vor dem Speichern korrigieren.
+        </span>
       )}
     </div>
   );
 }
 
-// ── KI-Extraktions-Prompt ─────────────────────────────────────────────────────
+// ── Produktkarte im Review ────────────────────────────────────────────────────
+function ProductReviewCard({ product, index, personName, onChange, onRemove, knownPersons }) {
+  const [expanded, setExpanded] = useState(true);
+  const conf = product.confidence || {};
+  const totalMonthly = product.praemie_monatlich ? Number(product.praemie_monatlich) : null;
+
+  const handleChange = (key, val) => onChange(index, key, val);
+
+  return (
+    <div className={`border rounded-xl overflow-hidden transition-shadow
+      ${product.section === 'grundversicherung' ? 'border-blue-200' : 'border-violet-200'}`}>
+      {/* Kartenheader */}
+      <div
+        className={`flex items-center justify-between px-4 py-2.5 cursor-pointer
+          ${product.section === 'grundversicherung' ? 'bg-blue-50' : 'bg-violet-50'}`}
+        onClick={() => setExpanded(e => !e)}
+      >
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border
+            ${product.section === 'grundversicherung'
+              ? 'bg-blue-100 text-blue-700 border-blue-200'
+              : 'bg-violet-100 text-violet-700 border-violet-200'}`}>
+            {product.section === 'grundversicherung' ? 'KVG' : 'VVG'}
+          </span>
+          <span className="text-sm font-semibold text-foreground">
+            {product.gesellschaft || <span className="text-muted-foreground italic">Gesellschaft ausfüllen</span>}
+          </span>
+          {product.product_name && (
+            <span className="text-xs text-muted-foreground">{product.product_name}</span>
+          )}
+          {totalMonthly && (
+            <span className="text-xs font-bold text-foreground">
+              CHF {Number(totalMonthly).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/Mt.
+            </span>
+          )}
+          <ConfidencePill confidence={
+            Object.values(conf).filter(v => v != null).length > 0
+              ? Object.values(conf).filter(v => v != null).reduce((a, b) => a + b, 0) /
+                Object.values(conf).filter(v => v != null).length
+              : null
+          } />
+        </div>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={e => { e.stopPropagation(); onRemove(index); }}
+            className="p-1 text-muted-foreground hover:text-destructive rounded transition-colors">
+            <X className="w-3.5 h-3.5" />
+          </button>
+          {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="p-4 space-y-4 bg-card">
+          {/* Person & Gruppe */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Person</label>
+              {knownPersons.length > 0 ? (
+                <select
+                  className="w-full border border-input rounded-md px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                  value={product.person_name || personName}
+                  onChange={e => handleChange('person_name', e.target.value)}
+                >
+                  {knownPersons.map(p => <option key={p} value={p}>{p}</option>)}
+                  <option value="__other">Andere Person…</option>
+                </select>
+              ) : (
+                <input
+                  className="w-full border border-input rounded-md px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                  value={product.person_name || personName}
+                  onChange={e => handleChange('person_name', e.target.value)}
+                />
+              )}
+            </div>
+            <div>
+              <label className="block text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">Gruppe</label>
+              <select
+                className="w-full border border-input rounded-md px-3 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                value={product.gruppe || 'manuell'}
+                onChange={e => handleChange('gruppe', e.target.value)}
+              >
+                {GRUPPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Hauptfelder */}
+          <div className="grid grid-cols-2 gap-3">
+            <AiField label="Abschnitt" fieldKey="section" value={product.section} confidence={conf.section}
+              options={[
+                { value: 'grundversicherung', label: 'Grundversicherung (KVG)' },
+                { value: 'zusatzversicherung', label: 'Zusatzversicherung (VVG)' },
+              ]}
+              onChange={handleChange} />
+            <AiField label="Gesellschaft" fieldKey="gesellschaft" value={product.gesellschaft}
+              confidence={conf.gesellschaft} onChange={handleChange} required />
+            <AiField label="Produkt / Tarif" fieldKey="product_name" value={product.product_name}
+              confidence={conf.product_name} onChange={handleChange} />
+            <AiField label="Prämie/Mt. (CHF)" fieldKey="praemie_monatlich" type="number"
+              value={product.praemie_monatlich} confidence={conf.praemie_monatlich} onChange={handleChange} />
+            <AiField label="Franchise (CHF)" fieldKey="franchise" type="number"
+              value={product.franchise} confidence={conf.franchise} onChange={handleChange} />
+            <AiField label="Modell" fieldKey="modell" value={product.modell}
+              confidence={conf.modell} onChange={handleChange} />
+            <div className="col-span-2">
+              <AiField label="Deckungsdetails" fieldKey="deckung_details" value={product.deckung_details}
+                confidence={conf.deckung_details} onChange={handleChange} />
+            </div>
+          </div>
+
+          {/* Flags */}
+          <div className="flex items-center gap-4 text-xs">
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" checked={product.is_current || false}
+                onChange={e => handleChange('is_current', e.target.checked)} />
+              Aktuelle Police
+            </label>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Gesamttotal pro Person ────────────────────────────────────────────────────
+function PersonTotal({ products, personName }) {
+  const personProds = products.filter(p => (p.person_name || '') === personName);
+  const total = personProds.reduce((sum, p) => sum + (p.praemie_monatlich ? Number(p.praemie_monatlich) : 0), 0);
+  if (total === 0) return null;
+  return (
+    <div className="flex items-center justify-between text-xs px-3 py-2 bg-muted/50 rounded-lg border border-border/60">
+      <div className="flex items-center gap-2">
+        <User className="w-3.5 h-3.5 text-muted-foreground" />
+        <span className="font-medium text-foreground">{personName}</span>
+        <span className="text-muted-foreground">· {personProds.length} Produkt{personProds.length !== 1 ? 'e' : ''}</span>
+      </div>
+      <span className="font-bold text-foreground">
+        Σ CHF {total.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/Mt.
+        <span className="font-normal text-muted-foreground ml-1">
+          (CHF {(total * 12).toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/Jahr)
+        </span>
+      </span>
+    </div>
+  );
+}
+
+// ── KI-Extraktions-Schema (Phase B: multi-Produkt) ────────────────────────────
 const EXTRACTION_SCHEMA = {
   type: 'object',
   properties: {
-    gesellschaft:      { type: 'string', description: 'Versicherungsgesellschaft / Anbieter' },
-    product_name:      { type: 'string', description: 'Produktname oder Tarifbezeichnung' },
-    praemie_monatlich: { type: 'number', description: 'Monatliche Prämie in CHF (Zahl ohne Einheit)' },
-    praemie_jaehrlich: { type: 'number', description: 'Jährliche Prämie in CHF (Zahl ohne Einheit)' },
-    franchise:         { type: 'number', description: 'Franchise in CHF (Zahl)' },
-    modell:            { type: 'string', description: 'Versicherungsmodell z.B. HMO, HAM, Standard, TelFirst' },
-    deckung_details:   { type: 'string', description: 'Deckungsdetails, Leistungsumfang kurz beschrieben' },
-    section:           { type: 'string', enum: ['grundversicherung', 'zusatzversicherung'], description: 'KVG = grundversicherung, VVG/Zusatz = zusatzversicherung' },
-    confidence: {
-      type: 'object',
-      description: 'Extraktions-Konfidenz pro Feld (0.0–1.0)',
-      properties: {
-        gesellschaft:      { type: 'number' },
-        product_name:      { type: 'number' },
-        praemie_monatlich: { type: 'number' },
-        franchise:         { type: 'number' },
-        modell:            { type: 'number' },
-        deckung_details:   { type: 'number' },
-        section:           { type: 'number' },
+    document_type: {
+      type: 'string',
+      enum: ['police', 'offerte', 'vergleich', 'unbekannt'],
+      description: 'Dokumenttyp',
+    },
+    detected_persons: {
+      type: 'array',
+      description: 'Erkannte Personen im Dokument',
+      items: { type: 'string' },
+    },
+    products: {
+      type: 'array',
+      description: 'Liste aller erkannten Versicherungsprodukte',
+      items: {
+        type: 'object',
+        properties: {
+          gesellschaft:      { type: 'string' },
+          product_name:      { type: 'string' },
+          section:           { type: 'string', enum: ['grundversicherung', 'zusatzversicherung'] },
+          praemie_monatlich: { type: 'number' },
+          praemie_jaehrlich: { type: 'number' },
+          franchise:         { type: 'number' },
+          modell:            { type: 'string' },
+          deckung_details:   { type: 'string' },
+          person_name:       { type: 'string' },
+          is_current:        { type: 'boolean' },
+          confidence: {
+            type: 'object',
+            properties: {
+              gesellschaft:      { type: 'number' },
+              product_name:      { type: 'number' },
+              section:           { type: 'number' },
+              praemie_monatlich: { type: 'number' },
+              franchise:         { type: 'number' },
+              modell:            { type: 'number' },
+              deckung_details:   { type: 'number' },
+              person_name:       { type: 'number' },
+            },
+          },
+        },
       },
     },
+    extraction_notes: { type: 'string', description: 'Hinweise zur Extraktion' },
   },
 };
 
 const EXTRACTION_PROMPT = `
-Du bist ein Schweizer Versicherungsexperte. Analysiere das folgende Dokument (Offerte, Police oder Vergleich).
+Du bist ein erfahrener Schweizer Versicherungsberater und Dokumentenanalyst.
+Analysiere das beiliegende Dokument (Police, Offerte oder Vergleich) und extrahiere ALLE darin enthaltenen Versicherungsprodukte.
 
-Extrahiere folgende Felder in strukturierter Form:
-- Versicherungsgesellschaft (z.B. SWICA, Helsana, CSS, Concordia, KPT, Sanitas, etc.)
-- Produktname / Tarifbezeichnung
-- Monatliche Prämie in CHF (reine Zahl, kein Text)
-- Jährliche Prämie in CHF (falls vorhanden)
-- Franchise in CHF (z.B. 300, 500, 1000, 1500, 2000, 2500)
-- Versicherungsmodell (HMO, HAM, Standard, TelFirst, Medbase, etc.)
-- Deckungsdetails / Leistungsumfang (max. 80 Zeichen)
-- Ob es KVG Grundversicherung (grundversicherung) oder VVG Zusatzversicherung (zusatzversicherung) ist
+WICHTIG:
+- Extrahiere JEDES einzelne Versicherungsprodukt als separaten Eintrag (z.B. Grundversicherung UND Zusatzversicherungen separat)
+- Erkenne alle im Dokument erwähnten Personen (Versicherungsnehmer, mitversicherte Personen)
+- Unterscheide klar KVG Grundversicherung (section: "grundversicherung") von VVG Zusatzversicherungen (section: "zusatzversicherung")
+- Häufige KVG-Gesellschaften: CSS, Helsana, SWICA, Concordia, KPT, Sanitas, Assura, Atupri, EGK, Visana, Groupe Mutuel, Sympany
+- KVG-Modelle: Standard, HMO, HAM, Hausarzt, TelFirst, Medbase, Callmed
+- VVG-Produkte: Spital, Dental, Komplementär, Reise, Ausland, Ambulant, etc.
 
-Gib pro extrahiertem Feld einen Konfidenzwert zwischen 0.0 (sehr unsicher) und 1.0 (sehr sicher) an.
-Wenn ein Feld nicht gefunden wird, verwende null.
-Antworte NUR mit dem JSON-Objekt, ohne zusätzlichen Text.
+Für JEDES Produkt:
+- gesellschaft: Versicherungsgesellschaft (String)
+- product_name: Produktname oder Tarifbezeichnung (String)
+- section: "grundversicherung" für KVG, "zusatzversicherung" für VVG
+- praemie_monatlich: Monatsprämie in CHF (nur Zahl, kein Text)
+- praemie_jaehrlich: Jahresprämie falls angegeben
+- franchise: Franchise in CHF (Standard: 300, 500, 1000, 1500, 2000, 2500)
+- modell: Versicherungsmodell
+- deckung_details: Kurzbeschreibung der Deckung (max 100 Zeichen)
+- person_name: Name der versicherten Person falls erkennbar
+- is_current: true wenn es sich um eine bestehende Police handelt, false bei Offerte/Angebot
+
+Gib für jedes Feld einen Konfidenzwert (0.0-1.0) an:
+- 0.9-1.0: Klar im Dokument erkennbar
+- 0.7-0.9: Wahrscheinlich korrekt
+- 0.5-0.7: Unsicher, muss geprüft werden
+- 0.0-0.5: Sehr unsicher oder abgeleitet
+
+Falls ein Feld nicht erkennbar ist, verwende null (NICHT einen Platzhalterwert).
+Antworte NUR mit dem JSON-Objekt.
 `;
 
+// ── Schritt-Indikator ─────────────────────────────────────────────────────────
+const STEPS = [
+  { key: 'upload',    label: 'Upload' },
+  { key: 'analyzing', label: 'Analyse' },
+  { key: 'review',   label: 'Vorschau' },
+  { key: 'confirm',  label: 'Bestätigung' },
+];
+
+function StepBar({ step }) {
+  const idx = STEPS.findIndex(s => s.key === step);
+  return (
+    <div className="flex items-center gap-0">
+      {STEPS.filter(s => s.key !== 'analyzing').map((s, i) => {
+        const displayIdx = ['upload', 'review', 'confirm'].indexOf(s.key);
+        const currentDisplayIdx = ['upload', 'review', 'confirm'].indexOf(
+          step === 'analyzing' ? 'upload' : step
+        );
+        const done = displayIdx < currentDisplayIdx;
+        const active = displayIdx === currentDisplayIdx;
+        return (
+          <React.Fragment key={s.key}>
+            {i > 0 && (
+              <div className={`flex-1 h-0.5 mx-1 ${done ? 'bg-primary' : 'bg-border'}`} />
+            )}
+            <div className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full transition-colors
+              ${active ? 'bg-primary text-primary-foreground' :
+                done ? 'bg-primary/15 text-primary' :
+                'bg-muted text-muted-foreground'}`}>
+              {done ? <Check className="w-2.5 h-2.5" /> : null}
+              {s.label}
+            </div>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Hauptkomponente ───────────────────────────────────────────────────────────
-export default function DossierAiUpload({ dossierId, personName, onEntryAdded, onClose }) {
+export default function DossierAiUpload({ dossierId, personName, onEntryAdded, onClose, knownPersons = [] }) {
   const [file, setFile] = useState(null);
   const [fileError, setFileError] = useState('');
-  const [aiResult, setAiResult] = useState(null); // { fields, confidence }
-  const [editedResult, setEditedResult] = useState(null);
-  const [section, setSection] = useState('grundversicherung');
-  const [step, setStep] = useState('upload'); // 'upload' | 'analyzing' | 'review' | 'saving'
+  const [step, setStep] = useState('upload');
+  const [sessionProducts, setSessionProducts] = useState([]); // temporäre Session
+  const [detectedPersons, setDetectedPersons] = useState([]);
+  const [documentType, setDocumentType] = useState('');
+  const [extractionNotes, setExtractionNotes] = useState('');
+  const [defaultGruppe, setDefaultGruppe] = useState('aktuelle_loesung');
+  const [confirmedCount, setConfirmedCount] = useState(0);
   const fileInputRef = useRef();
   const qc = useQueryClient();
 
+  const allPersons = [...new Set([...knownPersons, ...detectedPersons, personName].filter(Boolean))];
+
+  // ── Analyse ────────────────────────────────────────────────────────────────
   const analyzeMutation = useMutation({
     mutationFn: async (uploadedFile) => {
-      // 1. Datei hochladen
       const { file_url } = await base44.integrations.Core.UploadFile({ file: uploadedFile });
-      // 2. LLM-Analyse
-      const result = await base44.integrations.Core.InvokeLLM({
+      return base44.integrations.Core.InvokeLLM({
         prompt: EXTRACTION_PROMPT,
         file_urls: [file_url],
         response_json_schema: EXTRACTION_SCHEMA,
-        model: 'claude_sonnet_4_6', // Hochwertigeres Modell für Dokument-Extraktion
+        model: 'claude_sonnet_4_6',
       });
-      return result;
     },
     onSuccess: (data) => {
-      setAiResult(data);
-      // Monatsprämie: direkt oder aus Jahrsprämie berechnen
-      const praemie = data.praemie_monatlich ?? (data.praemie_jaehrlich ? Math.round(data.praemie_jaehrlich / 12 * 100) / 100 : '');
-      setEditedResult({
-        gesellschaft:      data.gesellschaft || '',
-        product_name:      data.product_name || '',
-        praemie_monatlich: praemie,
-        franchise:         data.franchise || '',
-        modell:            data.modell || '',
-        deckung_details:   data.deckung_details || '',
-        section:           data.section || section,
-        is_current:        false,
-        is_recommended:    false,
-        leistungs_score:   '',
-      });
-      if (data.section) setSection(data.section);
+      setDocumentType(data.document_type || 'unbekannt');
+      setDetectedPersons(data.detected_persons || []);
+      setExtractionNotes(data.extraction_notes || '');
+
+      const products = (data.products || []).map((p, i) => ({
+        ...p,
+        // Monatsprämie ableiten wenn nur Jahresprämie
+        praemie_monatlich: p.praemie_monatlich ?? (p.praemie_jaehrlich ? Math.round(p.praemie_jaehrlich / 12 * 100) / 100 : null),
+        // Standardwerte
+        person_name: p.person_name || personName,
+        gruppe: p.is_current ? 'aktuelle_loesung' : defaultGruppe,
+        gruppe_label: '',
+        confidence: p.confidence || {},
+        _session_id: `session_${Date.now()}_${i}`,
+        _verified: false,
+      }));
+
+      setSessionProducts(products);
       setStep('review');
     },
-    onError: () => {
-      setStep('upload');
-    },
+    onError: () => setStep('upload'),
   });
 
+  // ── Persistierung ─────────────────────────────────────────────────────────
   const saveMutation = useMutation({
-    mutationFn: (data) => base44.entities.ComparisonEntry.create(data),
-    onSuccess: () => {
+    mutationFn: async (products) => {
+      const results = [];
+      for (const p of products) {
+        const entry = await base44.entities.ComparisonEntry.create({
+          dossier_id:        dossierId,
+          person_name:       p.person_name || personName,
+          section:           p.section || 'grundversicherung',
+          gruppe:            p.gruppe || 'manuell',
+          gruppe_label:      p.gruppe_label || null,
+          gesellschaft:      p.gesellschaft,
+          product_name:      p.product_name || null,
+          praemie_monatlich: p.praemie_monatlich != null ? Number(p.praemie_monatlich) : null,
+          franchise:         p.franchise != null ? Number(p.franchise) : null,
+          modell:            p.modell || null,
+          deckung_details:   p.deckung_details || null,
+          is_current:        p.is_current || false,
+          is_recommended:    false,
+          ai_extracted:      true,
+          ai_confidence:     p.confidence
+            ? (Object.values(p.confidence).filter(v => v != null).reduce((a, b) => a + b, 0) /
+               Object.values(p.confidence).filter(v => v != null).length) || null
+            : null,
+          ai_source_document: file?.name || null,
+          manually_verified:  true, // Benutzer hat explizit bestätigt
+        });
+        results.push(entry);
+      }
+      return results;
+    },
+    onSuccess: (results) => {
+      setConfirmedCount(results.length);
       qc.invalidateQueries({ queryKey: ['dossier_comparison', dossierId] });
-      if (onEntryAdded) onEntryAdded();
-      onClose();
+      setStep('confirm');
     },
   });
 
+  // ── File-Handling ─────────────────────────────────────────────────────────
   const handleFileChange = (f) => {
     setFileError('');
     if (!f) return;
@@ -192,210 +529,254 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
     setFile(f);
   };
 
-  const handleAnalyze = () => {
-    if (!file) return;
-    setStep('analyzing');
-    analyzeMutation.mutate(file);
+  const handleProductChange = (index, key, val) => {
+    setSessionProducts(ps => ps.map((p, i) => i === index ? { ...p, [key]: val } : p));
   };
 
-  const handleFieldChange = (key, val) => {
-    setEditedResult(r => ({ ...r, [key]: val }));
+  const handleRemoveProduct = (index) => {
+    setSessionProducts(ps => ps.filter((_, i) => i !== index));
   };
 
   const handleSave = () => {
-    setStep('saving');
-    saveMutation.mutate({
-      dossier_id:        dossierId,
-      person_name:       personName,
-      section:           editedResult.section,
-      gesellschaft:      editedResult.gesellschaft,
-      product_name:      editedResult.product_name || null,
-      praemie_monatlich: editedResult.praemie_monatlich !== '' ? Number(editedResult.praemie_monatlich) : null,
-      franchise:         editedResult.franchise !== '' ? Number(editedResult.franchise) : null,
-      modell:            editedResult.modell || null,
-      deckung_details:   editedResult.deckung_details || null,
-      leistungs_score:   editedResult.leistungs_score !== '' ? Number(editedResult.leistungs_score) : null,
-      is_current:        editedResult.is_current,
-      is_recommended:    editedResult.is_recommended,
-    });
+    const valid = sessionProducts.filter(p => p.gesellschaft && p.gesellschaft.trim());
+    if (valid.length === 0) return;
+    saveMutation.mutate(valid);
   };
 
-  const conf = aiResult?.confidence || {};
-  const lowConfFields = Object.entries(conf).filter(([, v]) => v != null && v < 0.7).length;
+  // Personen aus Session ableiten
+  const sessionPersons = [...new Set(sessionProducts.map(p => p.person_name || personName).filter(Boolean))];
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="border border-primary/20 bg-primary/5 rounded-xl p-5 space-y-4">
+    <div className="border border-violet-200 bg-violet-50/30 rounded-xl overflow-hidden">
+
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
+      <div className="flex items-center justify-between px-5 py-3 bg-violet-50 border-b border-violet-200">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center">
+            <Sparkles className="w-3.5 h-3.5 text-violet-700" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-foreground">KI-Offerten-Analyse</h3>
-            <p className="text-[10px] text-muted-foreground">Für: {personName}</p>
+            <h3 className="text-sm font-semibold text-foreground">KI-Dokumentenanalyse</h3>
+            <p className="text-[10px] text-violet-600">Phase B — Multi-Produkt-Extraktion</p>
           </div>
         </div>
-        <button onClick={onClose} className="p-1.5 hover:bg-muted rounded-lg transition-colors">
-          <X className="w-4 h-4 text-muted-foreground" />
-        </button>
-      </div>
-
-      {/* Sicherheitshinweis */}
-      <div className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2">
-        <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-        <span>KI-Daten werden <strong>niemals automatisch gespeichert</strong>. Jedes Feld kann vor der Übernahme geprüft und korrigiert werden.</span>
-      </div>
-
-      {/* ── Step: Upload ── */}
-      {step === 'upload' && (
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-              Abschnitt
-            </label>
-            <div className="flex gap-2">
-              {SECTION_OPTIONS.map(o => (
-                <button
-                  key={o.value}
-                  type="button"
-                  onClick={() => setSection(o.value)}
-                  className={`flex-1 text-xs font-medium py-2 px-3 rounded-lg border transition-colors
-                    ${section === o.value ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:bg-muted'}`}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors
-              ${file ? 'border-primary/40 bg-primary/5' : 'border-border hover:border-primary/40 hover:bg-muted/30'}`}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              accept=".pdf,image/png,image/jpeg,image/jpg,image/webp"
-              onChange={e => handleFileChange(e.target.files?.[0])}
-            />
-            {file ? (
-              <div className="flex items-center justify-center gap-2">
-                <FileText className="w-5 h-5 text-primary" />
-                <span className="text-sm font-medium text-foreground">{file.name}</span>
-                <span className="text-xs text-muted-foreground">({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
-              </div>
-            ) : (
-              <>
-                <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground/60" />
-                <p className="text-sm text-muted-foreground">PDF oder Bild hochladen</p>
-                <p className="text-xs text-muted-foreground/70 mt-1">Max. {MAX_FILE_SIZE_MB} MB · PDF, PNG, JPG, WEBP</p>
-              </>
-            )}
-          </div>
-
-          {fileError && (
-            <p className="text-xs text-destructive flex items-center gap-1.5">
-              <AlertTriangle className="w-3 h-3" />
-              {fileError}
-            </p>
-          )}
-
-          <button
-            onClick={handleAnalyze}
-            disabled={!file || !!fileError}
-            className="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
-          >
-            <Sparkles className="w-4 h-4" />
-            KI-Analyse starten
+        <div className="flex items-center gap-3">
+          <StepBar step={step} />
+          <button onClick={onClose} className="p-1.5 hover:bg-violet-100 rounded-lg transition-colors">
+            <X className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
-      )}
+      </div>
 
-      {/* ── Step: Analyzing ── */}
-      {step === 'analyzing' && (
-        <div className="flex flex-col items-center justify-center py-10 gap-4">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <div className="text-center">
-            <p className="text-sm font-medium text-foreground">Dokument wird analysiert…</p>
-            <p className="text-xs text-muted-foreground mt-1">KI extrahiert Versicherungsdaten. Dies kann 10–30 Sekunden dauern.</p>
-          </div>
+      <div className="p-5 space-y-4">
+
+        {/* Sicherheitshinweis */}
+        <div className="flex items-start gap-2 text-xs bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2">
+          <Shield className="w-3.5 h-3.5 shrink-0 mt-0.5 text-slate-500" />
+          <span>
+            KI-Daten werden <strong>niemals automatisch gespeichert</strong>.
+            Jedes Feld kann vor der Übernahme geprüft und korrigiert werden.
+            Nur nach expliziter Bestätigung wird in ComparisonEntry geschrieben.
+          </span>
         </div>
-      )}
 
-      {/* ── Step: Review ── */}
-      {step === 'review' && editedResult && (
-        <div className="space-y-4">
-          {/* Confidence-Warnung */}
-          {lowConfFields > 0 && (
-            <div className="flex items-center gap-2 text-xs bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2">
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              <span>{lowConfFields} Feld{lowConfFields !== 1 ? 'er' : ''} mit niedriger KI-Konfidenz — bitte vor dem Speichern prüfen.</span>
+        {/* ── Step: Upload ──────────────────────────────────────────────── */}
+        {step === 'upload' && (
+          <div className="space-y-4">
+            {/* Gruppe Vorauswahl */}
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                Zu welcher Vergleichsgruppe gehören die extrahierten Daten?
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {GRUPPE_OPTIONS.slice(0, 5).map(o => (
+                  <button key={o.value} type="button" onClick={() => setDefaultGruppe(o.value)}
+                    className={`text-xs font-medium py-2 px-3 rounded-lg border transition-colors
+                      ${defaultGruppe === o.value
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'border-border text-muted-foreground hover:bg-muted'}`}>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
 
-          <p className="text-xs font-semibold text-foreground">
-            KI-Extraktion — Bitte alle Felder prüfen und ggf. korrigieren:
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <AiField label="Abschnitt" fieldKey="section" value={editedResult.section} confidence={conf.section}
-              options={SECTION_OPTIONS} onChange={handleFieldChange} />
-            <AiField label="Gesellschaft *" fieldKey="gesellschaft" value={editedResult.gesellschaft} confidence={conf.gesellschaft}
-              onChange={handleFieldChange} />
-            <AiField label="Produkt" fieldKey="product_name" value={editedResult.product_name} confidence={conf.product_name}
-              onChange={handleFieldChange} />
-            <AiField label="Prämie/Mt. (CHF)" fieldKey="praemie_monatlich" type="number" value={editedResult.praemie_monatlich}
-              confidence={conf.praemie_monatlich} onChange={handleFieldChange} />
-            <AiField label="Franchise (CHF)" fieldKey="franchise" type="number" value={editedResult.franchise}
-              confidence={conf.franchise} onChange={handleFieldChange} />
-            <AiField label="Modell" fieldKey="modell" value={editedResult.modell} confidence={conf.modell}
-              onChange={handleFieldChange} />
-            <div className="sm:col-span-2">
-              <AiField label="Deckungsdetails" fieldKey="deckung_details" value={editedResult.deckung_details}
-                confidence={conf.deckung_details} onChange={handleFieldChange} />
+            {/* Drop-Zone */}
+            <div
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => { e.preventDefault(); handleFileChange(e.dataTransfer.files?.[0]); }}
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors
+                ${file ? 'border-violet-400 bg-violet-50' : 'border-border hover:border-violet-300 hover:bg-violet-50/30'}`}
+            >
+              <input ref={fileInputRef} type="file" className="hidden"
+                accept=".pdf,image/png,image/jpeg,image/jpg,image/webp"
+                onChange={e => handleFileChange(e.target.files?.[0])} />
+              {file ? (
+                <div className="flex items-center justify-center gap-2">
+                  <FileText className="w-5 h-5 text-violet-600" />
+                  <span className="text-sm font-medium text-foreground">{file.name}</span>
+                  <span className="text-xs text-muted-foreground">({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
+                </div>
+              ) : (
+                <>
+                  <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">PDF oder Bild hierher ziehen oder klicken</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">Max. {MAX_FILE_SIZE_MB} MB · PDF, PNG, JPG, WEBP</p>
+                </>
+              )}
             </div>
-            <AiField label="Leistungsbewertung (1–6, optional)" fieldKey="leistungs_score" type="number"
-              value={editedResult.leistungs_score} onChange={handleFieldChange} />
-          </div>
 
-          <div className="flex items-center gap-4 text-xs">
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={editedResult.is_current}
-                onChange={e => handleFieldChange('is_current', e.target.checked)} />
-              Aktuelle Police
-            </label>
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={editedResult.is_recommended}
-                onChange={e => handleFieldChange('is_recommended', e.target.checked)} />
-              Als Empfehlung markieren
-            </label>
-          </div>
+            {fileError && (
+              <p className="text-xs text-destructive flex items-center gap-1.5">
+                <AlertTriangle className="w-3 h-3" /> {fileError}
+              </p>
+            )}
 
-          <div className="flex gap-2 pt-2 border-t border-border/60">
-            <button
-              onClick={handleSave}
-              disabled={!editedResult.gesellschaft || saveMutation.isPending}
-              className="flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
-            >
-              <Check className="w-3 h-3" />
-              {saveMutation.isPending ? 'Speichern…' : 'Geprüft — Eintrag speichern'}
-            </button>
-            <button
-              onClick={() => { setStep('upload'); setFile(null); setAiResult(null); }}
-              className="px-4 py-2 border border-border text-xs font-medium rounded-lg hover:bg-muted transition-colors"
-            >
-              Neu analysieren
-            </button>
-            <button onClick={onClose}
-              className="px-4 py-2 border border-border text-xs font-medium rounded-lg hover:bg-muted transition-colors">
-              Abbrechen
+            <button onClick={() => { setStep('analyzing'); analyzeMutation.mutate(file); }}
+              disabled={!file || !!fileError}
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors disabled:opacity-50">
+              <Sparkles className="w-4 h-4" />
+              KI-Analyse starten
             </button>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* ── Step: Analyzing ───────────────────────────────────────────── */}
+        {step === 'analyzing' && (
+          <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <div className="relative">
+              <Loader2 className="w-10 h-10 text-violet-500 animate-spin" />
+              <Sparkles className="w-4 h-4 text-violet-600 absolute -top-1 -right-1" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-semibold text-foreground">Dokument wird analysiert…</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                KI extrahiert alle Versicherungsprodukte, Personen und Prämien.
+              </p>
+              <p className="text-xs text-muted-foreground/60 mt-0.5">Dauert 15–40 Sekunden.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step: Review ──────────────────────────────────────────────── */}
+        {step === 'review' && (
+          <div className="space-y-4">
+            {/* Dokument-Info */}
+            <div className="flex items-center gap-4 flex-wrap text-xs bg-muted/50 border border-border/60 rounded-lg px-3 py-2">
+              <div className="flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="font-medium text-foreground">{file?.name}</span>
+              </div>
+              {documentType && (
+                <span className="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase">
+                  {documentType}
+                </span>
+              )}
+              {detectedPersons.length > 0 && (
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <User className="w-3 h-3" />
+                  {detectedPersons.join(', ')}
+                </div>
+              )}
+              <span className="text-muted-foreground">{sessionProducts.length} Produkt{sessionProducts.length !== 1 ? 'e' : ''} erkannt</span>
+            </div>
+
+            {extractionNotes && (
+              <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg px-3 py-2 border border-border/40">
+                <strong>KI-Hinweis:</strong> {extractionNotes}
+              </div>
+            )}
+
+            {/* Konfidenz-Zusammenfassung */}
+            <ConfidenceSummary products={sessionProducts} />
+
+            {/* Gesamttotale pro Person */}
+            {sessionPersons.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Gesamttotal pro Person</p>
+                {sessionPersons.map(p => (
+                  <PersonTotal key={p} products={sessionProducts} personName={p} />
+                ))}
+              </div>
+            )}
+
+            {/* Produkt-Karten */}
+            {sessionProducts.length === 0 ? (
+              <div className="text-center py-8 text-sm text-muted-foreground">
+                Keine Produkte erkannt. Bitte Dokument prüfen oder neu analysieren.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-foreground">
+                  Extrahierte Produkte — <span className="text-muted-foreground font-normal">Alle Felder prüfen und ggf. korrigieren:</span>
+                </p>
+                {sessionProducts.map((p, i) => (
+                  <ProductReviewCard
+                    key={p._session_id || i}
+                    product={p}
+                    index={i}
+                    personName={personName}
+                    knownPersons={allPersons}
+                    onChange={handleProductChange}
+                    onRemove={handleRemoveProduct}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Aktionsbuttons */}
+            <div className="flex items-center gap-2 pt-3 border-t border-border/60 flex-wrap">
+              <button
+                onClick={handleSave}
+                disabled={sessionProducts.filter(p => p.gesellschaft?.trim()).length === 0 || saveMutation.isPending}
+                className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+              >
+                <Check className="w-3.5 h-3.5" />
+                {saveMutation.isPending
+                  ? 'Wird gespeichert…'
+                  : `${sessionProducts.filter(p => p.gesellschaft?.trim()).length} Einträge speichern`}
+              </button>
+              <button
+                onClick={() => { setStep('upload'); setFile(null); setSessionProducts([]); }}
+                className="flex items-center gap-1.5 px-3 py-2 border border-border text-xs font-medium rounded-lg hover:bg-muted transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Neu analysieren
+              </button>
+              <button onClick={onClose}
+                className="px-3 py-2 border border-border text-xs font-medium rounded-lg hover:bg-muted transition-colors">
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step: Confirm (Erfolg) ────────────────────────────────────── */}
+        {step === 'confirm' && (
+          <div className="flex flex-col items-center justify-center py-8 gap-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                {confirmedCount} Einträge gespeichert
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Alle Daten wurden von Ihnen geprüft und im Dossier-Vergleich gespeichert.
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="px-5 py-2 bg-primary text-primary-foreground text-xs font-semibold rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Fertig
+            </button>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

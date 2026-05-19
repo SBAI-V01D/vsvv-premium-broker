@@ -239,7 +239,7 @@ function AddEntryForm({ dossierId, personName, section, onSuccess, onCancel, pre
 // ── Hauptkomponente ───────────────────────────────────────────────────────────
 export default function DossierVergleichTab({ dossier, pendingImportContract, onPendingImportConsumed }) {
   const [addingFor, setAddingFor] = useState(null); // { personName, section, prefill? }
-  const [showAiUpload, setShowAiUpload] = useState(null); // personName | null
+  const [showAiUpload, setShowAiUpload] = useState(false);
   const [viewMode, setViewMode] = useState('gruppen');
   const dossierId = dossier?.id;
   const customerId = dossier?.customer_id;
@@ -367,9 +367,10 @@ export default function DossierVergleichTab({ dossier, pendingImportContract, on
         {showAiUpload && (
           <DossierAiUpload
             dossierId={dossierId}
-            personName={showAiUpload}
-            onEntryAdded={() => setShowAiUpload(null)}
-            onClose={() => setShowAiUpload(null)}
+            personName={persons[0] || ''}
+            knownPersons={persons}
+            onEntryAdded={() => setShowAiUpload(false)}
+            onClose={() => setShowAiUpload(false)}
           />
         )}
 
@@ -400,21 +401,19 @@ export default function DossierVergleichTab({ dossier, pendingImportContract, on
                 ))
               )}
             </div>
-            {/* KI-Analyse */}
-            {persons.length > 0 && (
-              <div className="flex items-center gap-2 flex-wrap pt-1">
-                {persons.map(name => (
-                  <button
-                    key={`ai-${name}`}
-                    onClick={() => setShowAiUpload(name)}
-                    className="flex items-center gap-1.5 text-xs text-violet-700 border border-violet-200 bg-violet-50 px-3 py-1.5 rounded-lg hover:bg-violet-100 transition-colors"
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    KI-Analyse · {name}
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* KI-Analyse — ein einziger Button, Personen werden im Dokument erkannt */}
+            <div className="flex items-center gap-2 flex-wrap pt-1">
+              <button
+                onClick={() => setShowAiUpload(true)}
+                className="flex items-center gap-1.5 text-xs text-violet-700 border border-violet-200 bg-violet-50 px-3 py-1.5 rounded-lg hover:bg-violet-100 transition-colors font-medium"
+              >
+                <Sparkles className="w-3 h-3" />
+                Dokument per KI analysieren
+              </button>
+              <span className="text-[10px] text-muted-foreground">
+                KVG + VVG, alle Personen — wird aus dem Dokument erkannt
+              </span>
+            </div>
           </div>
         )}
       </div>
