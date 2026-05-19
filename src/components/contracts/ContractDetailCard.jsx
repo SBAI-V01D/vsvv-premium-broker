@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronUp, Calendar, Hash, AlertTriangle, TrendingUp, FileText, Upload, ExternalLink } from 'lucide-react';
+import { ChevronDown, ChevronUp, Calendar, Hash, AlertTriangle, TrendingUp, FileText, Upload, ExternalLink, Plus } from 'lucide-react';
 import { format, differenceInDays, addMonths } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import StatusBadge from '../shared/StatusBadge';
 import ContractDocuments from './ContractDocuments';
 import PolicyUploadDialog from './PolicyUploadDialog';
@@ -16,9 +17,14 @@ const insuranceIcons = {
 };
 
 export default function ContractDetailCard({ contract, customerId, customerName, familyMembers = [] }) {
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const [showPolicyUpload, setShowPolicyUpload] = useState(false);
   const queryClient = useQueryClient();
+
+  const handleCreateMutation = () => {
+    navigate(`/verkaufschancen?new=true&customer_id=${customerId || contract.customer_id}&linked_contract_id=${contract.id}`);
+  };
 
   const familyMemberName = contract.family_member_id && familyMembers.length > 0
     ? (() => {
@@ -103,6 +109,15 @@ export default function ContractDetailCard({ contract, customerId, customerName,
                 >
                   <Upload className="w-3.5 h-3.5" />
                   {contract.policy_document_url ? 'Ersetzen' : 'Hochladen'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCreateMutation}
+                  className="gap-2 text-primary border-primary/30 hover:bg-primary/5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Mutation/Wechsel
                 </Button>
               </div>
             </div>

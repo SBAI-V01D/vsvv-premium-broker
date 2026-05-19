@@ -44,7 +44,6 @@ export default function VerkaufschanceForm({ verkaufschance, customer, onSave, o
   // Lead-Daten übernehmen wenn vorhanden
   useEffect(() => {
     if (lead && !selectedCustomer) {
-      // Automatisch nach Kunde suchen basierend auf Lead-Daten
       const searchFromLead = async () => {
         setIsSearching(true)
         try {
@@ -55,9 +54,7 @@ export default function VerkaufschanceForm({ verkaufschance, customer, onSave, o
             `${c.first_name} ${c.last_name}`.toLowerCase() === `${lead.first_name || ''} ${lead.last_name || ''}`.toLowerCase()
           )
           const match = emailMatch || phoneMatch || nameMatch
-          if (match) {
-            setSelectedCustomer(match)
-          }
+          if (match) setSelectedCustomer(match)
         } catch (e) {
           console.error('Lead customer search failed:', e)
         }
@@ -66,6 +63,39 @@ export default function VerkaufschanceForm({ verkaufschance, customer, onSave, o
       searchFromLead()
     }
   }, [lead])
+
+  // URL-Parameter für Mutation/Wechsel (von Contract aus)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const linkedContractId = params.get('linked_contract_id')
+    const customerIdFromUrl = params.get('customer_id')
+    
+    if (linkedContractId && !verkaufschance && !selectedCustomer) {
+      // Kunde laden und Vertrag anzeigen
+      const loadFromContract = async () => {
+        setIsSearching(true)
+        try {
+          const contract = await base44.entities.Contract.get(linkedContractId)
+          if (contract && customerIdFromUrl) {
+            const customer = await base44.entities.Customer.get(customerIdFromUrl)
+            if (customer) {
+              setSelectedCustomer(customer)
+              // Titel vorschlagen
+              setForm(prev => ({
+                ...prev,
+                title: `Mutation ${contract.insurer} – ${contract.sparte || contract.insurance_type}`,
+                notes: `Aus Vertrag ${contract.policy_number || contract.id} erstellt.`,
+              }))
+            }
+          }
+        } catch (e) {
+          console.error('Contract load failed:', e)
+        }
+        setIsSearching(false)
+      }
+      loadFromContract()
+    }
+  }, [])
 
   // Live-Kundensuche
   useEffect(() => {
