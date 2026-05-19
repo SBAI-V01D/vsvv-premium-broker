@@ -102,12 +102,13 @@ export default function DossierPersonalienTab({ dossier }) {
     mutationFn: (data) => base44.entities.Customer.update(customerId, data),
     onSuccess: () => {
       // Invalidate überall — CRM-Module + Dossier sehen sofort frische Daten
-      qc.invalidateQueries({ queryKey: ['dossier_customer_ro', customerId] });
+      qc.invalidateQueries({ queryKey: ['dossier_customer_ro'] });
       qc.invalidateQueries({ queryKey: ['customers'] });
-      qc.invalidateQueries({ queryKey: ['customer', customerId] });
+      qc.invalidateQueries({ queryKey: ['customer'] });
       qc.invalidateQueries({ queryKey: ['customers_search_dossier'] });
+      qc.invalidateQueries({ queryKey: ['advisory_dossier'] });
       setEditing(false);
-      toast.success('Kundendaten aktualisiert');
+      toast.success('Kundendaten wurden im CRM aktualisiert');
     },
   });
 
