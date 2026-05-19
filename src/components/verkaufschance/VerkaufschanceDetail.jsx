@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   ArrowLeft, Edit2, Trophy, Plus, CalendarClock, Building2,
-  TrendingUp, FileText, AlertTriangle, CheckCircle2, Info
+  TrendingUp, FileText, AlertTriangle, CheckCircle2, Info, Upload
 } from 'lucide-react'
+import VerkaufschanceAiUpload from './VerkaufschanceAiUpload'
 import VerkaufschanceStatusBadge, { ALLE_STATUS } from './VerkaufschanceStatusBadge'
 import GesellschaftenTabelle from './GesellschaftenTabelle'
 import VerkaufschanceForm from './VerkaufschanceForm'
@@ -42,6 +43,7 @@ export default function VerkaufschanceDetail({ verkaufschance, customer, onClose
   const [editing, setEditing] = useState(false)
   const [showContractDialog, setShowContractDialog] = useState(false)
   const [activeTab, setActiveTab] = useState('offerten')
+  const [showAiUpload, setShowAiUpload] = useState(false)
 
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.Verkaufschance.update(verkaufschance.id, data),
@@ -63,6 +65,28 @@ export default function VerkaufschanceDetail({ verkaufschance, customer, onClose
 
   const handleStatusChange = (newStatus) => {
     updateMutation.mutate({ status: newStatus })
+  }
+
+  const handleAiDataExtracted = (data) => {
+    const updates = {}
+    if (data.insurer && !verkaufschance.gesellschaften?.some(g => g.gesellschaft === data.insurer)) {
+      // Neue Gesellschaft aus KI-Analyse hinzufügen
+      const newGes = data._gesellschaft
+      if (newGes) {
+        updates.gesellschaften = [...(verkaufschance.gesellschaften || []), { ...newGes, id: `ai_${Date.now()}` }]
+      }
+    }
+    if (data.sparte && !verkaufschance.sparte) updates.sparte = data.sparte
+    if (data.estimated_value && !verkaufschance.estimated_value) updates.estimated_value = data.estimated_value
+    if (data.start_date_requested && !verkaufschance.start_date_requested) updates.start_date_requested = data.start_date_requested
+    if (data.title && !verkaufschance.title) updates.title = data.title
+    if (data.notes) updates.notes = data.notes
+
+    if (Object.keys(updates).length > 0) {
+      updateMutation.mutate(updates)
+    }
+    setShowAiUpload(false)
+    onUpdated?.()
   }
 
   return (
@@ -192,6 +216,10 @@ export default function VerkaufschanceDetail({ verkaufschance, customer, onClose
               <Building2 className="w-3.5 h-3.5 mr-1.5" />
               Gesellschaften ({gesellschaften.length})
             </TabsTrigger>
+            <TabsTrigger value="ki" className="rounded-none rounded-t-lg border border-b-0 border-border data-[state=active]:bg-background data-[state=active]:border-border data-[state=active]:text-foreground mr-1">
+              <Upload className="w-3.5 h-3.5 mr-1.5" />
+              KI-Analyse
+            </TabsTrigger>
             <TabsTrigger value="notizen" className="rounded-none rounded-t-lg border border-b-0 border-border data-[state=active]:bg-background data-[state=active]:border-border data-[state=active]:text-foreground">
               <FileText className="w-3.5 h-3.5 mr-1.5" />
               Notizen
@@ -203,6 +231,18 @@ export default function VerkaufschanceDetail({ verkaufschance, customer, onClose
               verkaufschance={verkaufschance}
               onUpdate={onUpdated}
             />
+          </TabsContent>
+
+          <TabsContent value="ki" className="p-6 mt-0">
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-semibold mb-1">Offerte oder Police analysieren</p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  KI erkennt Versicherer, Sparte, Prämie und Deckung automatisch — und trägt die Gesellschaft direkt in die Offerttabelle ein.
+                </p>
+              </div>
+              <VerkaufschanceAiUpload onDataExtracted={handleAiDataExtracted} />
+            </div>
           </TabsContent>
 
           <TabsContent value="notizen" className="p-6 mt-0">

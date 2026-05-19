@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { User, Mail, Phone, Building2, Globe, UserCheck, FileText, Tag, Calendar, Upload, X, Paperclip } from 'lucide-react'
 import { base44 } from '@/api/base44Client'
+import LeadAiDocumentAnalysis from './LeadAiDocumentAnalysis'
 
 const SOURCE_LABELS = {
   website: 'Website',
@@ -84,6 +85,25 @@ export default function LeadForm({ open, onClose, onSubmit, lead, advisors = [],
     return errs
   }
 
+  const handleAiExtracted = (data) => {
+    setForm(prev => ({
+      ...prev,
+      first_name: data.first_name || prev.first_name,
+      last_name: data.last_name || prev.last_name,
+      birthdate: data.birthdate || prev.birthdate,
+      phone: data.phone || prev.phone,
+      email: data.email || prev.email,
+      notes: data.notes || prev.notes,
+    }))
+    // Dokument als Anhang hinzufügen, falls vorhanden
+    if (data._aiDocument) {
+      setForm(prev => ({
+        ...prev,
+        documents: [...(prev.documents || []).filter(d => d.url !== data._aiDocument.url), data._aiDocument],
+      }))
+    }
+  }
+
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -136,6 +156,9 @@ export default function LeadForm({ open, onClose, onSubmit, lead, advisors = [],
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5 mt-2">
+
+          {/* KI-DOKUMENTENANALYSE */}
+          <LeadAiDocumentAnalysis onDataExtracted={handleAiExtracted} />
 
           {/* KONTAKT */}
           <div className="space-y-3">
