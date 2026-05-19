@@ -11,21 +11,25 @@
  *   - Jedes Feld einzeln editierbar vor der Übernahme
  *   - Nur Write auf ComparisonEntry nach Bestätigung
  *
- * Phase B Erweiterungen:
+ * Phase B+C Erweiterungen:
  *   - Multi-Produkt-Extraktion (mehrere Produkte pro Dokument)
  *   - Personen-Erkennung aus Dokument
  *   - Gruppen-Logik: KVG + VVG pro Gesamtlösung
  *   - Erweitertes Confidence-System (rot/amber/grün)
  *   - Gesamttotal-Berechnung pro Person
+ *   - [Phase C] Korrektur-Tracking & Qualitätsmessung
+ *   - [Phase C] Schnellkorrektur-Modus: unsichere Felder zuerst
+ *   - [Phase C] Anonymisiertes Feedback-Logging via aiCorrectionLogger
  */
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
-  Upload, Sparkles, AlertTriangle, Check, X, Info,
+  Upload, Sparkles, AlertTriangle, Check, X,
   Loader2, FileText, ChevronDown, ChevronUp, Shield,
-  User, RefreshCw, CheckCircle, AlertCircle, Eye
+  User, RefreshCw, CheckCircle, AlertCircle, Eye, Zap
 } from 'lucide-react';
+import { detectCorrections, logCorrections, sessionQualityScore } from '@/lib/aiCorrectionLogger';
 
 // ── Konstanten ────────────────────────────────────────────────────────────────
 const MAX_FILE_SIZE_MB = 10;
@@ -165,6 +169,10 @@ function ProductReviewCard({ product, index, personName, onChange, onRemove, kno
 
   const handleChange = (key, val) => onChange(index, key, val);
 
+  // Unsichere Felder zählen für Schnellkorrektur-Hinweis
+  const lowConfFields = Object.entries(conf).filter(([, v]) => v != null && v < 0.60);
+  const medConfFields = Object.entries(conf).filter(([, v]) => v != null && v >= 0.60 && v < 0.82);
+
   return (
     <div className={`border rounded-xl overflow-hidden transition-shadow
       ${product.section === 'grundversicherung' ? 'border-blue-200' : 'border-violet-200'}`}>
@@ -198,6 +206,19 @@ function ProductReviewCard({ product, index, personName, onChange, onRemove, kno
                 Object.values(conf).filter(v => v != null).length
               : null
           } />
+          {/* Schnellkorrektur-Hinweis */}
+          {lowConfFields.length > 0 && (
+            <span className="flex items-center gap-0.5 text-[9px] font-bold text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">
+              <Zap className="w-2.5 h-2.5" />
+              {lowConfFields.length} unsicher
+            </span>
+          )}
+          {lowConfFields.length === 0 && medConfFields.length > 0 && (
+            <span className="flex items-center gap-0.5 text-[9px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+              <Eye className="w-2.5 h-2.5" />
+              {medConfFields.length} prüfen
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button type="button" onClick={e => { e.stopPropagation(); onRemove(index); }}
@@ -436,6 +457,7 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
   const [extractionNotes, setExtractionNotes] = useState('');
   const [defaultGruppe, setDefaultGruppe] = useState('aktuelle_loesung');
   const [confirmedCount, setConfirmedCount] = useState(0);
+  const [originalProducts, setOriginalProducts] = useState([]); // Phase C: Korrektur-Tracking
   const fileInputRef = useRef();
   const qc = useQueryClient();
 
@@ -471,6 +493,7 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
       }));
 
       setSessionProducts(products);
+      setOriginalProducts(JSON.parse(JSON.stringify(products))); // Deep-Copy für Korrektur-Vergleich
       setStep('review');
     },
     onError: () => setStep('upload'),
@@ -540,8 +563,25 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
   const handleSave = () => {
     const valid = sessionProducts.filter(p => p.gesellschaft && p.gesellschaft.trim());
     if (valid.length === 0) return;
+
+    // Phase C: Korrekturen erkennen und anonymisiert loggen
+    const allCorrections = valid.flatMap((editedProduct, i) => {
+      const original = originalProducts[i] || {};
+      return detectCorrections(original, editedProduct);
+    });
+    logCorrections(allCorrections, file?.name, valid.length);
+
     saveMutation.mutate(valid);
   };
+
+  // Phase C: Qualitätsscore der aktuellen Session
+  const qualityScore = useMemo(() => {
+    if (sessionProducts.length === 0 || originalProducts.length === 0) return null;
+    const corrections = sessionProducts.flatMap((p, i) =>
+      detectCorrections(originalProducts[i] || {}, p)
+    );
+    return sessionQualityScore(sessionProducts, corrections);
+  }, [sessionProducts, originalProducts]);
 
   // Personen aus Session ableiten
   const sessionPersons = [...new Set(sessionProducts.map(p => p.person_name || personName).filter(Boolean))];
@@ -689,8 +729,24 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
               </div>
             )}
 
-            {/* Konfidenz-Zusammenfassung */}
+            {/* Konfidenz-Zusammenfassung + Session-Qualität */}
             <ConfidenceSummary products={sessionProducts} />
+
+            {/* Phase C: Session-Qualitätsscore */}
+            {qualityScore != null && (
+              <div className={`flex items-center gap-3 text-xs px-3 py-2 rounded-lg border
+                ${qualityScore >= 75 ? 'bg-emerald-50 border-emerald-200 text-emerald-800' :
+                  qualityScore >= 45 ? 'bg-amber-50 border-amber-200 text-amber-800' :
+                  'bg-red-50 border-red-200 text-red-800'}`}>
+                <Zap className="w-3.5 h-3.5 shrink-0" />
+                <span>
+                  <strong>Extraktionsqualität: {qualityScore}/100</strong>
+                  {qualityScore >= 75 && ' — Hohe Qualität, wenige Korrekturen erwartet'}
+                  {qualityScore >= 45 && qualityScore < 75 && ' — Mittlere Qualität, gelb/rot markierte Felder prüfen'}
+                  {qualityScore < 45 && ' — Niedrige Qualität, bitte alle Felder sorgfältig prüfen'}
+                </span>
+              </div>
+            )}
 
             {/* Gesamttotale pro Person */}
             {sessionPersons.length > 0 && (
@@ -766,6 +822,12 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
               <p className="text-xs text-muted-foreground mt-1">
                 Alle Daten wurden von Ihnen geprüft und im Dossier-Vergleich gespeichert.
               </p>
+              {qualityScore != null && (
+                <p className={`text-xs mt-1.5 font-medium
+                  ${qualityScore >= 75 ? 'text-emerald-600' : qualityScore >= 45 ? 'text-amber-600' : 'text-red-600'}`}>
+                  Extraktionsqualität dieser Session: {qualityScore}/100
+                </p>
+              )}
             </div>
             <button
               onClick={onClose}
