@@ -140,6 +140,17 @@ export function deserializeSnapshot(jsonString) {
 }
 
 /**
+ * Berechnet die nächste stabile Snapshot-Versionsnummer aus bestehenden Snapshots.
+ * @param {Array} existingSnapshots - DossierSnapshot[]
+ * @returns {number}
+ */
+export function nextSnapshotVersion(existingSnapshots = []) {
+  if (!Array.isArray(existingSnapshots) || existingSnapshots.length === 0) return 1;
+  const max = Math.max(...existingSnapshots.map(s => Number(s.version) || 0));
+  return max + 1;
+}
+
+/**
  * Gibt Snapshot-Metadaten für die Listenansicht zurück.
  */
 export function getSnapshotMeta(snapshot) {

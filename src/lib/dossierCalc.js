@@ -164,18 +164,6 @@ export function fmtCHF(amount, decimals = 2) {
 }
 
 /**
- * Formatiert ein Datum sicher für de-CH.
- * @param {string|Date|null} date
- * @returns {string}
- */
-export function fmtDate(date) {
-  if (!date) return '—';
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('de-CH');
-}
-
-/**
  * Gesamtübersicht für Dossier-Summary.
  * Alle Felder sind immer definiert (null für "keine Daten", nie undefined).
  */
