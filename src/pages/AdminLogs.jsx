@@ -1,369 +1,319 @@
-import React, { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { base44 } from '@/api/base44Client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Search, Shield, AlertTriangle, CheckCircle, XCircle, Clock, 
-  FileText, Activity, TrendingUp, Filter, Download 
-} from 'lucide-react'
-import { format } from 'date-fns'
+import React, { useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RefreshCw, Search, Shield, AlertTriangle, Activity, Clock, ChevronDown, ChevronRight, Play } from 'lucide-react';
 
-const ACTION_COLORS = {
-  create: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  update: 'bg-blue-50 text-blue-700 border-blue-200',
-  delete: 'bg-rose-50 text-rose-700 border-rose-200',
-  automation: 'bg-purple-50 text-purple-700 border-purple-200',
-  guard: 'bg-amber-50 text-amber-700 border-amber-200',
-  error: 'bg-red-50 text-red-700 border-red-200',
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const LEVEL_CONFIG = {
+  1: { label: 'Critical', className: 'bg-red-50 text-red-700 border border-red-200' },
+  2: { label: 'Lifecycle', className: 'bg-blue-50 text-blue-700 border border-blue-200' },
+  3: { label: 'Guard', className: 'bg-amber-50 text-amber-700 border border-amber-200' },
+  4: { label: 'Debug', className: 'bg-slate-100 text-slate-500 border border-slate-200' },
+};
+
+const GUARD_CONFIG = {
+  blocked: { className: 'bg-red-50 text-red-700 border border-red-200', label: 'Blocked' },
+  allowed: { className: 'bg-green-50 text-green-700 border border-green-200', label: 'Allowed' },
+  skipped: { className: 'bg-slate-100 text-slate-500 border border-slate-200', label: 'Skipped' },
+  error:   { className: 'bg-red-100 text-red-800 border border-red-300', label: 'Error' },
+};
+
+function fmt(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleString('de-CH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
-const GUARD_RESULT_COLORS = {
-  allowed: 'bg-emerald-100 text-emerald-800',
-  blocked: 'bg-red-100 text-red-800',
-  skipped: 'bg-amber-100 text-amber-800',
-}
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
-export default function AdminLogs() {
-  const [search, setSearch] = useState('')
-  const [filterAction, setFilterAction] = useState('all')
-  const [filterGuardResult, setFilterGuardResult] = useState('all')
-  const [filterEntityType, setFilterEntityType] = useState('all')
-  const [period, setPeriod] = useState('7d')
-
-  const { data: auditLogs = [], isLoading } = useQuery({
-    queryKey: ['auditLogs', period],
-    queryFn: () => base44.entities.AuditLog.list('-changed_at', 1000),
-    staleTime: 5_000,
-  })
-
-  // Parse details JSON
-  const parsedLogs = useMemo(() => {
-    return auditLogs.map(log => {
-      try {
-        const details = typeof log.details === 'string' ? JSON.parse(log.details) : (log.details || {})
-        return { ...log, details }
-      } catch {
-        return { ...log, details: {} }
-      }
-    })
-  }, [auditLogs])
-
-  // Filter
-  const filteredLogs = useMemo(() => {
-    return parsedLogs.filter(log => {
-      const searchStr = `${log.summary} ${log.entity_type} ${log.entity_id} ${log.changed_by} ${log.details.source || ''}`.toLowerCase()
-      const matchSearch = !search.trim() || searchStr.includes(search.toLowerCase())
-      const matchAction = filterAction === 'all' || log.action === filterAction
-      const matchGuardResult = filterGuardResult === 'all' || log.details.guard_result === filterGuardResult
-      const matchEntityType = filterEntityType === 'all' || log.entity_type === filterEntityType
-      
-      // Period filter
-      const logDate = new Date(log.changed_at)
-      const daysAgo = period === '7d' ? 7 : period === '30d' ? 30 : 365
-      const cutoff = new Date()
-      cutoff.setDate(cutoff.getDate() - daysAgo)
-      const matchPeriod = logDate >= cutoff
-
-      return matchSearch && matchAction && matchGuardResult && matchEntityType && matchPeriod
-    })
-  }, [parsedLogs, search, filterAction, filterGuardResult, filterEntityType, period])
-
-  // KPIs
-  const kpis = useMemo(() => {
-    const total = filteredLogs.length
-    const creates = filteredLogs.filter(l => l.action === 'create').length
-    const updates = filteredLogs.filter(l => l.action === 'update').length
-    const guardHits = filteredLogs.filter(l => l.details.guard_result).length
-    const guardBlocked = filteredLogs.filter(l => l.details.guard_result === 'blocked').length
-    const errors = filteredLogs.filter(l => l.action === 'error' || l.details.error_details).length
-    const avgDuration = filteredLogs
-      .filter(l => l.details.duration_ms)
-      .reduce((s, l) => s + (l.details.duration_ms || 0), 0) / (filteredLogs.filter(l => l.details.duration_ms).length || 1)
-
-    return { total, creates, updates, guardHits, guardBlocked, errors, avgDuration }
-  }, [filteredLogs])
-
-  // Guard-Stats
-  const guardStats = useMemo(() => {
-    const stats = {}
-    filteredLogs.filter(l => l.details.guard_result).forEach(log => {
-      const key = log.details.guard_reason || 'unknown'
-      if (!stats[key]) {
-        stats[key] = { reason: key, allowed: 0, blocked: 0, skipped: 0, total: 0 }
-      }
-      stats[key][log.details.guard_result]++
-      stats[key].total++
-    })
-    return Object.values(stats).sort((a, b) => b.total - a.total)
-  }, [filteredLogs])
-
-  // Automation-Stats
-  const automationStats = useMemo(() => {
-    const stats = {}
-    filteredLogs.filter(l => l.details.source).forEach(log => {
-      const key = log.details.source
-      if (!stats[key]) {
-        stats[key] = { source: key, triggers: 0, creates: 0, updates: 0, guards: 0, errors: 0 }
-      }
-      stats[key].triggers++
-      if (log.action === 'create') stats[key].creates++
-      if (log.action === 'update') stats[key].updates++
-      if (log.details.guard_result) stats[key].guards++
-      if (log.action === 'error' || log.details.error_details) stats[key].errors++
-    })
-    return Object.values(stats).sort((a, b) => b.triggers - a.triggers)
-  }, [filteredLogs])
-
-  const exportCSV = () => {
-    const headers = ['Datum', 'Aktion', 'Entität', 'ID', 'User', 'Summary', 'Source', 'Guard', 'Dauer (ms)']
-    const rows = filteredLogs.map(log => [
-      format(new Date(log.changed_at), 'dd.MM.yyyy HH:mm'),
-      log.action,
-      log.entity_type,
-      log.entity_id,
-      log.changed_by,
-      log.summary,
-      log.details.source || '',
-      log.details.guard_result || '',
-      log.details.duration_ms || '',
-    ])
-    const csv = [headers, ...rows].map(r => r.join(';')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `audit_logs_${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-  }
+function AuditRow({ log }) {
+  const [expanded, setExpanded] = useState(false);
+  const lvl = LEVEL_CONFIG[log.audit_level] || LEVEL_CONFIG[4];
+  const guard = log.guard_result ? GUARD_CONFIG[log.guard_result] : null;
 
   return (
-    <div className="space-y-5">
+    <>
+      <tr
+        className="border-b border-border hover:bg-slate-50/60 cursor-pointer transition-colors"
+        onClick={() => setExpanded(e => !e)}
+      >
+        <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{fmt(log.timestamp)}</td>
+        <td className="px-3 py-2">
+          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${lvl.className}`}>{lvl.label}</span>
+        </td>
+        <td className="px-3 py-2">
+          <span className="text-xs font-mono text-slate-600">{log.event_type || '—'}</span>
+        </td>
+        <td className="px-3 py-2 text-xs text-muted-foreground">{log.trigger_source || '—'}</td>
+        <td className="px-3 py-2">
+          {guard && (
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${guard.className}`}>{guard.label}</span>
+          )}
+        </td>
+        <td className="px-3 py-2 text-xs font-mono text-primary truncate max-w-[140px]">{log.correlation_id || '—'}</td>
+        <td className="px-3 py-2 text-xs font-mono text-slate-500 truncate max-w-[160px]">{log.decision_code || '—'}</td>
+        <td className="px-3 py-2 text-xs text-muted-foreground">{log.entity_type || '—'}</td>
+        <td className="px-3 py-2 text-right">
+          {expanded ? <ChevronDown className="w-3 h-3 text-muted-foreground ml-auto" /> : <ChevronRight className="w-3 h-3 text-muted-foreground ml-auto" />}
+        </td>
+      </tr>
+      {expanded && (
+        <tr className="bg-slate-50/80 border-b border-border">
+          <td colSpan={9} className="px-4 py-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="space-y-1.5">
+                <p><span className="font-semibold text-muted-foreground">Decision Logic:</span> <span>{log.decision_logic || '—'}</span></p>
+                <p><span className="font-semibold text-muted-foreground">Guard:</span> <span className="font-mono">{log.guard_evaluated || '—'}</span></p>
+                <p><span className="font-semibold text-muted-foreground">Guard Reason:</span> <span>{log.guard_reason || '—'}</span></p>
+                <p><span className="font-semibold text-muted-foreground">Actor:</span> <span>{log.actor_name || log.actor_id || '—'} ({log.actor_type})</span></p>
+                <p><span className="font-semibold text-muted-foreground">Process:</span> <span className="font-mono text-slate-600">{log.process_type} / {log.process_stage}</span></p>
+                <p><span className="font-semibold text-muted-foreground">Process-ID:</span> <span className="font-mono text-slate-500 break-all">{log.process_id || '—'}</span></p>
+              </div>
+              <div className="space-y-1.5">
+                <p><span className="font-semibold text-muted-foreground">Business Impact:</span> <span>{log.business_impact_description || '—'}</span>
+                  {log.business_impact_financial_chf > 0 && <span className="ml-1 font-semibold text-emerald-700">CHF {log.business_impact_financial_chf?.toLocaleString('de-CH')}</span>}
+                </p>
+                <p><span className="font-semibold text-muted-foreground">Severity:</span> <span>{log.business_severity_type} / {log.business_severity_level}</span></p>
+                <p><span className="font-semibold text-muted-foreground">Entity:</span> <span className="font-mono">{log.entity_type} / {log.entity_id}</span></p>
+                <p><span className="font-semibold text-muted-foreground">Sequence:</span> <span>#{log.event_sequence}</span></p>
+                {log.error_message && <p className="text-red-600"><span className="font-semibold">Error:</span> {log.error_message}</p>}
+              </div>
+              {(log.previous_state_summary && Object.keys(log.previous_state_summary).length > 0) && (
+                <div>
+                  <p className="font-semibold text-muted-foreground mb-1">Previous State:</p>
+                  <pre className="bg-white border border-border rounded p-2 text-[10px] text-slate-600 overflow-auto">{JSON.stringify(log.previous_state_summary, null, 2)}</pre>
+                </div>
+              )}
+              {(log.new_state_summary && Object.keys(log.new_state_summary).length > 0) && (
+                <div>
+                  <p className="font-semibold text-muted-foreground mb-1">New State:</p>
+                  <pre className="bg-white border border-border rounded p-2 text-[10px] text-slate-600 overflow-auto">{JSON.stringify(log.new_state_summary, null, 2)}</pre>
+                </div>
+              )}
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function KpiTile({ icon: IconComponent, label, value, sub, color = 'slate' }) {
+  const Icon = IconComponent;
+  const colors = {
+    red:   'border-red-200 bg-red-50 text-red-700',
+    amber: 'border-amber-200 bg-amber-50 text-amber-700',
+    blue:  'border-blue-200 bg-blue-50 text-blue-700',
+    slate: 'border-border bg-card text-foreground',
+    green: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  };
+  return (
+    <div className={`rounded-xl border p-4 flex items-start gap-3 ${colors[color]}`}>
+      <Icon className="w-4 h-4 mt-0.5 shrink-0" />
+      <div>
+        <p className="text-[11px] font-medium opacity-70">{label}</p>
+        <p className="text-xl font-bold">{value}</p>
+        {sub && <p className="text-[10px] opacity-60 mt-0.5">{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+export default function AdminLogs() {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [running, setRunning] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filterLevel, setFilterLevel] = useState('all');
+  const [filterGuard, setFilterGuard] = useState('all');
+  const [filterProcess, setFilterProcess] = useState('all');
+  const [validationResult, setValidationResult] = useState(null);
+
+  const loadLogs = async () => {
+    setLoading(true);
+    const data = await base44.entities.AuditLog.list('-created_date', 200);
+    setLogs(data);
+    setLoading(false);
+  };
+
+  useEffect(() => { loadLogs(); }, []);
+
+  const runValidation = async () => {
+    setRunning(true);
+    const res = await base44.functions.invoke('enterpriseValidationSuite', { suite: 'all' });
+    setValidationResult(res.data);
+    setRunning(false);
+    loadLogs();
+  };
+
+  // Filtered logs
+  const filtered = logs.filter(log => {
+    if (filterLevel !== 'all' && String(log.audit_level) !== filterLevel) return false;
+    if (filterGuard !== 'all' && log.guard_result !== filterGuard) return false;
+    if (filterProcess !== 'all' && log.process_type !== filterProcess) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return (
+        (log.correlation_id || '').toLowerCase().includes(q) ||
+        (log.decision_code || '').toLowerCase().includes(q) ||
+        (log.event_type || '').toLowerCase().includes(q) ||
+        (log.trigger_source || '').toLowerCase().includes(q) ||
+        (log.entity_id || '').toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
+  // KPIs
+  const critical = logs.filter(l => l.audit_level === 1).length;
+  const blocked = logs.filter(l => l.guard_result === 'blocked').length;
+  const withCorrelation = logs.filter(l => l.correlation_id).length;
+  const processTypes = [...new Set(logs.filter(l => l.process_type).map(l => l.process_type))];
+
+  const readiness = validationResult?.enterprise_readiness;
+  const readinessColor = !readiness ? 'slate' :
+    readiness.level === 'ENTERPRISE_READY' ? 'green' :
+    readiness.level === 'ALMOST_READY' ? 'blue' :
+    readiness.level === 'NEEDS_ATTENTION' ? 'amber' : 'red';
+
+  return (
+    <div className="p-6 space-y-6 page-enter">
       {/* Header */}
-      <div className="flex justify-between items-center flex-wrap gap-3">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground tracking-tight">
-            Audit Trail & Guard-Monitoring
-            {!isLoading && <span className="text-muted-foreground text-sm font-normal ml-2">· {filteredLogs.length} Einträge</span>}
-          </h1>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            Nachvollziehbarkeit · Guard-Hits · Automation-Triggers
-          </p>
+          <h1 className="text-2xl font-bold text-foreground">Enterprise Audit Monitor</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Prozess-Observability · Guard Analytics · Lifecycle Intelligence</p>
         </div>
-        <div className="flex gap-1.5">
-          <Button onClick={exportCSV} variant="outline" size="sm">
-            <Download className="w-3.5 h-3.5 mr-1.5" /> Export
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={loadLogs} disabled={loading}>
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button size="sm" onClick={runValidation} disabled={running} className="gap-2">
+            <Play className="w-3.5 h-3.5" />
+            {running ? 'Validierung...' : 'Enterprise Validation'}
           </Button>
         </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-        <KpiCard label="Einträge" value={kpis.total} icon={FileText} color="text-slate-700" />
-        <KpiCard label="Creates" value={kpis.creates} icon={CheckCircle} color="text-emerald-700" />
-        <KpiCard label="Updates" value={kpis.updates} icon={Activity} color="text-blue-700" />
-        <KpiCard label="Guard-Hits" value={kpis.guardHits} icon={Shield} color="text-amber-700" />
-        <KpiCard label="Blocked" value={kpis.guardBlocked} icon={XCircle} color="text-red-700" />
-        <KpiCard label="Errors" value={kpis.errors} icon={AlertTriangle} color="text-rose-700" />
-        <KpiCard label="Ø Dauer" value={`${Math.round(kpis.avgDuration)}ms`} icon={Clock} color="text-purple-700" />
+      {/* KPI Strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-3">
+        <KpiTile icon={Activity} label="Total Audit Logs" value={logs.length} sub="Letzte 200 Einträge" color="slate" />
+        <KpiTile icon={AlertTriangle} label="Critical Events (L1)" value={critical} sub="Financial / Compliance" color={critical > 0 ? 'red' : 'slate'} />
+        <KpiTile icon={Shield} label="Guard Blocks" value={blocked} sub="Verhinderte Operationen" color={blocked > 0 ? 'amber' : 'slate'} />
+        <KpiTile icon={Clock} label="Correlation Coverage" value={`${logs.length > 0 ? ((withCorrelation / logs.length) * 100).toFixed(0) : 0}%`} sub={`${withCorrelation} mit Correlation-ID`} color="blue" />
+        {readiness && (
+          <KpiTile icon={Shield} label="Enterprise Readiness" value={`${validationResult.summary.pass_rate}%`} sub={readiness.level} color={readinessColor} />
+        )}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2">
-        <div className="relative flex-1 min-w-44">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Suche (Summary, Entity, User...)" value={search}
-            onChange={e => setSearch(e.target.value)} className="pl-9 h-9" />
+      {/* Validation Result */}
+      {validationResult && (
+        <div className={`rounded-xl border p-4 ${readiness.level === 'ENTERPRISE_READY' ? 'border-emerald-200 bg-emerald-50' : readiness.level.includes('BLOCKED') ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`}>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="font-semibold text-sm">{readiness.action_required}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {validationResult.summary.total_checks} Checks · {validationResult.summary.passed} bestanden · {validationResult.summary.warnings} Warnungen · {validationResult.summary.critical} Kritisch
+              </p>
+            </div>
+            <span className={`text-xs font-bold px-2 py-1 rounded-lg ${readiness.level === 'ENTERPRISE_READY' ? 'bg-emerald-700 text-white' : 'bg-amber-700 text-white'}`}>
+              {readiness.level}
+            </span>
+          </div>
+          {/* Section details */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+            {Object.entries(validationResult.sections).map(([key, section]) => (
+              <div key={key} className="bg-white/70 rounded-lg border border-white p-3 text-xs">
+                <p className="font-semibold text-slate-700 uppercase tracking-wide text-[10px] mb-1">{key}</p>
+                <p className="text-emerald-700">✓ {section.passed} passed</p>
+                {section.warnings > 0 && <p className="text-amber-600">⚠ {section.warnings} warnings</p>}
+                {section.failures > 0 && <p className="text-red-600">✗ {section.failures} failures</p>}
+              </div>
+            ))}
+          </div>
         </div>
-        <Select value={filterAction} onValueChange={setFilterAction}>
-          <SelectTrigger className="w-36 h-9 text-sm"><SelectValue placeholder="Aktion" /></SelectTrigger>
+      )}
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Correlation-ID, Decision-Code, Event-Type..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9 h-8 text-xs"
+          />
+        </div>
+        <Select value={filterLevel} onValueChange={setFilterLevel}>
+          <SelectTrigger className="w-36 h-8 text-xs">
+            <SelectValue placeholder="Audit Level" />
+          </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Alle Aktionen</SelectItem>
-            <SelectItem value="create">Create</SelectItem>
-            <SelectItem value="update">Update</SelectItem>
-            <SelectItem value="delete">Delete</SelectItem>
-            <SelectItem value="automation">Automation</SelectItem>
-            <SelectItem value="guard">Guard</SelectItem>
-            <SelectItem value="error">Error</SelectItem>
+            <SelectItem value="all">Alle Level</SelectItem>
+            <SelectItem value="1">L1 Critical</SelectItem>
+            <SelectItem value="2">L2 Lifecycle</SelectItem>
+            <SelectItem value="3">L3 Guard</SelectItem>
+            <SelectItem value="4">L4 Debug</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filterGuardResult} onValueChange={setFilterGuardResult}>
-          <SelectTrigger className="w-36 h-9 text-sm"><SelectValue placeholder="Guard" /></SelectTrigger>
+        <Select value={filterGuard} onValueChange={setFilterGuard}>
+          <SelectTrigger className="w-36 h-8 text-xs">
+            <SelectValue placeholder="Guard Result" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Alle Guards</SelectItem>
-            <SelectItem value="allowed">Allowed</SelectItem>
             <SelectItem value="blocked">Blocked</SelectItem>
+            <SelectItem value="allowed">Allowed</SelectItem>
             <SelectItem value="skipped">Skipped</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filterEntityType} onValueChange={setFilterEntityType}>
-          <SelectTrigger className="w-36 h-9 text-sm"><SelectValue placeholder="Entität" /></SelectTrigger>
+        <Select value={filterProcess} onValueChange={setFilterProcess}>
+          <SelectTrigger className="w-44 h-8 text-xs">
+            <SelectValue placeholder="Prozess-Typ" />
+          </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Alle Entitäten</SelectItem>
-            <SelectItem value="Application">Application</SelectItem>
-            <SelectItem value="Contract">Contract</SelectItem>
-            <SelectItem value="Customer">Customer</SelectItem>
-            <SelectItem value="CommissionEntry">Commission</SelectItem>
-            <SelectItem value="Task">Task</SelectItem>
+            <SelectItem value="all">Alle Prozesse</SelectItem>
+            {processTypes.map(pt => <SelectItem key={pt} value={pt}>{pt}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-28 h-9 text-sm"><SelectValue placeholder="Periode" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="24h">24h</SelectItem>
-            <SelectItem value="7d">7 Tage</SelectItem>
-            <SelectItem value="30d">30 Tage</SelectItem>
-            <SelectItem value="90d">90 Tage</SelectItem>
-          </SelectContent>
-        </Select>
+        <span className="text-xs text-muted-foreground">{filtered.length} Einträge</span>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="logs">
-        <TabsList className="flex-wrap h-auto gap-0.5">
-          <TabsTrigger value="logs">Audit Logs</TabsTrigger>
-          <TabsTrigger value="guards">Guard-Stats</TabsTrigger>
-          <TabsTrigger value="automations">Automationen</TabsTrigger>
-        </TabsList>
-
-        {/* Audit Logs */}
-        <TabsContent value="logs" className="mt-4">
-          <div className="rounded-xl border bg-card shadow overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/40">
-                  <th className="text-left py-3 px-4 font-semibold">Datum</th>
-                  <th className="text-left py-3 px-4 font-semibold">Aktion</th>
-                  <th className="text-left py-3 px-4 font-semibold hidden md:table-cell">Entität</th>
-                  <th className="text-left py-3 px-4 font-semibold">Summary</th>
-                  <th className="text-left py-3 px-4 font-semibold hidden lg:table-cell">User</th>
-                  <th className="text-left py-3 px-4 font-semibold hidden lg:table-cell">Source</th>
-                  <th className="text-left py-3 px-4 font-semibold">Guard</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLogs.length === 0 ? (
-                  <tr><td colSpan="7" className="text-center py-8 text-muted-foreground">Keine Logs gefunden</td></tr>
-                ) : filteredLogs.map(log => (
-                  <tr key={log.id} className="border-b hover:bg-muted/30">
-                    <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
-                      {format(new Date(log.changed_at), 'dd.MM.yyyy HH:mm')}
-                    </td>
-                    <td className="py-3 px-4">
-                      <Badge className={ACTION_COLORS[log.action] || 'bg-slate-100'}>{log.action}</Badge>
-                    </td>
-                    <td className="py-3 px-4 hidden md:table-cell">
-                      <span className="text-xs font-mono">{log.entity_type}</span>
-                      {log.entity_id && <span className="text-[10px] text-muted-foreground ml-1">{log.entity_id.slice(0, 8)}</span>}
-                    </td>
-                    <td className="py-3 px-4">
-                      <p className="text-xs truncate max-w-xs">{log.summary}</p>
-                      {log.details.trigger_reason && (
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{log.details.trigger_reason}</p>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 hidden lg:table-cell text-xs">{log.changed_by}</td>
-                    <td className="py-3 px-4 hidden lg:table-cell text-xs">
-                      {log.details.source || '–'}
-                    </td>
-                    <td className="py-3 px-4">
-                      {log.details.guard_result ? (
-                        <Badge className={GUARD_RESULT_COLORS[log.details.guard_result] || 'bg-slate-100'}>
-                          {log.details.guard_result}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">–</span>
-                      )}
-                      {log.details.guard_reason && (
-                        <p className="text-[10px] text-muted-foreground mt-0.5 truncate max-w-[120px]">
-                          {log.details.guard_reason}
-                        </p>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </TabsContent>
-
-        {/* Guard Stats */}
-        <TabsContent value="guards" className="mt-4 space-y-4">
-          {guardStats.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">Keine Guard-Hits gefunden</p>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {guardStats.map((stat, i) => (
-                <Card key={i}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-semibold flex items-center justify-between">
-                      <span>{stat.reason}</span>
-                      <Badge>{stat.total} Hits</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex gap-2 text-xs">
-                      <Badge className="bg-emerald-100 text-emerald-800">Allowed: {stat.allowed}</Badge>
-                      <Badge className="bg-red-100 text-red-800">Blocked: {stat.blocked}</Badge>
-                      <Badge className="bg-amber-100 text-amber-800">Skipped: {stat.skipped}</Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Automation Stats */}
-        <TabsContent value="automations" className="mt-4">
-          <div className="rounded-xl border bg-card shadow overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/40">
-                  <th className="text-left py-3 px-4 font-semibold">Automation</th>
-                  <th className="text-right py-3 px-4 font-semibold">Triggers</th>
-                  <th className="text-right py-3 px-4 font-semibold">Creates</th>
-                  <th className="text-right py-3 px-4 font-semibold">Updates</th>
-                  <th className="text-right py-3 px-4 font-semibold">Guards</th>
-                  <th className="text-right py-3 px-4 font-semibold">Errors</th>
-                </tr>
-              </thead>
-              <tbody>
-                {automationStats.length === 0 ? (
-                  <tr><td colSpan="6" className="text-center py-8 text-muted-foreground">Keine Automation-Daten</td></tr>
-                ) : automationStats.map((stat, i) => (
-                  <tr key={i} className="border-b hover:bg-muted/30">
-                    <td className="py-3 px-4 font-mono text-xs">{stat.source}</td>
-                    <td className="text-right py-3 px-4 font-semibold">{stat.triggers}</td>
-                    <td className="text-right py-3 px-4 text-emerald-700">{stat.creates}</td>
-                    <td className="text-right py-3 px-4 text-blue-700">{stat.updates}</td>
-                    <td className="text-right py-3 px-4 text-amber-700">{stat.guards}</td>
-                    <td className="text-right py-3 px-4 text-red-700">{stat.errors}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
-}
-
-function KpiCard({ label, value, icon: Icon, color }) {
-  return (
-    <Card>
-      <CardContent className="p-3 flex items-center gap-2">
-        {Icon && <Icon className={`w-4 h-4 ${color}`} />}
-        <div>
-          <p className="text-[10px] text-muted-foreground">{label}</p>
-          <p className="text-sm font-bold">{value}</p>
+      {/* Timeline Table */}
+      <div className="surface overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="table-header">
+                <th className="px-3 py-2.5 text-left font-semibold">Zeitstempel</th>
+                <th className="px-3 py-2.5 text-left font-semibold">Level</th>
+                <th className="px-3 py-2.5 text-left font-semibold">Event Type</th>
+                <th className="px-3 py-2.5 text-left font-semibold">Source</th>
+                <th className="px-3 py-2.5 text-left font-semibold">Guard</th>
+                <th className="px-3 py-2.5 text-left font-semibold">Correlation-ID</th>
+                <th className="px-3 py-2.5 text-left font-semibold">Decision Code</th>
+                <th className="px-3 py-2.5 text-left font-semibold">Entity</th>
+                <th className="px-3 py-2.5 text-right font-semibold w-8"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={9} className="px-4 py-12 text-center text-sm text-muted-foreground">Lade Audit Logs...</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={9} className="px-4 py-12 text-center text-sm text-muted-foreground">Keine Einträge gefunden</td></tr>
+              ) : (
+                filtered.map(log => <AuditRow key={log.id} log={log} />)
+              )}
+            </tbody>
+          </table>
         </div>
-      </CardContent>
-    </Card>
-  )
+      </div>
+    </div>
+  );
 }
