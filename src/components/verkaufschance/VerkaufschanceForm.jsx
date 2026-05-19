@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { ALLE_STATUS } from './VerkaufschanceStatusBadge'
 import { base44 } from '@/api/base44Client'
-import { Search, User, Mail, Phone, Building2 } from 'lucide-react'
+import { Search, User, Mail, Phone, Building2, FileText } from 'lucide-react'
+import { getSparteLabel } from '@/lib/insuranceSparten'
 
 const SPARTEN = [
   { value: 'kvg', label: 'KVG – Grundversicherung' },
@@ -28,7 +29,11 @@ export default function VerkaufschanceForm({ verkaufschance, customer, onSave, o
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [selectedCustomer, setSelectedCustomer] = useState(customer || null)
+  const [selectedContract, setSelectedContract] = useState(null)
   const [isSearching, setIsSearching] = useState(false)
+  const [contractSearchQuery, setContractSearchQuery] = useState('')
+  const [contractResults, setContractResults] = useState([])
+  const [isContractSearching, setIsContractSearching] = useState(false)
   const [form, setForm] = useState({
     title: verkaufschance?.title || '',
     sparte: verkaufschance?.sparte || '',
@@ -71,7 +76,6 @@ export default function VerkaufschanceForm({ verkaufschance, customer, onSave, o
     const customerIdFromUrl = params.get('customer_id')
     
     if (linkedContractId && !verkaufschance && !selectedCustomer) {
-      // Kunde laden und Vertrag anzeigen
       const loadFromContract = async () => {
         setIsSearching(true)
         try {
@@ -80,7 +84,7 @@ export default function VerkaufschanceForm({ verkaufschance, customer, onSave, o
             const customer = await base44.entities.Customer.get(customerIdFromUrl)
             if (customer) {
               setSelectedCustomer(customer)
-              // Titel vorschlagen
+              setSelectedContract(contract)
               setForm(prev => ({
                 ...prev,
                 title: `Mutation ${contract.insurer} – ${contract.sparte || contract.insurance_type}`,
@@ -96,6 +100,26 @@ export default function VerkaufschanceForm({ verkaufschance, customer, onSave, o
       loadFromContract()
     }
   }, [])
+
+  // Vertrags-Suche wenn Kunde ausgewählt
+  useEffect(() => {
+    if (!selectedCustomer?.id) {
+      setContractResults([])
+      return
+    }
+    const debounce = setTimeout(async () => {
+      setIsContractSearching(true)
+      try {
+        const contracts = await base44.entities.Contract.filter({ customer_id: selectedCustomer.id })
+        const activeContracts = contracts.filter(c => c.status === 'active')
+        setContractResults(activeContracts.slice(0, 10))
+      } catch (e) {
+        console.error('Contract search failed:', e)
+      }
+      setIsContractSearching(false)
+    }, 300)
+    return () => clearTimeout(debounce)
+  }, [selectedCustomer])
 
   // Live-Kundensuche
   useEffect(() => {
@@ -141,6 +165,7 @@ export default function VerkaufschanceForm({ verkaufschance, customer, onSave, o
       organization_id: selectedCustomer.organization_id,
       advisor_id: selectedCustomer.advisor_id,
       assigned_broker: selectedCustomer.assigned_broker,
+      linked_contract_id: selectedContract?.id || null,
     })
   }
 
@@ -204,30 +229,97 @@ export default function VerkaufschanceForm({ verkaufschance, customer, onSave, o
 
       {/* Ausgewählter Kunde */}
       {selectedCustomer && (
-        <div className="flex items-center justify-between gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-              <User className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <p className="font-semibold text-emerald-900">
-                {selectedCustomer.first_name} {selectedCustomer.last_name}
-              </p>
-              <div className="flex items-center gap-3 text-xs text-emerald-700">
-                {selectedCustomer.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {selectedCustomer.email}</span>}
-                {selectedCustomer.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {selectedCustomer.phone}</span>}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <User className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-emerald-900 truncate">
+                  {selectedCustomer.first_name} {selectedCustomer.last_name}
+                </p>
+                <div className="flex items-center gap-3 text-xs text-emerald-700">
+                  {selectedCustomer.email && <span className="truncate">{selectedCustomer.email}</span>}
+                </div>
               </div>
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSelectedCustomer(null)
+                setSelectedContract(null)
+              }}
+              className="text-emerald-700 border-emerald-300 hover:bg-emerald-100 flex-shrink-0"
+            >
+              Ändern
+            </Button>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setSelectedCustomer(null)}
-            className="text-emerald-700 border-emerald-300 hover:bg-emerald-100"
-          >
-            Ändern
-          </Button>
+
+          {/* VERTRAGS-AUSWAHL */}
+          <div className="space-y-1.5">
+            <Label>Bestehender Vertrag (für Mutation/Wechsel)</Label>
+            {selectedContract ? (
+              <div className="flex items-center justify-between gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-blue-900 truncate">
+                      {selectedContract.insurer} · {getSparteLabel(selectedContract.sparte || selectedContract.insurance_type)}
+                    </p>
+                    <p className="text-xs text-blue-700 truncate">
+                      Police: {selectedContract.policy_number || '–'} · CHF {selectedContract.premium_yearly?.toLocaleString('de-CH') || '–'}/Jahr
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedContract(null)}
+                  className="text-blue-700 border-blue-300 hover:bg-blue-100 flex-shrink-0"
+                >
+                  Ändern
+                </Button>
+              </div>
+            ) : (
+              <div className="relative">
+                <div className="flex items-center gap-2 border border-border rounded-lg p-2 bg-card">
+                  <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <select
+                    value=""
+                    onChange={e => {
+                      const contract = contractResults.find(c => c.id === e.target.value)
+                      if (contract) {
+                        setSelectedContract(contract)
+                        setForm(prev => ({
+                          ...prev,
+                          title: `Mutation ${contract.insurer} – ${getSparteLabel(contract.sparte || contract.insurance_type)}`,
+                          sparte: contract.sparte || contract.insurance_type,
+                          estimated_value: contract.premium_yearly?.toString() || '',
+                        }))
+                      }
+                    }}
+                    className="flex-1 text-sm bg-transparent border-none focus:ring-0 cursor-pointer"
+                  >
+                    <option value="">Vertrag wählen...</option>
+                    {contractResults.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.insurer} · {getSparteLabel(c.sparte || c.insurance_type)} · {c.policy_number || '–'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {contractResults.length === 0 && selectedCustomer && (
+                  <p className="text-xs text-muted-foreground mt-1">Keine aktiven Verträge für diesen Kunden</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
