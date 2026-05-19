@@ -53,14 +53,26 @@ export default function DossierStammdatenTab({ dossier, onSave, isSaving }) {
   }, [dossier]);
 
   // READ-ONLY: Kunden suchen (kein Write auf Customer)
+  // Serverseitige Suche über alle Kunden — kein clientseitiger 20-Datensatz-Limit
   const { data: customers = [] } = useQuery({
     queryKey: ['customers_search_dossier', search],
-    queryFn: () => base44.entities.Customer.list('-created_date', 20),
-    enabled: search.length >= 2,
-    select: (data) => data.filter(c =>
-      `${c.first_name} ${c.last_name}`.toLowerCase().includes(search.toLowerCase()) ||
-      (c.email || '').toLowerCase().includes(search.toLowerCase())
-    ).slice(0, 8),
+    queryFn: async () => {
+      const term = search.trim().toLowerCase();
+      // Parallel: Suche nach Vor-/Nachname-Splits + E-Mail
+      const [byFirst, byLast, byEmail] = await Promise.all([
+        base44.entities.Customer.filter({ first_name: { $regex: term, $options: 'i' } }, '-created_date', 10),
+        base44.entities.Customer.filter({ last_name:  { $regex: term, $options: 'i' } }, '-created_date', 10),
+        base44.entities.Customer.filter({ email:      { $regex: term, $options: 'i' } }, '-created_date', 10),
+      ]);
+      // Deduplizieren nach ID
+      const seen = new Set();
+      return [...byFirst, ...byLast, ...byEmail].filter(c => {
+        if (seen.has(c.id)) return false;
+        seen.add(c.id);
+        return true;
+      }).slice(0, 10);
+    },
+    enabled: search.trim().length >= 2,
   });
 
   const handleSubmit = (e) => {
