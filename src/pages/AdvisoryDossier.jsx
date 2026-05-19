@@ -64,9 +64,9 @@ export default function AdvisoryDossier() {
         )}
       </div>
 
-      {/* Phase-2 Notice */}
+      {/* Phase-3 Notice */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
-        <strong>Phase 2 — Datenaggregation:</strong> Kundendaten, Familienmitglieder, Verträge und Vergleichsofferten werden read-only aus dem CRM geladen.
+        <strong>Phase 3 — Vergleichs- &amp; Berechnungslogik:</strong> Prämienvergleich, Einsparungsberechnung, Side-by-Side-Vergleich und Leistungsbewertung aktiv.
         PDF-Export, Automationen und KI-Empfehlungen folgen in späteren Phasen.
       </div>
 
