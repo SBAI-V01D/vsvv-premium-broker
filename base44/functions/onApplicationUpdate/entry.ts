@@ -41,16 +41,21 @@ function buildContractNotes(app) {
 
 /**
  * CONTRACT CREATION GUARD — Atomare Prüfung VOR create()
- * Verhindert Race-Conditions und Duplikate deterministisch
+ * Verhindert Race-Conditions und Duplikate deterministisch.
+ *
+ * FACHLICHE DUPLIKAT-REGEL (Motorfahrzeug & alle Sparten):
+ * Duplikat = gleiche policy_number + gleicher insurer + gleiche sparte + gleicher Kunde + gleicher start_date
+ * NICHT Duplikat = gleiche Sparte, anderes Fahrzeug/Versicherer/Vertragsbeginn (Multi-Policy ist erlaubt)
  */
-async function guardContractCreation(base44, appId, customerId) {
-  // 1. Check: Existiert bereits ein Contract mit dieser source_application_id?
+async function guardContractCreation(base44, appId, customerId, app) {
+  // 1. Check: Existiert bereits ein Contract mit dieser source_application_id? (Race-Condition)
   const existingBySource = await base44.asServiceRole.entities.Contract.filter({ source_application_id: appId });
-  if (existingBySource.length > 0) {
+  const nonArchivedBySource = existingBySource.filter(c => !c.archived);
+  if (nonArchivedBySource.length > 0) {
     return {
       allowed: false,
       reason: 'contract_exists_by_source',
-      existingContractId: existingBySource[0].id,
+      existingContractId: nonArchivedBySource[0].id,
     };
   }
 
@@ -64,14 +69,30 @@ async function guardContractCreation(base44, appId, customerId) {
     };
   }
 
-  // 3. Check: Existiert bereits ein aktiver Vertrag für diesen Kunden + insurer + sparte?
-  const existingActive = await base44.asServiceRole.entities.Contract.filter({
-    customer_id: customerId,
-    status: 'active',
-  });
-  
-  // Hinweis: Wir erlauben mehrere Verträge pro Kunde (verschiedene Sparten/Gesellschaften)
-  // Aber wir prüfen hier nicht auf Duplikate — das ist fachlich gewollt
+  // 3. FACHLICHER DUPLIKAT-CHECK: policy_number + insurer + sparte + start_date + customer
+  // Verhindert echte fachliche Duplikate (z.B. gleiche Police doppelt erfasst)
+  if (app?.policy_number && app?.insurer && app?.sparte) {
+    const existingContracts = await base44.asServiceRole.entities.Contract.filter({
+      customer_id: customerId,
+      archived: false,
+    });
+    const exactDuplicate = existingContracts.find(c => {
+      const samePolicy   = c.policy_number === app.policy_number;
+      const sameInsurer  = c.insurer?.toLowerCase() === app.insurer?.toLowerCase();
+      const sameSparte   = c.sparte === app.sparte;
+      const sameStart    = !app.contract_start_date || !c.start_date || c.start_date === app.contract_start_date;
+      const notCancelled = c.status !== 'cancelled' && c.status !== 'expired';
+      return samePolicy && sameInsurer && sameSparte && sameStart && notCancelled;
+    });
+    if (exactDuplicate) {
+      return {
+        allowed: false,
+        reason: 'exact_policy_duplicate',
+        existingContractId: exactDuplicate.id,
+        note: `Police ${app.policy_number} (${app.insurer}/${app.sparte}) bereits vorhanden`,
+      };
+    }
+  }
 
   // 4. Guard passed — creation allowed
   return {
@@ -170,8 +191,8 @@ Deno.serve(async (req) => {
 
     // ── 3. AUTOMATISCHE VERTRAGSERSTELLUNG bei Annahme — MIT HARD GUARDS ─────
     if (isNewAcceptance && app.customer_id) {
-      // CRITICAL: Atomare Guard-Prüfung VOR create() — verhindert Race-Conditions
-      const guardResult = await guardContractCreation(base44, app.id, app.customer_id);
+      // CRITICAL: Atomare Guard-Prüfung VOR create() — verhindert Race-Conditions + fachliche Duplikate
+      const guardResult = await guardContractCreation(base44, app.id, app.customer_id, app);
       
       if (!guardResult.allowed) {
         // Contract existiert bereits — KEIN create(), kein update, kein Logging als "erstellt"

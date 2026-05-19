@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react'
 import CustomerMergeDialog from '@/components/customers/CustomerMergeDialog'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Edit, Trash2, ChevronDown, ChevronUp, User, Building2, ArrowRight, Upload, Download, Users, Clock, List } from 'lucide-react'
+import { Plus, Edit, Trash2, ChevronDown, ChevronUp, User, Building2, ArrowRight, Upload, Download, Users, Clock } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { Button } from '@/components/ui/button'
@@ -29,7 +29,6 @@ export default function Customers() {
   const [expandedFamily, setExpandedFamily] = useState(null)
   const [showImport, setShowImport] = useState(false)
   const [showMerge, setShowMerge] = useState(false)
-  const [showAll, setShowAll] = useState(false)
   const queryClient = useQueryClient()
 
   const { data: currentUser } = useQuery({
@@ -118,9 +117,9 @@ export default function Customers() {
           : c.customer_type !== 'business'
       )
 
-  // Cockpit-Modus: nur 10 zuletzt aktive Kunden — Rest über Suche
+  // Cockpit-Modus: NUR 10 zuletzt aktive Kunden — weitere Kunden ausschliesslich via Suche/Filter
   const isSearching = !!search.trim()
-  const filtered = (isSearching || showAll) ? filteredByType : filteredByType.slice(0, 10)
+  const filtered = isSearching ? filteredByType : filteredByType.slice(0, 10)
 
   // When searching, auto-expand families that have a matched member
   const autoExpanded = search.trim() ? familyMatchParentIds : new Set()
@@ -349,30 +348,11 @@ export default function Customers() {
         )}
       </div>
 
-      {/* Cockpit Footer */}
-      {!isSearching && (
-        <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
-          {!showAll ? (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-xs">
-                <Clock className="w-3.5 h-3.5" />
-                <span>Zeigt die 10 zuletzt aktiven Kunden. Für gezielten Zugriff bitte Suche nutzen.</span>
-              </div>
-              <button
-                onClick={() => setShowAll(true)}
-                className="flex items-center gap-1 text-xs text-primary hover:underline font-medium"
-              >
-                <List className="w-3.5 h-3.5" /> Alle {primaryCustomers.length} anzeigen
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowAll(false)}
-              className="flex items-center gap-1 text-xs text-primary hover:underline font-medium"
-            >
-              Zurück zur Cockpit-Ansicht (10 zuletzt aktiv)
-            </button>
-          )}
+      {/* Cockpit Footer — kein "Alle anzeigen" — weitere Kunden nur via Suche */}
+      {!isSearching && filteredByType.length > 10 && (
+        <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground px-1">
+          <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+          <span>10 zuletzt aktive Kunden. Weitere Kunden via Suche oder Filter oben finden.</span>
         </div>
       )}
 
