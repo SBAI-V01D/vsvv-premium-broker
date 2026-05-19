@@ -164,8 +164,8 @@ export default function Applications() {
     await queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
 
     // Bei Genehmigung: Backend-Automation braucht ~1-3s für Vertragserstellung
-    // Deshalb nochmals nach 1.5s und 3.5s refreshen
     if (isApproval) {
+      setCreatingContract(true)
       setTimeout(async () => {
         await queryClient.invalidateQueries({ queryKey: ['contracts'] })
         await queryClient.invalidateQueries({ queryKey: ['applications'] })
@@ -176,6 +176,7 @@ export default function Applications() {
         await queryClient.invalidateQueries({ queryKey: ['contracts'] })
         await queryClient.invalidateQueries({ queryKey: ['applications'] })
         await queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
+        setCreatingContract(false)
       }, 3500)
     }
   }
@@ -188,9 +189,16 @@ export default function Applications() {
   const formatDate = formatDateSafe
 
   const [confirmDeleteApp, setConfirmDeleteApp] = useState(null)
+  const [creatingContract, setCreatingContract] = useState(false)
 
   return (
     <div>
+      {creatingContract && (
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 bg-card border border-border shadow-card-md rounded-xl px-4 py-3 text-sm">
+          <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <span className="font-medium text-foreground">Vertrag wird erstellt…</span>
+        </div>
+      )}
       <PageHeader
         title="Versicherungsanträge"
         subtitle={`${pendingApps.length} pendente · ${archivedApps.length} archivierte Anträge`}
