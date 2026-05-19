@@ -373,45 +373,7 @@ export default function DossierPrintTemplate({ snapshot }) {
           );
         })}
 
-        {/* ── Bestehende Verträge ─────────────────────────────────────────── */}
-        {Array.isArray(contracts) && contracts.length > 0 && (
-          <PrintSection title="Bestehende Verträge (CRM-Bestand)">
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px', tableLayout: 'fixed' }}>
-              <colgroup>
-                <col style={{ width: '22%' }} />
-                <col style={{ width: '22%' }} />
-                <col style={{ width: '16%' }} />
-                <col style={{ width: '13%' }} />
-                <col style={{ width: '13%' }} />
-                <col style={{ width: '14%' }} />
-              </colgroup>
-              <thead>
-                <tr>
-                  {['Gesellschaft', 'Produkt / Sparte', 'Jahresprämie', 'Beginn', 'Ablauf', 'Status'].map(h => (
-                    <th key={h} style={TH}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {contracts.map((c, i) => {
-                  const yearly = c.premium_yearly ?? (c.premium_monthly != null ? c.premium_monthly * 12 : null);
-                  return (
-                    <tr key={c.id} style={{ background: i % 2 === 0 ? '#fff' : '#fafafa' }}>
-                      <td style={TD({ fontWeight: 600 })}>{c.insurer || '—'}</td>
-                      <td style={TD({ color: '#475569' })}>{c.product || c.sparte || c.insurance_type || '—'}</td>
-                      <td style={TD({ fontWeight: 600 })}>{fmtCHF(yearly)}</td>
-                      <td style={TD({ color: '#64748b' })}>{fmtDate(c.start_date)}</td>
-                      <td style={TD({ color: '#64748b' })}>{fmtDate(c.renewal_date || c.end_date)}</td>
-                      <td style={TD({ fontWeight: 600, color: c.status === 'active' ? '#059669' : '#64748b' })}>
-                        {STATUS_LABELS_DE[c.status] || c.status || '—'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </PrintSection>
-        )}
+        {/* Bestehende Verträge absichtlich NICHT im PDF — nur Vergleichseinträge */}
 
         {/* ── Beratungsnotiz ──────────────────────────────────────────────── */}
         {dossier.recommendation_notes && (
