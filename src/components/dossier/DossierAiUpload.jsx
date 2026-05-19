@@ -394,82 +394,72 @@ const EXTRACTION_SCHEMA = {
 };
 
 const EXTRACTION_PROMPT = `
-Du bist ein erfahrener Schweizer Versicherungsberater und KI-Spezialist für Policenanalyse.
-
-AUFGABE: Analysiere das GESAMTE Dokument (alle Seiten) und extrahiere JEDES einzelne Versicherungsprodukt als separaten JSON-Eintrag.
+Du bist ein erfahrener Schweizer Versicherungsberater. Analysiere das GESAMTE mehrseitige Dokument (alle Seiten) und extrahiere JEDES Versicherungsprodukt als separaten Eintrag.
 
 ═══════════════════════════════════════════════════════
-SCHRITT 1: DOKUMENTSTRUKTUR VERSTEHEN
+GROUPE MUTUEL POLICE-STRUKTUR (häufiges Format):
 ═══════════════════════════════════════════════════════
-Bevor du extrahierst, erkenne die Dokumentstruktur:
-- Welcher Hauptversicherer? (z.B. Groupe Mutuel, CSS, Helsana, SWICA, etc.)
-- Wie viele Produktblöcke/Sektionen gibt es?
-- Gibt es eine Zusammenfassung/Totale am Anfang oder Ende?
-- Sind Produkte auf mehrere Seiten verteilt?
+Groupe Mutuel Policen sind typischerweise so aufgebaut:
+
+SEITE 1: "Versicherungsausweis" (KVG-Teil)
+  → Überschrift: "Versicherungen gemäss Bundesgesetz über die Krankenversicherung (KVG)"
+  → Produkte haben 2-Buchstaben-Code + Name, z.B.:
+    "RT  SanaTel - obligatorische Krankenpflegeversicherung   433.00"
+    "RF  SanaFlex..."  "RS  SanaStart..."
+  → "Monatlicher Abzug" = Rabatt/Abzug (KEIN Produkt, in discount_amount)
+  → "Monatsprämie der Versicherungen gemäss KVG" = KVG-Subtotal (KEIN Produkt)
+
+SEITE 2+: "Versicherungspolice" (VVG-Teil)
+  → Überschrift: "Versicherungen gemäss Bundesgesetz über den Versicherungsvertrag (VVG)"
+  → Produkte mit 2-Buchstaben-Code + Name:
+    "BH  Taggeldversicherung bei Spitalaufenthalt   20.00"
+    "GO  Global smart - Zusatzversicherung ...   28.20"
+    "KH  H-Capital - Kapitalversicherung ...   22.00"
+    "MU  Mundo - Zusatzversicherung für Auslandreisen   3.50"
+    "SP  Supra..." "HO  Hospi..." "CO  Complementa..." "DE  Denta..."
+  → "Ihr Kombinationsrabatt" = Rabatt (KEIN Produkt, in discount_amount)
+  → "Monatsprämie der Versicherungen gemäss VVG" = VVG-Subtotal (KEIN Produkt)
+
+LETZTE SEITE: Zusammenfassung
+  → "Monatsprämie zu Ihren Lasten" = GESAMTTOTAL → total_monthly_premium
+  → "Kombinationsrabatt" = Gesamtrabatt → discount_amount
 
 ═══════════════════════════════════════════════════════
-SCHRITT 2: PRODUKTE ERKENNEN
+ANDERE VERSICHERER (CSS, Helsana, SWICA, Sanitas, etc.)
 ═══════════════════════════════════════════════════════
-JEDEN der folgenden Blöcke als SEPARATES Produkt erfassen:
-
-KVG-GRUNDVERSICHERUNG (section: "grundversicherung"):
-  Erkennungsmerkmale: KVG, Grundversicherung, Krankenversicherung, Franchise-Angabe
-  Groupe Mutuel KVG-Produkte: SanaTel, SanaFlex, SanaTop, SanaPlus, SanaElite, EasyCare
-  Andere KVG: Standard, HMO, HAM, Hausarzt, TelFirst, Medbase, Callmed
-
-VVG-ZUSATZVERSICHERUNGEN (section: "zusatzversicherung"):
-  Erkennungsmerkmale: VVG, Zusatz, Komplementär, Spital, Dental, Taggeld, Reise, Global
-  Groupe Mutuel VVG-Produkte: Global Smart, Global Top, Global Best, Global Safe,
-    H-Capital, H-Top, H-Plus, Mundo, Complementa, Denta, Prima, Supra, Hospi, Optima,
-    Travel, TelMed, Medi, Vita, Complementa Plus, Diversa, Assista
-  Andere VVG: Spital allgemein, Spital halbprivat, Spital privat, Ambulant, Zahnarzt,
-    Komplementärmedizin, Auslandkrankenschutz, Reiseversicherung, Taggeldversicherung
-
-WICHTIG — JEDE ZEILE/BLOCK IST EIN SEPARATES PRODUKT:
-  - "SanaTel CHF 350.–" → 1 Produkt (KVG)
-  - "Taggeldversicherung CHF 45.–" → 1 Produkt (VVG)
-  - "Global Smart CHF 62.50" → 1 Produkt (VVG)
-  - "H-Capital CHF 28.–" → 1 Produkt (VVG)
-  - "Mundo CHF 18.–" → 1 Produkt (VVG)
+KVG (section: "grundversicherung"): Standard, HMO, HAM, Hausarzt, TelFirst, Medbase, Callmed, flexmed
+VVG (section: "zusatzversicherung"): Spital allg./halbprivat/privat, Ambulant, Dental, Komplementär, Reise, Taggeld, Global, Ausland
 
 ═══════════════════════════════════════════════════════
-SCHRITT 3: PRÄMIEN KORREKT ZUORDNEN
+EXTRAKTIONSREGELN
 ═══════════════════════════════════════════════════════
-- Monatsprämien: direkt übernehmen (CHF X.XX/Monat)
-- Jahresprämien: durch 12 teilen für praemie_monatlich
-- Totale/Summenpositionen: NICHT als separates Produkt, sondern in total_monthly_premium
-- Rabatte: in discount_amount, NICHT als negatives Produkt
-- Kombinationsrabatte: in discount_amount erfassen
+1. JEDER Produktblock = 1 separater Eintrag im products-Array
+2. section: "grundversicherung" für KVG, "zusatzversicherung" für VVG
+3. gesellschaft: Hauptversicherer (z.B. "Groupe Mutuel", "CSS", "Helsana")
+4. product_name: Exakter Produktname (z.B. "SanaTel", "Global Smart", "H-Capital", "Mundo", "Taggeldversicherung bei Spitalaufenthalt")
+5. praemie_monatlich: CHF-Betrag rechts neben dem Produktnamen (nur Zahl, z.B. 433.00)
+6. franchise: Nur KVG — aus "Jahresfranchise von CHF X" (z.B. 2500)
+7. modell: z.B. "SanaTel" = Telmed-Modell, "SanaFlex" = freie Arztwahl, "HMO" etc.
+8. is_current: true (Police = bestehende Versicherung)
+9. Prämien-Abzüge / Totale / Rabatte: NICHT als Produkt — in total_monthly_premium / discount_amount
+10. Falls Feld nicht lesbar: null (NIE Platzhalterwert)
 
 ═══════════════════════════════════════════════════════
-SCHRITT 4: FELDREGELN
+KONFIDENZ (für jedes Feld 0.0–1.0)
 ═══════════════════════════════════════════════════════
-- gesellschaft: immer den Hauptversicherer (z.B. "Groupe Mutuel")
-- product_name: exakt wie im Dokument (z.B. "SanaTel", "Global Smart", "H-Capital")
-- praemie_monatlich: nur Zahl ohne CHF/Währung (z.B. 142.50)
-- franchise: nur für KVG (300, 500, 1000, 1500, 2000, 2500 CHF)
-- is_current: true für Police/Rechnung, false für Offerte/Angebot
-- Falls Feld nicht lesbar: null (KEIN Platzhalterwert)
-
-═══════════════════════════════════════════════════════
-SCHRITT 5: KONFIDENZ BEWERTEN
-═══════════════════════════════════════════════════════
-Für jedes Feld: 0.0–1.0
-- 0.90–1.00: Im Dokument klar erkennbar (Zahl/Text direkt ablesbar)
-- 0.70–0.89: Wahrscheinlich korrekt (Kontext-Ableitung)
-- 0.50–0.69: Unsicher, muss vom Berater geprüft werden
-- 0.00–0.49: Sehr unsicher oder fehlt im Dokument
+1.00: Zahl/Text exakt im Dokument lesbar
+0.80–0.99: Aus Kontext klar ableitbar
+0.60–0.79: Wahrscheinlich korrekt, Berater sollte prüfen
+0.00–0.59: Unsicher oder nicht im Dokument
 
 ═══════════════════════════════════════════════════════
 FEHLERTOLERANZ
 ═══════════════════════════════════════════════════════
-Auch wenn das Dokument unleserliche Teile hat:
-- Alle klar erkennbaren Produkte IMMER zurückgeben
-- partial_extraction: true setzen falls nur Teile erkannt
-- extraction_notes: erklären was erkannt/nicht erkannt wurde
-- NIEMALS leeres products-Array zurückgeben wenn irgendein Produkt erkennbar ist
+- Alle erkennbaren Produkte IMMER zurückgeben (partial_extraction: true wenn unvollständig)
+- NIEMALS leeres products-Array wenn irgendein Produkt erkennbar ist
+- extraction_notes: Was erkannt / was unklar war
 
-Antworte AUSSCHLIESSLICH mit dem JSON-Objekt. Keine Erklärungen ausserhalb des JSON.
+Antworte NUR mit dem JSON-Objekt.
 `;
 
 // ── Schritt-Indikator ─────────────────────────────────────────────────────────
@@ -538,7 +528,10 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
         model: 'claude_sonnet_4_6',
       });
     },
-    onSuccess: (data) => {
+    onSuccess: (rawData) => {
+      // InvokeLLM wraps the result in { response: { ... } } — unwrap it
+      const data = rawData?.response ?? rawData ?? {};
+
       setDocumentType(data.document_type || 'unbekannt');
       setDetectedPersons(data.detected_persons || []);
       // Notizen inkl. partial_extraction-Warnung
@@ -553,20 +546,35 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
       // insurer_name als Fallback für gesellschaft
       const insurerFallback = data.insurer_name || '';
 
-      const products = (data.products || []).map((p, i) => ({
-        ...p,
-        // Monatsprämie ableiten wenn nur Jahresprämie
-        praemie_monatlich: p.praemie_monatlich ?? (p.praemie_jaehrlich ? Math.round(p.praemie_jaehrlich / 12 * 100) / 100 : null),
-        // Gesellschaft-Fallback auf Dokumentversicherer
-        gesellschaft: p.gesellschaft || insurerFallback || '',
-        // Standardwerte
-        person_name: p.person_name || personName,
-        gruppe: p.is_current !== false ? 'aktuelle_loesung' : defaultGruppe,
-        gruppe_label: '',
-        confidence: p.confidence || {},
-        _session_id: `session_${Date.now()}_${i}`,
-        _verified: false,
-      }));
+      const products = (data.products || []).map((p, i) => {
+        // Confidence-Objekt normalisieren — Schema gibt entweder p.confidence{} oder flache conf_*-Felder
+        const conf = p.confidence && typeof p.confidence === 'object' ? p.confidence : {
+          gesellschaft:      p.conf_product ?? null,
+          product_name:      p.conf_product ?? null,
+          section:           p.conf_section ?? null,
+          praemie_monatlich: p.conf_praemie ?? null,
+          franchise:         null,
+          modell:            null,
+          deckung_details:   null,
+          person_name:       null,
+        };
+        return {
+          ...p,
+          // Monatsprämie ableiten wenn nur Jahresprämie
+          praemie_monatlich: p.praemie_monatlich ?? (p.praemie_jaehrlich ? Math.round(p.praemie_jaehrlich / 12 * 100) / 100 : null),
+          // Gesellschaft-Fallback auf Dokumentversicherer
+          gesellschaft: p.gesellschaft || insurerFallback || '',
+          // section-Fallback
+          section: p.section || 'grundversicherung',
+          // Standardwerte
+          person_name: p.person_name || personName,
+          gruppe: p.is_current !== false ? 'aktuelle_loesung' : defaultGruppe,
+          gruppe_label: '',
+          confidence: conf,
+          _session_id: `session_${Date.now()}_${i}`,
+          _verified: false,
+        };
+      });
 
       setSessionProducts(products);
       setOriginalProducts(JSON.parse(JSON.stringify(products)));
