@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Plus, Search, Edit, Trash2, FileText, TrendingUp, Clock, CheckCircle, Calendar, Building2, Tag, Archive, Inbox } from 'lucide-react'
+import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 
 // Helper: formatDate mit Sonderfall für "unbegrenzt"
@@ -460,22 +461,22 @@ export default function Applications() {
                       {['eingereicht', 'in_pruefung', 'rueckfrage', 'vorbehalt', 'risikopruefung', 'under_review', 'neu'].includes(getStatus(app)) && (
                         <button
                           onClick={async () => {
-                            if (confirm(`Antrag annehmen und Vertrag erstellen?\n\n${app.customer_name} · ${app.insurer || '–'}\n\nDies setzt den Status auf "angenommen" und erstellt automatisch den Vertrag.`)) {
-                              setCreatingContract(true)
-                              try {
-                                const result = await base44.functions.invoke('acceptApplicationAndCreateContract', {
-                                  application_id: app.id,
-                                })
-                                if (result.data.success) {
-                                  await queryClient.invalidateQueries({ queryKey: ['contracts'] })
-                                  await queryClient.invalidateQueries({ queryKey: ['applications'] })
-                                  await queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
-                                }
-                              } catch (e) {
-                                console.error('One-click acceptance failed:', e)
+                            setCreatingContract(true)
+                            try {
+                              const result = await base44.functions.invoke('acceptApplicationAndCreateContract', {
+                                application_id: app.id,
+                              })
+                              if (result.data.success) {
+                                await queryClient.invalidateQueries({ queryKey: ['contracts'] })
+                                await queryClient.invalidateQueries({ queryKey: ['applications'] })
+                                await queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
+                                toast.success(`Vertrag erstellt für ${app.customer_name}`)
                               }
-                              setCreatingContract(false)
+                            } catch (e) {
+                              console.error('One-click acceptance failed:', e)
+                              toast.error('Vertrag konnte nicht erstellt werden')
                             }
+                            setCreatingContract(false)
                           }}
                           className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-semibold"
                         >
