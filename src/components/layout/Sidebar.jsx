@@ -24,14 +24,10 @@ function useSidebarBadges() {
         const today = new Date();
         const openTasks = tasks.filter(t => t.status === 'open' || t.status === 'in_progress');
         const vertragsablaeufe = contracts.filter(c => {
-          if (['cancelled', 'archived'].includes(c.status)) return false;
-          if (c.status === 'expired') {
-            const cd = c.cancellation_deadline ? Math.ceil((new Date(c.cancellation_deadline) - today) / 86400000) : null;
-            return cd !== null && cd >= -30 && cd <= 90;
-          }
+          if (['cancelled', 'archived', 'expired'].includes(c.status)) return false;
           const ed = c.end_date ? Math.ceil((new Date(c.end_date) - today) / 86400000) : null;
           const cd = c.cancellation_deadline ? Math.ceil((new Date(c.cancellation_deadline) - today) / 86400000) : null;
-          return (ed !== null && ed >= -30 && ed <= 90) || (cd !== null && cd >= -30 && cd <= 90);
+          return (ed !== null && ed >= 0 && ed <= 180) || (cd !== null && cd >= 0 && cd <= 180);
         });
         const pendingDocs = docs.filter(d => d.classification_status === 'ausstehend');
         const activeLeads = leads.filter(l => ['new', 'contacted', 'qualified'].includes(l.status));
