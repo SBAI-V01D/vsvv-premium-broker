@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -49,6 +49,19 @@ export default function CustomerDetail() {
    const [accessChecked, setAccessChecked] = useState(false)
    const [hasAccess, setHasAccess] = useState(false)
    const queryClient = useQueryClient()
+
+  // Real-time: Sobald ein neuer Vertrag erstellt wird, sofort alle abhängigen Queries invalidieren
+  useEffect(() => {
+    const unsubscribe = base44.entities.Contract.subscribe((event) => {
+      if (event.type === 'create' || event.type === 'update') {
+        queryClient.invalidateQueries({ queryKey: ['contracts'] })
+        queryClient.invalidateQueries({ queryKey: ['customers'] })
+        queryClient.invalidateQueries({ queryKey: ['applications'] })
+        queryClient.invalidateQueries({ queryKey: ['tasks'] })
+      }
+    })
+    return unsubscribe
+  }, [queryClient])
 
   const { data: allCustomers = [] } = useQuery({
     queryKey: ['customers'],
