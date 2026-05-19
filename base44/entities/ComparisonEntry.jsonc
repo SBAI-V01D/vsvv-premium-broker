@@ -14,6 +14,25 @@
       "type": "string",
       "description": "Optionaler Read-Link zu Familienmitglied (kein Cascade)"
     },
+    "gruppe": {
+      "type": "string",
+      "enum": [
+        "aktuelle_loesung",
+        "optimiert",
+        "angebot_1",
+        "angebot_2",
+        "angebot_3",
+        "angebot_4",
+        "angebot_5",
+        "manuell"
+      ],
+      "default": "manuell",
+      "description": "Vergleichsachse: Spalte in der Gesamtl\u00f6sungs-Darstellung. Fallback 'manuell' f\u00fcr Altdaten."
+    },
+    "gruppe_label": {
+      "type": "string",
+      "description": "Lesbarer Spaltenname (z.B. 'CSS \u2014 Angebot 1', 'Aktuelle L\u00f6sung'). \u00dcberschreibt Default-Label."
+    },
     "section": {
       "type": "string",
       "enum": [
@@ -21,7 +40,7 @@
         "zusatzversicherung"
       ],
       "default": "grundversicherung",
-      "description": "KVG oder VVG"
+      "description": "Interne Strukturierung: KVG (Grundversicherung) oder VVG (Zusatzversicherung). Nicht f\u00fcr Darstellung verwenden."
     },
     "gesellschaft": {
       "type": "string",
@@ -37,7 +56,7 @@
     },
     "franchise": {
       "type": "number",
-      "description": "Franchise CHF"
+      "description": "Franchise CHF (nur relevant f\u00fcr Grundversicherung)"
     },
     "modell": {
       "type": "string",
@@ -54,17 +73,35 @@
     "is_current": {
       "type": "boolean",
       "default": false,
-      "description": "Aktuelle Police (true) oder Offerte (false)"
+      "description": "Aktuelle Police (true) = geh\u00f6rt zu aktuelle_loesung-Gruppe"
     },
     "is_recommended": {
       "type": "boolean",
       "default": false,
       "description": "Empfohlene L\u00f6sung"
     },
+    "ai_extracted": {
+      "type": "boolean",
+      "default": false,
+      "description": "Wurde durch KI-Extraktion erstellt (nicht manuell)"
+    },
+    "ai_confidence": {
+      "type": "number",
+      "description": "KI-Konfidenz 0.0\u20131.0. < 0.6 = unsicher (rot), 0.6\u20130.8 = pr\u00fcfen (amber), > 0.8 = ok (gr\u00fcn)"
+    },
+    "ai_source_document": {
+      "type": "string",
+      "description": "Urspr\u00fcnglicher Dokumentname der KI-Extraktion (Audit-Trail)"
+    },
+    "manually_verified": {
+      "type": "boolean",
+      "default": false,
+      "description": "Wurde vom Berater manuell gepr\u00fcft und best\u00e4tigt"
+    },
     "sort_order": {
       "type": "number",
       "default": 0,
-      "description": "Reihenfolge in der Vergleichstabelle"
+      "description": "Reihenfolge innerhalb der Gruppe"
     }
   },
   "required": [

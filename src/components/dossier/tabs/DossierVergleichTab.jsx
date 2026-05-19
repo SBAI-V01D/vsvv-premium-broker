@@ -11,8 +11,20 @@ import { base44 } from '@/api/base44Client';
 import { Shield, Plus, ChevronDown, ChevronUp, Star, Sparkles } from 'lucide-react';
 import DossierEinsparungPanel from '@/components/dossier/DossierEinsparungPanel';
 import ComparisonSideBySide from '@/components/dossier/ComparisonSideBySide';
+import ComparisonGruppenView from '@/components/dossier/ComparisonGruppenView';
 import DossierAiUpload from '@/components/dossier/DossierAiUpload';
 import { mapContractToEntry, getImportSummary } from '@/lib/contractToEntryMapper';
+
+const GRUPPE_OPTIONS = [
+  { value: 'aktuelle_loesung', label: 'Aktuelle Lösung' },
+  { value: 'optimiert',        label: 'Optimiert (gleiche Gesellschaft)' },
+  { value: 'angebot_1',        label: 'Angebot 1' },
+  { value: 'angebot_2',        label: 'Angebot 2' },
+  { value: 'angebot_3',        label: 'Angebot 3' },
+  { value: 'angebot_4',        label: 'Angebot 4' },
+  { value: 'angebot_5',        label: 'Angebot 5' },
+  { value: 'manuell',          label: 'Manuell (ohne Gruppe)' },
+];
 
 const SECTION_LABELS = {
   grundversicherung: 'Grundversicherung (KVG)',
@@ -68,17 +80,19 @@ function VerkaufschanceOfferten({ gesellschaften }) {
 }
 
 // ── Neuer Eintrag Formular (mit optionaler Auto-Befüllung) ────────────────────
-function AddEntryForm({ dossierId, personName, section, onSuccess, onCancel, prefill }) {
+function AddEntryForm({ dossierId, personName, section, onSuccess, onCancel, prefill, defaultGruppe }) {
   const [form, setForm] = useState({
     gesellschaft: '', product_name: '', praemie_monatlich: '',
     franchise: '', modell: '', deckung_details: '',
     leistungs_score: '', is_current: false, is_recommended: false,
+    gruppe: defaultGruppe || 'manuell', gruppe_label: '',
   });
 
   // Phase 5.3: Wenn prefill gesetzt → Auto-Befüllung aus Police
   useEffect(() => {
     if (prefill) {
-      setForm({
+      setForm(f => ({
+        ...f,
         gesellschaft:      prefill.gesellschaft || '',
         product_name:      prefill.product_name || '',
         praemie_monatlich: prefill.praemie_monatlich !== '' ? prefill.praemie_monatlich : '',
@@ -88,7 +102,8 @@ function AddEntryForm({ dossierId, personName, section, onSuccess, onCancel, pre
         leistungs_score:   '',
         is_current:        prefill.is_current ?? false,
         is_recommended:    false,
-      });
+        gruppe:            prefill.is_current ? 'aktuelle_loesung' : (defaultGruppe || 'manuell'),
+      }));
     }
   }, [prefill]);
   const qc = useQueryClient();
@@ -104,9 +119,11 @@ function AddEntryForm({ dossierId, personName, section, onSuccess, onCancel, pre
   const handleSubmit = (e) => {
     e.preventDefault();
     mutation.mutate({
-      dossier_id: dossierId,
-      person_name: personName,
+      dossier_id:        dossierId,
+      person_name:       personName,
       section,
+      gruppe:            form.gruppe,
+      gruppe_label:      form.gruppe_label || null,
       gesellschaft:      form.gesellschaft,
       product_name:      form.product_name || null,
       praemie_monatlich: form.praemie_monatlich ? Number(form.praemie_monatlich) : null,
@@ -116,20 +133,38 @@ function AddEntryForm({ dossierId, personName, section, onSuccess, onCancel, pre
       leistungs_score:   form.leistungs_score ? Number(form.leistungs_score) : null,
       is_current:        form.is_current,
       is_recommended:    form.is_recommended,
+      ai_extracted:      false,
+      manually_verified: true,
     });
   };
 
   return (
     <form onSubmit={handleSubmit} className="border border-primary/30 bg-primary/5 rounded-xl p-4 space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-xs font-semibold text-primary">
-          Neuer Vergleichseintrag — {personName} · {SECTION_LABELS[section]}
+          Neuer Eintrag — {personName} · {SECTION_LABELS[section]}
         </p>
         {prefill && (
           <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full">
             ✓ Aus Police vorbefüllt — bitte prüfen
           </span>
         )}
+      </div>
+      {/* Gruppe-Zuweisung */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-muted-foreground mb-1">Gruppe (Vergleichsspalte)</label>
+          <select className={inputClass} value={form.gruppe}
+            onChange={e => setForm(f => ({ ...f, gruppe: e.target.value }))}>
+            {GRUPPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-muted-foreground mb-1">Spalten-Label (optional)</label>
+          <input className={inputClass} value={form.gruppe_label}
+            onChange={e => setForm(f => ({ ...f, gruppe_label: e.target.value }))}
+            placeholder={`z.B. CSS — Angebot 1`} />
+        </div>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <div>
@@ -205,7 +240,7 @@ function AddEntryForm({ dossierId, personName, section, onSuccess, onCancel, pre
 export default function DossierVergleichTab({ dossier, pendingImportContract, onPendingImportConsumed }) {
   const [addingFor, setAddingFor] = useState(null); // { personName, section, prefill? }
   const [showAiUpload, setShowAiUpload] = useState(null); // personName | null
-  const [viewMode, setViewMode] = useState('sidebyside');
+  const [viewMode, setViewMode] = useState('gruppen');
   const dossierId = dossier?.id;
   const customerId = dossier?.customer_id;
 
@@ -282,8 +317,13 @@ export default function DossierVergleichTab({ dossier, pendingImportContract, on
         <div className="flex items-center gap-2">
           <div className="flex border border-border rounded-lg overflow-hidden text-xs font-medium">
             <button
+              onClick={() => setViewMode('gruppen')}
+              className={`px-3 py-1.5 transition-colors ${viewMode === 'gruppen' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>
+              Gesamtlösungen
+            </button>
+            <button
               onClick={() => setViewMode('sidebyside')}
-              className={`px-3 py-1.5 transition-colors ${viewMode === 'sidebyside' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>
+              className={`px-3 py-1.5 transition-colors border-l border-border ${viewMode === 'sidebyside' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>
               Side-by-Side
             </button>
             <button
@@ -300,10 +340,11 @@ export default function DossierVergleichTab({ dossier, pendingImportContract, on
         <div className="space-y-2">
           {[1, 2, 3].map(i => <div key={i} className="h-32 bg-muted animate-pulse rounded-xl" />)}
         </div>
+      ) : viewMode === 'gruppen' ? (
+        <ComparisonGruppenView entries={entries} dossierId={dossierId} />
       ) : viewMode === 'sidebyside' ? (
         <ComparisonSideBySide entries={entries} dossierId={dossierId} />
       ) : (
-        // List view (grouped by section)
         ['grundversicherung', 'zusatzversicherung'].map(section => {
           const sectionEntries = entries.filter(e => e.section === section);
           if (sectionEntries.length === 0) return null;
@@ -312,10 +353,7 @@ export default function DossierVergleichTab({ dossier, pendingImportContract, on
               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                 {SECTION_LABELS[section]} ({sectionEntries.length})
               </h4>
-              <ComparisonSideBySide
-                entries={sectionEntries}
-                dossierId={dossierId}
-              />
+              <ComparisonSideBySide entries={sectionEntries} dossierId={dossierId} />
             </div>
           );
         })
