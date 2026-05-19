@@ -8,7 +8,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import DossierList from '@/components/dossier/DossierList';
-import DossierBuilder from '@/components/dossier/DossierBuilder';
+import DossierBuilder from '@/components/dossier/DossierBuilder.jsx';
 import DossierModuleGuard from '@/components/dossier/DossierModuleGuard';
 
 // Feature-Flag: Modul ist aktuell nur für Admins sichtbar
@@ -64,11 +64,10 @@ export default function AdvisoryDossier() {
         )}
       </div>
 
-      {/* Phase-1 Notice */}
+      {/* Phase-2 Notice */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
-        <strong>Phase 1 — Grundstruktur:</strong> Dieses Modul befindet sich in der Aufbauphase.
+        <strong>Phase 2 — Datenaggregation:</strong> Kundendaten, Familienmitglieder, Verträge und Vergleichsofferten werden read-only aus dem CRM geladen.
         PDF-Export, Automationen und KI-Empfehlungen folgen in späteren Phasen.
-        Alle CRM-Daten werden ausschliesslich lesend verwendet.
       </div>
 
       {/* Content */}
