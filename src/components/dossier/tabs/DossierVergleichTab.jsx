@@ -5,12 +5,14 @@
  * Schreibt nur in ComparisonEntry (isolierte Dossier-Entity).
  * Read-only gegenüber allen CRM-Kern-Entities.
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Shield, Plus, ChevronDown, ChevronUp, Star } from 'lucide-react';
+import { Shield, Plus, ChevronDown, ChevronUp, Star, Sparkles } from 'lucide-react';
 import DossierEinsparungPanel from '@/components/dossier/DossierEinsparungPanel';
 import ComparisonSideBySide from '@/components/dossier/ComparisonSideBySide';
+import DossierAiUpload from '@/components/dossier/DossierAiUpload';
+import { mapContractToEntry, getImportSummary } from '@/lib/contractToEntryMapper';
 
 const SECTION_LABELS = {
   grundversicherung: 'Grundversicherung (KVG)',
@@ -65,13 +67,30 @@ function VerkaufschanceOfferten({ gesellschaften }) {
   );
 }
 
-// ── Neuer Eintrag Formular ────────────────────────────────────────────────────
-function AddEntryForm({ dossierId, personName, section, onSuccess, onCancel }) {
+// ── Neuer Eintrag Formular (mit optionaler Auto-Befüllung) ────────────────────
+function AddEntryForm({ dossierId, personName, section, onSuccess, onCancel, prefill }) {
   const [form, setForm] = useState({
     gesellschaft: '', product_name: '', praemie_monatlich: '',
     franchise: '', modell: '', deckung_details: '',
     leistungs_score: '', is_current: false, is_recommended: false,
   });
+
+  // Phase 5.3: Wenn prefill gesetzt → Auto-Befüllung aus Police
+  useEffect(() => {
+    if (prefill) {
+      setForm({
+        gesellschaft:      prefill.gesellschaft || '',
+        product_name:      prefill.product_name || '',
+        praemie_monatlich: prefill.praemie_monatlich !== '' ? prefill.praemie_monatlich : '',
+        franchise:         prefill.franchise !== '' ? prefill.franchise : '',
+        modell:            prefill.modell || '',
+        deckung_details:   prefill.deckung_details || '',
+        leistungs_score:   '',
+        is_current:        prefill.is_current ?? false,
+        is_recommended:    false,
+      });
+    }
+  }, [prefill]);
   const qc = useQueryClient();
 
   const mutation = useMutation({
@@ -102,9 +121,16 @@ function AddEntryForm({ dossierId, personName, section, onSuccess, onCancel }) {
 
   return (
     <form onSubmit={handleSubmit} className="border border-primary/30 bg-primary/5 rounded-xl p-4 space-y-3">
-      <p className="text-xs font-semibold text-primary">
-        Neuer Vergleichseintrag — {personName} · {SECTION_LABELS[section]}
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-primary">
+          Neuer Vergleichseintrag — {personName} · {SECTION_LABELS[section]}
+        </p>
+        {prefill && (
+          <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full">
+            ✓ Aus Police vorbefüllt — bitte prüfen
+          </span>
+        )}
+      </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <div>
           <label className="block text-xs text-muted-foreground mb-1">Gesellschaft *</label>
@@ -176,9 +202,10 @@ function AddEntryForm({ dossierId, personName, section, onSuccess, onCancel }) {
 }
 
 // ── Hauptkomponente ───────────────────────────────────────────────────────────
-export default function DossierVergleichTab({ dossier }) {
-  const [addingFor, setAddingFor] = useState(null); // { personName, section }
-  const [viewMode, setViewMode] = useState('sidebyside'); // 'sidebyside' | 'list'
+export default function DossierVergleichTab({ dossier, pendingImportContract, onPendingImportConsumed }) {
+  const [addingFor, setAddingFor] = useState(null); // { personName, section, prefill? }
+  const [showAiUpload, setShowAiUpload] = useState(null); // personName | null
+  const [viewMode, setViewMode] = useState('sidebyside');
   const dossierId = dossier?.id;
   const customerId = dossier?.customer_id;
 
@@ -212,6 +239,15 @@ export default function DossierVergleichTab({ dossier }) {
     familyMembers.forEach(m => list.push(`${m.first_name} ${m.last_name}`.trim()));
     return list;
   }, [mainCustomer, familyMembers]);
+
+  // Phase 5.3: Pending Import aus Policen-Tab verarbeiten
+  useEffect(() => {
+    if (pendingImportContract && persons.length > 0) {
+      const mapped = mapContractToEntry(pendingImportContract, persons[0]);
+      setAddingFor({ personName: persons[0], section: mapped.section, prefill: mapped });
+      if (onPendingImportConsumed) onPendingImportConsumed();
+    }
+  }, [pendingImportContract, persons]);
 
   if (!dossierId) {
     return (
@@ -285,30 +321,61 @@ export default function DossierVergleichTab({ dossier }) {
         })
       )}
 
-      {/* Add entry buttons (per person × section) */}
+      {/* Add entry + KI-Upload */}
       <div className="border-t border-border/60 pt-4 space-y-3">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Eintrag hinzufügen</p>
-        {addingFor ? (
+
+        {/* KI-Upload Panel */}
+        {showAiUpload && (
+          <DossierAiUpload
+            dossierId={dossierId}
+            personName={showAiUpload}
+            onEntryAdded={() => setShowAiUpload(null)}
+            onClose={() => setShowAiUpload(null)}
+          />
+        )}
+
+        {/* Manuelle Eingabe / Auto-Befüllung */}
+        {addingFor && !showAiUpload ? (
           <AddEntryForm
             dossierId={dossierId}
             personName={addingFor.personName}
             section={addingFor.section}
+            prefill={addingFor.prefill}
             onSuccess={() => setAddingFor(null)}
             onCancel={() => setAddingFor(null)}
           />
-        ) : (
-          <div className="flex items-center gap-2 flex-wrap">
-            {['grundversicherung', 'zusatzversicherung'].map(section =>
-              persons.map(name => (
-                <button
-                  key={`${section}-${name}`}
-                  onClick={() => setAddingFor({ personName: name, section })}
-                  className="flex items-center gap-1.5 text-xs text-primary border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary/5 transition-colors"
-                >
-                  <Plus className="w-3 h-3" />
-                  {SECTION_LABELS[section].split(' ')[0]} · {name}
-                </button>
-              ))
+        ) : !showAiUpload && (
+          <div className="space-y-2">
+            {/* Manuell hinzufügen */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {['grundversicherung', 'zusatzversicherung'].map(section =>
+                persons.map(name => (
+                  <button
+                    key={`${section}-${name}`}
+                    onClick={() => setAddingFor({ personName: name, section })}
+                    className="flex items-center gap-1.5 text-xs text-primary border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary/5 transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />
+                    {SECTION_LABELS[section].split(' ')[0]} · {name}
+                  </button>
+                ))
+              )}
+            </div>
+            {/* KI-Analyse */}
+            {persons.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap pt-1">
+                {persons.map(name => (
+                  <button
+                    key={`ai-${name}`}
+                    onClick={() => setShowAiUpload(name)}
+                    className="flex items-center gap-1.5 text-xs text-violet-700 border border-violet-200 bg-violet-50 px-3 py-1.5 rounded-lg hover:bg-violet-100 transition-colors"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    KI-Analyse · {name}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         )}

@@ -29,6 +29,7 @@ const PHASE2_TABS = new Set(['personalien', 'familie', 'policen', 'vergleich']);
 
 export default function DossierBuilder({ dossierId, onSaved }) {
   const [activeTab, setActiveTab] = useState('stammdaten');
+  const [pendingImportContract, setPendingImportContract] = useState(null);
   const qc = useQueryClient();
 
   const { data: dossier, isLoading } = useQuery({
@@ -42,8 +43,7 @@ export default function DossierBuilder({ dossierId, onSaved }) {
     onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: ['advisory_dossiers'] });
       onSaved(created.id);
-      // Jump to Personalien after creation
-      setActiveTab('personalien');
+      setActiveTab('personalien'); // Auto-Navigation nach Stammdaten-Speicherung
     },
   });
 
@@ -125,8 +125,23 @@ export default function DossierBuilder({ dossierId, onSaved }) {
 
         {activeTab === 'personalien' && <DossierPersonalienTab dossier={dossier} />}
         {activeTab === 'familie'     && <DossierFamilieTab     dossier={dossier} />}
-        {activeTab === 'policen'     && <DossierPolicenTab     dossier={dossier} />}
-        {activeTab === 'vergleich'   && <DossierVergleichTab   dossier={dossier} />}
+        {activeTab === 'policen'     && (
+          <DossierPolicenTab
+            dossier={dossier}
+            onImportContract={(contract) => {
+              // Navigiere zu Vergleich-Tab — Contract-Import wird dort verarbeitet
+              setActiveTab('vergleich');
+              setPendingImportContract(contract);
+            }}
+          />
+        )}
+        {activeTab === 'vergleich'   && (
+          <DossierVergleichTab
+            dossier={dossier}
+            pendingImportContract={pendingImportContract}
+            onPendingImportConsumed={() => setPendingImportContract(null)}
+          />
+        )}
 
         {activeTab === 'empfehlung' && (
           <DossierPlaceholderTab tab={TABS.find(t => t.key === 'empfehlung')} />
