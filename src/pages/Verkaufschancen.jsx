@@ -10,13 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge'
 import {
   Plus, Search, TrendingUp, Trophy, Target, BarChart3,
-  LayoutGrid, List, Filter, CalendarClock, Wallet,
+  Filter, CalendarClock, Wallet,
   ArrowRight, RefreshCw, Star, AlertTriangle, ChevronDown
 } from 'lucide-react'
 import VerkaufschanceStatusBadge, { ALLE_STATUS } from '@/components/verkaufschance/VerkaufschanceStatusBadge'
 import VerkaufschanceDetail from '@/components/verkaufschance/VerkaufschanceDetail'
 import VerkaufschanceForm from '@/components/verkaufschance/VerkaufschanceForm'
-import VerkaufschancenKanban from '@/components/verkaufschance/VerkaufschancenKanban'
 import { getSparteLabel } from '@/lib/insuranceSparten'
 import { cn } from '@/lib/utils'
 import { isWithinInterval, addDays, parseISO, isToday, isBefore } from 'date-fns'
@@ -34,7 +33,6 @@ export default function Verkaufschancen() {
   const [selectedId, setSelectedId] = useState(null)
   const [showNewForm, setShowNewForm] = useState(false)
   const [newFormCustomer, setNewFormCustomer] = useState(null)
-  const [view, setView] = useState('kanban')
   const [showFilters, setShowFilters] = useState(false)
 
   const { data: verkaufschancen = [] } = useQuery({
@@ -180,28 +178,8 @@ export default function Verkaufschancen() {
         </div>
       )}
 
-      {/* ── View Toggle + Filters ────────────────────────────────────────── */}
+      {/* ── Search + Filters ────────────────────────────────────────── */}
       <div className="flex items-center gap-3 flex-wrap">
-        {/* View toggle */}
-        <div className="flex rounded-lg border border-border overflow-hidden">
-          <button
-            onClick={() => setView('kanban')}
-            className={cn('flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors',
-              view === 'kanban' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground'
-            )}
-          >
-            <LayoutGrid className="w-3.5 h-3.5" /> Kanban
-          </button>
-          <button
-            onClick={() => setView('list')}
-            className={cn('flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors border-l border-border',
-              view === 'list' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted text-muted-foreground'
-            )}
-          >
-            <List className="w-3.5 h-3.5" /> Liste
-          </button>
-        </div>
-
         {/* Search */}
         <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -248,18 +226,9 @@ export default function Verkaufschancen() {
         </div>
       )}
 
-      {/* ── Kanban View ─────────────────────────────────────────────────── */}
-      {view === 'kanban' && (
-        <VerkaufschancenKanban
-          verkaufschancen={filtered}
-          onSelect={setSelectedId}
-        />
-      )}
-
       {/* ── List View ───────────────────────────────────────────────────── */}
-      {view === 'list' && (
-        <Card>
-          <CardContent className="p-0">
+      <Card>
+        <CardContent className="p-0">
             <div className="hidden md:grid grid-cols-[2fr_1.5fr_1.2fr_1fr_1fr_1.2fr_auto] gap-2 px-4 py-2.5 border-b bg-muted/40 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
               <div>Kunde / Bezeichnung</div>
               <div>Sparte</div>
@@ -345,7 +314,6 @@ export default function Verkaufschancen() {
             })}
           </CardContent>
         </Card>
-      )}
 
       {/* ── Detail Dialog ────────────────────────────────────────────────── */}
       <Dialog open={!!selectedVs} onOpenChange={(o) => { if (!o) setSelectedId(null) }}>
