@@ -152,16 +152,17 @@ Deno.serve(async (req) => {
     if (suite === 'race' || suite === 'all') {
       const race = { checks: [], passed: 0, warnings: 0, failures: 0 };
 
-      // Doppelte Verträge: gleicher Kunde + Versicherer + Status active
+      // Doppelte Verträge: gleicher Kunde + Versicherer + GLEICHE Policennummer (echte Duplikate)
+      // Verschiedene Policennummern = verschiedene Produkte = kein Duplikat
       const activeContractsByKey = {};
-      contracts.filter(c => c.status === 'active').forEach(c => {
-        const key = `${c.customer_id}|${c.insurer}|${c.insurance_type}`;
+      contracts.filter(c => c.status === 'active' && !c.archived).forEach(c => {
+        const key = `${c.customer_id}|${c.insurer}|${c.policy_number || 'no_policy'}`;
         if (!activeContractsByKey[key]) activeContractsByKey[key] = [];
         activeContractsByKey[key].push(c);
       });
       const duplicateContracts = Object.entries(activeContractsByKey)
-        .filter(([, v]) => v.length > 1)
-        .map(([k, v]) => ({ key: k, count: v.length, contracts: v.map(c => ({ id: c.id, customer: c.customer_name, insurer: c.insurer })) }));
+        .filter(([k, v]) => v.length > 1 && !k.endsWith('|no_policy'))
+        .map(([k, v]) => ({ key: k, count: v.length, contracts: v.map(c => ({ id: c.id, customer: c.customer_name, insurer: c.insurer, policy_number: c.policy_number })) }));
 
       race.checks.push({
         check: 'no_duplicate_active_contracts',
@@ -190,9 +191,9 @@ Deno.serve(async (req) => {
       });
       if (duplicateTasks.length === 0) race.passed++; else race.warnings++;
 
-      // Storno-Duplikate: gleiche Policy mehrfach storniert
+      // Storno-Duplikate: gleiche Policy mehrfach storniert (nur bei valider policy_id)
       const stornoByPolicy = {};
-      commissions.filter(cm => cm.is_storno).forEach(cm => {
+      commissions.filter(cm => cm.is_storno && cm.policy_id && cm.policy_id !== 'null').forEach(cm => {
         if (!stornoByPolicy[cm.policy_id]) stornoByPolicy[cm.policy_id] = [];
         stornoByPolicy[cm.policy_id].push(cm);
       });
@@ -380,6 +381,29 @@ Deno.serve(async (req) => {
         detail: `${appsNoCustomer.length} active applications missing customer_id`,
       });
       if (appsNoCustomer.length === 0) integrity.passed++; else { integrity.failures++; report.summary.critical++; }
+
+      // Legacy-Status-Werte (nicht-normalisiert)
+      const validStatuses = ['active', 'cancelled', 'expired', 'pending', 'archived'];
+      const legacyStatusContracts = contracts.filter(c => c.status && !validStatuses.includes(c.status));
+
+      integrity.checks.push({
+        check: 'no_legacy_status_values',
+        status: legacyStatusContracts.length === 0 ? 'pass' : 'critical',
+        detail: `${legacyStatusContracts.length} contracts with non-normalized status (e.g. 'aktiv' instead of 'active')`,
+        findings: legacyStatusContracts.map(c => ({ id: c.id, status: c.status, customer: c.customer_name, insurer: c.insurer })),
+      });
+      if (legacyStatusContracts.length === 0) integrity.passed++; else { integrity.failures++; report.summary.critical++; }
+
+      // Archived Contracts die noch status=active haben (inkonsistenter State)
+      const archivedButActive = contracts.filter(c => c.archived === true && c.status === 'active');
+
+      integrity.checks.push({
+        check: 'archived_contracts_not_active',
+        status: archivedButActive.length === 0 ? 'pass' : 'critical',
+        detail: `${archivedButActive.length} contracts are archived but still have status='active'`,
+        findings: archivedButActive.map(c => ({ id: c.id, customer: c.customer_name, insurer: c.insurer })),
+      });
+      if (archivedButActive.length === 0) integrity.passed++; else { integrity.failures++; report.summary.critical++; }
 
       report.sections.integrity = integrity;
       report.summary.total_checks += integrity.checks.length;
