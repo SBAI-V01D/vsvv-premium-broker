@@ -45,12 +45,8 @@ export default function Customers() {
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
     queryFn: async () => {
-      const allCustomers = await base44.entities.Customer.filter({ archived: false }, '-created_date', 500)
-      allCustomers.sort((a, b) => {
-        const lastCmp = (a.last_name || '').localeCompare(b.last_name || '', 'de', { sensitivity: 'base' })
-        if (lastCmp !== 0) return lastCmp
-        return (a.first_name || '').localeCompare(b.first_name || '', 'de', { sensitivity: 'base' })
-      })
+      // Zuletzt bearbeitet zuerst — operative Priorisierung statt alphabetische Liste
+      const allCustomers = await base44.entities.Customer.filter({ archived: false }, '-updated_date', 500)
       
       // Role-based filtering
       if (currentUser?.role === 'admin') {
