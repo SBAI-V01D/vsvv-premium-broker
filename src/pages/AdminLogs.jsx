@@ -4,7 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RefreshCw, Search, Shield, AlertTriangle, Activity, Clock, ChevronDown, ChevronRight, Play } from 'lucide-react';
+import { RefreshCw, Search, Shield, AlertTriangle, Activity, Clock, ChevronDown, ChevronRight, Play, Zap } from 'lucide-react';
+import CorrelationChainDrawer from '@/components/admin/CorrelationChainDrawer';
+import GuardHitsPanel from '@/components/admin/GuardHitsPanel';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -29,7 +31,7 @@ function fmt(ts) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function AuditRow({ log }) {
+function AuditRow({ log, onCorrelationClick }) {
   const [expanded, setExpanded] = useState(false);
   const lvl = LEVEL_CONFIG[log.audit_level] || LEVEL_CONFIG[4];
   const guard = log.guard_result ? GUARD_CONFIG[log.guard_result] : null;
@@ -53,7 +55,11 @@ function AuditRow({ log }) {
             <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${guard.className}`}>{guard.label}</span>
           )}
         </td>
-        <td className="px-3 py-2 text-xs font-mono text-primary truncate max-w-[140px]">{log.correlation_id || '—'}</td>
+        <td className="px-3 py-2 text-xs font-mono text-primary truncate max-w-[140px]">
+          {log.correlation_id
+            ? <button className="hover:underline text-primary font-mono" onClick={e => { e.stopPropagation(); onCorrelationClick(log.correlation_id); }}>{log.correlation_id}</button>
+            : '—'}
+        </td>
         <td className="px-3 py-2 text-xs font-mono text-slate-500 truncate max-w-[160px]">{log.decision_code || '—'}</td>
         <td className="px-3 py-2 text-xs text-muted-foreground">{log.entity_type || '—'}</td>
         <td className="px-3 py-2 text-right">
@@ -132,7 +138,9 @@ export default function AdminLogs() {
   const [filterLevel, setFilterLevel] = useState('all');
   const [filterGuard, setFilterGuard] = useState('all');
   const [filterProcess, setFilterProcess] = useState('all');
+  const [onlyCritical, setOnlyCritical] = useState(false);
   const [validationResult, setValidationResult] = useState(null);
+  const [correlationDrawer, setCorrelationDrawer] = useState(null);
 
   const loadLogs = async () => {
     setLoading(true);
@@ -153,6 +161,7 @@ export default function AdminLogs() {
 
   // Filtered logs
   const filtered = logs.filter(log => {
+    if (onlyCritical && log.audit_level !== 1) return false;
     if (filterLevel !== 'all' && String(log.audit_level) !== filterLevel) return false;
     if (filterGuard !== 'all' && log.guard_result !== filterGuard) return false;
     if (filterProcess !== 'all' && log.process_type !== filterProcess) return false;
@@ -192,6 +201,15 @@ export default function AdminLogs() {
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={loadLogs} disabled={loading}>
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button
+            variant={onlyCritical ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setOnlyCritical(v => !v)}
+            className="gap-2"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            Nur Critical
           </Button>
           <Button size="sm" onClick={runValidation} disabled={running} className="gap-2">
             <Play className="w-3.5 h-3.5" />
@@ -238,6 +256,9 @@ export default function AdminLogs() {
           </div>
         </div>
       )}
+
+      {/* Guard Hits Panel */}
+      <GuardHitsPanel logs={logs} />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 items-center">
@@ -308,12 +329,21 @@ export default function AdminLogs() {
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={9} className="px-4 py-12 text-center text-sm text-muted-foreground">Keine Einträge gefunden</td></tr>
               ) : (
-                filtered.map(log => <AuditRow key={log.id} log={log} />)
+                filtered.map(log => <AuditRow key={log.id} log={log} onCorrelationClick={setCorrelationDrawer} />)
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Correlation Chain Drawer */}
+      {correlationDrawer && (
+        <CorrelationChainDrawer
+          correlationId={correlationDrawer}
+          logs={logs}
+          onClose={() => setCorrelationDrawer(null)}
+        />
+      )}
     </div>
   );
 }
