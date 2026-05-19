@@ -218,6 +218,46 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
   return (
     <div className="space-y-3">
 
+      {/* ── DRINGENDE AKTIONEN ──────────────────────────────────────────── */}
+      {(overdueCount > 0 || wiedervorlagen.length > 0 || expiringContracts.filter(c => daysUntil(c.end_date) <= 7).length > 0) && (
+        <div id="urgent-actions" className="rounded-xl border border-rose-200 bg-rose-50/60 overflow-hidden">
+          <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-rose-200/60">
+            <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+            <span className="text-[12.5px] font-bold text-rose-800">Dringende Aktionen</span>
+            <span className="ml-auto text-[10px] font-bold text-rose-700 bg-rose-100 border border-rose-300/60 px-1.5 py-0.5 rounded-full">
+              {overdueCount + wiedervorlagen.length + expiringContracts.filter(c => daysUntil(c.end_date) <= 7).length}
+            </span>
+          </div>
+          <div className="p-3 space-y-2">
+            {/* Überfällige Tasks */}
+            {sortedTasks.filter(t => daysUntil(t.due_date) <= 0).slice(0, 2).map(t => (
+              <TaskRow key={t.id} task={t} onComplete={onTaskComplete} onOpen={onTaskClick} />
+            ))}
+            {/* Wiedervorlagen */}
+            {wiedervorlagen.slice(0, 2).map(vs => (
+              <VsRow key={vs.id} vs={vs} onClick={() => navigate('/verkaufschancen')} />
+            ))}
+            {/* Verträge die in ≤7 Tagen ablaufen */}
+            {expiringContracts.filter(c => daysUntil(c.end_date) <= 7).slice(0, 2).map(c => (
+              <div
+                key={c.id}
+                onClick={() => navigate(`/kunden/${c.customer_id}/360`)}
+                className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg border border-rose-200 bg-rose-50/40 hover:bg-rose-50/70 cursor-pointer transition-all"
+              >
+                <div className="w-1 h-7 rounded-full bg-rose-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12.5px] font-semibold truncate">{c.customer_name || 'Kunde'}</p>
+                  <p className="text-[11px] text-rose-700 font-medium">{c.insurer} · {c.policy_number || 'Police'}</p>
+                </div>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-rose-500 text-white">
+                  {daysUntil(c.end_date)}d
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Tages-Zusammenfassung ───────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {[
