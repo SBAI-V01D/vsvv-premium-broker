@@ -324,7 +324,7 @@ function PersonTotal({ products, personName }) {
   );
 }
 
-// ── KI-Extraktions-Schema (Phase B: multi-Produkt) ────────────────────────────
+// ── KI-Extraktions-Schema (Phase B+: Groupe-Mutuel-kompatibel) ───────────────
 const EXTRACTION_SCHEMA = {
   type: 'object',
   properties: {
@@ -335,25 +335,37 @@ const EXTRACTION_SCHEMA = {
     },
     detected_persons: {
       type: 'array',
-      description: 'Erkannte Personen im Dokument',
+      description: 'Erkannte Personen im Dokument (Versicherungsnehmer, mitversicherte)',
       items: { type: 'string' },
+    },
+    insurer_name: {
+      type: 'string',
+      description: 'Hauptversicherer des Dokuments (z.B. "Groupe Mutuel")',
+    },
+    total_monthly_premium: {
+      type: 'number',
+      description: 'Gesamtmonatsprämie laut Dokument (nach Rabatten)',
+    },
+    discount_amount: {
+      type: 'number',
+      description: 'Rabattbetrag/Monat falls erkennbar',
     },
     products: {
       type: 'array',
-      description: 'Liste aller erkannten Versicherungsprodukte',
+      description: 'ALLE erkannten Versicherungsprodukte — jede Zeile/Block ist ein separates Produkt',
       items: {
         type: 'object',
         properties: {
-          gesellschaft:      { type: 'string' },
-          product_name:      { type: 'string' },
+          gesellschaft:      { type: 'string', description: 'Versicherungsgesellschaft' },
+          product_name:      { type: 'string', description: 'Exakter Produktname aus dem Dokument' },
           section:           { type: 'string', enum: ['grundversicherung', 'zusatzversicherung'] },
-          praemie_monatlich: { type: 'number' },
-          praemie_jaehrlich: { type: 'number' },
-          franchise:         { type: 'number' },
-          modell:            { type: 'string' },
-          deckung_details:   { type: 'string' },
-          person_name:       { type: 'string' },
-          is_current:        { type: 'boolean' },
+          praemie_monatlich: { type: 'number', description: 'Monatsprämie CHF (nur Zahl)' },
+          praemie_jaehrlich: { type: 'number', description: 'Jahresprämie CHF falls angegeben' },
+          franchise:         { type: 'number', description: 'Franchise CHF (nur für KVG relevant)' },
+          modell:            { type: 'string', description: 'Versicherungsmodell (HMO, HAM, Standard, TelFirst, SanaTel, etc.)' },
+          deckung_details:   { type: 'string', description: 'Kurzbeschreibung Deckung max 120 Zeichen' },
+          person_name:       { type: 'string', description: 'Versicherte Person falls erkennbar' },
+          is_current:        { type: 'boolean', description: 'true = bestehende Police, false = Offerte' },
           confidence: {
             type: 'object',
             properties: {
@@ -370,42 +382,94 @@ const EXTRACTION_SCHEMA = {
         },
       },
     },
-    extraction_notes: { type: 'string', description: 'Hinweise zur Extraktion' },
+    extraction_notes: {
+      type: 'string',
+      description: 'Hinweise zur Extraktion: was war klar, was war unsicher, welche Seiten wurden berücksichtigt',
+    },
+    partial_extraction: {
+      type: 'boolean',
+      description: 'true wenn nur Teile des Dokuments erkannt wurden (trotzdem alle gefundenen Produkte zurückgeben)',
+    },
   },
 };
 
 const EXTRACTION_PROMPT = `
-Du bist ein erfahrener Schweizer Versicherungsberater und Dokumentenanalyst.
-Analysiere das beiliegende Dokument (Police, Offerte oder Vergleich) und extrahiere ALLE darin enthaltenen Versicherungsprodukte.
+Du bist ein erfahrener Schweizer Versicherungsberater und KI-Spezialist für Policenanalyse.
 
-WICHTIG:
-- Extrahiere JEDES einzelne Versicherungsprodukt als separaten Eintrag (z.B. Grundversicherung UND Zusatzversicherungen separat)
-- Erkenne alle im Dokument erwähnten Personen (Versicherungsnehmer, mitversicherte Personen)
-- Unterscheide klar KVG Grundversicherung (section: "grundversicherung") von VVG Zusatzversicherungen (section: "zusatzversicherung")
-- Häufige KVG-Gesellschaften: CSS, Helsana, SWICA, Concordia, KPT, Sanitas, Assura, Atupri, EGK, Visana, Groupe Mutuel, Sympany
-- KVG-Modelle: Standard, HMO, HAM, Hausarzt, TelFirst, Medbase, Callmed
-- VVG-Produkte: Spital, Dental, Komplementär, Reise, Ausland, Ambulant, etc.
+AUFGABE: Analysiere das GESAMTE Dokument (alle Seiten) und extrahiere JEDES einzelne Versicherungsprodukt als separaten JSON-Eintrag.
 
-Für JEDES Produkt:
-- gesellschaft: Versicherungsgesellschaft (String)
-- product_name: Produktname oder Tarifbezeichnung (String)
-- section: "grundversicherung" für KVG, "zusatzversicherung" für VVG
-- praemie_monatlich: Monatsprämie in CHF (nur Zahl, kein Text)
-- praemie_jaehrlich: Jahresprämie falls angegeben
-- franchise: Franchise in CHF (Standard: 300, 500, 1000, 1500, 2000, 2500)
-- modell: Versicherungsmodell
-- deckung_details: Kurzbeschreibung der Deckung (max 100 Zeichen)
-- person_name: Name der versicherten Person falls erkennbar
-- is_current: true wenn es sich um eine bestehende Police handelt, false bei Offerte/Angebot
+═══════════════════════════════════════════════════════
+SCHRITT 1: DOKUMENTSTRUKTUR VERSTEHEN
+═══════════════════════════════════════════════════════
+Bevor du extrahierst, erkenne die Dokumentstruktur:
+- Welcher Hauptversicherer? (z.B. Groupe Mutuel, CSS, Helsana, SWICA, etc.)
+- Wie viele Produktblöcke/Sektionen gibt es?
+- Gibt es eine Zusammenfassung/Totale am Anfang oder Ende?
+- Sind Produkte auf mehrere Seiten verteilt?
 
-Gib für jedes Feld einen Konfidenzwert (0.0-1.0) an:
-- 0.9-1.0: Klar im Dokument erkennbar
-- 0.7-0.9: Wahrscheinlich korrekt
-- 0.5-0.7: Unsicher, muss geprüft werden
-- 0.0-0.5: Sehr unsicher oder abgeleitet
+═══════════════════════════════════════════════════════
+SCHRITT 2: PRODUKTE ERKENNEN
+═══════════════════════════════════════════════════════
+JEDEN der folgenden Blöcke als SEPARATES Produkt erfassen:
 
-Falls ein Feld nicht erkennbar ist, verwende null (NICHT einen Platzhalterwert).
-Antworte NUR mit dem JSON-Objekt.
+KVG-GRUNDVERSICHERUNG (section: "grundversicherung"):
+  Erkennungsmerkmale: KVG, Grundversicherung, Krankenversicherung, Franchise-Angabe
+  Groupe Mutuel KVG-Produkte: SanaTel, SanaFlex, SanaTop, SanaPlus, SanaElite, EasyCare
+  Andere KVG: Standard, HMO, HAM, Hausarzt, TelFirst, Medbase, Callmed
+
+VVG-ZUSATZVERSICHERUNGEN (section: "zusatzversicherung"):
+  Erkennungsmerkmale: VVG, Zusatz, Komplementär, Spital, Dental, Taggeld, Reise, Global
+  Groupe Mutuel VVG-Produkte: Global Smart, Global Top, Global Best, Global Safe,
+    H-Capital, H-Top, H-Plus, Mundo, Complementa, Denta, Prima, Supra, Hospi, Optima,
+    Travel, TelMed, Medi, Vita, Complementa Plus, Diversa, Assista
+  Andere VVG: Spital allgemein, Spital halbprivat, Spital privat, Ambulant, Zahnarzt,
+    Komplementärmedizin, Auslandkrankenschutz, Reiseversicherung, Taggeldversicherung
+
+WICHTIG — JEDE ZEILE/BLOCK IST EIN SEPARATES PRODUKT:
+  - "SanaTel CHF 350.–" → 1 Produkt (KVG)
+  - "Taggeldversicherung CHF 45.–" → 1 Produkt (VVG)
+  - "Global Smart CHF 62.50" → 1 Produkt (VVG)
+  - "H-Capital CHF 28.–" → 1 Produkt (VVG)
+  - "Mundo CHF 18.–" → 1 Produkt (VVG)
+
+═══════════════════════════════════════════════════════
+SCHRITT 3: PRÄMIEN KORREKT ZUORDNEN
+═══════════════════════════════════════════════════════
+- Monatsprämien: direkt übernehmen (CHF X.XX/Monat)
+- Jahresprämien: durch 12 teilen für praemie_monatlich
+- Totale/Summenpositionen: NICHT als separates Produkt, sondern in total_monthly_premium
+- Rabatte: in discount_amount, NICHT als negatives Produkt
+- Kombinationsrabatte: in discount_amount erfassen
+
+═══════════════════════════════════════════════════════
+SCHRITT 4: FELDREGELN
+═══════════════════════════════════════════════════════
+- gesellschaft: immer den Hauptversicherer (z.B. "Groupe Mutuel")
+- product_name: exakt wie im Dokument (z.B. "SanaTel", "Global Smart", "H-Capital")
+- praemie_monatlich: nur Zahl ohne CHF/Währung (z.B. 142.50)
+- franchise: nur für KVG (300, 500, 1000, 1500, 2000, 2500 CHF)
+- is_current: true für Police/Rechnung, false für Offerte/Angebot
+- Falls Feld nicht lesbar: null (KEIN Platzhalterwert)
+
+═══════════════════════════════════════════════════════
+SCHRITT 5: KONFIDENZ BEWERTEN
+═══════════════════════════════════════════════════════
+Für jedes Feld: 0.0–1.0
+- 0.90–1.00: Im Dokument klar erkennbar (Zahl/Text direkt ablesbar)
+- 0.70–0.89: Wahrscheinlich korrekt (Kontext-Ableitung)
+- 0.50–0.69: Unsicher, muss vom Berater geprüft werden
+- 0.00–0.49: Sehr unsicher oder fehlt im Dokument
+
+═══════════════════════════════════════════════════════
+FEHLERTOLERANZ
+═══════════════════════════════════════════════════════
+Auch wenn das Dokument unleserliche Teile hat:
+- Alle klar erkennbaren Produkte IMMER zurückgeben
+- partial_extraction: true setzen falls nur Teile erkannt
+- extraction_notes: erklären was erkannt/nicht erkannt wurde
+- NIEMALS leeres products-Array zurückgeben wenn irgendein Produkt erkennbar ist
+
+Antworte AUSSCHLIESSLICH mit dem JSON-Objekt. Keine Erklärungen ausserhalb des JSON.
 `;
 
 // ── Schritt-Indikator ─────────────────────────────────────────────────────────
@@ -477,15 +541,27 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
     onSuccess: (data) => {
       setDocumentType(data.document_type || 'unbekannt');
       setDetectedPersons(data.detected_persons || []);
-      setExtractionNotes(data.extraction_notes || '');
+      // Notizen inkl. partial_extraction-Warnung
+      const notes = [
+        data.extraction_notes,
+        data.partial_extraction ? '⚠️ Teilextraktion: Nicht alle Seiten konnten vollständig analysiert werden. Bitte Produkte manuell prüfen.' : null,
+        data.total_monthly_premium ? `Gesamtprämie laut Dokument: CHF ${data.total_monthly_premium.toLocaleString('de-CH', { minimumFractionDigits: 2 })}/Mt.` : null,
+        data.discount_amount ? `Rabatt berücksichtigt: CHF ${data.discount_amount.toLocaleString('de-CH', { minimumFractionDigits: 2 })}/Mt.` : null,
+      ].filter(Boolean).join(' · ');
+      setExtractionNotes(notes);
+
+      // insurer_name als Fallback für gesellschaft
+      const insurerFallback = data.insurer_name || '';
 
       const products = (data.products || []).map((p, i) => ({
         ...p,
         // Monatsprämie ableiten wenn nur Jahresprämie
         praemie_monatlich: p.praemie_monatlich ?? (p.praemie_jaehrlich ? Math.round(p.praemie_jaehrlich / 12 * 100) / 100 : null),
+        // Gesellschaft-Fallback auf Dokumentversicherer
+        gesellschaft: p.gesellschaft || insurerFallback || '',
         // Standardwerte
         person_name: p.person_name || personName,
-        gruppe: p.is_current ? 'aktuelle_loesung' : defaultGruppe,
+        gruppe: p.is_current !== false ? 'aktuelle_loesung' : defaultGruppe,
         gruppe_label: '',
         confidence: p.confidence || {},
         _session_id: `session_${Date.now()}_${i}`,
@@ -493,10 +569,13 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
       }));
 
       setSessionProducts(products);
-      setOriginalProducts(JSON.parse(JSON.stringify(products))); // Deep-Copy für Korrektur-Vergleich
+      setOriginalProducts(JSON.parse(JSON.stringify(products)));
       setStep('review');
     },
-    onError: () => setStep('upload'),
+    onError: (err) => {
+      setExtractionNotes(`Fehler bei der Analyse: ${err?.message || 'Unbekannter Fehler'}. Bitte erneut versuchen.`);
+      setStep('upload');
+    },
   });
 
   // ── Persistierung ─────────────────────────────────────────────────────────
@@ -760,8 +839,30 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
 
             {/* Produkt-Karten */}
             {sessionProducts.length === 0 ? (
-              <div className="text-center py-8 text-sm text-muted-foreground">
-                Keine Produkte erkannt. Bitte Dokument prüfen oder neu analysieren.
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 space-y-3">
+                <div className="flex items-center gap-2 text-amber-800 font-semibold text-sm">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  Keine Produkte automatisch erkannt
+                </div>
+                <p className="text-xs text-amber-700">
+                  Die KI konnte in diesem Dokument keine strukturierten Versicherungsprodukte identifizieren.
+                  Mögliche Ursachen: Sehr komprimiertes PDF, Scan-Qualität, ungewöhnliches Dokumentformat.
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => { setStep('upload'); setFile(null); setSessionProducts([]); setExtractionNotes(''); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-700 text-white text-xs font-medium rounded-lg hover:bg-amber-800 transition-colors"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Erneut analysieren
+                  </button>
+                  <button
+                    onClick={onClose}
+                    className="px-3 py-1.5 border border-amber-300 text-amber-800 text-xs font-medium rounded-lg hover:bg-amber-100 transition-colors"
+                  >
+                    Manuell erfassen
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
