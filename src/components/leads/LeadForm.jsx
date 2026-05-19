@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { User, Mail, Phone, Building2, Globe, UserCheck, FileText, Tag, Calendar, Upload, X, Paperclip } from 'lucide-react'
+import { User, Mail, Phone, Building2, Globe, UserCheck, FileText, Tag, Calendar, Upload, X, Paperclip, TrendingUp } from 'lucide-react'
 import { base44 } from '@/api/base44Client'
 import LeadAiDocumentAnalysis from './LeadAiDocumentAnalysis'
 
@@ -157,8 +157,26 @@ export default function LeadForm({ open, onClose, onSubmit, lead, advisors = [],
 
         <form onSubmit={handleSubmit} className="space-y-5 mt-2">
 
-          {/* KI-DOKUMENTENANALYSE */}
-          <LeadAiDocumentAnalysis onDataExtracted={handleAiExtracted} />
+          {/* KI-DOKUMENTENANALYSE — PRIORITÄRER EINSTIEG */}
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary border-b pb-1 mb-2">📄 Dokument hochladen & KI-Analyse</p>
+              <p className="text-xs text-muted-foreground mb-2">
+                Police, Offerte oder Ausweis hochladen — KI erkennt Kontaktdaten automatisch und füllt das Formular aus.
+              </p>
+              <LeadAiDocumentAnalysis onDataExtracted={handleAiExtracted} />
+            </div>
+          </div>
+
+          {/* TRENNLINIE NACH KI-UPLOAD */}
+          <div className="relative py-2">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase tracking-wide text-muted-foreground">
+              <span className="bg-background px-2">oder manuell erfassen</span>
+            </div>
+          </div>
 
           {/* KONTAKT */}
           <div className="space-y-3">
@@ -386,6 +404,32 @@ export default function LeadForm({ open, onClose, onSubmit, lead, advisors = [],
               className="h-24 resize-none"
             />
           </div>
+
+          {/* LEAD → VERKAUFSCHANCE KONVERTIERUNG */}
+          {lead && !lead.customer_id && (
+            <div className="pt-2 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2 text-primary border-primary/30 hover:bg-primary/5"
+                onClick={async () => {
+                  try {
+                    const response = await base44.functions.invoke('convertLeadToCustomer', { lead_id: lead.id })
+                    if (response.data.success) {
+                      onClose()
+                      // Navigation zur Verkaufschance-Erstellung mit dem neuen Kunden
+                      window.location.href = `/verkaufschancen?new=true&customer_id=${response.data.customer_id}&lead_id=${lead.id}`
+                    }
+                  } catch (e) {
+                    console.error('Lead conversion failed:', e)
+                  }
+                }}
+              >
+                <TrendingUp className="w-4 h-4" />
+                In Verkaufschance umwandeln →
+              </Button>
+            </div>
+          )}
 
           <DialogFooter className="pt-2 gap-2">
             <Button type="button" variant="outline" onClick={onClose}>Abbrechen</Button>

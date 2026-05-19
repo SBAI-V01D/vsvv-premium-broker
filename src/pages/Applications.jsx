@@ -149,36 +149,42 @@ export default function Applications() {
     const APPROVED_KEYS = ['angenommen', 'policiert', 'approved', 'angenommen_vorbehalt', 'bewilligung_erteilt']
     const isApproval = APPROVED_KEYS.includes(status?.toLowerCase())
 
-    await base44.entities.Application.update(app.id, {
-      custom_status: status,
-      status_changed_at: new Date().toISOString(),
-    })
-
     setStatusChanging(null)
 
-    // Sofort erste Invalidierung
+    // ONE-CLICK: Annehmen & Vertrag erstellen in einem Schritt
+    if (isApproval) {
+      setCreatingContract(true)
+      try {
+        const result = await base44.functions.invoke('acceptApplicationAndCreateContract', {
+          application_id: app.id,
+        })
+        if (result.data.success) {
+          await queryClient.invalidateQueries({ queryKey: ['contracts'] })
+          await queryClient.invalidateQueries({ queryKey: ['applications'] })
+          await queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
+        }
+      } catch (e) {
+        console.error('One-click acceptance failed:', e)
+        // Fallback: normaler Status-Update
+        await base44.entities.Application.update(app.id, {
+          custom_status: status,
+          status_changed_at: new Date().toISOString(),
+        })
+      }
+      setCreatingContract(false)
+    } else {
+      // Normaler Status-Update (nicht Genehmigung)
+      await base44.entities.Application.update(app.id, {
+        custom_status: status,
+        status_changed_at: new Date().toISOString(),
+      })
+    }
+
     await queryClient.invalidateQueries({ queryKey: ['applications'] })
     await queryClient.invalidateQueries({ queryKey: ['contracts'] })
     await queryClient.invalidateQueries({ queryKey: ['customers'] })
     await queryClient.invalidateQueries({ queryKey: ['tasks'] })
     await queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
-
-    // Bei Genehmigung: Backend-Automation braucht ~1-3s für Vertragserstellung
-    if (isApproval) {
-      setCreatingContract(true)
-      setTimeout(async () => {
-        await queryClient.invalidateQueries({ queryKey: ['contracts'] })
-        await queryClient.invalidateQueries({ queryKey: ['applications'] })
-        await queryClient.invalidateQueries({ queryKey: ['customers'] })
-        await queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      }, 1500)
-      setTimeout(async () => {
-        await queryClient.invalidateQueries({ queryKey: ['contracts'] })
-        await queryClient.invalidateQueries({ queryKey: ['applications'] })
-        await queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
-        setCreatingContract(false)
-      }, 3500)
-    }
   }
 
   const getStatusDef = (app) => {
@@ -450,6 +456,32 @@ export default function Applications() {
                       <button onClick={() => setStatusChanging(app)} className="hover:opacity-80 transition-opacity mb-1">
                         <StatusBadge statusDef={getStatusDef(app)} label={getStatusLabel(app) || getStatus(app)} />
                       </button>
+                      {/* ONE-CLICK ANNAHME BUTTON */}
+                      {['eingereicht', 'in_pruefung', 'rueckfrage', 'vorbehalt', 'risikopruefung', 'under_review', 'neu'].includes(getStatus(app)) && (
+                        <button
+                          onClick={async () => {
+                            if (confirm(`Antrag annehmen und Vertrag erstellen?\n\n${app.customer_name} · ${app.insurer || '–'}\n\nDies setzt den Status auf "angenommen" und erstellt automatisch den Vertrag.`)) {
+                              setCreatingContract(true)
+                              try {
+                                const result = await base44.functions.invoke('acceptApplicationAndCreateContract', {
+                                  application_id: app.id,
+                                })
+                                if (result.data.success) {
+                                  await queryClient.invalidateQueries({ queryKey: ['contracts'] })
+                                  await queryClient.invalidateQueries({ queryKey: ['applications'] })
+                                  await queryClient.invalidateQueries({ queryKey: ['commissionEntries'] })
+                                }
+                              } catch (e) {
+                                console.error('One-click acceptance failed:', e)
+                              }
+                              setCreatingContract(false)
+                            }
+                          }}
+                          className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-semibold"
+                        >
+                          ✓ Annehmen & Vertrag
+                        </button>
+                      )}
                       {app.status_changed_at && (
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {new Date(app.status_changed_at).toLocaleDateString('de-CH')}

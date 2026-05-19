@@ -371,33 +371,15 @@ export default function Verkaufschancen() {
             <DialogTitle>Neue Verkaufschance erfassen</DialogTitle>
             <p className="text-xs text-muted-foreground">Wird NICHT als Vertrag oder Police gespeichert — erst nach Auswahl einer Gewinnergesellschaft.</p>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Kunde *</label>
-              <Select
-                value={newFormCustomer?.id || ''}
-                onValueChange={v => setNewFormCustomer(customers.find(c => c.id === v) || null)}
-              >
-                <SelectTrigger><SelectValue placeholder="Kunde wählen..." /></SelectTrigger>
-                <SelectContent>
-                  {customers.filter(c => !c.is_family_member).map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {newFormCustomer && (
-              <VerkaufschanceForm
-                customer={newFormCustomer}
-                onSave={(data) => createMutation.mutate(data)}
-                onCancel={() => { setShowNewForm(false); setNewFormCustomer(null) }}
-                saving={createMutation.isPending}
-              />
-            )}
-            {!newFormCustomer && (
-              <p className="text-sm text-muted-foreground text-center py-4">↑ Bitte zuerst einen Kunden auswählen</p>
-            )}
-          </div>
+          <VerkaufschanceForm
+            customer={newFormCustomer}
+            onSave={(data) => {
+              createMutation.mutate(data)
+              setNewFormCustomer(null)
+            }}
+            onCancel={() => { setShowNewForm(false); setNewFormCustomer(null) }}
+            saving={createMutation.isPending}
+          />
         </DialogContent>
       </Dialog>
 

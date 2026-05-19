@@ -1,10 +1,12 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { ALLE_STATUS } from './VerkaufschanceStatusBadge'
+import { base44 } from '@/api/base44Client'
+import { Search, User, Mail, Phone, Building2 } from 'lucide-react'
 
 const SPARTEN = [
   { value: 'kvg', label: 'KVG – Grundversicherung' },
@@ -22,7 +24,11 @@ const SPARTEN = [
   { value: 'other', label: 'Sonstiges' },
 ]
 
-export default function VerkaufschanceForm({ verkaufschance, customer, onSave, onCancel, saving }) {
+export default function VerkaufschanceForm({ verkaufschance, customer, onSave, onCancel, saving, lead }) {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [selectedCustomer, setSelectedCustomer] = useState(customer || null)
+  const [isSearching, setIsSearching] = useState(false)
   const [form, setForm] = useState({
     title: verkaufschance?.title || '',
     sparte: verkaufschance?.sparte || '',
@@ -35,25 +41,166 @@ export default function VerkaufschanceForm({ verkaufschance, customer, onSave, o
     notes: verkaufschance?.notes || '',
   })
 
+  // Lead-Daten übernehmen wenn vorhanden
+  useEffect(() => {
+    if (lead && !selectedCustomer) {
+      // Automatisch nach Kunde suchen basierend auf Lead-Daten
+      const searchFromLead = async () => {
+        setIsSearching(true)
+        try {
+          const customers = await base44.entities.Customer.list()
+          const emailMatch = customers.find(c => c.email === lead.email)
+          const phoneMatch = customers.find(c => c.phone === lead.phone || c.mobile === lead.phone)
+          const nameMatch = customers.find(c => 
+            `${c.first_name} ${c.last_name}`.toLowerCase() === `${lead.first_name || ''} ${lead.last_name || ''}`.toLowerCase()
+          )
+          const match = emailMatch || phoneMatch || nameMatch
+          if (match) {
+            setSelectedCustomer(match)
+          }
+        } catch (e) {
+          console.error('Lead customer search failed:', e)
+        }
+        setIsSearching(false)
+      }
+      searchFromLead()
+    }
+  }, [lead])
+
+  // Live-Kundensuche
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([])
+      return
+    }
+    const debounce = setTimeout(async () => {
+      setIsSearching(true)
+      try {
+        const customers = await base44.entities.Customer.list()
+        const q = searchQuery.toLowerCase()
+        const results = customers.filter(c => 
+          !c.is_family_member &&
+          (
+            `${c.first_name} ${c.last_name}`.toLowerCase().includes(q) ||
+            c.email?.toLowerCase().includes(q) ||
+            c.phone?.toLowerCase().includes(q) ||
+            c.mobile?.toLowerCase().includes(q) ||
+            c.company_name?.toLowerCase().includes(q)
+          )
+        ).slice(0, 8)
+        setSearchResults(results)
+      } catch (e) {
+        console.error('Customer search failed:', e)
+      }
+      setIsSearching(false)
+    }, 300)
+    return () => clearTimeout(debounce)
+  }, [searchQuery])
+
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }))
 
   const handleSubmit = () => {
-    if (!form.sparte) return
+    if (!form.sparte || !selectedCustomer) return
     onSave({
       ...form,
       estimated_value: parseFloat(form.estimated_value) || null,
       expected_close_date: form.expected_close_date || null,
       start_date_requested: form.start_date_requested || null,
-      customer_id: customer.id,
-      customer_name: `${customer.first_name} ${customer.last_name}`,
-      organization_id: customer.organization_id,
-      advisor_id: customer.advisor_id,
-      assigned_broker: customer.assigned_broker,
+      customer_id: selectedCustomer.id,
+      customer_name: `${selectedCustomer.first_name} ${selectedCustomer.last_name}`,
+      organization_id: selectedCustomer.organization_id,
+      advisor_id: selectedCustomer.advisor_id,
+      assigned_broker: selectedCustomer.assigned_broker,
     })
   }
 
   return (
     <div className="space-y-4">
+      {/* KUNDENSUCHE — SUCHBASIERT STATT DROPDOWN */}
+      {!selectedCustomer && (
+        <div className="space-y-2">
+          <Label>Kunde suchen *</Label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Name, E-Mail, Telefon, Policennummer..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-9 h-10"
+              autoFocus
+            />
+            {isSearching && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <div className="w-4 h-4 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+              </div>
+            )}
+          </div>
+          {searchResults.length > 0 && (
+            <div className="border border-border rounded-lg overflow-hidden max-h-64 overflow-y-auto">
+              {searchResults.map(c => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCustomer(c)
+                    setSearchQuery('')
+                    setSearchResults([])
+                  }}
+                  className="w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors border-b last:border-0 text-left"
+                >
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <User className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">
+                      {c.first_name} {c.last_name}
+                      {c.company_name && <span className="text-muted-foreground font-normal ml-1">({c.company_name})</span>}
+                    </p>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      {c.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {c.email}</span>}
+                      {c.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {c.phone}</span>}
+                    </div>
+                  </div>
+                  <Building2 className="w-4 h-4 text-muted-foreground" />
+                </button>
+              ))}
+            </div>
+          )}
+          {searchQuery.trim() && searchResults.length === 0 && !isSearching && (
+            <p className="text-xs text-muted-foreground text-center py-2">Keine Kunden gefunden</p>
+          )}
+        </div>
+      )}
+
+      {/* Ausgewählter Kunde */}
+      {selectedCustomer && (
+        <div className="flex items-center justify-between gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+              <User className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-emerald-900">
+                {selectedCustomer.first_name} {selectedCustomer.last_name}
+              </p>
+              <div className="flex items-center gap-3 text-xs text-emerald-700">
+                {selectedCustomer.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {selectedCustomer.email}</span>}
+                {selectedCustomer.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {selectedCustomer.phone}</span>}
+              </div>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedCustomer(null)}
+            className="text-emerald-700 border-emerald-300 hover:bg-emerald-100"
+          >
+            Ändern
+          </Button>
+        </div>
+      )}
+
       {/* Titel + Sparte */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">

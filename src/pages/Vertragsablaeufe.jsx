@@ -309,6 +309,16 @@ export default function Vertragsablaeufe() {
     queryFn: () => base44.entities.Contract.list(),
   })
 
+  const { data: verkaufschancen = [] } = useQuery({
+    queryKey: ['verkaufschancen'],
+    queryFn: () => base44.entities.Verkaufschance.list(),
+  })
+
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => base44.entities.Task.list(),
+  })
+
   const createVsMutation = useMutation({
     mutationFn: (data) => base44.entities.Verkaufschance.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['verkaufschancen'] }); navigate('/verkaufschancen') },
@@ -382,17 +392,48 @@ export default function Vertragsablaeufe() {
   }
 
   const handleCreateVs = (contract) => {
-    createVsMutation.mutate({
-      customer_id:     contract.customer_id,
-      customer_name:   contract.customer_name,
-      organization_id: contract.organization_id,
-      sparte:          contract.sparte || contract.insurance_type,
-      status:          'neu',
-      linked_contract_id: contract.id,
-      title: `Verlängerung ${contract.insurer} – ${getSparteLabel(contract.sparte || contract.insurance_type) || ''}`,
-      estimated_value: contract.premium_yearly || 0,
-      notes: `Aus Vertragsablauf erstellt. Ablauf: ${fmtDate(contract.end_date)}`,
-    })
+    // Prüfen ob bereits Verkaufschance existiert
+    const existingVs = verkaufschancen?.find(v => 
+      v.linked_contract_id === contract.id && 
+      !['gewonnen', 'verloren'].includes(v.status)
+    )
+    
+    if (existingVs) {
+      // Bereits Verkaufschance vorhanden → direkt navigieren
+      navigate(`/verkaufschancen?detail=${existingVs.id}`)
+      return
+    }
+
+    // Kontext-Informationen anzeigen vor Erstellung
+    const hasOpenTasks = tasks?.some(t => 
+      t.contract_id === contract.id && 
+      t.status !== 'completed'
+    )
+    const lastContact = contract.renewal_last_activity ? fmtDate(contract.renewal_last_activity) : 'Kein Kontakt'
+    
+    if (confirm(
+      `Verkaufschance erstellen für:\n` +
+      `${contract.customer_name} · ${contract.insurer}\n\n` +
+      `Kontext:\n` +
+      `• Ablauf: ${fmtDate(contract.end_date)}\n` +
+      `• Kündigung bis: ${fmtDate(contract.cancellation_deadline)}\n` +
+      `• Prozess-Status: ${PROCESS_STATUS[contract.process_status]?.label || contract.process_status}\n` +
+      `• Letzter Kontakt: ${lastContact}\n` +
+      `• Offene Aufgaben: ${hasOpenTasks ? 'Ja' : 'Nein'}\n\n` +
+      `Möchten Sie diese Verkaufschance erstellen?`
+    )) {
+      createVsMutation.mutate({
+        customer_id:     contract.customer_id,
+        customer_name:   contract.customer_name,
+        organization_id: contract.organization_id,
+        sparte:          contract.sparte || contract.insurance_type,
+        status:          'neu',
+        linked_contract_id: contract.id,
+        title: `Verlängerung ${contract.insurer} – ${getSparteLabel(contract.sparte || contract.insurance_type) || ''}`,
+        estimated_value: contract.premium_yearly || 0,
+        notes: `Aus Vertragsablauf erstellt. Ablauf: ${fmtDate(contract.end_date)}. Letzter Kontakt: ${lastContact}`,
+      })
+    }
   }
 
   const handleStatusChange = (contractId, newStatus) => {
