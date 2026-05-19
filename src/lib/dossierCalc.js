@@ -1,21 +1,47 @@
 /**
- * dossierCalc.js — Phase 3 — Zentrale Berechnungslogik für Beratungsdossiers
+ * dossierCalc.js — Phase 3/5 (Hardening)
  *
  * ISOLIERT: Nur pure Funktionen, keine Seiteneffekte, kein CRM-Write.
  * Alle Berechnungen hier zentralisiert — keine verteilte Logik in UI-Komponenten.
+ *
+ * Hardening-Änderungen:
+ * - Vollständiger null/undefined/NaN-Schutz in allen Funktionen
+ * - Defensive Array-Behandlung (leere Eingaben nie crashen)
+ * - Explizite Typen-Koerzierung mit Fallback
  */
 
 /**
- * Berechnet Monatsprämie aus Einträgen (grouped by person_name).
+ * Normalisiert einen Prämien-Wert sicher auf number|null.
+ * @param {*} v
+ * @returns {number|null}
+ */
+function safePraemie(v) {
+  if (v == null) return null;
+  const n = Number(v);
+  return isFinite(n) ? n : null;
+}
+
+/**
+ * Normalisiert einen Array sicher (null/undefined → []).
+ */
+function safeArray(arr) {
+  return Array.isArray(arr) ? arr : [];
+}
+
+/**
+ * Berechnet Monatsprämie aus Einträgen.
  * @param {Array} entries - ComparisonEntry[]
  * @param {boolean} currentOnly - Nur is_current=true Einträge
- * @returns {number} Summe CHF/Monat
+ * @returns {number} Summe CHF/Monat (immer eine Zahl, nie null)
  */
 export function sumPraemieMonatlich(entries, currentOnly = false) {
-  return entries
+  return safeArray(entries)
+    .filter(e => e != null)
     .filter(e => !currentOnly || e.is_current)
-    .filter(e => e.praemie_monatlich != null)
-    .reduce((sum, e) => sum + Number(e.praemie_monatlich), 0);
+    .reduce((sum, e) => {
+      const p = safePraemie(e.praemie_monatlich);
+      return p !== null ? sum + p : sum;
+    }, 0);
 }
 
 /**
@@ -26,12 +52,13 @@ export function sumPraemieJaehrlich(entries, currentOnly = false) {
 }
 
 /**
- * Einsparung = Aktuell - Empfohlen (monatlich)
- * Positiv = Einsparung, Negativ = Mehrkosten.
+ * Einsparung = Aktuell - Empfohlen (monatlich).
+ * Gibt null zurück wenn keine verwertbaren Daten vorhanden.
  */
 export function calcSavingsMonthly(entries) {
-  const current   = sumPraemieMonatlich(entries, true);
-  const recommended = sumPraemieMonatlich(entries.filter(e => e.is_recommended));
+  const arr = safeArray(entries);
+  const current      = sumPraemieMonatlich(arr, true);
+  const recommended  = sumPraemieMonatlich(arr.filter(e => e?.is_recommended));
   if (current === 0 && recommended === 0) return null;
   return current - recommended;
 }
@@ -43,20 +70,25 @@ export function calcSavingsYearly(entries) {
 
 /**
  * Prozentuale Einsparung gegenüber aktuellem Stand.
- * @returns {number|null} z.B. -15.3 für 15.3% Einsparung
+ * @returns {number|null}
  */
 export function calcSavingsPercent(entries) {
-  const current     = sumPraemieMonatlich(entries, true);
-  const recommended = sumPraemieMonatlich(entries.filter(e => e.is_recommended));
-  if (current === 0) return null;
+  const arr          = safeArray(entries);
+  const current      = sumPraemieMonatlich(arr, true);
+  const recommended  = sumPraemieMonatlich(arr.filter(e => e?.is_recommended));
+  if (current <= 0) return null;
   return ((current - recommended) / current) * 100;
 }
 
 /**
- * Sortiert Einträge nach Prämie (günstigste zuerst).
+ * Sortiert Einträge nach Prämie (günstigste zuerst, null-Prämien ans Ende).
  */
 export function sortByPraemie(entries) {
-  return [...entries].sort((a, b) => (a.praemie_monatlich ?? Infinity) - (b.praemie_monatlich ?? Infinity));
+  return [...safeArray(entries)].sort((a, b) => {
+    const pa = safePraemie(a?.praemie_monatlich) ?? Infinity;
+    const pb = safePraemie(b?.praemie_monatlich) ?? Infinity;
+    return pa - pb;
+  });
 }
 
 /**
@@ -64,8 +96,8 @@ export function sortByPraemie(entries) {
  * @returns {Object} { personName: Entry[] }
  */
 export function groupByPerson(entries) {
-  return entries.reduce((acc, e) => {
-    const key = e.person_name || 'Unbekannt';
+  return safeArray(entries).reduce((acc, e) => {
+    const key = e?.person_name || 'Unbekannt';
     if (!acc[key]) acc[key] = [];
     acc[key].push(e);
     return acc;
@@ -76,8 +108,8 @@ export function groupByPerson(entries) {
  * Gruppiert nach section (grundversicherung / zusatzversicherung).
  */
 export function groupBySection(entries) {
-  return entries.reduce((acc, e) => {
-    const key = e.section || 'grundversicherung';
+  return safeArray(entries).reduce((acc, e) => {
+    const key = e?.section || 'grundversicherung';
     if (!acc[key]) acc[key] = [];
     acc[key].push(e);
     return acc;
@@ -86,12 +118,14 @@ export function groupBySection(entries) {
 
 /**
  * Leistungsbewertung: normalisiert Score 1–6 auf Klasse.
+ * @returns {'excellent'|'good'|'average'|'poor'|null}
  */
 export function scoreClass(score) {
-  if (score == null) return null;
-  if (score >= 5.5) return 'excellent';
-  if (score >= 4.5) return 'good';
-  if (score >= 3.5) return 'average';
+  const n = Number(score);
+  if (!isFinite(n)) return null;
+  if (n >= 5.5) return 'excellent';
+  if (n >= 4.5) return 'good';
+  if (n >= 3.5) return 'average';
   return 'poor';
 }
 
@@ -103,36 +137,72 @@ export const SCORE_COLORS = {
 };
 
 /**
- * Formatiert CHF-Betrag (de-CH Locale).
+ * Formatiert ein Datum sicher für de-CH.
+ * @param {string|Date|null} date
+ * @returns {string}
+ */
+export function fmtDate(date) {
+  if (!date) return '—';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('de-CH');
+}
+
+/**
+ * Formatiert CHF-Betrag sicher (de-CH Locale).
+ * @param {*} amount
+ * @param {number} decimals
+ * @returns {string} formatierter Betrag oder '—'
  */
 export function fmtCHF(amount, decimals = 2) {
-  if (amount == null || isNaN(amount)) return '—';
-  return `CHF ${Number(amount).toLocaleString('de-CH', {
+  const n = Number(amount);
+  if (amount == null || !isFinite(n)) return '—';
+  return `CHF ${n.toLocaleString('de-CH', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   })}`;
 }
 
 /**
+ * Formatiert ein Datum sicher für de-CH.
+ * @param {string|Date|null} date
+ * @returns {string}
+ */
+export function fmtDate(date) {
+  if (!date) return '—';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('de-CH');
+}
+
+/**
  * Gesamtübersicht für Dossier-Summary.
+ * Alle Felder sind immer definiert (null für "keine Daten", nie undefined).
  */
 export function calcDossierSummary(entries) {
-  const currentMonthly    = sumPraemieMonatlich(entries, true);
-  const recommendedEntries = entries.filter(e => e.is_recommended);
-  const proposedMonthly   = sumPraemieMonatlich(recommendedEntries);
-  const savingsMonthly    = currentMonthly > 0 || proposedMonthly > 0 ? currentMonthly - proposedMonthly : null;
-  const savingsYearly     = savingsMonthly !== null ? savingsMonthly * 12 : null;
-  const savingsPercent    = currentMonthly > 0 ? ((currentMonthly - proposedMonthly) / currentMonthly) * 100 : null;
+  const arr = safeArray(entries);
+  const currentMonthly     = sumPraemieMonatlich(arr, true);
+  const recommendedEntries = arr.filter(e => e?.is_recommended);
+  const proposedMonthly    = sumPraemieMonatlich(recommendedEntries);
+
+  // savingsMonthly: null wenn keine verwertbaren Daten auf beiden Seiten
+  const hasCurrent          = arr.some(e => e?.is_current && safePraemie(e?.praemie_monatlich) !== null);
+  const hasRecommendation   = recommendedEntries.some(e => safePraemie(e?.praemie_monatlich) !== null);
+  const savingsMonthly      = hasCurrent || hasRecommendation ? currentMonthly - proposedMonthly : null;
+  const savingsYearly       = savingsMonthly !== null ? savingsMonthly * 12 : null;
+  const savingsPercent      = hasCurrent && currentMonthly > 0
+    ? ((currentMonthly - proposedMonthly) / currentMonthly) * 100
+    : null;
 
   return {
     currentMonthly,
-    currentYearly:   currentMonthly * 12,
+    currentYearly:     currentMonthly * 12,
     proposedMonthly,
-    proposedYearly:  proposedMonthly * 12,
+    proposedYearly:    proposedMonthly * 12,
     savingsMonthly,
     savingsYearly,
     savingsPercent,
     hasRecommendation: recommendedEntries.length > 0,
-    hasCurrent:        entries.some(e => e.is_current),
+    hasCurrent:        arr.some(e => e?.is_current),
   };
 }
