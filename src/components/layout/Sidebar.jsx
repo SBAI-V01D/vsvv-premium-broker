@@ -210,7 +210,7 @@ export default function Sidebar({ onNavigate }) {
           rel="noopener noreferrer"
           title={collapsed ? 'Kundenportal' : undefined}
           className={cn(
-            'flex items-center gap-2 rounded-[7px] text-[11.5px] font-medium text-white/28 hover:text-white/58 hover:bg-white/[0.06] transition-all border border-white/[0.08]',
+            'flex items-center gap-2 rounded-[7px] text-[11.5px] font-medium text-white hover:bg-white/10 transition-all',
             collapsed ? 'justify-center h-8 w-8 mx-auto' : 'px-3 py-1.5'
           )}
         >
