@@ -64,10 +64,13 @@ export default function AdvisoryDossier() {
         )}
       </div>
 
-      {/* Phase-4 Notice */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
-        <strong>Phase 4 — PDF-Infrastruktur:</strong> Druckvorschau, Snapshot-System und versionierte Dossierarchivierung aktiv. Tab «Export / PDF» im Builder verfügbar.
-        KI-Empfehlungen, Mailversand und Automationen folgen in späteren Phasen.
+      {/* Phase-5 Status */}
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 text-sm text-emerald-800 flex items-start gap-2">
+        <span className="text-base leading-none mt-0.5">✅</span>
+        <div>
+          <strong>Phase 5 aktiv:</strong> KI-Offertenanalyse, automatische Policenübernahme, Personalien-Bearbeitung und kompakte Policenansicht verfügbar.
+          Navigation mit <kbd className="bg-white border border-emerald-300 rounded px-1 py-0.5 text-[11px] font-mono">Alt+←</kbd> <kbd className="bg-white border border-emerald-300 rounded px-1 py-0.5 text-[11px] font-mono">Alt+→</kbd> zwischen Tabs.
+        </div>
       </div>
 
       {/* Content */}
