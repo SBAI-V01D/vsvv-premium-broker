@@ -52,6 +52,7 @@ export default function DossierBuilder({ dossierId, onSaved }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['advisory_dossier', dossierId] });
       qc.invalidateQueries({ queryKey: ['advisory_dossiers'] });
+      setActiveTab('personalien');
     },
   });
 
