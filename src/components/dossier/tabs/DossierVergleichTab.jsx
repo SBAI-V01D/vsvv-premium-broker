@@ -385,34 +385,38 @@ export default function DossierVergleichTab({ dossier, pendingImportContract, on
             onCancel={() => setAddingFor(null)}
           />
         ) : !showAiUpload && (
-          <div className="space-y-2">
-            {/* Manuell hinzufügen */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {['grundversicherung', 'zusatzversicherung'].map(section =>
-                persons.map(name => (
-                  <button
-                    key={`${section}-${name}`}
-                    onClick={() => setAddingFor({ personName: name, section })}
-                    className="flex items-center gap-1.5 text-xs text-primary border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary/5 transition-colors"
-                  >
-                    <Plus className="w-3 h-3" />
-                    {SECTION_LABELS[section].split(' ')[0]} · {name}
-                  </button>
-                ))
-              )}
-            </div>
-            {/* KI-Analyse — ein einziger Button, Personen werden im Dokument erkannt */}
-            <div className="flex items-center gap-2 flex-wrap pt-1">
-              <button
-                onClick={() => setShowAiUpload(true)}
-                className="flex items-center gap-1.5 text-xs text-violet-700 border border-violet-200 bg-violet-50 px-3 py-1.5 rounded-lg hover:bg-violet-100 transition-colors font-medium"
-              >
-                <Sparkles className="w-3 h-3" />
-                Dokument per KI analysieren
-              </button>
-              <span className="text-[10px] text-muted-foreground">
-                KVG + VVG, alle Personen — wird aus dem Dokument erkannt
-              </span>
+          <div className="space-y-3">
+            {/* Primär: KI-Analyse */}
+            <button
+              onClick={() => setShowAiUpload(true)}
+              className="w-full flex items-center justify-center gap-2 text-sm font-medium text-violet-700 border-2 border-violet-200 bg-violet-50 px-4 py-3 rounded-xl hover:bg-violet-100 transition-colors"
+            >
+              <Sparkles className="w-4 h-4" />
+              Dokument per KI analysieren (empfohlen)
+            </button>
+            <p className="text-[10px] text-muted-foreground text-center">
+              Extrahiert automatisch KVG + VVG für alle Personen — Review vor Speicherung
+            </p>
+
+            {/* Sekundär: Manuelle Ergänzung (nur für Sonderfälle) */}
+            <div className="border-t border-border/60 pt-3">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                Manuell ergänzen (nur bei Sonderfällen)
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                {['grundversicherung', 'zusatzversicherung'].map(section =>
+                  persons.map(name => (
+                    <button
+                      key={`${section}-${name}`}
+                      onClick={() => setAddingFor({ personName: name, section })}
+                      className="flex items-center gap-1.5 text-[10px] text-muted-foreground border border-border px-2.5 py-1.5 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      <Plus className="w-2.5 h-2.5" />
+                      {SECTION_LABELS[section].split(' ')[0]} · {name}
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         )}

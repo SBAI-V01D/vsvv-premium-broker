@@ -18,13 +18,13 @@ import DossierPlaceholderTab from './tabs/DossierPlaceholderTab';
 import DossierExportTab from './tabs/DossierExportTab';
 
 const TABS = [
-  { key: 'stammdaten',  label: 'Stammdaten',  icon: '📋', phase: 1 },
-  { key: 'personalien', label: 'Personalien',  icon: '👤', phase: 2 },
-  { key: 'familie',     label: 'Familie',      icon: '👨‍👩‍👧', phase: 2 },
-  { key: 'policen',     label: 'Policen',      icon: '🛡️', phase: 2 },
-  { key: 'vergleich',   label: 'Vergleich',    icon: '📊', phase: 2 },
-  { key: 'empfehlung',  label: 'Empfehlung',   icon: '💡', phase: 3 },
-  { key: 'export',      label: 'Export / PDF', icon: '📄', phase: 4 },
+  { key: 'stammdaten',  label: 'Stammdaten',       icon: '📋', phase: 1 },
+  { key: 'personalien', label: 'Personalien',      icon: '👤', phase: 2 },
+  { key: 'familie',     label: 'Familie',          icon: '👨‍👩‍👧', phase: 2 },
+  { key: 'policen',     label: 'Aktuelle Lösung',  icon: '🛡️', phase: 2 },
+  { key: 'vergleich',   label: 'Vergleich',        icon: '📊', phase: 2 },
+  { key: 'empfehlung',  label: 'Empfehlung',       icon: '💡', phase: 3 },
+  { key: 'export',      label: 'Export / PDF',     icon: '📄', phase: 4 },
 ];
 
 export default function DossierBuilder({ dossierId, onSaved }) {

@@ -1,9 +1,8 @@
 /**
- * DossierPolicenTab — Phase 5.2
- * Kompakte Policen-Darstellung gruppiert nach Person.
- * Automatischer Filter nach dossier_type.
- * "In Vergleich übernehmen"-Button pro Police.
- * Read-only gegenüber Contract-Entity.
+ * DossierPolicenTab — Phase B+C (lösungsorientiert)
+ * Zeigt die aktuelle Versicherungslösung pro Person (KI-extrahiert + CRM-Daten).
+ * Fokus: Beratungslösung statt technischer Policenverwaltung.
+ * Read-only gegenüber Contract-Entity — Import vorbefüllt Vergleich.
  */
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -83,6 +82,7 @@ function ContractCard({ contract, onImport }) {
           <button
             onClick={() => onImport(contract)}
             className="flex items-center gap-1 text-[10px] text-primary font-medium hover:bg-primary/5 px-2 py-1 rounded-md transition-colors shrink-0"
+            title="In Vergleich übernehmen (KI-Extraktion)"
           >
             <ArrowRight className="w-3 h-3" />
             Übernehmen
@@ -123,9 +123,9 @@ function PersonAccordion({ person, contracts, isMain, onImport }) {
           <div className="text-left">
             <p className="text-sm font-semibold text-foreground">{person}</p>
             <p className="text-[10px] text-muted-foreground">
-              {contracts.length} Vertrag{contracts.length !== 1 ? 'e' : ''}
-              {totalMonthly > 0 && ` · CHF ${totalMonthly.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/Mt.`}
-              {isMain && <span className="ml-1.5 text-primary font-medium">Hauptperson</span>}
+              {contracts.length} {contracts.length === 1 ? 'Vertrag' : 'Verträge'}
+              {totalMonthly > 0 && <span className="text-foreground font-medium"> · CHF {totalMonthly.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}/Mt.</span>}
+              {isMain && <span className="ml-1.5 text-primary font-medium">(Hauptperson)</span>}
             </p>
           </div>
         </div>
@@ -235,12 +235,12 @@ export default function DossierPolicenTab({ dossier, onImportContract }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Info-Bar + Filter-Toggle */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 border border-border/60 rounded-lg px-3 py-2 flex-1">
           <Shield className="w-3.5 h-3.5 shrink-0" />
-          Policen read-only aus CRM — «Übernehmen» vorbefüllt den Vergleich.
+          Aktuelle Lösung (read-only aus CRM) — «Übernehmen» vorbefüllt den Vergleich mit KI-Extraktion.
         </div>
         {relevantTypes && (
           <button
@@ -252,16 +252,16 @@ export default function DossierPolicenTab({ dossier, onImportContract }) {
             }`}
           >
             <Filter className="w-3 h-3" />
-            {filterActive ? 'Filter aktiv' : 'Alle anzeigen'}
+            {filterActive ? 'nur relevante' : 'alle'}
           </button>
         )}
       </div>
 
-      {/* KPI Strip */}
+      {/* KPI Strip — lösungsorientiert */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Verträge total', value: allContracts.length },
-          { label: 'Davon aktiv', value: allContracts.filter(c => c.status === 'active').length },
+          { label: 'Gesamtlösung', value: allContracts.length > 0 ? '✓ vorhanden' : '–' },
+          { label: 'Aktive Verträge', value: allContracts.filter(c => c.status === 'active').length },
           { label: 'Prämie/Monat', value: `CHF ${totalPremium.toLocaleString('de-CH', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` },
         ].map(kpi => (
           <div key={kpi.label} className="bg-card border border-border rounded-xl px-4 py-3 text-center">
@@ -275,23 +275,29 @@ export default function DossierPolicenTab({ dossier, onImportContract }) {
       {filterActive && filteredOut > 0 && (
         <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
           <Filter className="w-3.5 h-3.5 shrink-0" />
-          {filteredOut} Vertrag{filteredOut !== 1 ? 'e' : ''} ausgeblendet (nicht relevant für {dossierType.replace(/_/g, ' ')}).
-          <button onClick={() => setFilterActive(false)} className="underline hover:no-underline ml-1">Alle anzeigen</button>
+          {filteredOut} Vertrag{filteredOut !== 1 ? 'e' : ''} ausgeblendet (nicht relevant).
+          <button onClick={() => setFilterActive(false)} className="underline hover:no-underline ml-1">alle anzeigen</button>
         </div>
       )}
 
-      {/* Leerer State */}
+      {/* Leerer State — mit KI-Upload-Hinweis */}
       {filteredContracts.length === 0 ? (
         <div className="border border-dashed border-border rounded-xl p-8 text-center">
           <AlertCircle className="w-6 h-6 mx-auto mb-2 text-muted-foreground/60" />
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mb-2">
             {filterActive && filteredOut > 0
-              ? 'Keine passenden Verträge für diesen Dossier-Typ.'
+              ? 'Keine passenden Verträge für diesen Dossier-Typ im CRM.'
               : 'Keine Verträge im CRM gefunden.'}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            💡 Dokument per KI analysieren im <strong>Vergleich</strong>-Tab — extrahiert aktuelle Lösung automatisch.
           </p>
         </div>
       ) : (
         <div className="space-y-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Aktuelle Versicherungslösung pro Person
+          </p>
           {Object.entries(personGroups).map(([name, { contracts, isMain }]) => (
             <PersonAccordion
               key={name}
