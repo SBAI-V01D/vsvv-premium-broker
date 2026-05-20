@@ -428,18 +428,17 @@ export default function DossierPrintTemplate({ snapshot }) {
   const vergleichsSeiten = [];
   const remaining = presentGruppen.filter(g => g !== 'aktuelle_loesung' && g !== 'optimiert');
 
-  // Seite 2 (nach Deckblatt): aktuelle_loesung + optimiert
-  const hasAktuelle = presentGruppen.includes('aktuelle_loesung');
-  const hasOptimiert = presentGruppen.includes('optimiert');
-  if (hasAktuelle || hasOptimiert) {
-    vergleichsSeiten.push({
-      g1: hasAktuelle ? 'aktuelle_loesung' : null,
-      g2: hasOptimiert ? 'optimiert' : null,
-      label: 'Seite 2 — Aktuelle & Optimierte Lösung',
-    });
+  // Seite 2: Aktuelle Lösung (alleine, ganzseitig)
+  if (presentGruppen.includes('aktuelle_loesung')) {
+    vergleichsSeiten.push({ g1: 'aktuelle_loesung', g2: null, label: 'Seite 2 — Aktuelle Versicherungslösung' });
   }
 
-  // Seite 3+: je 2 Angebote
+  // Seite 3: Optimierte Lösung (alleine, ganzseitig)
+  if (presentGruppen.includes('optimiert')) {
+    vergleichsSeiten.push({ g1: 'optimiert', g2: null, label: 'Seite 3 — Optimierte Versicherungslösung' });
+  }
+
+  // Seite 4+: je 2 Angebote nebeneinander
   for (let i = 0; i < remaining.length; i += 2) {
     const pageNum = vergleichsSeiten.length + 2; // +2 weil Deckblatt = Seite 1
     vergleichsSeiten.push({
