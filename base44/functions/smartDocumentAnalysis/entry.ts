@@ -65,6 +65,7 @@ Für jede Police/Versicherung:
   - start_date: Format YYYY-MM-DD
   - end_date: Format YYYY-MM-DD (aus "Vertragsablauf")
   - health_declaration_required: true/false
+  - product_short: KURZE Produktbezeichnung (max. 2 Wörter), z.B.: "Grundversicherung", "Ambulant", "Alternativ", "Spital", "Zahn", "Tod/Invalidität", "Heilungskosten", "Rechtschutz", "Haftpflicht", "Hausrat", "Motorfahrzeug"
   - coverage_summary: Wichtigste Deckungsdetails (Leistungsprozent, Maximalbetrag, Variante etc.)
 
 VERMITTLER & PROVISION:
@@ -102,6 +103,7 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
                   insurance_type: { type: ['string', 'null'] },
                   sparte: { type: ['string', 'null'] },
                   product: { type: ['string', 'null'] },
+                  product_short: { type: ['string', 'null'] },
                   franchise: { type: ['number', 'null'] },
                   model: { type: ['string', 'null'] },
                   coverage_type: { type: ['string', 'null'] },

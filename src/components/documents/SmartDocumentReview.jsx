@@ -62,7 +62,13 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
   const buildAllProductsLabel = (pols) => {
     return pols.map((pol) => {
       const sparteName = pol.sparte === 'kvg' ? 'KVG' : 'VVG'
-      return `${sparteName}: ${buildProductLabel(pol)}`
+      const name = pol.product_short || pol.product || ''
+      const extras = []
+      if (pol.model) extras.push(pol.model)
+      if (pol.coverage_type) extras.push(pol.coverage_type)
+      if (pol.coverage_summary) extras.push(pol.coverage_summary)
+      const detail = extras.length ? ` (${extras.join(', ')})` : ''
+      return `${sparteName}: ${name}${detail}`
     }).join('\n')
   }
 
