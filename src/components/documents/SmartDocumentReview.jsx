@@ -509,8 +509,11 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-xs font-medium text-muted-foreground">Produkt / Tarif</label>
-              <Input placeholder="z.B. Hausarztmodell" value={appData.product}
+              <Input placeholder="z.B. Grundversicherung (KVG), Ambulantversicherung myFlex" value={appData.product}
                 onChange={e => setAppData(d => ({ ...d, product: e.target.value }))} />
+              {policies[selectedPolicyIndex]?.coverage_summary && (
+                <p className="text-[10px] text-muted-foreground mt-0.5 px-0.5">{policies[selectedPolicyIndex].coverage_summary}</p>
+              )}
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Franchise (CHF)</label>

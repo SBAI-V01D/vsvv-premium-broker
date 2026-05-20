@@ -49,22 +49,23 @@ VERSICHERTE PERSON (falls abweichend vom VN):
 - insured_ahv_number
 - insured_is_different: true wenn versicherte Person ≠ Versicherungsnehmer
 
-POLICEN (WICHTIG: Extrahiere ALLE Policen/Versicherungen im Dokument als Array!):
-Für jede Police:
-  - insurer: Versicherungsgesellschaft (z.B. "CSS", "Helsana", "AXA", "Zurich", "Swica", "Sanitas")
-  - policy_number: Policen- oder Antragsnummer
+POLICEN (WICHTIG: Extrahiere JEDE einzelne Versicherung als eigenen Eintrag im Array!):
+Bei KVG+VVG Dokumenten: KVG und jede VVG-Versicherung als SEPARATE Einträge!
+Für jede Police/Versicherung:
+  - insurer: Versicherungsgesellschaft (z.B. "CSS Kranken-Versicherung AG", "CSS Versicherung AG", "Helsana", "AXA")
+  - policy_number: Policen- oder Antragsnummer (aus Deckblatt, gilt für alle Policen desselben Dokuments)
   - insurance_type: EXAKT aus: "health"(KVG/VVG/Kranken), "life"(Leben/Rente), "property"(Hausrat/Gebäude), "liability"(Haftpflicht), "motor"(Auto/MF), "other"
-  - sparte: z.B. "kvg", "vvg", "uvg", "bvg", "mf", "haftpflicht", "leben"
-  - product: Produktname/Tarif (z.B. "Hausarztmodell", "COMPLETA PLUS", "TOP")
-  - franchise: Franchise in CHF (Zahl)
-  - model: Versicherungsmodell (z.B. "Hausarztmodell", "Telmed", "Standard")
-  - coverage_type: Deckungskategorie (z.B. "Erwachsene ab 26", "Kind 0-18")
-  - premium_monthly: Monatsprämie als CHF-Zahl
+  - sparte: EXAKT aus: "kvg" (Grundversicherung KVG), "vvg_zusatz" (alle VVG-Zusatzversicherungen), "motorfahrzeug", "haftpflicht_privat", "hausrat", "leben_3a", "leben_3b", "unfall_privat", "bvg", "uvg", "ktg"
+  - product: VOLLSTÄNDIGER Produktname wie er im Dokument steht (z.B. "Grundversicherung (KVG)", "Ambulantversicherung myFlex (AVB-Version 01.2026 / ZB 01.2026)", "Spitalversicherung myFlex")
+  - franchise: Jahresfranchise in CHF (Zahl, nur bei KVG)
+  - model: Kassenmodell/Variante (z.B. "Standardmodell", "myFlex", "Balance", "Premium", "Hausarztmodell", "Telemed")
+  - coverage_type: Altersgruppe/Deckungskategorie (z.B. "Erwachsene ab 26", "Kind 0-18", "bis 15 Jahre", "bis 18 Jahre")
+  - premium_monthly: NETTO Monatsprämie als CHF-Zahl (nach Rabatten)
   - premium_yearly: Jahresprämie als CHF-Zahl (falls nur monatlich: mal 12)
   - start_date: Format YYYY-MM-DD
-  - end_date: Format YYYY-MM-DD
+  - end_date: Format YYYY-MM-DD (aus "Vertragsablauf")
   - health_declaration_required: true/false
-  - coverage_summary: Kurze Beschreibung der Deckung
+  - coverage_summary: Wichtigste Deckungsdetails (Leistungsprozent, Maximalbetrag, Variante etc.)
 
 VERMITTLER & PROVISION:
 - broker_name, broker_number
@@ -118,7 +119,7 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
             commission_estimate: { type: ['number', 'null'] },
           }
         },
-        model: 'gpt_5_mini',
+        model: 'gemini_3_flash',
       });
       if (!extracted || typeof extracted !== 'object') {
         throw new Error('Leere Antwort von KI');
