@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Upload, FileText, Trash2, ExternalLink, Tag, Eye, EyeOff, Pencil } from 'lucide-react';
+import { Upload, FileText, Trash2, ExternalLink, Tag, Eye, EyeOff, Pencil, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import SmartDocumentReview from '@/components/documents/SmartDocumentReview';
 
 const CATEGORIES = [
   { value: 'police', label: 'Police', color: 'bg-blue-50 text-blue-700 border-blue-200' },
@@ -40,6 +41,11 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
   const [dragOver, setDragOver] = useState(false);
   const [editingDoc, setEditingDoc] = useState(null);
   const [editForm, setEditForm] = useState({});
+  // KI-Analyse State
+  const [aiAnalysisDoc, setAiAnalysisDoc] = useState(null);     // Document-Objekt für Review
+  const [aiAnalysisResult, setAiAnalysisResult] = useState(null); // Ergebnis von smartDocumentAnalysis
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiAnalyzingDocId, setAiAnalyzingDocId] = useState(null);
 
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ['documents', customerId],
@@ -123,6 +129,28 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
     setForm({ name: '', category: 'police', linked_contract_id: '', linked_claim_id: '', notes: '', visible_in_portal: false });
   };
 
+  const handleAiAnalyze = async (doc) => {
+    setAiAnalyzingDocId(doc.id);
+    setAiAnalyzing(true);
+    try {
+      const res = await base44.functions.invoke('smartDocumentAnalysis', {
+        file_url: doc.file_url,
+        document_type: doc.category || 'police',
+      });
+      if (res.data?.success) {
+        setAiAnalysisDoc(doc);
+        setAiAnalysisResult(res.data);
+      } else {
+        alert('KI-Analyse fehlgeschlagen: ' + (res.data?.error || 'Unbekannter Fehler'));
+      }
+    } catch (err) {
+      alert('KI-Analyse fehlgeschlagen: ' + (err?.response?.data?.error || err.message));
+    } finally {
+      setAiAnalyzing(false);
+      setAiAnalyzingDocId(null);
+    }
+  };
+
   const linkedContractName = (id) => {
     const c = contracts.find(c => c.id === id);
     if (!c) return id;
@@ -199,6 +227,19 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-primary"
+                    title="KI-Analyse: Antrag/Vertrag aus Dokument erstellen"
+                    disabled={aiAnalyzingDocId === doc.id}
+                    onClick={() => handleAiAnalyze(doc)}
+                  >
+                    {aiAnalyzingDocId === doc.id
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Sparkles className="w-4 h-4" />
+                    }
+                  </Button>
                   <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <ExternalLink className="w-4 h-4" />
@@ -287,6 +328,35 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* KI-Analyse Dialog */}
+      <Dialog open={!!aiAnalysisDoc && !!aiAnalysisResult} onOpenChange={(open) => { if (!open) { setAiAnalysisDoc(null); setAiAnalysisResult(null); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              KI-Analyse: {aiAnalysisDoc?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {aiAnalysisDoc && aiAnalysisResult && (
+            <SmartDocumentReview
+              document={aiAnalysisDoc}
+              documentType={aiAnalysisResult.extracted?.document_subtype || 'neuantrag'}
+              analysisResult={aiAnalysisResult}
+              onSuccess={() => {
+                setAiAnalysisDoc(null);
+                setAiAnalysisResult(null);
+                queryClient.invalidateQueries({ queryKey: ['documents', customerId] });
+                queryClient.invalidateQueries({ queryKey: ['applications'] });
+              }}
+              onRestart={() => {
+                setAiAnalysisDoc(null);
+                setAiAnalysisResult(null);
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
 

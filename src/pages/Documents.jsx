@@ -7,12 +7,14 @@ import { Input } from '@/components/ui/input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   Search, Plus, MoreHorizontal, FileText, ExternalLink,
-  Zap, Paperclip, Tag, Trash2, Eye, RefreshCw, Clock, Download, AlertCircle, CheckCircle2
+  Zap, Paperclip, Tag, Trash2, Eye, RefreshCw, Clock, Download, AlertCircle, CheckCircle2, Sparkles, Loader2
 } from 'lucide-react'
 import DocumentTypeBadge from '@/components/documents/DocumentTypeBadge'
 import DocumentTagBadge from '@/components/documents/DocumentTagBadge'
 import DocumentReviewPanel from '@/components/documents/DocumentReviewPanel'
 import SmartDocumentUpload from '@/components/documents/SmartDocumentUpload'
+import SmartDocumentReview from '@/components/documents/SmartDocumentReview'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 const TABS = [
   { key: 'all', label: 'Alle' },
@@ -44,6 +46,11 @@ export default function Documents() {
   const [tab, setTab] = useState('all')
   const [smartUploadOpen, setSmartUploadOpen] = useState(false)
   const [reviewDoc, setReviewDoc] = useState(null)
+  // Neuer KI-Analyse-Flow (smartDocumentAnalysis)
+  const [smartReviewDoc, setSmartReviewDoc] = useState(null)
+  const [smartReviewResult, setSmartReviewResult] = useState(null)
+  const [smartAnalyzing, setSmartAnalyzing] = useState(false)
+  const [smartAnalyzingId, setSmartAnalyzingId] = useState(null)
 
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ['documents'],
@@ -101,6 +108,28 @@ export default function Documents() {
       payload: JSON.stringify({ file_url: doc.file_url, file_name: doc.name, document_id: doc.id }),
     })
     updateMutation.mutate({ id: doc.id, data: { classification_status: 'ausstehend' } })
+  }
+
+  const handleSmartAnalyze = async (doc) => {
+    setSmartAnalyzingId(doc.id)
+    setSmartAnalyzing(true)
+    try {
+      const res = await base44.functions.invoke('smartDocumentAnalysis', {
+        file_url: doc.file_url,
+        document_type: doc.category || doc.doc_type || 'police',
+      })
+      if (res.data?.success) {
+        setSmartReviewDoc(doc)
+        setSmartReviewResult(res.data)
+      } else {
+        alert('KI-Analyse fehlgeschlagen: ' + (res.data?.error || 'Unbekannter Fehler'))
+      }
+    } catch (err) {
+      alert('KI-Analyse fehlgeschlagen: ' + (err?.response?.data?.error || err.message))
+    } finally {
+      setSmartAnalyzing(false)
+      setSmartAnalyzingId(null)
+    }
   }
 
   const handleFixClassificationStatus = async () => {
@@ -358,12 +387,25 @@ export default function Documents() {
                 <div className="text-xs text-muted-foreground">{formatDate(doc.created_date)}</div>
 
                 <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-primary"
+                    title="KI-Analyse: Kunden/Antrag erkennen"
+                    disabled={smartAnalyzingId === doc.id}
+                    onClick={() => handleSmartAnalyze(doc)}
+                  >
+                    {smartAnalyzingId === doc.id
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Sparkles className="w-4 h-4" />
+                    }
+                  </Button>
                   {doc.doc_type === 'antrag' && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-primary"
-                      title="KI-Extraktion & Antrag erstellen"
+                      className="h-7 w-7 text-muted-foreground"
+                      title="Alte KI-Extraktion (extractApplicationData)"
                       onClick={() => setReviewDoc(doc)}
                     >
                       <Eye className="w-4 h-4" />
@@ -441,6 +483,39 @@ export default function Documents() {
           )}
         </CardContent>
       </Card>
+
+      {/* Neuer KI-Analyse Flow (smartDocumentAnalysis + SmartDocumentReview) */}
+      <Dialog
+        open={!!smartReviewDoc && !!smartReviewResult}
+        onOpenChange={(open) => { if (!open) { setSmartReviewDoc(null); setSmartReviewResult(null) } }}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              KI-Analyse: {smartReviewDoc?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {smartReviewDoc && smartReviewResult && (
+            <SmartDocumentReview
+              document={smartReviewDoc}
+              documentType={smartReviewResult.extracted?.document_subtype || 'neuantrag'}
+              analysisResult={smartReviewResult}
+              onSuccess={() => {
+                setSmartReviewDoc(null)
+                setSmartReviewResult(null)
+                queryClient.invalidateQueries({ queryKey: ['documents'] })
+                queryClient.invalidateQueries({ queryKey: ['applications'] })
+                queryClient.invalidateQueries({ queryKey: ['customers'] })
+              }}
+              onRestart={() => {
+                setSmartReviewDoc(null)
+                setSmartReviewResult(null)
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <SmartDocumentUpload
         open={smartUploadOpen}

@@ -122,8 +122,11 @@ Antworte NUR mit JSON, keine Erklärungen. Felder die nicht gefunden werden: nul
             commission_estimate: { type: ['number', 'null'] },
           }
         },
-        model: 'gemini_3_flash'
+        model: 'gemini_3_flash',
       });
+      if (!extracted || typeof extracted !== 'object') {
+        throw new Error('Leere Antwort von KI');
+      }
     } catch (aiErr) {
       console.error('[smartDocumentAnalysis] KI-Extraktion fehlgeschlagen:', aiErr.message);
       return Response.json({
