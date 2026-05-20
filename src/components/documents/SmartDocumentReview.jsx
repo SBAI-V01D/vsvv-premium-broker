@@ -275,16 +275,45 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
           </div>
         )}
 
-        {/* Kunden-Matches */}
-        {customerMatches?.length > 0 && (
-          <div className={cn('p-3 rounded-lg border text-sm font-medium flex items-center gap-2',
-            customerMatches[0].confidence >= 90 ? 'bg-green-50 border-green-300 text-green-800' : 'bg-amber-50 border-amber-300 text-amber-800'
-          )}>
-            <User className="w-4 h-4 flex-shrink-0" />
-            {customerMatches[0].confidence >= 90 ? '✅' : '⚠️'} Möglicher Kunde: {customerMatches[0].customer.first_name} {customerMatches[0].customer.last_name}
-            <span className="ml-auto text-xs font-normal opacity-75">{customerMatches[0].confidence}% – {customerMatches[0].matchType}</span>
+        {/* Kunden-Zuweisung Vorschau */}
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Kundenzuweisung</p>
+
+          {/* Erkannte Matches */}
+          {customerMatches?.length > 0 && customerMatches.slice(0, 3).map(({ customer, confidence, matchType, notes }) => (
+            <div key={customer.id} className={cn(
+              'p-3 rounded-lg border text-sm flex items-center gap-2',
+              confidence >= 90 ? 'bg-green-50 border-green-300 text-green-800' : 'bg-amber-50 border-amber-300 text-amber-800'
+            )}>
+              <User className="w-4 h-4 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold">{customer.first_name} {customer.last_name}</p>
+                <p className="text-xs opacity-75">{notes}</p>
+              </div>
+              <span className="text-xs font-medium opacity-75 flex-shrink-0">{confidence}%</span>
+            </div>
+          ))}
+
+          {/* Familienmitglied Option */}
+          <div className="p-3 rounded-lg border border-amber-200 bg-amber-50 text-sm flex items-center gap-2 text-amber-800">
+            <Users className="w-4 h-4 flex-shrink-0 text-amber-600" />
+            <div>
+              <p className="font-semibold">Neues Familienmitglied</p>
+              <p className="text-xs opacity-75">Kind, Partner oder Mitglied einer bestehenden Familie</p>
+            </div>
           </div>
-        )}
+
+          {/* Neuer Hauptkontakt Option */}
+          <div className="p-3 rounded-lg border border-border bg-muted/20 text-sm flex items-center gap-2 text-foreground">
+            <UserPlus className="w-4 h-4 flex-shrink-0" />
+            <div>
+              <p className="font-semibold">Neuer Hauptkontakt</p>
+              <p className="text-xs text-muted-foreground">Völlig neuer Kunde ohne bestehende Familie</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground pt-1">Im nächsten Schritt können Sie die Zuweisung wählen und anpassen.</p>
+        </div>
 
         <div className="flex gap-2 pt-2 border-t">
           <Button variant="outline" onClick={onRestart}>Abbrechen</Button>
