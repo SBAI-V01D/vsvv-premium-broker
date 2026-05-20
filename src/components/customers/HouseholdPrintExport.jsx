@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 
-export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers, contracts, advisors }, ref) => {
+export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers, contracts, advisors, organization }, ref) => {
   // ALL HOOKS MUST BE CALLED UNCONDITIONALLY - before any early returns
   // Group contracts by customer
   const contractsByCustomer = useMemo(() => {
@@ -201,8 +201,25 @@ export const HouseholdPrintExport = React.forwardRef(({ customer, familyMembers,
               </div>
             )}
             {advisors && advisors.length > 0 && (
-              <div style={{ marginTop: '4px' }}>
-                Berater: <strong>{advisors[0].firstname} {advisors[0].lastname}</strong>
+              <>
+                <div style={{ marginTop: '4px' }}>
+                  Berater: <strong>{advisors[0].firstname} {advisors[0].lastname}</strong>
+                </div>
+                {advisors[0].finma_number && (
+                  <div style={{ marginTop: '2px' }}>
+                    FINMA-Nr. Berater: <strong>{advisors[0].finma_number}</strong>
+                  </div>
+                )}
+                {advisors[0].vbv_number && (
+                  <div style={{ marginTop: '2px' }}>
+                    VBV-Nr.: <strong>{advisors[0].vbv_number}</strong>
+                  </div>
+                )}
+              </>
+            )}
+            {organization?.finma_number && (
+              <div style={{ marginTop: '2px' }}>
+                FINMA-Nr. Organisation: <strong>{organization.finma_number}</strong>
               </div>
             )}
           </div>

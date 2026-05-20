@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,6 +8,7 @@ import { Search, X } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
 import { DialogFooter } from '@/components/ui/dialog'
 import { ALL_SPARTEN, SPARTEN_PRIVAT, SPARTEN_FIRMA, getFieldsForSparte, FRANCHISE_OPTIONS, getSparteLabel } from '@/lib/insuranceSparten'
+import { useQuery } from '@tanstack/react-query'
 
 // Commission estimates by sparte
 const COMMISSION_ESTIMATES = {
@@ -37,6 +37,31 @@ const grouped = ALL_SPARTEN.reduce((acc, s) => {
   acc[s.group].push(s)
   return acc
 }, {})
+
+function AdvisorSelect({ value, onChange }) {
+  const { data: advisors = [] } = useQuery({
+    queryKey: ['advisors'],
+    queryFn: () => base44.entities.Advisor.list(),
+    staleTime: 60_000,
+  })
+  const active = advisors.filter(a => a.status === 'active')
+  return (
+    <div>
+      <Label>Zuständiger Berater</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="mt-1"><SelectValue placeholder="Berater auswählen" /></SelectTrigger>
+        <SelectContent>
+          {active.map(a => (
+            <SelectItem key={a.id} value={a.email}>
+              {`${a.firstname} ${a.lastname}`.trim()}
+              {a.organization_name ? ` · ${a.organization_name}` : ''}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
 
 export default function ApplicationForm({ application, customers = [], brokers = [], onSave, onCancel, saving, classificationDebug }) {
 
@@ -440,18 +465,8 @@ export default function ApplicationForm({ application, customers = [], brokers =
         </div>
       </div>
 
-      {/* Berater */}
-      <div>
-        <Label>Zuständiger Berater</Label>
-        <Select value={form.assigned_broker} onValueChange={v => set('assigned_broker', v)}>
-          <SelectTrigger className="mt-1"><SelectValue placeholder="Berater auswählen" /></SelectTrigger>
-          <SelectContent>
-            {brokers.filter(b => b.status === 'active' || b.is_active).map(b => (
-              <SelectItem key={b.id} value={b.name || b.email}>{b.name || `${b.firstname || ''} ${b.lastname || ''}`.trim()}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Berater — aus Advisor-Entity */}
+      <AdvisorSelect value={form.assigned_broker} onChange={v => set('assigned_broker', v)} />
 
       {/* Notizen */}
       <div>

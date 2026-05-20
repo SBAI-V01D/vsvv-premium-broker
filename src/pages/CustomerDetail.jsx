@@ -340,6 +340,7 @@ export default function CustomerDetail() {
           familyMembers={householdMembers.filter(m => m.id !== primaryCustomerId)}
           contracts={allHouseholdContracts}
           advisors={allAdvisors.filter(a => a.id === (primaryCustomer?.advisor_id || customer?.advisor_id))}
+          organization={organizations.find(o => o.id === (primaryCustomer?.organization_id || customer?.organization_id))}
         />
       </div>
 

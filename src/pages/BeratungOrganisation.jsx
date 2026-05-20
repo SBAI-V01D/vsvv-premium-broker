@@ -25,13 +25,17 @@ const ROLE_LABELS = {
 }
 
 function OrgForm({ org, onSave, onCancel, saving }) {
-  const [form, setForm] = useState(org || { name: '', type: 'broker', status: 'active', notes: '' })
+  const [form, setForm] = useState(org || { name: '', type: 'broker', status: 'active', finma_number: '', notes: '' })
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
   return (
     <form onSubmit={e => { e.preventDefault(); onSave(form) }} className="space-y-4">
       <div>
         <Label>Name *</Label>
         <Input value={form.name} onChange={e => set('name', e.target.value)} required className="mt-1" placeholder="Muster Broker AG" />
+      </div>
+      <div>
+        <Label>FINMA-Nummer</Label>
+        <Input value={form.finma_number || ''} onChange={e => set('finma_number', e.target.value)} className="mt-1" placeholder="z.B. CHE-123.456.789" />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -67,7 +71,7 @@ function OrgForm({ org, onSave, onCancel, saving }) {
 }
 
 function AdvisorForm({ advisor, organizations, onSave, onCancel, saving }) {
-  const [form, setForm] = useState(advisor || { firstname: '', lastname: '', email: '', phone: '', organization_id: '', role: 'advisor', status: 'active' })
+  const [form, setForm] = useState(advisor || { firstname: '', lastname: '', email: '', phone: '', organization_id: '', role: 'advisor', status: 'active', finma_number: '', vbv_number: '' })
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
   return (
     <form onSubmit={e => {
@@ -92,6 +96,16 @@ function AdvisorForm({ advisor, organizations, onSave, onCancel, saving }) {
       <div>
         <Label>Telefon</Label>
         <Input value={form.phone || ''} onChange={e => set('phone', e.target.value)} className="mt-1" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>FINMA-Nummer</Label>
+          <Input value={form.finma_number || ''} onChange={e => set('finma_number', e.target.value)} className="mt-1" placeholder="z.B. CHE-123.456.789" />
+        </div>
+        <div>
+          <Label>VBV-Nummer</Label>
+          <Input value={form.vbv_number || ''} onChange={e => set('vbv_number', e.target.value)} className="mt-1" placeholder="z.B. VBV-12345" />
+        </div>
       </div>
       <div>
         <Label>Organisation *</Label>

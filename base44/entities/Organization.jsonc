@@ -26,6 +26,10 @@
       "default": "active",
       "description": "Status"
     },
+    "finma_number": {
+      "type": "string",
+      "description": "FINMA-Registrierungsnummer der Organisation"
+    },
     "notes": {
       "type": "string",
       "description": "Notizen"
@@ -33,44 +37,5 @@
   },
   "required": [
     "name"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "id": "{{user.data.organization_id}}"
-        },
-        {
-          "user_condition": {
-            "role": "broker"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "assistenz"
-          }
-        }
-      ]
-    },
-    "update": {
-      "user_condition": {
-        "role": "admin"
-      }
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }
