@@ -289,6 +289,7 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
       customer_number: c.customer_number,
       city: c.city,
       zip_code: c.zip_code,
+      email: c.email || null,
     }));
 
     let matchedPrimaryCustomer = null;

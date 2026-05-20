@@ -297,7 +297,10 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
             {matchedPrimaryCustomer && (
               <button
                 type="button"
-                onClick={() => setSelectedPrimaryId(matchedPrimaryCustomer.id)}
+                onClick={() => {
+                  setSelectedPrimaryId(matchedPrimaryCustomer.id)
+                  if (matchedPrimaryCustomer.email) setNewCustomerData(d => ({ ...d, email: matchedPrimaryCustomer.email }))
+                }}
                 className={cn('w-full text-left p-2.5 rounded-lg border text-sm transition-all font-medium',
                   selectedPrimaryId === matchedPrimaryCustomer.id
                     ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
@@ -327,7 +330,10 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
                   <button
                     key={c.id}
                     type="button"
-                    onClick={() => setSelectedPrimaryId(c.id)}
+                    onClick={() => {
+                      setSelectedPrimaryId(c.id)
+                      if (c.email) setNewCustomerData(d => ({ ...d, email: c.email }))
+                    }}
                     className={cn('w-full text-left p-2 rounded text-sm transition-all',
                       selectedPrimaryId === c.id ? 'bg-primary/10 font-semibold' : 'hover:bg-muted/60'
                     )}
