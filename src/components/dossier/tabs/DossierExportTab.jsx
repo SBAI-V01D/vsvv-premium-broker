@@ -69,11 +69,15 @@ const SnapshotRow = memo(function SnapshotRow({ snap, onPreview }) {
 // ── Print-Vorschau Modal ──────────────────────────────────────────────────────
 const PRINT_MODAL_STYLE = `
   @media print {
-    body > *:not(#dossier-print-portal) { display: none !important; }
-    #dossier-print-portal .print-modal-toolbar { display: none !important; }
-    #dossier-print-portal .print-modal-hint { display: none !important; }
-    #dossier-print-portal { position: fixed; inset: 0; overflow: visible; background: white; }
-    #dossier-print-portal .print-modal-content { overflow: visible !important; background: white !important; padding: 0 !important; }
+    body * { visibility: hidden !important; }
+    #dossier-print-content, #dossier-print-content * { visibility: visible !important; }
+    #dossier-print-content {
+      position: fixed !important;
+      inset: 0 !important;
+      overflow: visible !important;
+      background: white !important;
+      z-index: 99999 !important;
+    }
   }
 `;
 
@@ -123,8 +127,8 @@ function PrintPreviewModal({ snapshot, onClose }) {
         </div>
 
         {/* Scrollbare Vorschau */}
-        <div className="print-modal-content flex-1 overflow-auto bg-slate-100 p-6">
-          <div className="max-w-5xl mx-auto bg-white shadow-modal rounded-xl overflow-hidden p-4">
+        <div className="flex-1 overflow-auto bg-slate-100 p-6">
+          <div id="dossier-print-content" className="max-w-5xl mx-auto bg-white shadow-modal rounded-xl overflow-hidden p-4">
             <DossierPrintTemplate snapshot={snapshot} />
           </div>
         </div>
