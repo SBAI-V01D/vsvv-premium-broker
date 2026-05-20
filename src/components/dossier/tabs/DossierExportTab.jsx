@@ -10,7 +10,7 @@
  * - created_date Fallback auf created_date (ISO-String von Base44)
  * - Kein Mailversand, keine Automationen, keine produktiven Exporte
  */
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
@@ -68,10 +68,46 @@ const SnapshotRow = memo(function SnapshotRow({ snap, onPreview }) {
 
 // ── Print-Vorschau Modal ──────────────────────────────────────────────────────
 function PrintPreviewModal({ snapshot, onClose }) {
+  const iframeRef = React.useRef(null);
+
+  // Render DossierPrintTemplate into the iframe so only that content prints
+  React.useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe || !snapshot) return;
+
+    // Wait for iframe to load then inject content
+    const inject = () => {
+      const doc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!doc) return;
+      // Copy all stylesheets from parent
+      const styleLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+        .map(el => el.outerHTML)
+        .join('\n');
+      // Get the rendered HTML of the print template (already mounted in hidden div)
+      const container = document.getElementById('dossier-print-hidden');
+      if (!container) return;
+      doc.open();
+      doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8">${styleLinks}</head><body style="margin:0;background:white">${container.innerHTML}</body></html>`);
+      doc.close();
+    };
+
+    iframe.addEventListener('load', inject);
+    return () => iframe.removeEventListener('load', inject);
+  }, [snapshot]);
+
+  const handlePrint = () => {
+    iframeRef.current?.contentWindow?.print();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
-      {/* Toolbar — print:hidden */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card shrink-0 print:hidden">
+      {/* Hidden div to render the template so we can extract its HTML */}
+      <div id="dossier-print-hidden" style={{ position: 'absolute', left: '-9999px', top: 0, width: '297mm' }}>
+        <DossierPrintTemplate snapshot={snapshot} />
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
             <FileText className="w-4 h-4 text-primary" />
@@ -87,7 +123,7 @@ function PrintPreviewModal({ snapshot, onClose }) {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => window.print()}
+            onClick={handlePrint}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
           >
             <Printer className="w-4 h-4" />
@@ -102,16 +138,22 @@ function PrintPreviewModal({ snapshot, onClose }) {
         </div>
       </div>
 
-      {/* Hinweis — print:hidden */}
-      <div className="px-6 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-700 flex items-center gap-2 print:hidden">
+      {/* Hinweis */}
+      <div className="px-6 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-700 flex items-center gap-2">
         <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-        Für PDF-Export: Drucken → Ziel «Als PDF speichern» · A4, Ränder Normal, Hintergrundgrafiken aktivieren.
+        Für PDF-Export: Drucken → Ziel «Als PDF speichern» · A4 Querformat, Ränder Normal, Hintergrundgrafiken aktivieren.
       </div>
 
-      {/* Preview */}
-      <div className="flex-1 overflow-auto bg-slate-100 print:bg-white p-6 print:p-0">
-        <div className="max-w-4xl mx-auto bg-white shadow-modal rounded-xl print:shadow-none print:rounded-none overflow-hidden">
-          <DossierPrintTemplate snapshot={snapshot} />
+      {/* Preview via iframe — isoliert vom Rest der App */}
+      <div className="flex-1 overflow-auto bg-slate-100 p-6">
+        <div className="max-w-5xl mx-auto bg-white shadow-modal rounded-xl overflow-hidden">
+          <iframe
+            ref={iframeRef}
+            src="about:blank"
+            title="Druckvorschau"
+            className="w-full border-0"
+            style={{ minHeight: '80vh', height: '100%' }}
+          />
         </div>
       </div>
     </div>
