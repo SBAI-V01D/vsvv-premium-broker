@@ -310,9 +310,17 @@ export default function CustomerDetail() {
           <CardContent className="p-4 space-y-2">
             {customer.birthdate && <div className="text-sm"><span className="text-muted-foreground">Geburtsdatum:</span> {new Date(customer.birthdate).toLocaleDateString('de-CH')}</div>}
             {customer.profession && <div className="text-sm"><span className="text-muted-foreground">Beruf:</span> {customer.profession}</div>}
-            {customer.advisor_id && (() => {
-              const advisor = allAdvisors.find(a => a.id === customer.advisor_id);
-              return advisor ? <div className="text-sm"><span className="text-muted-foreground">Berater:</span> {advisor.firstname} {advisor.lastname}</div> : null;
+            {(() => {
+              // Berater aus Kunde, sonst aus Vertrag, sonst aus Antrag ableiten
+              const advisorId = customer.advisor_id
+                || relatedContracts.find(c => c.advisor_id)?.advisor_id
+                || relatedApplications.find(a => a.advisor_id)?.advisor_id;
+              const advisor = allAdvisors.find(a => a.id === advisorId);
+              return advisor ? (
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Berater:</span> {advisor.firstname} {advisor.lastname}
+                </div>
+              ) : null;
             })()}
             <div className="text-sm"><span className="text-muted-foreground">Status:</span> {label(STATUS_LABELS, customer.status)}</div>
           </CardContent>
