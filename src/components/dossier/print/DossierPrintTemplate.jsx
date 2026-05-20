@@ -600,9 +600,27 @@ export default function DossierPrintTemplate({ snapshot }) {
         )}
 
         {/* Legende / Hinweise — immer am Ende */}
-        <div className="print-page">
-          <PageHeader dossier={dossier} customer={customer} snapshot={snapshot} pageLabel="Hinweise & Berechnungsgrundlagen" />
-          <DossierLegende entries={entries} snapshot={snapshot} mainTitle={TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type} subTitle={dossier.title} />
+        <div className="print-page" style={{ padding: '0' }}>
+          {/* Einheitlicher Header wie Seite 2+ */}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+            borderBottom: '3px solid #1e3a5f', paddingBottom: '12px', marginBottom: '14px',
+          }}>
+            <div>
+              <div style={{ fontSize: '22px', fontWeight: 900, color: '#1e3a5f', letterSpacing: '-0.02em' }}>
+                {dossier.title}
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>
+                {'Hinweise & Berechnungsgrundlagen'}
+              </div>
+              <div style={{ fontSize: '8.5px', color: '#94a3b8' }}>
+                Swiss Premium Broker · {fmtDate(snapshot?.snapshot_created_at)} · v{dossier.version ?? 1}
+              </div>
+            </div>
+          </div>
+          <DossierLegende entries={entries} snapshot={snapshot} />
         </div>
 
       </div>

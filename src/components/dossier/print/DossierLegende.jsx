@@ -170,7 +170,7 @@ function HinweisBox({ hinweis }) {
 }
 
 // ── Hauptkomponente ───────────────────────────────────────────────────────────
-export default function DossierLegende({ entries, snapshot, mainTitle, subTitle }) {
+export default function DossierLegende({ entries, snapshot }) {
   // Filtere produktspezifische Hinweise
   const visibleProduktHinweise = Object.values(PRODUKT_HINWEISE).filter(hinweis => {
     return hinweis.condition && entries && hinweis.condition(entries);
@@ -180,28 +180,6 @@ export default function DossierLegende({ entries, snapshot, mainTitle, subTitle 
     <div style={{
       paddingTop: '8px',
     }}>
-      {/* Haupttitel (konsistent mit Seite 1 & 2) */}
-      <div style={{
-        fontSize: '22px',
-        fontWeight: 900,
-        color: '#1e3a5f',
-        letterSpacing: '-0.02em',
-        marginBottom: '2px',
-      }}>
-        {mainTitle || 'Beratungsdossier'}
-      </div>
-      
-      {/* Untertitel (Dossier-Titel) */}
-      {subTitle && (
-        <div style={{
-          fontSize: '11px',
-          fontWeight: 500,
-          color: '#64748b',
-          marginBottom: '14px',
-        }}>
-          {subTitle}
-        </div>
-      )}
       {/* Abschnitt 1: Allgemeine Hinweise */}
       <div style={{ marginBottom: '14px' }}>
         {ALLGEMEINE_HINWEISE.map(hinweis => (
