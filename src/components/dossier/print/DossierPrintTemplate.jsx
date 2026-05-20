@@ -100,33 +100,35 @@ const TYPE_LABELS = {
   sachversicherung: 'Sachversicherungsdossier', gesamtdossier: 'Gesamtdossier',
 };
 
-// ── Gemeinsamer Seiten-Header (klein, wiederholt auf jeder Seite) ─────────────
+// ── Gemeinsamer Seiten-Header (Enterprise-Stil, konsistent) ───────────────────
 function PageHeader({ dossier, customer, pageLabel, snapshot, organization, advisor }) {
   return (
     <div style={{
-      display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-      borderBottom: '2px solid #1e3a5f', paddingBottom: '8px', marginBottom: '14px',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)',
+      borderRadius: '10px',
+      padding: '14px 18px',
+      marginBottom: '18px',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      boxShadow: '0 2px 8px rgba(15, 23, 42, 0.1)',
     }}>
       <div>
-        {/* Haupttitel: Dossier-Titel (ohne Kundennamen) */}
-        <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e3a5f', letterSpacing: '-0.02em', marginBottom: '2px' }}>
+        {/* Haupttitel: Dossier-Titel */}
+        <div style={{ fontSize: '14px', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', marginBottom: '3px' }}>
           {dossier.title || TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
         </div>
         {/* Untertitel: Seiten-spezifisch */}
-        <div style={{ fontSize: '9px', color: '#64748b' }}>
+        <div style={{ fontSize: '9.5px', color: 'rgba(255,255,255,0.85)' }}>
           {pageLabel}
         </div>
-        {/* Berater/Organisation (klein, nur wenn vorhanden) */}
-        {(organization?.name || advisor) && (
-          <div style={{ fontSize: '7.5px', color: '#94a3b8', marginTop: '4px' }}>
-            {organization?.name && <div>{organization.name}</div>}
-            {advisor && <div>{advisor.firstname} {advisor.lastname}</div>}
-          </div>
-        )}
       </div>
       <div style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: '8.5px', color: '#94a3b8' }}>
-          {fmtDate(snapshot?.snapshot_created_at)} · v{dossier.version ?? 1}
+        <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.75)' }}>
+          {fmtDate(snapshot?.snapshot_created_at)}
+        </div>
+        <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.6)', marginTop: '2px' }}>
+          Version {dossier.version ?? 1}
         </div>
       </div>
     </div>
@@ -347,7 +349,7 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
 
   return (
     <div className="print-page" style={{ padding: '0' }}>
-      {/* Seiten-spezifischer Header */}
+      {/* Seiten-spezifischer Header (Enterprise-Stil) */}
       <PageHeader 
         dossier={dossier}
         customer={customer}
@@ -376,6 +378,111 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
         )}
         {!gruppe2 && <div style={{ flex: 1 }} />}
       </div>
+    </div>
+  );
+}
+
+// ── Enterprise Header Komponente (wiederverwendbar) ───────────────────────────
+function EnterpriseHeader({ organization, advisor, dossier, snapshot }) {
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)',
+      borderRadius: '12px',
+      padding: '20px 24px',
+      marginBottom: '24px',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      boxShadow: '0 4px 12px rgba(15, 23, 42, 0.15)',
+    }}>
+      {/* LINKE SPALTE: Organisation / Brokerunternehmen */}
+      <div style={{ flex: 1, paddingRight: '24px', borderRight: '1px solid rgba(255,255,255,0.15)' }}>
+        {/* Firmenname */}
+        {organization?.name && (
+          <div style={{
+            fontSize: '16px',
+            fontWeight: 800,
+            color: '#ffffff',
+            marginBottom: '12px',
+            letterSpacing: '-0.02em',
+          }}>
+            {organization.name}
+          </div>
+        )}
+        
+        {/* Kontaktdaten */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {organization?.street && (
+            <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.85)', lineHeight: '1.4' }}>
+              {organization.street} · {organization.zip_code} {organization.city}
+            </div>
+          )}
+          {organization?.phone && (
+            <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.85)' }}>
+              Tel +41 {organization.phone}
+            </div>
+          )}
+          {organization?.email && (
+            <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.85)' }}>
+              {organization.email}
+            </div>
+          )}
+          {organization?.website && (
+            <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.7)' }}>
+              {organization.website}
+            </div>
+          )}
+        </div>
+
+        {/* FINMA / VBV - regulatorische Angaben */}
+        {(organization?.finma_number || advisor?.finma_number || advisor?.vbv_number) && (
+          <div style={{
+            marginTop: '14px',
+            paddingTop: '10px',
+            borderTop: '1px solid rgba(255,255,255,0.2)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+          }}>
+            {(organization?.finma_number || advisor?.finma_number) && (
+              <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.75)' }}>
+                FINMA-Reg.-Nr. {(organization?.finma_number || advisor?.finma_number)}
+              </div>
+            )}
+            {advisor?.vbv_number && (
+              <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.75)' }}>
+                VBV-Mitglied {advisor.vbv_number}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* RECHTE SPALTE: Persönlicher Berater */}
+      {advisor && (
+        <div style={{ paddingLeft: '24px', minWidth: '200px' }}>
+          <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
+            Ihr persönlicher Berater
+          </div>
+          
+          <div style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff', marginBottom: '10px' }}>
+            {advisor.firstname} {advisor.lastname}
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            {advisor?.phone && (
+              <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.85)' }}>
+                Tel +41 {advisor.phone}
+              </div>
+            )}
+            {advisor?.email && (
+              <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.85)' }}>
+                {advisor.email}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -413,39 +520,21 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
 
   return (
     <div>
-      {/* Dossier-Header mit Titel links + Berater/Organisation rechts */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-        borderBottom: '3px solid #1e3a5f', paddingBottom: '12px', marginBottom: '18px',
-      }}>
-        {/* Linke Seite: Titel (linksbündig, gleich gross wie Seite 2-4) */}
-        <div style={{ flex: 1, paddingRight: '20px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e3a5f', letterSpacing: '-0.02em' }}>
-            {dossier.title || TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
-          </div>
+      {/* Enterprise Header */}
+      <EnterpriseHeader 
+        organization={organization}
+        advisor={advisor}
+        dossier={dossier}
+        snapshot={snapshot}
+      />
+
+      {/* Dokumententitel */}
+      <div style={{ marginBottom: '24px' }}>
+        <div style={{ fontSize: '18px', fontWeight: 800, color: '#1e3a5f', letterSpacing: '-0.02em', marginBottom: '4px' }}>
+          {dossier.title || TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
         </div>
-        
-        {/* Rechte Seite: Organisation + Berater */}
-        <div style={{ minWidth: '220px', textAlign: 'right' }}>
-          {organization?.name && (
-            <div style={{ fontSize: '10px', fontWeight: 700, color: '#1e3a5f', marginBottom: '4px' }}>
-              {organization.name}
-            </div>
-          )}
-          <div style={{ fontSize: '8px', color: '#64748b', lineHeight: '1.4' }}>
-            {organization?.street && <div>{organization.street}{organization?.zip_code || organization?.city ? ',' : ''} {organization?.zip_code} {organization?.city}</div>}
-            {organization?.phone && <div>Tel: {organization.phone}</div>}
-            {organization?.email && <div>Email: {organization.email}</div>}
-          </div>
-          {advisor && (
-            <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '9px', fontWeight: 600, color: '#1e3a5f' }}>{advisor.firstname} {advisor.lastname}</div>
-              {advisor?.phone && <div style={{ fontSize: '8px' }}>Tel: {advisor.phone}</div>}
-              {advisor?.email && <div style={{ fontSize: '8px' }}>Email: {advisor.email}</div>}
-              {advisor?.finma_number && <div style={{ fontSize: '7.5px', color: '#94a3b8' }}>FINMA: {advisor.finma_number}</div>}
-              {advisor?.vbv_number && <div style={{ fontSize: '7.5px', color: '#94a3b8' }}>VBV: {advisor.vbv_number}</div>}
-            </div>
-          )}
+        <div style={{ fontSize: '10px', color: '#64748b' }}>
+          {fmtDate(snapshot?.snapshot_created_at)} · Version {dossier.version ?? 1}
         </div>
       </div>
 
@@ -770,12 +859,9 @@ export default function DossierPrintTemplate({ snapshot }) {
               organization={organization}
               advisor={advisor}
             />
-            <div style={{ fontSize: '9px', fontWeight: 700, color: '#1e3a5f', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', marginBottom: '10px' }}>
-              Beratungsnotiz / Empfehlung
-            </div>
             <div style={{
-              border: '1px solid #bbf7d0', background: '#f0fdf4', borderRadius: '8px',
-              padding: '12px 16px', fontSize: '10.5px', color: '#166534', lineHeight: '1.6',
+              border: '1px solid #bbf7d0', background: '#f0fdf4', borderRadius: '10px',
+              padding: '16px 20px', fontSize: '10.5px', color: '#166534', lineHeight: '1.6',
               whiteSpace: 'pre-wrap', wordBreak: 'break-word',
               WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
             }}>
@@ -794,7 +880,9 @@ export default function DossierPrintTemplate({ snapshot }) {
             organization={organization}
             advisor={advisor}
           />
-          <DossierLegende entries={entries} snapshot={snapshot} />
+          <div style={{ marginTop: '8px' }}>
+            <DossierLegende entries={entries} snapshot={snapshot} />
+          </div>
         </div>
 
       </div>
