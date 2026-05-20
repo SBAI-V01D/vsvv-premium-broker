@@ -571,39 +571,47 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
                 Angebote im Vergleich zur {referenceLabel}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(angebotPrämien.length, 4)}, 1fr)`, gap: '10px' }}>
-                {angebotPrämien.map((angebot, i) => (
-                  <div key={angebot.gruppe} style={{
-                    border: `1px solid ${angebot.diff > 0 ? '#bbf7d0' : angebot.diff < 0 ? '#fecaca' : '#e2e8f0'}`,
-                    borderRadius: '10px',
-                    padding: '12px 14px',
-                    background: angebot.diff > 0 ? '#f0fdf4' : angebot.diff < 0 ? '#fef2f2' : '#f8fafc',
-                    textAlign: 'center',
-                  }}>
-                    <div style={{ fontSize: '8px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
-                      {angebot.label}
-                    </div>
-                    <div style={{ fontSize: '18px', fontWeight: 900, color: angebot.diff > 0 ? '#059669' : angebot.diff < 0 ? '#dc2626' : '#64748b' }}>
-                      {fmtCHF(angebot.monthly)}
-                    </div>
-                    <div style={{ fontSize: '7.5px', color: '#94a3b8', marginTop: '2px' }}>
-                      {fmtCHF(angebot.yearly)} / Jahr
-                    </div>
-                    {Math.abs(angebot.diff) > 0.01 && (
-                      <div style={{
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        color: angebot.diff > 0 ? '#059669' : '#dc2626',
-                        marginTop: '4px',
-                        background: angebot.diff > 0 ? 'rgba(5,150,105,0.1)' : 'rgba(220,38,38,0.1)',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        display: 'inline-block',
-                      }}>
-                        {angebot.diff > 0 ? '−' : '+'}{fmtCHF(Math.abs(angebot.diff))}/Mt. {angebot.pct > 0 ? `(${angebot.pct.toFixed(1)}%)` : ''}
+                {angebotPrämien.map((angebot, i) => {
+                  // Angebot 1 verwendet blaue Farbe (wie Optimierte Lösung), alle anderen grün/rot je nach Einsparung
+                  const istAngebot1 = angebot.gruppe === 'angebot_1';
+                  const farbe = istAngebot1 ? '#1d4ed8' : (angebot.diff > 0 ? '#059669' : angebot.diff < 0 ? '#dc2626' : '#64748b');
+                  const borderFarbe = istAngebot1 ? '#bfdbfe' : (angebot.diff > 0 ? '#bbf7d0' : angebot.diff < 0 ? '#fecaca' : '#e2e8f0');
+                  const bgFarbe = istAngebot1 ? '#eff6ff' : (angebot.diff > 0 ? '#f0fdf4' : angebot.diff < 0 ? '#fef2f2' : '#f8fafc');
+                  
+                  return (
+                    <div key={angebot.gruppe} style={{
+                      border: `1px solid ${borderFarbe}`,
+                      borderRadius: '10px',
+                      padding: '12px 14px',
+                      background: bgFarbe,
+                      textAlign: 'center',
+                    }}>
+                      <div style={{ fontSize: '8px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
+                        {angebot.label}
                       </div>
-                    )}
-                  </div>
-                ))}
+                      <div style={{ fontSize: '18px', fontWeight: 900, color: farbe }}>
+                        {fmtCHF(angebot.monthly)}
+                      </div>
+                      <div style={{ fontSize: '7.5px', color: '#94a3b8', marginTop: '2px' }}>
+                        {fmtCHF(angebot.yearly)} / Jahr
+                      </div>
+                      {Math.abs(angebot.diff) > 0.01 && (
+                        <div style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          color: istAngebot1 ? '#1d4ed8' : (angebot.diff > 0 ? '#059669' : '#dc2626'),
+                          marginTop: '4px',
+                          background: istAngebot1 ? 'rgba(29,78,216,0.1)' : (angebot.diff > 0 ? 'rgba(5,150,105,0.1)' : 'rgba(220,38,38,0.1)'),
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          display: 'inline-block',
+                        }}>
+                          {angebot.diff > 0 ? '−' : '+'}{fmtCHF(Math.abs(angebot.diff))}/Mt. {angebot.pct > 0 ? `(${angebot.pct.toFixed(1)}%)` : ''}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
