@@ -428,23 +428,24 @@ export default function DossierPrintTemplate({ snapshot }) {
   const vergleichsSeiten = [];
   const remaining = presentGruppen.filter(g => g !== 'aktuelle_loesung' && g !== 'optimiert');
 
-  // Seite 1: aktuelle_loesung + optimiert
+  // Seite 2 (nach Deckblatt): aktuelle_loesung + optimiert
   const hasAktuelle = presentGruppen.includes('aktuelle_loesung');
   const hasOptimiert = presentGruppen.includes('optimiert');
   if (hasAktuelle || hasOptimiert) {
     vergleichsSeiten.push({
       g1: hasAktuelle ? 'aktuelle_loesung' : null,
       g2: hasOptimiert ? 'optimiert' : null,
-      label: 'Seite 1 — Aktuelle & Optimierte Lösung',
+      label: 'Seite 2 — Aktuelle & Optimierte Lösung',
     });
   }
 
-  // Folgeseiten: je 2 Angebote
+  // Seite 3+: je 2 Angebote
   for (let i = 0; i < remaining.length; i += 2) {
+    const pageNum = vergleichsSeiten.length + 2; // +2 weil Deckblatt = Seite 1
     vergleichsSeiten.push({
       g1: remaining[i],
       g2: remaining[i + 1] || null,
-      label: `Seite ${vergleichsSeiten.length + 1} — ${GRUPPE_CFG[remaining[i]]?.label || remaining[i]}${remaining[i+1] ? ' & ' + (GRUPPE_CFG[remaining[i+1]]?.label || remaining[i+1]) : ''}`,
+      label: `Seite ${pageNum} — ${GRUPPE_CFG[remaining[i]]?.label || remaining[i]}${remaining[i+1] ? ' & ' + (GRUPPE_CFG[remaining[i+1]]?.label || remaining[i+1]) : ''}`,
     });
   }
 
