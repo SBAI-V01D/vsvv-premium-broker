@@ -163,7 +163,13 @@ function LösungsSäule({ gruppe, label, entries, referenceTotal }) {
         {persons.map(person => {
           const pEntries = entries.filter(e => (e.person_name || 'Unbekannt') === person);
           const kvg = pEntries.filter(e => e.section === 'grundversicherung');
-          const vvg = pEntries.filter(e => e.section === 'zusatzversicherung');
+          const vvgAll = pEntries.filter(e => e.section === 'zusatzversicherung');
+          // VVG-Sortierung: Grundversicherer-VVG zuerst, dann andere Gesellschaften
+          const kvgGesellschaft = kvg[0]?.gesellschaft || null;
+          const vvg = [
+            ...vvgAll.filter(e => e.gesellschaft === kvgGesellschaft),
+            ...vvgAll.filter(e => e.gesellschaft !== kvgGesellschaft),
+          ];
           const personTotal = pEntries.reduce((s, e) => s + (Number(e.praemie_monatlich) || 0), 0);
 
           return (

@@ -217,7 +217,16 @@ function ProductRow({ entry, dossierId, onDelete }) {
 // ── Personen-Block innerhalb einer Lösung ─────────────────────────────────────
 function PersonBlock({ person, entries, dossierId, onDelete }) {
   const kvg = entries.filter(e => e.section === 'grundversicherung');
-  const vvg = entries.filter(e => e.section === 'zusatzversicherung');
+  const vvgAll = entries.filter(e => e.section === 'zusatzversicherung');
+
+  // VVG-Sortierung: Grundversicherer-VVG zuerst, dann andere Gesellschaften
+  const kvgGesellschaft = kvg[0]?.gesellschaft || null;
+  const vvgGrundversicherer = kvgGesellschaft
+    ? vvgAll.filter(e => e.gesellschaft === kvgGesellschaft)
+    : [];
+  const vvgOther = vvgAll.filter(e => e.gesellschaft !== kvgGesellschaft);
+  const vvg = [...vvgGrundversicherer, ...vvgOther];
+
   const total = entries.reduce((s, e) => s + (e.praemie_monatlich ?? 0), 0);
   const hasWarning = entries.some(e => e.ai_extracted && (e.ai_confidence ?? 1) < 0.6);
 
