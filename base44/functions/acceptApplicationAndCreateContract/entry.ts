@@ -73,6 +73,22 @@ Deno.serve(async (req) => {
         }
       }
 
+      // ENTERPRISE GUARD: Customer-ID validieren (existiert noch?)
+      let customerExists = false;
+      try {
+        const customerCheck = await base44.entities.Customer.get(app.customer_id);
+        customerExists = !!customerCheck && !customerCheck.archived;
+      } catch (_) { customerExists = false; }
+      
+      if (!customerExists) {
+        console.error(`[acceptApplicationAndCreateContract] BLOCKED: customer_id ${app.customer_id} does not exist or is archived`);
+        return Response.json({ 
+          error: 'Kunde existiert nicht oder ist archiviert', 
+          customer_id: app.customer_id,
+          application_id: application_id 
+        }, { status: 400 });
+      }
+      
       const premiumYearly = app.estimated_premium_yearly || (app.estimated_premium_monthly ? Math.round(app.estimated_premium_monthly * 12) : 0);
       
       const newContract = await base44.entities.Contract.create({
@@ -101,6 +117,14 @@ Deno.serve(async (req) => {
       await base44.entities.Application.update(application_id, {
         linked_contract_id: newContract.id,
       });
+
+      // ENTERPRISE GUARD: Kündigungsfrist synchronisieren (sofort, nicht warten)
+      try {
+        await base44.functions.invoke('syncCancellationDeadline', { contract_id: newContract.id });
+        console.log(`[acceptApplicationAndCreateContract] syncCancellationDeadline executed for ${newContract.id}`);
+      } catch (syncErr) {
+        console.warn(`[acceptApplicationAndCreateContract] syncCancellationDeadline failed (non-blocking): ${syncErr.message}`);
+      }
 
       return Response.json({
         success: true,
