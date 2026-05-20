@@ -66,43 +66,43 @@ const SnapshotRow = memo(function SnapshotRow({ snap, onPreview }) {
   );
 });
 
-// ── Print-Vorschau Modal ──────────────────────────────────────────────────────
-const PRINT_MODAL_STYLE = `
+// ── Print CSS: alles ausblenden ausser #dossier-print-only ───────────────────
+// Injiziert global sobald das Modal offen ist, entfernt beim Schliessen.
+const PRINT_ONLY_STYLE = `
   @media print {
-    /* Alles ausblenden ausser dem Print-Inhalt */
-    #dossier-print-portal > *:not(#dossier-print-content-wrapper) {
-      display: none !important;
-    }
-    /* Print-Wrapper: normaler Block-Flow, kein fixed */
-    #dossier-print-content-wrapper {
-      display: block !important;
-      position: static !important;
-      overflow: visible !important;
-      background: white !important;
-      padding: 0 !important;
-      margin: 0 !important;
-      width: 100% !important;
-      box-shadow: none !important;
-      border-radius: 0 !important;
-    }
-    /* Scroll-Container entfernen */
-    #dossier-print-scroll {
-      overflow: visible !important;
-      background: white !important;
-      padding: 0 !important;
-    }
+    body > * { display: none !important; }
+    #dossier-print-only { display: block !important; }
   }
 `;
 
+// ── Print-Vorschau Modal ──────────────────────────────────────────────────────
 function PrintPreviewModal({ snapshot, onClose }) {
+  // Injiziere Print-CSS in <head>, entferne beim Unmount
+  useEffect(() => {
+    const tag = document.createElement('style');
+    tag.id = 'dossier-print-style';
+    tag.textContent = PRINT_ONLY_STYLE;
+    document.head.appendChild(tag);
+    return () => { document.getElementById('dossier-print-style')?.remove(); };
+  }, []);
+
   const handlePrint = () => window.print();
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: PRINT_MODAL_STYLE }} />
-      <div id="dossier-print-portal" className="fixed inset-0 z-50 flex flex-col bg-background" style={{ overflow: 'hidden' }}>
+      {/* Print-only: im normalen body-Flow, screen=unsichtbar, print=sichtbar */}
+      <div
+        id="dossier-print-only"
+        style={{ display: 'none' }}
+        aria-hidden="true"
+      >
+        <DossierPrintTemplate snapshot={snapshot} />
+      </div>
+
+      {/* Screen-Modal: fixed overlay für die Vorschau, nie im Print */}
+      <div className="fixed inset-0 z-50 flex flex-col bg-background" style={{ overflow: 'hidden' }}>
         {/* Toolbar */}
-        <div className="print-modal-toolbar flex items-center justify-between px-6 py-3 border-b border-border bg-card shrink-0">
+        <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <FileText className="w-4 h-4 text-primary" />
@@ -134,14 +134,14 @@ function PrintPreviewModal({ snapshot, onClose }) {
         </div>
 
         {/* Hinweis */}
-        <div className="print-modal-hint px-6 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-700 flex items-center gap-2">
+        <div className="px-6 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-700 flex items-center gap-2">
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
           Für PDF-Export: Drucken → Ziel «Als PDF speichern» · A4 Querformat, Ränder Normal, Hintergrundgrafiken aktivieren.
         </div>
 
-        {/* Scrollbare Vorschau */}
-        <div id="dossier-print-scroll" className="flex-1 overflow-auto bg-slate-100 p-6">
-          <div id="dossier-print-content-wrapper" className="max-w-5xl mx-auto bg-white shadow-modal rounded-xl overflow-hidden p-4">
+        {/* Scrollbare Screen-Vorschau */}
+        <div className="flex-1 overflow-auto bg-slate-100 p-6">
+          <div className="max-w-5xl mx-auto bg-white shadow-modal rounded-xl overflow-hidden p-4">
             <DossierPrintTemplate snapshot={snapshot} />
           </div>
         </div>
