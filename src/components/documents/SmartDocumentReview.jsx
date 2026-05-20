@@ -59,12 +59,19 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
     return parts.filter(Boolean).join(' — ')
   }
 
+  const buildAllProductsLabel = (pols) => {
+    return pols.map((pol) => {
+      const sparteName = pol.sparte === 'kvg' ? 'KVG' : 'VVG'
+      return `${sparteName}: ${buildProductLabel(pol)}`
+    }).join('\n')
+  }
+
   const [appData, setAppData] = useState({
     insurer: extracted?.insurer || '',
     policy_number: extracted?.policy_number || '',
     insurance_type: extracted?.insurance_type || 'health',
     sparte: extracted?.sparte || '',
-    product: buildProductLabel(policies[0] || {}),
+    product: buildAllProductsLabel(policies),
     franchise: extracted?.franchise ? String(extracted.franchise) : '',
     model: extracted?.model || '',
     coverage_type: extracted?.coverage_type || '',
@@ -425,7 +432,7 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
                       policy_number: pol.policy_number || '',
                       insurance_type: pol.insurance_type || 'health',
                       sparte: pol.sparte || '',
-                      product: buildProductLabel(pol),
+                      // product bleibt unverändert – enthält alle Deckungen
                       franchise: pol.franchise ? String(pol.franchise) : '',
                       model: pol.model || '',
                       coverage_type: pol.coverage_type || '',
