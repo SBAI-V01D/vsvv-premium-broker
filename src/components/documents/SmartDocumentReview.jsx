@@ -6,24 +6,27 @@ import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import {
   CheckCircle2, AlertCircle, User, Users, UserPlus,
-  ChevronRight, ChevronLeft, Loader2, FileText, Search
+  ChevronRight, ChevronLeft, Loader2, FileText, Search,
+  Sparkles, TrendingUp, Shield, Calendar, Banknote
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const STEPS = ['Kundenzuweisung', 'Antragsdaten prüfen', 'Bestätigen']
+const STEPS = ['Analyse', 'Kundenzuweisung', 'Antragsdaten prüfen', 'Bestätigen']
 
 function StepIndicator({ current }) {
+  // current=-1 → step "Analyse" active; current=0..2 → wizard steps
+  const displayIndex = current === -1 ? 0 : current + 1
   return (
     <div className="flex items-center gap-1 mb-4">
       {STEPS.map((label, i) => (
         <React.Fragment key={i}>
           <div className={cn(
             'flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full',
-            i < current ? 'bg-green-100 text-green-700' :
-            i === current ? 'bg-primary text-white' :
+            i < displayIndex ? 'bg-green-100 text-green-700' :
+            i === displayIndex ? 'bg-primary text-white' :
             'bg-muted text-muted-foreground'
           )}>
-            {i < current ? <CheckCircle2 className="w-3 h-3" /> : <span>{i + 1}</span>}
+            {i < displayIndex ? <CheckCircle2 className="w-3 h-3" /> : <span>{i + 1}</span>}
             <span className="hidden sm:inline">{label}</span>
           </div>
           {i < STEPS.length - 1 && <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
@@ -37,7 +40,7 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
   const queryClient = useQueryClient()
   const { extracted, customerMatches, detectionPhase, matchedPrimaryCustomer, availableFamilyMembers, availablePrimaryCustomers } = analysisResult
 
-  const [step, setStep] = useState(0)
+  const [step, setStep] = useState(-1) // -1 = Analyse-Übersicht, 0..2 = Wizard
   const [customerAction, setCustomerAction] = useState(null) // 'use_existing' | 'create_primary' | 'create_family_member'
   const [selectedCustomerId, setSelectedCustomerId] = useState(
     customerMatches?.[0]?.customer?.id || null
@@ -149,6 +152,145 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
         )}
         <div className="flex gap-2 justify-center">
           <Button onClick={onSuccess}>Fertig</Button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── SCHRITT -1: Analyse-Übersicht ────────────────────────────────────────
+  if (step === -1) {
+    const confidence = extracted?.document_confidence
+    const confLabel = confidence >= 0.9 ? 'Sehr hoch' : confidence >= 0.7 ? 'Hoch' : confidence >= 0.5 ? 'Mittel' : 'Niedrig'
+    const confColor = confidence >= 0.9 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                      confidence >= 0.7 ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                      'bg-amber-50 text-amber-700 border-amber-200'
+
+    return (
+      <div className="space-y-4">
+        <StepIndicator current={-1} />
+
+        {/* Dokumenttyp & Konfidenz */}
+        <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <div>
+              <p className="text-sm font-semibold capitalize">{extracted?.document_subtype || 'Dokument'} erkannt</p>
+              <p className="text-xs text-muted-foreground">{document?.name}</p>
+            </div>
+          </div>
+          {confidence != null && (
+            <span className={cn('text-xs px-2 py-1 rounded-full border font-medium', confColor)}>
+              {confLabel} ({Math.round(confidence * 100)}%)
+            </span>
+          )}
+        </div>
+
+        {/* Person */}
+        {(extracted?.policy_holder_first_name || extracted?.insured_first_name) && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-1">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-700">Person erkannt</p>
+            <p className="text-sm font-medium text-blue-900">
+              {extracted.insured_is_different
+                ? `${extracted.insured_first_name || ''} ${extracted.insured_last_name || ''}`
+                : `${extracted.policy_holder_first_name || ''} ${extracted.policy_holder_last_name || ''}`
+              }
+              {extracted.policy_holder_birthdate && <span className="text-blue-700 font-normal ml-2">· Geb. {extracted.policy_holder_birthdate}</span>}
+            </p>
+            {extracted.policy_holder_street && (
+              <p className="text-xs text-blue-700">{extracted.policy_holder_street}, {extracted.policy_holder_zip_code} {extracted.policy_holder_city}</p>
+            )}
+            {extracted.policy_holder_phone && <p className="text-xs text-blue-700">📞 {extracted.policy_holder_phone}</p>}
+            {extracted.policy_holder_email && <p className="text-xs text-blue-700">✉️ {extracted.policy_holder_email}</p>}
+          </div>
+        )}
+
+        {/* Versicherungsdetails */}
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Versicherungsdetails</p>
+          <div className="grid grid-cols-2 gap-2">
+            {extracted?.insurer && (
+              <div className="p-2.5 bg-card border rounded-lg text-xs">
+                <p className="text-muted-foreground">Gesellschaft</p>
+                <p className="font-semibold">{extracted.insurer}</p>
+              </div>
+            )}
+            {extracted?.policy_number && (
+              <div className="p-2.5 bg-card border rounded-lg text-xs">
+                <p className="text-muted-foreground">Policennummer</p>
+                <p className="font-semibold">{extracted.policy_number}</p>
+              </div>
+            )}
+            {extracted?.product && (
+              <div className="p-2.5 bg-card border rounded-lg text-xs col-span-2">
+                <p className="text-muted-foreground">Produkt / Tarif</p>
+                <p className="font-semibold">{extracted.product}</p>
+              </div>
+            )}
+            {extracted?.model && (
+              <div className="p-2.5 bg-card border rounded-lg text-xs">
+                <p className="text-muted-foreground">Modell</p>
+                <p className="font-semibold">{extracted.model}</p>
+              </div>
+            )}
+            {extracted?.franchise != null && (
+              <div className="p-2.5 bg-card border rounded-lg text-xs">
+                <p className="text-muted-foreground">Franchise</p>
+                <p className="font-semibold">CHF {extracted.franchise}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Prämien */}
+        {(extracted?.premium_monthly || extracted?.premium_yearly) && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700 mb-2 flex items-center gap-1">
+              <Banknote className="w-3 h-3" /> Prämien
+            </p>
+            <div className="flex gap-4">
+              {extracted.premium_monthly && (
+                <div>
+                  <p className="text-xs text-emerald-700">Monatlich</p>
+                  <p className="text-base font-bold text-emerald-800">CHF {Number(extracted.premium_monthly).toLocaleString('de-CH')}</p>
+                </div>
+              )}
+              {extracted.premium_yearly && (
+                <div>
+                  <p className="text-xs text-emerald-700">Jährlich</p>
+                  <p className="text-base font-bold text-emerald-800">CHF {Number(extracted.premium_yearly).toLocaleString('de-CH')}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Vertragslaufzeit */}
+        {(extracted?.start_date || extracted?.end_date) && (
+          <div className="p-2.5 bg-card border rounded-lg text-xs flex items-center gap-3">
+            <Calendar className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            <div className="flex gap-4">
+              {extracted.start_date && <span><span className="text-muted-foreground">Beginn: </span><strong>{extracted.start_date}</strong></span>}
+              {extracted.end_date && <span><span className="text-muted-foreground">Ende: </span><strong>{extracted.end_date}</strong></span>}
+            </div>
+          </div>
+        )}
+
+        {/* Kunden-Matches */}
+        {customerMatches?.length > 0 && (
+          <div className={cn('p-3 rounded-lg border text-sm font-medium flex items-center gap-2',
+            customerMatches[0].confidence >= 90 ? 'bg-green-50 border-green-300 text-green-800' : 'bg-amber-50 border-amber-300 text-amber-800'
+          )}>
+            <User className="w-4 h-4 flex-shrink-0" />
+            {customerMatches[0].confidence >= 90 ? '✅' : '⚠️'} Möglicher Kunde: {customerMatches[0].customer.first_name} {customerMatches[0].customer.last_name}
+            <span className="ml-auto text-xs font-normal opacity-75">{customerMatches[0].confidence}% – {customerMatches[0].matchType}</span>
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-2 border-t">
+          <Button variant="outline" onClick={onRestart}>Abbrechen</Button>
+          <Button className="flex-1 gap-2" onClick={() => setStep(0)}>
+            Weiter: Antrag erstellen <ChevronRight className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     )
