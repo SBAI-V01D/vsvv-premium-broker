@@ -163,13 +163,48 @@ export function fmtCHF(amount, decimals = 2) {
   })}`;
 }
 
+// Prioritätsreihenfolge für die "proposed"-Gruppe in der Summary
+const PROPOSED_GRUPPE_PRIORITY = ['optimiert', 'angebot_1', 'angebot_2', 'angebot_3', 'angebot_4', 'angebot_5', 'manuell'];
+
+/**
+ * Bestimmt die Gruppe, die als "Optimierte / Vorgeschlagene Lösung" in der Summary verwendet wird.
+ *
+ * Priorität:
+ *   1. Gruppe mit is_recommended=true Einträgen
+ *   2. 'optimiert' (falls vorhanden)
+ *   3. Erste vorhandene Angebots-Gruppe in PROPOSED_GRUPPE_PRIORITY
+ *
+ * @param {Array} entries - ComparisonEntry[]
+ * @returns {string|null} Gruppenname oder null wenn keine Nicht-Aktuelle-Lösung vorhanden
+ */
+export function resolveProposedGruppe(entries) {
+  const arr = safeArray(entries).filter(e => e?.gruppe !== 'aktuelle_loesung');
+  if (arr.length === 0) return null;
+
+  // 1. Explizit empfohlene Gruppe
+  const recommendedEntry = arr.find(e => e?.is_recommended);
+  if (recommendedEntry?.gruppe) return recommendedEntry.gruppe;
+
+  // 2. Nach Prioritätsliste: erste vorhandene Gruppe
+  const presentGruppen = new Set(arr.map(e => e?.gruppe).filter(Boolean));
+  for (const g of PROPOSED_GRUPPE_PRIORITY) {
+    if (presentGruppen.has(g)) return g;
+  }
+
+  return null;
+}
+
 /**
  * Gesamtübersicht für Dossier-Summary.
  * Alle Felder sind immer definiert (null für "keine Daten", nie undefined).
  *
  * Priorität für "proposed":
- *   1. is_recommended=true Einträge (explizit empfohlen)
- *   2. gruppe='optimiert' Einträge (falls keine is_recommended vorhanden)
+ *   1. Gruppe mit is_recommended=true Einträgen
+ *   2. gruppe='optimiert' (falls vorhanden)
+ *   3. Erste vorhandene Angebots-Gruppe (angebot_1, angebot_2, …)
+ *
+ * Gibt zusätzlich `proposedGruppe` zurück, damit Summary und Print
+ * dieselbe Datenquelle verwenden.
  */
 export function calcDossierSummary(entries) {
   const arr = safeArray(entries);
@@ -181,32 +216,34 @@ export function calcDossierSummary(entries) {
     return p !== null ? sum + p : sum;
   }, 0);
 
-  // Empfohlene Lösung: is_recommended=true → sonst gruppe='optimiert'
-  const recommendedEntries = arr.filter(e => e?.is_recommended);
-  const optimiertEntries   = arr.filter(e => e?.gruppe === 'optimiert');
-  const proposedEntries    = recommendedEntries.length > 0 ? recommendedEntries : optimiertEntries;
-  const proposedMonthly    = proposedEntries.reduce((sum, e) => {
+  // Empfohlene / vorgeschlagene Gruppe automatisch bestimmen
+  const proposedGruppe  = resolveProposedGruppe(arr);
+  const proposedEntries = proposedGruppe
+    ? arr.filter(e => e?.gruppe === proposedGruppe || (proposedGruppe === 'optimiert' && e?.is_recommended && e?.gruppe !== 'aktuelle_loesung'))
+    : [];
+  const proposedMonthly = proposedEntries.reduce((sum, e) => {
     const p = safePraemie(e?.praemie_monatlich);
     return p !== null ? sum + p : sum;
   }, 0);
 
-  const hasCurrent       = currentEntries.some(e => safePraemie(e?.praemie_monatlich) !== null);
+  const hasCurrent        = currentEntries.some(e => safePraemie(e?.praemie_monatlich) !== null);
   const hasRecommendation = proposedEntries.some(e => safePraemie(e?.praemie_monatlich) !== null);
-  const savingsMonthly   = hasCurrent || hasRecommendation ? currentMonthly - proposedMonthly : null;
-  const savingsYearly    = savingsMonthly !== null ? savingsMonthly * 12 : null;
-  const savingsPercent   = hasCurrent && currentMonthly > 0
+  const savingsMonthly    = hasCurrent || hasRecommendation ? currentMonthly - proposedMonthly : null;
+  const savingsYearly     = savingsMonthly !== null ? savingsMonthly * 12 : null;
+  const savingsPercent    = hasCurrent && currentMonthly > 0
     ? ((currentMonthly - proposedMonthly) / currentMonthly) * 100
     : null;
 
   return {
     currentMonthly,
-    currentYearly:     currentMonthly * 12,
+    currentYearly:      currentMonthly * 12,
     proposedMonthly,
-    proposedYearly:    proposedMonthly * 12,
+    proposedYearly:     proposedMonthly * 12,
     savingsMonthly,
     savingsYearly,
     savingsPercent,
-    hasRecommendation: proposedEntries.length > 0,
-    hasCurrent:        currentEntries.length > 0,
+    hasRecommendation:  proposedEntries.length > 0,
+    hasCurrent:         currentEntries.length > 0,
+    proposedGruppe,     // welche Gruppe als "Optimiert" verwendet wurde
   };
 }

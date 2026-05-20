@@ -417,7 +417,9 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
                 icon: savings != null && savings > 0.005 ? '↓' : savings != null && savings < -0.005 ? '↑' : '=',
               },
               {
-                label: 'Optimierte Prämie / Monat',
+                label: summary.proposedGruppe
+                  ? `${GRUPPE_CFG[summary.proposedGruppe]?.label || summary.proposedGruppe} / Monat`
+                  : 'Optimierte Prämie / Monat',
                 value: fmtCHF(summary.proposedMonthly),
                 sub: `${fmtCHF(summary.proposedYearly)} / Jahr`,
                 color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe',
