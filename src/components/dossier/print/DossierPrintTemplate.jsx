@@ -484,6 +484,25 @@ export default function DossierPrintTemplate({ snapshot }) {
   const summary = calcDossierSummary(entries);
   const savings = summary.savingsMonthly;
 
+  // DEBUG: Console-Log für Berechnung
+  console.log('[DossierPrintTemplate DEBUG]', {
+    totalEntries: entries.length,
+    currentEntries: entries.filter(e => e.gruppe === 'aktuelle_loesung' || e.is_current).length,
+    currentMonthly: summary.currentMonthly,
+    currentYearly: summary.currentYearly,
+    proposedMonthly: summary.proposedMonthly,
+    savingsMonthly: summary.savingsMonthly,
+    savingsYearly: summary.savingsYearly,
+    proposedGruppe: summary.proposedGruppe,
+    entries: entries.map(e => ({
+      gesellschaft: e.gesellschaft,
+      praemie: e.praemie_monatlich,
+      gruppe: e.gruppe,
+      is_current: e.is_current,
+      person: e.person_name,
+    })),
+  });
+
   // Welche Gruppen sind vorhanden?
   const presentGruppen = GRUPPE_ORDER.filter(g => entries.some(e => e.gruppe === g));
 
