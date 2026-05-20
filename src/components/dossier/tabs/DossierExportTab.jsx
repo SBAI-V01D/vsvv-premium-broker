@@ -67,96 +67,69 @@ const SnapshotRow = memo(function SnapshotRow({ snap, onPreview }) {
 });
 
 // ── Print-Vorschau Modal ──────────────────────────────────────────────────────
+const PRINT_MODAL_STYLE = `
+  @media print {
+    body > *:not(#dossier-print-portal) { display: none !important; }
+    #dossier-print-portal .print-modal-toolbar { display: none !important; }
+    #dossier-print-portal .print-modal-hint { display: none !important; }
+    #dossier-print-portal { position: fixed; inset: 0; overflow: visible; background: white; }
+    #dossier-print-portal .print-modal-content { overflow: visible !important; background: white !important; padding: 0 !important; }
+  }
+`;
+
 function PrintPreviewModal({ snapshot, onClose }) {
-  const iframeRef = React.useRef(null);
-
-  // Render DossierPrintTemplate into the iframe so only that content prints
-  React.useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe || !snapshot) return;
-
-    // Wait for iframe to load then inject content
-    const inject = () => {
-      const doc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (!doc) return;
-      // Copy all stylesheets from parent
-      const styleLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
-        .map(el => el.outerHTML)
-        .join('\n');
-      // Get the rendered HTML of the print template (already mounted in hidden div)
-      const container = document.getElementById('dossier-print-hidden');
-      if (!container) return;
-      doc.open();
-      doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8">${styleLinks}</head><body style="margin:0;background:white">${container.innerHTML}</body></html>`);
-      doc.close();
-    };
-
-    iframe.addEventListener('load', inject);
-    return () => iframe.removeEventListener('load', inject);
-  }, [snapshot]);
-
-  const handlePrint = () => {
-    iframeRef.current?.contentWindow?.print();
-  };
+  const handlePrint = () => window.print();
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background">
-      {/* Hidden div to render the template so we can extract its HTML */}
-      <div id="dossier-print-hidden" style={{ position: 'absolute', left: '-9999px', top: 0, width: '297mm' }}>
-        <DossierPrintTemplate snapshot={snapshot} />
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <FileText className="w-4 h-4 text-primary" />
+    <>
+      <style dangerouslySetInnerHTML={{ __html: PRINT_MODAL_STYLE }} />
+      <div id="dossier-print-portal" className="fixed inset-0 z-50 flex flex-col bg-background">
+        {/* Toolbar */}
+        <div className="print-modal-toolbar flex items-center justify-between px-6 py-3 border-b border-border bg-card shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <FileText className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                {snapshot.dossier?.title ?? 'Dossier'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Druckvorschau · v{snapshot.dossier_version ?? 1}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground">
-              {snapshot.dossier?.title ?? 'Dossier'}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Druckvorschau · v{snapshot.dossier_version ?? 1}
-            </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              <Printer className="w-4 h-4" />
+              Drucken / Als PDF speichern
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-border text-sm font-medium rounded-lg hover:bg-muted transition-colors"
+            >
+              Schliessen
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            <Printer className="w-4 h-4" />
-            Drucken / Als PDF speichern
-          </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-border text-sm font-medium rounded-lg hover:bg-muted transition-colors"
-          >
-            Schliessen
-          </button>
+
+        {/* Hinweis */}
+        <div className="print-modal-hint px-6 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-700 flex items-center gap-2">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          Für PDF-Export: Drucken → Ziel «Als PDF speichern» · A4 Querformat, Ränder Normal, Hintergrundgrafiken aktivieren.
+        </div>
+
+        {/* Scrollbare Vorschau */}
+        <div className="print-modal-content flex-1 overflow-auto bg-slate-100 p-6">
+          <div className="max-w-5xl mx-auto bg-white shadow-modal rounded-xl overflow-hidden p-4">
+            <DossierPrintTemplate snapshot={snapshot} />
+          </div>
         </div>
       </div>
-
-      {/* Hinweis */}
-      <div className="px-6 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-700 flex items-center gap-2">
-        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-        Für PDF-Export: Drucken → Ziel «Als PDF speichern» · A4 Querformat, Ränder Normal, Hintergrundgrafiken aktivieren.
-      </div>
-
-      {/* Preview via iframe — isoliert vom Rest der App */}
-      <div className="flex-1 overflow-auto bg-slate-100 p-6">
-        <div className="max-w-5xl mx-auto bg-white shadow-modal rounded-xl overflow-hidden">
-          <iframe
-            ref={iframeRef}
-            src="about:blank"
-            title="Druckvorschau"
-            className="w-full border-0"
-            style={{ minHeight: '80vh', height: '100%' }}
-          />
-        </div>
-      </div>
-    </div>
+    </>
   );
 }
 
