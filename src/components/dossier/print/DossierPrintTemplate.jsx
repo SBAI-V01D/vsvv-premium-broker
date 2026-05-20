@@ -602,7 +602,7 @@ export default function DossierPrintTemplate({ snapshot }) {
         {/* Legende / Hinweise — immer am Ende */}
         <div className="print-page">
           <PageHeader dossier={dossier} customer={customer} snapshot={snapshot} pageLabel="Hinweise & Berechnungsgrundlagen" />
-          <DossierLegende entries={entries} snapshot={snapshot} />
+          <DossierLegende entries={entries} snapshot={snapshot} mainTitle={TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type} subTitle={dossier.title} />
         </div>
 
       </div>
