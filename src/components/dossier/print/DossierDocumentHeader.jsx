@@ -29,7 +29,19 @@ export default function DossierDocumentHeader({ organization, advisor, snapshot,
   // Icon-Konfiguration
   const iconStyle = { width: '10px', height: '10px', color: '#64748b', flexShrink: 0 };
   const textStyle = { fontSize: '8.5px', color: '#334155' };
-  const labelStyle = { fontSize: '7px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' };
+
+  // Hilfsfunktion für Info-Zeilen (nur anzeigen wenn Wert existiert)
+  const InfoLine = ({ icon: Icon, value }) => {
+    if (!value) return null;
+    return (
+      <div style={textStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <Icon style={iconStyle} />
+          <span>{value}</span>
+        </div>
+      </div>
+    );
+  };
 
   // Fallback wenn keine Daten vorhanden
   const hasData = orgName || advisorName;
@@ -57,47 +69,10 @@ export default function DossierDocumentHeader({ organization, advisor, snapshot,
         </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {/* Adresse */}
-          {(orgStreet || orgZip || orgCity) && (
-            <div style={textStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <MapPin style={iconStyle} />
-                <span>
-                  {[orgStreet, [orgZip, orgCity].filter(Boolean).join(' ')].filter(Boolean).join(', ')}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Telefon */}
-          {orgPhone && (
-            <div style={textStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <Phone style={iconStyle} />
-                <span>{orgPhone}</span>
-              </div>
-            </div>
-          )}
-
-          {/* E-Mail */}
-          {orgEmail && (
-            <div style={textStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <Mail style={iconStyle} />
-                <span>{orgEmail}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Website */}
-          {orgWebsite && (
-            <div style={textStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <Globe style={iconStyle} />
-                <span>{orgWebsite}</span>
-              </div>
-            </div>
-          )}
+          <InfoLine icon={MapPin} value={[orgStreet, [orgZip, orgCity].filter(Boolean).join(' ')].filter(Boolean).join(', ')} />
+          <InfoLine icon={Phone} value={orgPhone} />
+          <InfoLine icon={Mail} value={orgEmail} />
+          <InfoLine icon={Globe} value={orgWebsite} />
         </div>
       </div>
 
@@ -117,45 +92,10 @@ export default function DossierDocumentHeader({ organization, advisor, snapshot,
         </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {/* Telefon Berater */}
-          {advisorPhone && (
-            <div style={textStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <Phone style={iconStyle} />
-                <span>{advisorPhone}</span>
-              </div>
-            </div>
-          )}
-
-          {/* E-Mail Berater */}
-          {advisorEmail && (
-            <div style={textStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <Mail style={iconStyle} />
-                <span>{advisorEmail}</span>
-              </div>
-            </div>
-          )}
-
-          {/* FINMA-Nummer */}
-          {finmaNumber && (
-            <div style={textStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <BadgeCheck style={{ ...iconStyle, color: '#1d4ed8' }} />
-                <span>FINMA: {finmaNumber}</span>
-              </div>
-            </div>
-          )}
-
-          {/* VBV-Nummer */}
-          {vbvNumber && (
-            <div style={textStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <BadgeCheck style={{ ...iconStyle, color: '#1d4ed8' }} />
-                <span>VBV: {vbvNumber}</span>
-              </div>
-            </div>
-          )}
+          <InfoLine icon={Phone} value={advisorPhone} />
+          <InfoLine icon={Mail} value={advisorEmail} />
+          <InfoLine icon={BadgeCheck} value={finmaNumber ? `FINMA: ${finmaNumber}` : null} />
+          <InfoLine icon={BadgeCheck} value={vbvNumber ? `VBV: ${vbvNumber}` : null} />
         </div>
       </div>
 

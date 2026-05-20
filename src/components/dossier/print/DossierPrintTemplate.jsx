@@ -8,7 +8,7 @@
  * Lösungsorientierung: Jede Gruppe = eigenständiges Beratungsangebot.
  * Keine CRM-Entities, nur ComparisonEntry.
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { fmtCHF, fmtDate, calcDossierSummary } from '@/lib/dossierCalc';
@@ -27,6 +27,16 @@ const GRUPPE_CFG = {
   manuell:          { label: 'Weitere Einträge',   headerBg: '#64748b', accentColor: '#64748b' },
 };
 const GRUPPE_ORDER = ['aktuelle_loesung', 'optimiert', 'angebot_1', 'angebot_2', 'angebot_3', 'angebot_4', 'angebot_5', 'manuell'];
+
+// ── Hilfsfunktion: Titel aus Gesellschaften generieren ────────────────────────
+function generateTitelFromGesellschaften(entries) {
+  if (!entries || entries.length === 0) return '';
+  const gesellschaften = [...new Set(entries.map(e => e.gesellschaft).filter(Boolean))];
+  if (gesellschaften.length === 0) return '';
+  if (gesellschaften.length <= 3) return gesellschaften.join(' / ');
+  // Bei mehr als 3: erste 2 + "u.a."
+  return `${gesellschaften[0]} / ${gesellschaften[1]} u.a.`;
+}
 
 // ── Print CSS — A4 Querformat ─────────────────────────────────────────────────
 const PRINT_STYLES = `
@@ -71,27 +81,32 @@ const TYPE_LABELS = {
 };
 
 // ── Gemeinsamer Seiten-Header (klein, wiederholt auf jeder Seite) ─────────────
-function PageHeader({ dossier, customer, pageLabel, snapshot }) {
+function PageHeader({ dossier, customer, pageLabel, snapshot, organization, advisor }) {
+  const customerName = customer ? `${customer.first_name} ${customer.last_name}`.trim() : '';
+  
   return (
     <div style={{
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       borderBottom: '2px solid #1e3a5f', paddingBottom: '8px', marginBottom: '14px',
     }}>
       <div>
-        <div style={{ fontSize: '14px', fontWeight: 800, color: '#1e3a5f', letterSpacing: '-0.02em' }}>
-          {TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
+        {/* Haupttitel: Dossier-Titel + Kunde */}
+        <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e3a5f', letterSpacing: '-0.02em', marginBottom: '2px' }}>
+          {dossier.title || TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
+          {customerName && <span style={{ fontWeight: 400, color: '#64748b' }}> · {customerName}</span>}
         </div>
-        <div style={{ fontSize: '10px', color: '#64748b', marginTop: '1px' }}>
-          {dossier.title}
-          {customer ? ` · ${[customer.first_name, customer.last_name].filter(Boolean).join(' ')}` : ''}
+        {/* Untertitel: Seiten-spezifisch */}
+        <div style={{ fontSize: '9px', color: '#64748b' }}>
+          {pageLabel}
         </div>
       </div>
       <div style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: '9px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          {pageLabel}
+        {/* Berater/Org-Kurzfassung */}
+        <div style={{ fontSize: '8px', color: '#94a3b8', marginBottom: '1px' }}>
+          {organization?.name || advisor?.firstname ? `${organization?.name || ''}${advisor?.firstname ? ' · ' + advisor.firstname + ' ' + advisor.lastname : ''}` : 'Swiss Premium Broker'}
         </div>
         <div style={{ fontSize: '8.5px', color: '#94a3b8' }}>
-          Swiss Premium Broker · {fmtDate(snapshot?.snapshot_created_at)} · v{dossier.version ?? 1}
+          {fmtDate(snapshot?.snapshot_created_at)} · v{dossier.version ?? 1}
         </div>
       </div>
     </div>
@@ -99,11 +114,13 @@ function PageHeader({ dossier, customer, pageLabel, snapshot }) {
 }
 
 // ── Lösungs-Säule: eine Gruppe als Beratungsangebot ──────────────────────────
-function LösungsSäule({ gruppe, label, entries, referenceTotal }) {
+function LösungsSäule({ gruppe, label, entries, referenceTotal, titel }) {
   const cfg = GRUPPE_CFG[gruppe] || GRUPPE_CFG.manuell;
   const persons = [...new Set(entries.map(e => e.person_name || 'Unbekannt'))];
   const gruppeTotal = entries.reduce((s, e) => s + (Number(e.praemie_monatlich) || 0), 0);
   const gesellschaften = [...new Set(entries.map(e => e.gesellschaft).filter(Boolean))];
+  // Titel aus Prop oder generieren
+  const titelToUse = titel || generateTitelFromGesellschaften(entries);
   const isRef = gruppe === 'aktuelle_loesung';
 
   // Einsparung vs. Aktuelle Lösung
@@ -121,10 +138,26 @@ function LösungsSäule({ gruppe, label, entries, referenceTotal }) {
         <div style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', opacity: 0.8, marginBottom: '2px' }}>
           {label}
         </div>
-        <div style={{ fontSize: '12px', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {gesellschaften.length > 0
-            ? gesellschaften.map(g => g.length > 30 ? g.substring(0, 28) + '…' : g).join(' · ')
-            : <span style={{ opacity: 0.5, fontStyle: 'italic' }}>Keine Gesellschaft</span>}
+        {/* Dynamischer Titel aus allen Gesellschaften */}
+        <div style={{ fontSize: '11px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
+          {titelToUse || <span style={{ opacity: 0.5, fontStyle: 'italic' }}>Keine Gesellschaft</span>}
+        </div>
+        {/* Gesellschaften als kleine Badges */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px', marginBottom: '8px' }}>
+          {gesellschaften.slice(0, 5).map((g, i) => (
+            <span key={i} style={{
+              fontSize: '7px',
+              fontWeight: 600,
+              background: 'rgba(255,255,255,0.2)',
+              padding: '2px 5px',
+              borderRadius: '3px',
+            }}>
+              {g.length > 20 ? g.substring(0, 18) + '…' : g}
+            </span>
+          ))}
+          {gesellschaften.length > 5 && (
+            <span style={{ fontSize: '7px', opacity: 0.8 }}>+{gesellschaften.length - 5}</span>
+          )}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '8px' }}>
           <div>
@@ -288,14 +321,27 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
   const label1 = g1entries[0]?.gruppe_label || cfg1.label;
   const label2 = cfg2 ? (g2entries[0]?.gruppe_label || cfg2.label) : null;
 
+  // Dynamische Titel für beide Lösungen
+  const titel1 = generateTitelFromGesellschaften(g1entries);
+  const titel2 = gruppe2 ? generateTitelFromGesellschaften(g2entries) : null;
+
   return (
     <div className="print-page" style={{ padding: '0' }}>
-      {/* Einheitlicher Header mit Berater/Org-Daten */}
+      {/* Einheitlicher Header mit Berater/Org-Daten + Dossier-Titel */}
       <DossierDocumentHeader 
         organization={organization} 
         advisor={advisor} 
         snapshot={snapshot}
         dossier={dossier}
+      />
+      {/* Seiten-spezifischer Untertitel */}
+      <PageHeader 
+        dossier={dossier}
+        customer={customer}
+        pageLabel={pageLabel}
+        snapshot={snapshot}
+        organization={organization}
+        advisor={advisor}
       />
 
       <div style={{ display: 'flex', gap: '14px', alignItems: 'stretch' }}>
@@ -304,6 +350,7 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
           label={label1}
           entries={g1entries}
           referenceTotal={referenceTotal}
+          titel={titel1}
         />
         {gruppe2 && (
           <LösungsSäule
@@ -311,6 +358,7 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
             label={label2}
             entries={g2entries}
             referenceTotal={referenceTotal}
+            titel={titel2}
           />
         )}
         {!gruppe2 && <div style={{ flex: 1 }} />}
@@ -320,8 +368,30 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
 }
 
 // ── Seite 1: Deckblatt — Personen oben, Prämienübersicht unten ────────────────
-function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, savings, showHeader = true }) {
+function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, savings, entries, showHeader = true }) {
   const hasFamilyMembers = Array.isArray(family_members) && family_members.length > 0;
+
+  // Prämien für ALLE Angebote berechnen
+  const angebotPrämien = useMemo(() => {
+    const result = [];
+    ['angebot_1', 'angebot_2', 'angebot_3', 'angebot_4', 'angebot_5'].forEach(gruppe => {
+      const gruppeEntries = (entries || []).filter(e => e.gruppe === gruppe);
+      if (gruppeEntries.length > 0) {
+        const total = gruppeEntries.reduce((s, e) => s + (Number(e.praemie_monatlich) || 0), 0);
+        const diff = summary.currentMonthly - total;
+        const pct = summary.currentMonthly > 0 ? ((diff / summary.currentMonthly) * 100) : 0;
+        result.push({
+          gruppe,
+          label: GRUPPE_CFG[gruppe]?.label || gruppe,
+          monthly: total,
+          yearly: total * 12,
+          diff,
+          pct,
+        });
+      }
+    });
+    return result;
+  }, [entries, summary.currentMonthly]);
 
   return (
     <div>
@@ -407,52 +477,104 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
         )}
       </div>
 
-      {/* ── 2. Prämienübersicht ── */}
-      {(summary.hasCurrent || summary.hasRecommendation) && (
+      {/* ── 2. Prämienübersicht — ERWEITERT für alle Angebote ── */}
+      {(summary.hasCurrent || summary.hasRecommendation || angebotPrämien.length > 0) && (
         <div style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
           <div style={{ fontSize: '9px', fontWeight: 700, color: '#1e3a5f', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-            Prämienübersicht
+            Prämienübersicht — Alle Lösungen im Vergleich
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-            {[
-              {
-                label: 'Aktuelle Prämie / Monat',
-                value: fmtCHF(summary.currentMonthly),
-                sub: `${fmtCHF(summary.currentYearly)} / Jahr`,
-                color: '#334155', bg: '#f8fafc', border: '#e2e8f0',
-                icon: '📋',
-              },
-              {
-                label: summary.savingsMonthly != null && summary.savingsMonthly > 0.005 ? 'Einsparung / Monat' : summary.savingsMonthly != null && summary.savingsMonthly < -0.005 ? 'Mehrkosten / Monat' : 'Differenz',
-                value: summary.savingsMonthly != null ? `${summary.savingsMonthly > 0.005 ? '− ' : summary.savingsMonthly < -0.005 ? '+ ' : ''}${fmtCHF(Math.abs(summary.savingsMonthly))}` : '—',
-                sub: summary.savingsYearly != null ? `${summary.savingsMonthly > 0 ? '− ' : '+ '}${fmtCHF(Math.abs(summary.savingsYearly))} / Jahr` : '',
-                percent: summary.savingsPercent != null ? `${summary.savingsMonthly > 0 ? '−' : '+'}${Math.abs(summary.savingsPercent).toFixed(1)}%` : null,
-                color: summary.savingsMonthly != null && summary.savingsMonthly > 0.005 ? '#059669' : summary.savingsMonthly != null && summary.savingsMonthly < -0.005 ? '#dc2626' : '#64748b',
-                bg: summary.savingsMonthly != null && summary.savingsMonthly > 0.005 ? '#f0fdf4' : summary.savingsMonthly != null && summary.savingsMonthly < -0.005 ? '#fef2f2' : '#f8fafc',
-                border: summary.savingsMonthly != null && summary.savingsMonthly > 0.005 ? '#bbf7d0' : summary.savingsMonthly != null && summary.savingsMonthly < -0.005 ? '#fecaca' : '#e2e8f0',
-                icon: summary.savingsMonthly != null && summary.savingsMonthly > 0.005 ? '↓' : summary.savingsMonthly != null && summary.savingsMonthly < -0.005 ? '↑' : '=',
-              },
-              {
-                label: summary.proposedGruppe
-                  ? `${GRUPPE_CFG[summary.proposedGruppe]?.label || summary.proposedGruppe} / Monat`
-                  : 'Optimierte Prämie / Monat',
-                value: fmtCHF(summary.proposedMonthly),
-                sub: `${fmtCHF(summary.proposedYearly)} / Jahr`,
-                color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe',
-                icon: '✓',
-              },
-            ].map((col, i) => (
-              <div key={i} style={{
-                border: `1px solid ${col.border}`, borderRadius: '10px',
-                padding: '14px 16px', background: col.bg, textAlign: 'center',
-              }}>
-                <div style={{ fontSize: '8px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>{col.label}</div>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: col.color }}>{col.value}</div>
-                {col.sub && <div style={{ fontSize: '8.5px', color: '#94a3b8', marginTop: '3px' }}>{col.sub}</div>}
-                {col.percent && <div style={{ fontSize: '13px', fontWeight: 800, color: col.color, marginTop: '4px' }}>{col.percent}</div>}
+          
+          {/* Zeile 1: Aktuelle Lösung + Einsparung/Optimiert */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div style={{
+              border: '1px solid #e2e8f0', borderRadius: '10px',
+              padding: '14px 16px', background: '#f8fafc', textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '8px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Aktuelle Prämie / Monat</div>
+              <div style={{ fontSize: '20px', fontWeight: 900, color: '#334155' }}>{fmtCHF(summary.currentMonthly)}</div>
+              <div style={{ fontSize: '8.5px', color: '#94a3b8', marginTop: '3px' }}>{fmtCHF(summary.currentYearly)} / Jahr</div>
+            </div>
+            
+            <div style={{
+              border: `1px solid ${summary.savingsMonthly > 0.005 ? '#bbf7d0' : summary.savingsMonthly < -0.005 ? '#fecaca' : '#e2e8f0'}`,
+              borderRadius: '10px',
+              padding: '14px 16px',
+              background: summary.savingsMonthly > 0.005 ? '#f0fdf4' : summary.savingsMonthly < -0.005 ? '#fef2f2' : '#f8fafc',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '8px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                {summary.savingsMonthly > 0.005 ? 'Einsparung / Monat' : summary.savingsMonthly < -0.005 ? 'Mehrkosten / Monat' : 'Differenz'}
               </div>
-            ))}
+              <div style={{ fontSize: '20px', fontWeight: 900, color: summary.savingsMonthly > 0.005 ? '#059669' : summary.savingsMonthly < -0.005 ? '#dc2626' : '#64748b' }}>
+                {summary.savingsMonthly != null ? `${summary.savingsMonthly > 0.005 ? '− ' : summary.savingsMonthly < -0.005 ? '+ ' : ''}${fmtCHF(Math.abs(summary.savingsMonthly))}` : '—'}
+              </div>
+              {summary.savingsYearly != null && (
+                <div style={{ fontSize: '8.5px', color: '#94a3b8', marginTop: '3px' }}>
+                  {summary.savingsMonthly > 0 ? '− ' : '+ '}{fmtCHF(Math.abs(summary.savingsYearly))} / Jahr
+                </div>
+              )}
+              {summary.savingsPercent != null && (
+                <div style={{ fontSize: '13px', fontWeight: 800, color: summary.savingsMonthly > 0.005 ? '#059669' : summary.savingsMonthly < -0.005 ? '#dc2626' : '#64748b', marginTop: '4px' }}>
+                  {summary.savingsMonthly > 0 ? '−' : '+'}{Math.abs(summary.savingsPercent).toFixed(1)}%
+                </div>
+              )}
+            </div>
+            
+            <div style={{
+              border: '1px solid #bfdbfe', borderRadius: '10px',
+              padding: '14px 16px', background: '#eff6ff', textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '8px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                {summary.proposedGruppe ? `${GRUPPE_CFG[summary.proposedGruppe]?.label || summary.proposedGruppe} / Monat` : 'Optimierte Prämie / Monat'}
+              </div>
+              <div style={{ fontSize: '20px', fontWeight: 900, color: '#1d4ed8' }}>{fmtCHF(summary.proposedMonthly)}</div>
+              <div style={{ fontSize: '8.5px', color: '#94a3b8', marginTop: '3px' }}>{fmtCHF(summary.proposedYearly)} / Jahr</div>
+            </div>
           </div>
+          
+          {/* Zeile 2: Alle Angebote im Vergleich */}
+          {angebotPrämien.length > 0 && (
+            <div>
+              <div style={{ fontSize: '8px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                Angebote im Vergleich zur aktuellen Lösung
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(angebotPrämien.length, 4)}, 1fr)`, gap: '10px' }}>
+                {angebotPrämien.map((angebot, i) => (
+                  <div key={angebot.gruppe} style={{
+                    border: `1px solid ${angebot.diff > 0 ? '#bbf7d0' : angebot.diff < 0 ? '#fecaca' : '#e2e8f0'}`,
+                    borderRadius: '10px',
+                    padding: '12px 14px',
+                    background: angebot.diff > 0 ? '#f0fdf4' : angebot.diff < 0 ? '#fef2f2' : '#f8fafc',
+                    textAlign: 'center',
+                  }}>
+                    <div style={{ fontSize: '8px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
+                      {angebot.label}
+                    </div>
+                    <div style={{ fontSize: '18px', fontWeight: 900, color: angebot.diff > 0 ? '#059669' : angebot.diff < 0 ? '#dc2626' : '#64748b' }}>
+                      {fmtCHF(angebot.monthly)}
+                    </div>
+                    <div style={{ fontSize: '7.5px', color: '#94a3b8', marginTop: '2px' }}>
+                      {fmtCHF(angebot.yearly)} / Jahr
+                    </div>
+                    {Math.abs(angebot.diff) > 0.01 && (
+                      <div style={{
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        color: angebot.diff > 0 ? '#059669' : '#dc2626',
+                        marginTop: '4px',
+                        background: angebot.diff > 0 ? 'rgba(5,150,105,0.1)' : 'rgba(220,38,38,0.1)',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        display: 'inline-block',
+                      }}>
+                        {angebot.diff > 0 ? '−' : '+'}{fmtCHF(Math.abs(angebot.diff))}/Mt. {angebot.pct > 0 ? `(${angebot.pct.toFixed(1)}%)` : ''}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -585,6 +707,7 @@ export default function DossierPrintTemplate({ snapshot }) {
             snapshot={snapshot}
             summary={summary}
             savings={savings}
+            entries={entries}
             showHeader={false}
           />
         </div>
