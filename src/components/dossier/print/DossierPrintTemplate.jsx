@@ -286,7 +286,21 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
 
   return (
     <div className="print-page" style={{ padding: '0' }}>
-      <PageHeader dossier={dossier} customer={customer} snapshot={snapshot} pageLabel={pageLabel} />
+      {/* Deckblatt-Stil Titel für Seite 2+ */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+        borderBottom: '3px solid #1e3a5f', paddingBottom: '12px', marginBottom: '14px',
+      }}>
+        <div>
+          <div style={{ fontSize: '22px', fontWeight: 900, color: '#1e3a5f', letterSpacing: '-0.02em' }}>
+            {dossier.title}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>{pageLabel}</div>
+          <div style={{ fontSize: '8.5px', color: '#94a3b8' }}>Swiss Premium Broker · {fmtDate(snapshot?.snapshot_created_at)} · v{dossier.version ?? 1}</div>
+        </div>
+      </div>
 
       <div style={{ display: 'flex', gap: '14px', alignItems: 'stretch' }}>
         <LösungsSäule
@@ -411,14 +425,14 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
                 icon: '📋',
               },
               {
-                label: savings != null && savings > 0.005 ? 'Einsparung / Monat' : savings != null && savings < -0.005 ? 'Mehrkosten / Monat' : 'Differenz',
-                value: savings != null ? `${savings > 0.005 ? '− ' : savings < -0.005 ? '+ ' : ''}${fmtCHF(Math.abs(savings))}` : '—',
-                sub: summary.savingsYearly != null ? `${savings > 0 ? '− ' : '+ '}${fmtCHF(Math.abs(summary.savingsYearly))} / Jahr` : '',
-                percent: summary.savingsPercent != null ? `${savings > 0 ? '−' : '+'}${Math.abs(summary.savingsPercent).toFixed(1)}%` : null,
-                color: savings != null && savings > 0.005 ? '#059669' : savings != null && savings < -0.005 ? '#dc2626' : '#64748b',
-                bg: savings != null && savings > 0.005 ? '#f0fdf4' : savings != null && savings < -0.005 ? '#fef2f2' : '#f8fafc',
-                border: savings != null && savings > 0.005 ? '#bbf7d0' : savings != null && savings < -0.005 ? '#fecaca' : '#e2e8f0',
-                icon: savings != null && savings > 0.005 ? '↓' : savings != null && savings < -0.005 ? '↑' : '=',
+                label: summary.savingsMonthly != null && summary.savingsMonthly > 0.005 ? 'Einsparung / Monat' : summary.savingsMonthly != null && summary.savingsMonthly < -0.005 ? 'Mehrkosten / Monat' : 'Differenz',
+                value: summary.savingsMonthly != null ? `${summary.savingsMonthly > 0.005 ? '− ' : summary.savingsMonthly < -0.005 ? '+ ' : ''}${fmtCHF(Math.abs(summary.savingsMonthly))}` : '—',
+                sub: summary.savingsYearly != null ? `${summary.savingsMonthly > 0 ? '− ' : '+ '}${fmtCHF(Math.abs(summary.savingsYearly))} / Jahr` : '',
+                percent: summary.savingsPercent != null ? `${summary.savingsMonthly > 0 ? '−' : '+'}${Math.abs(summary.savingsPercent).toFixed(1)}%` : null,
+                color: summary.savingsMonthly != null && summary.savingsMonthly > 0.005 ? '#059669' : summary.savingsMonthly != null && summary.savingsMonthly < -0.005 ? '#dc2626' : '#64748b',
+                bg: summary.savingsMonthly != null && summary.savingsMonthly > 0.005 ? '#f0fdf4' : summary.savingsMonthly != null && summary.savingsMonthly < -0.005 ? '#fef2f2' : '#f8fafc',
+                border: summary.savingsMonthly != null && summary.savingsMonthly > 0.005 ? '#bbf7d0' : summary.savingsMonthly != null && summary.savingsMonthly < -0.005 ? '#fecaca' : '#e2e8f0',
+                icon: summary.savingsMonthly != null && summary.savingsMonthly > 0.005 ? '↓' : summary.savingsMonthly != null && summary.savingsMonthly < -0.005 ? '↑' : '=',
               },
               {
                 label: summary.proposedGruppe
