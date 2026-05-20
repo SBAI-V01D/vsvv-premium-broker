@@ -28,14 +28,34 @@ const GRUPPE_CFG = {
 };
 const GRUPPE_ORDER = ['aktuelle_loesung', 'optimiert', 'angebot_1', 'angebot_2', 'angebot_3', 'angebot_4', 'angebot_5', 'manuell'];
 
-// ── Hilfsfunktion: Titel aus Gesellschaften generieren ────────────────────────
+// ── Hilfsfunktion: Titel aus Gesellschaften generieren (KVG zuerst, dann VVG) ──
 function generateTitelFromGesellschaften(entries) {
   if (!entries || entries.length === 0) return '';
-  const gesellschaften = [...new Set(entries.map(e => e.gesellschaft).filter(Boolean))];
-  if (gesellschaften.length === 0) return '';
-  if (gesellschaften.length <= 3) return gesellschaften.join(' / ');
+  
+  // KVG-Einträge zuerst, dann VVG (Reihenfolge aus entries bewahren)
+  const kvgGesellschaften = entries
+    .filter(e => e.section === 'grundversicherung' && e.gesellschaft)
+    .map(e => e.gesellschaft);
+  
+  const vvgGesellschaften = entries
+    .filter(e => e.section === 'zusatzversicherung' && e.gesellschaft)
+    .map(e => e.gesellschaft);
+  
+  // Kombiniere KVG + VVG, entferne Duplikate aber behalte Reihenfolge
+  const alleGesellschaften = [];
+  const gesehen = new Set();
+  
+  [...kvgGesellschaften, ...vvgGesellschaften].forEach(g => {
+    if (!gesehen.has(g)) {
+      gesehen.add(g);
+      alleGesellschaften.push(g);
+    }
+  });
+  
+  if (alleGesellschaften.length === 0) return '';
+  if (alleGesellschaften.length <= 3) return alleGesellschaften.join(' / ');
   // Bei mehr als 3: erste 2 + "u.a."
-  return `${gesellschaften[0]} / ${gesellschaften[1]} u.a.`;
+  return `${alleGesellschaften[0]} / ${alleGesellschaften[1]} u.a.`;
 }
 
 // ── Print CSS — A4 Querformat ─────────────────────────────────────────────────
