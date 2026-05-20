@@ -599,22 +599,29 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
   const saveMutation = useMutation({
     mutationFn: async (products) => {
       const results = [];
+      console.log(`[DossierAiUpload SAVE] START: ${products.length} Produkte, Ziel-Gruppe="${defaultGruppe}"`);
+      
       for (const p of products) {
-        // FACHLOGIK: Gruppe ist durch User-Auswahl vor Upload festgelegt
-        // Upload über "Angebot 2" → Daten dürfen NUR Angebot 2 aktualisieren
-        const targetGruppe = defaultGruppe; // Immer die vom User ausgewählte Gruppe verwenden!
+        const targetGruppe = defaultGruppe;
+        const personNameFinal = p.person_name || personName;
+        const sectionFinal = p.section || 'grundversicherung';
         
-        // GUARD: Eintrag in derselben Gruppe existiert bereits → aktualisieren
+        console.log(`[DossierAiUpload SAVE] Verarbeite: ${p.gesellschaft} | ${personNameFinal} | ${sectionFinal}`);
+        
+        // Prüfen ob Eintrag in derselben Gruppe bereits existiert
         const existingInSameGroup = await base44.entities.ComparisonEntry.filter({
           dossier_id: dossierId,
-          person_name: p.person_name || personName,
-          section: p.section,
+          person_name: personNameFinal,
+          section: sectionFinal,
           gesellschaft: p.gesellschaft,
           gruppe: targetGruppe,
-        }).then(r => r[0]);
+        }).then(r => {
+          console.log(`[DossierAiUpload SAVE] Filter ergab ${r.length} Einträge in Gruppe "${targetGruppe}"`);
+          return r[0];
+        });
         
         if (existingInSameGroup) {
-          // Update innerhalb derselben Gruppe ist erlaubt (User hat bewusst gleiche Kategorie gewählt)
+          console.log(`[DossierAiUpload SAVE] UPDATE: ${p.gesellschaft} (ID: ${existingInSameGroup.id})`);
           const entry = await base44.entities.ComparisonEntry.update(existingInSameGroup.id, {
             product_name:      p.product_name || null,
             praemie_monatlich: p.praemie_monatlich != null ? Number(p.praemie_monatlich) : null,
@@ -629,34 +636,34 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
             manually_verified:  true,
           });
           results.push(entry);
-          continue;
+        } else {
+          console.log(`[DossierAiUpload SAVE] CREATE: ${p.gesellschaft} in Gruppe "${targetGruppe}"`);
+          const entry = await base44.entities.ComparisonEntry.create({
+            dossier_id:        dossierId,
+            person_name:       personNameFinal,
+            section:           sectionFinal,
+            gruppe:            targetGruppe,
+            gruppe_label:      p.gruppe_label || null,
+            gesellschaft:      p.gesellschaft,
+            product_name:      p.product_name || null,
+            praemie_monatlich: p.praemie_monatlich != null ? Number(p.praemie_monatlich) : null,
+            franchise:         p.franchise != null ? Number(p.franchise) : null,
+            modell:            p.modell || null,
+            deckung_details:   p.deckung_details || null,
+            is_current:        p.is_current || false,
+            is_recommended:    false,
+            ai_extracted:      true,
+            ai_confidence:     p.confidence
+              ? (Object.values(p.confidence).filter(v => v != null).reduce((a, b) => a + b, 0) /
+                 Object.values(p.confidence).filter(v => v != null).length) || null
+              : null,
+            ai_source_document: file?.name || null,
+            manually_verified:  true,
+          });
+          results.push(entry);
         }
-        
-        // GUARD 3: Neuer Eintrag — erstellen
-        const entry = await base44.entities.ComparisonEntry.create({
-          dossier_id:        dossierId,
-          person_name:       p.person_name || personName,
-          section:           p.section || 'grundversicherung',
-          gruppe:            targetGruppe,
-          gruppe_label:      p.gruppe_label || null,
-          gesellschaft:      p.gesellschaft,
-          product_name:      p.product_name || null,
-          praemie_monatlich: p.praemie_monatlich != null ? Number(p.praemie_monatlich) : null,
-          franchise:         p.franchise != null ? Number(p.franchise) : null,
-          modell:            p.modell || null,
-          deckung_details:   p.deckung_details || null,
-          is_current:        p.is_current || false,
-          is_recommended:    false,
-          ai_extracted:      true,
-          ai_confidence:     p.confidence
-            ? (Object.values(p.confidence).filter(v => v != null).reduce((a, b) => a + b, 0) /
-               Object.values(p.confidence).filter(v => v != null).length) || null
-            : null,
-          ai_source_document: file?.name || null,
-          manually_verified:  true, // Benutzer hat explizit bestätigt
-        });
-        results.push(entry);
       }
+      console.log(`[DossierAiUpload SAVE] SUCCESS: ${results.length} von ${products.length} Einträgen gespeichert`);
       return results;
     },
     onSuccess: (results) => {
