@@ -363,15 +363,15 @@ export default function DossierVergleichTab({ dossier, pendingImportContract, on
       <div className="border-t border-border/60 pt-4 space-y-3">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Eintrag hinzufügen</p>
 
-        {/* KI-Upload Panel */}
-        {showAiUpload && (
+        {/* KI-Upload Panel — nur wenn Gruppe ausgewählt */}
+        {typeof showAiUpload === 'object' && showAiUpload.gruppe && (
           <DossierAiUpload
             dossierId={dossierId}
             personName={persons[0] || ''}
             knownPersons={persons}
-            onEntryAdded={() => setShowAiUpload(false)}
-            onClose={() => setShowAiUpload(false)}
-            defaultGruppe="optimiert"
+            onEntryAdded={() => { setShowAiUpload(false); }}
+            onClose={() => { setShowAiUpload(false); }}
+            defaultGruppe={showAiUpload.gruppe}
           />
         )}
 
@@ -387,17 +387,44 @@ export default function DossierVergleichTab({ dossier, pendingImportContract, on
           />
         ) : !showAiUpload && (
           <div className="space-y-3">
-            {/* Primär: KI-Analyse */}
-            <button
-              onClick={() => setShowAiUpload(true)}
-              className="w-full flex items-center justify-center gap-2 text-sm font-medium text-violet-700 border-2 border-violet-200 bg-violet-50 px-4 py-3 rounded-xl hover:bg-violet-100 transition-colors"
-            >
-              <Sparkles className="w-4 h-4" />
-              Dokument per KI analysieren (empfohlen)
-            </button>
-            <p className="text-[10px] text-muted-foreground text-center">
-              Extrahiert automatisch KVG + VVG für alle Personen — Review vor Speicherung
-            </p>
+            {/* Gruppe-Auswahl VOR dem Upload */}
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-2">
+                1. Zu welcher Vergleichsgruppe gehört das Dokument?
+              </label>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {GRUPPE_OPTIONS.filter(o => o.value !== 'manuell').map((o, idx) => (
+                  <button
+                    key={o.value}
+                    onClick={() => setShowAiUpload({ gruppe: o.value })}
+                    className={`text-xs font-medium py-2.5 px-3 rounded-lg border transition-colors text-left
+                      ${typeof showAiUpload === 'object' && showAiUpload.gruppe === o.value
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : idx === 0
+                          ? 'border-primary/40 bg-primary/5 text-primary hover:bg-muted'
+                          : 'border-border text-muted-foreground hover:bg-muted'}`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Primär: KI-Analyse (nur wenn Gruppe ausgewählt) */}
+            {typeof showAiUpload === 'object' && showAiUpload.gruppe && (
+              <>
+                <button
+                  onClick={() => { /* showAiUpload ist bereits gesetzt, DossierAiUpload wird gleich gerendert */ }}
+                  className="w-full flex items-center justify-center gap-2 text-sm font-medium text-violet-700 border-2 border-violet-200 bg-violet-50 px-4 py-3 rounded-xl hover:bg-violet-100 transition-colors"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  2. Dokument jetzt per KI analysieren (Gruppe: {GRUPPE_OPTIONS.find(o => o.value === showAiUpload.gruppe)?.label})
+                </button>
+                <p className="text-[10px] text-muted-foreground text-center">
+                  Extrahiert automatisch KVG + VVG für alle Personen — Review vor Speicherung
+                </p>
+              </>
+            )}
 
             {/* Sekundär: Manuelle Ergänzung (nur für Sonderfälle) */}
             <div className="border-t border-border/60 pt-3">

@@ -594,30 +594,63 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
     },
   });
 
-  // ── Persistierung ─────────────────────────────────────────────────────────
+  // ── Persistierung — HARTE TRENNUNG DER GRUPPEN ────────────────────────────
   const saveMutation = useMutation({
     mutationFn: async (products) => {
       const results = [];
       for (const p of products) {
-        // GUARD: Nur erstellen wenn nicht bereits exists (person + section + gesellschaft + gruppe)
-        const existing = await base44.entities.ComparisonEntry.filter({
+        // FACHLOGIK: Gruppe ist durch User-Auswahl vor Upload festgelegt
+        // Upload über "Angebot 2" → Daten dürfen NUR Angebot 2 aktualisieren
+        const targetGruppe = defaultGruppe; // Immer die vom User ausgewählte Gruppe verwenden!
+        
+        // GUARD 1: Bestehende Einträge in ANDEREN Gruppen sind READ-ONLY
+        // Wenn bereits ein Eintrag in einer ANDEREN Gruppe existiert → NICHT überschreiben
+        const existingInOtherGroup = await base44.entities.ComparisonEntry.filter({
           dossier_id: dossierId,
           person_name: p.person_name || personName,
           section: p.section,
           gesellschaft: p.gesellschaft,
-          gruppe: p.gruppe,
-        }).then(r => r[0]);
+        }).then(r => r.find(e => e.gruppe !== targetGruppe));
         
-        if (existing) {
-          console.warn(`[DossierAiUpload] SKIP: ${p.gesellschaft} (${p.section}) für ${p.person_name} in Gruppe ${p.gruppe} existiert bereits`);
-          continue; // Nicht erstellen, nicht updaten (ausser gleiche Gruppe)
+        if (existingInOtherGroup) {
+          console.warn(`[DossierAiUpload] BLOCKED: ${p.gesellschaft} (${p.section}) für ${p.person_name} existiert bereits in Gruppe "${existingInOtherGroup.gruppe}" — darf nicht in "${targetGruppe}" überschrieben werden`);
+          continue; // Cross-Overwrite verhindern!
         }
         
+        // GUARD 2: Eintrag in derselben Gruppe existiert bereits → aktualisieren
+        const existingInSameGroup = await base44.entities.ComparisonEntry.filter({
+          dossier_id: dossierId,
+          person_name: p.person_name || personName,
+          section: p.section,
+          gesellschaft: p.gesellschaft,
+          gruppe: targetGruppe,
+        }).then(r => r[0]);
+        
+        if (existingInSameGroup) {
+          // Update innerhalb derselben Gruppe ist erlaubt (User hat bewusst gleiche Kategorie gewählt)
+          const entry = await base44.entities.ComparisonEntry.update(existingInSameGroup.id, {
+            product_name:      p.product_name || null,
+            praemie_monatlich: p.praemie_monatlich != null ? Number(p.praemie_monatlich) : null,
+            franchise:         p.franchise != null ? Number(p.franchise) : null,
+            modell:            p.modell || null,
+            deckung_details:   p.deckung_details || null,
+            ai_confidence:     p.confidence
+              ? (Object.values(p.confidence).filter(v => v != null).reduce((a, b) => a + b, 0) /
+                 Object.values(p.confidence).filter(v => v != null).length) || null
+              : null,
+            ai_source_document: file?.name || null,
+            manually_verified:  true,
+          });
+          results.push(entry);
+          continue;
+        }
+        
+        // GUARD 3: Neuer Eintrag — erstellen
         const entry = await base44.entities.ComparisonEntry.create({
           dossier_id:        dossierId,
           person_name:       p.person_name || personName,
           section:           p.section || 'grundversicherung',
-          gruppe:            p.gruppe || 'manuell',
+          gruppe:            targetGruppe,
           gruppe_label:      p.gruppe_label || null,
           gesellschaft:      p.gesellschaft,
           product_name:      p.product_name || null,
