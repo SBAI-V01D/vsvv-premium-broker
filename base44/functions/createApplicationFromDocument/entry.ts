@@ -191,7 +191,34 @@ Deno.serve(async (req) => {
     const premiumYearly = applicationData.premium_yearly
       || (premiumMonthly ? Math.round(premiumMonthly * 12 * 100) / 100 : null);
 
-    const sparte = applicationData.sparte || applicationData.insurance_type || 'other';
+    // Normalisiere Sparte auf gültige Werte aus insuranceSparten.js
+    const SPARTE_MAP = {
+      // KVG/VVG
+      'kvg': 'kvg', 'grundversicherung': 'kvg', 'krankenkasse': 'kvg', 'health': 'kvg',
+      'vvg': 'vvg_zusatz', 'vvg_zusatz': 'vvg_zusatz', 'zusatz': 'vvg_zusatz', 'zusatzversicherung': 'vvg_zusatz',
+      'kvg_vvg': 'kvg_vvg_kombi', 'kvg_vvg_kombi': 'kvg_vvg_kombi', 'kombi': 'kvg_vvg_kombi',
+      // Leben
+      'leben': 'leben_3b', 'life': 'leben_3b', 'leben_3a': 'leben_3a', 'leben_3b': 'leben_3b',
+      'vorsorge': 'leben_3a', '3a': 'leben_3a', '3b': 'leben_3b',
+      // MF
+      'mf': 'motorfahrzeug', 'motor': 'motorfahrzeug', 'motorfahrzeug': 'motorfahrzeug',
+      'auto': 'motorfahrzeug', 'fahrzeug': 'motorfahrzeug', 'kfz': 'motorfahrzeug',
+      // Haftpflicht
+      'haftpflicht': 'haftpflicht_privat', 'haftpflicht_privat': 'haftpflicht_privat',
+      'liability': 'haftpflicht_privat', 'betriebshaftpflicht': 'betriebshaftpflicht',
+      // Sach
+      'hausrat': 'hausrat', 'property': 'hausrat', 'sach': 'hausrat',
+      'gebäude': 'gebaude_privat', 'gebaude': 'gebaude_privat', 'gebaude_privat': 'gebaude_privat',
+      // Unfall
+      'unfall': 'unfall_privat', 'unfall_privat': 'unfall_privat', 'uvg': 'uvg',
+      // Firma
+      'bvg': 'bvg', 'pension': 'bvg', 'ktg': 'ktg', 'krankentaggeld': 'ktg',
+      'rechtsschutz': 'rechtsschutz_privat', 'rechtsschutz_privat': 'rechtsschutz_privat',
+      'reise': 'reise', 'cyber': 'cyber_privat',
+    };
+    const rawSparte = (applicationData.sparte || '').toLowerCase().trim();
+    const sparte = SPARTE_MAP[rawSparte] || rawSparte || applicationData.insurance_type || 'other';
+
     const sparteData = {
       franchise: applicationData.franchise ? String(applicationData.franchise) : null,
       model: applicationData.model || null,

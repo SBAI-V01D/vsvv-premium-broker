@@ -469,8 +469,41 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Sparte</label>
-              <Input placeholder="z.B. kvg, vvg, mf" value={appData.sparte}
-                onChange={e => setAppData(d => ({ ...d, sparte: e.target.value }))} />
+              <select value={appData.sparte}
+                onChange={e => setAppData(d => ({ ...d, sparte: e.target.value }))}
+                className="w-full p-2 border rounded text-sm bg-background mt-0.5">
+                <option value="">– wählen –</option>
+                <optgroup label="Privat – Kranken">
+                  <option value="kvg">KVG – Grundversicherung</option>
+                  <option value="vvg_zusatz">VVG – Zusatzversicherung</option>
+                  <option value="kvg_vvg_kombi">KVG + VVG Kombi</option>
+                </optgroup>
+                <optgroup label="Privat – Leben">
+                  <option value="leben_3a">Leben Säule 3a</option>
+                  <option value="leben_3b">Leben Säule 3b</option>
+                </optgroup>
+                <optgroup label="Privat – Sach &amp; Haftpflicht">
+                  <option value="motorfahrzeug">Motorfahrzeug</option>
+                  <option value="hausrat">Hausrat</option>
+                  <option value="gebaude_privat">Gebäude Privat</option>
+                  <option value="haftpflicht_privat">Haftpflicht Privat</option>
+                  <option value="unfall_privat">Unfall Privat</option>
+                  <option value="rechtsschutz_privat">Rechtsschutz Privat</option>
+                  <option value="reise">Reise</option>
+                  <option value="cyber_privat">Cyber Privat</option>
+                </optgroup>
+                <optgroup label="Firma">
+                  <option value="bvg">BVG – Pensionskasse</option>
+                  <option value="uvg">UVG – Unfall</option>
+                  <option value="ktg">KTG – Krankentaggeld</option>
+                  <option value="betriebshaftpflicht">Betriebshaftpflicht</option>
+                  <option value="berufshaftpflicht">Berufshaftpflicht</option>
+                  <option value="inventar">Betriebs-/Inventar</option>
+                  <option value="rechtsschutz_firma">Rechtsschutz Firma</option>
+                  <option value="cyber_firma">Cyber Firma</option>
+                  <option value="flotte">Flotte</option>
+                </optgroup>
+              </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
