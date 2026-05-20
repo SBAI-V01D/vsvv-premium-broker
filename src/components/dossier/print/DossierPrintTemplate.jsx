@@ -413,44 +413,42 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
 
   return (
     <div>
-      {/* Dossier-Header mit Berater/Organisation */}
+      {/* Dossier-Header mit Titel links + Berater/Organisation rechts */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
         borderBottom: '3px solid #1e3a5f', paddingBottom: '12px', marginBottom: '18px',
       }}>
-        {/* Linke Seite: Organisation + Berater */}
-        <div style={{ flex: 1 }}>
-          {organization?.name && (
-            <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e3a5f', marginBottom: '6px' }}>
-              {organization.name}
-            </div>
-          )}
-          <div style={{ fontSize: '8.5px', color: '#64748b', lineHeight: '1.5' }}>
-            {organization?.street && <div>{organization.street}{organization?.zip_code || organization?.city ? ',' : ''} {organization?.zip_code} {organization?.city}</div>}
-            {organization?.phone && <div>Tel: {organization.phone}</div>}
-            {organization?.email && <div>Email: {organization.email}</div>}
-            {advisor && (
-              <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #e2e8f0' }}>
-                <div style={{ fontWeight: 600, color: '#1e3a5f' }}>{advisor.firstname} {advisor.lastname}</div>
-                {advisor?.phone && <div>Tel: {advisor.phone}</div>}
-                {advisor?.email && <div>Email: {advisor.email}</div>}
-                {advisor?.finma_number && <div>FINMA: {advisor.finma_number}</div>}
-                {advisor?.vbv_number && <div>VBV: {advisor.vbv_number}</div>}
-              </div>
-            )}
+        {/* Linke Seite: Titel (linksbündig, gleich gross wie Seite 2-4) */}
+        <div style={{ flex: 1, paddingRight: '20px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e3a5f', letterSpacing: '-0.02em', marginBottom: '2px' }}>
+            {dossier.title || TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
+          </div>
+          <div style={{ fontSize: '9px', color: '#64748b' }}>
+            {customer && [customer.first_name, customer.last_name].filter(Boolean).join(' ')}
           </div>
         </div>
         
-        {/* Rechte Seite: Dossier-Info */}
-        <div style={{ textAlign: 'right', minWidth: '180px' }}>
-          <div style={{ fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>
-            {dossier.title || TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
+        {/* Rechte Seite: Organisation + Berater */}
+        <div style={{ minWidth: '220px', textAlign: 'right' }}>
+          {organization?.name && (
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#1e3a5f', marginBottom: '4px' }}>
+              {organization.name}
+            </div>
+          )}
+          <div style={{ fontSize: '8px', color: '#64748b', lineHeight: '1.4' }}>
+            {organization?.street && <div>{organization.street}{organization?.zip_code || organization?.city ? ',' : ''} {organization?.zip_code} {organization?.city}</div>}
+            {organization?.phone && <div>Tel: {organization.phone}</div>}
+            {organization?.email && <div>Email: {organization.email}</div>}
           </div>
-          <div style={{ fontSize: '9.5px', color: '#64748b' }}>Erstellt: {fmtDate(snapshot?.snapshot_created_at)}</div>
-          {snapshot?.created_by_name && <div style={{ fontSize: '9.5px', color: '#64748b' }}>durch {snapshot.created_by_name}</div>}
-          <div style={{ fontSize: '8.5px', color: '#94a3b8', marginTop: '3px', background: '#f1f5f9', padding: '2px 7px', borderRadius: '4px', display: 'inline-block' }}>
-            v{dossier.version ?? 1}
-          </div>
+          {advisor && (
+            <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '9px', fontWeight: 600, color: '#1e3a5f' }}>{advisor.firstname} {advisor.lastname}</div>
+              {advisor?.phone && <div style={{ fontSize: '8px' }}>Tel: {advisor.phone}</div>}
+              {advisor?.email && <div style={{ fontSize: '8px' }}>Email: {advisor.email}</div>}
+              {advisor?.finma_number && <div style={{ fontSize: '7.5px', color: '#94a3b8' }}>FINMA: {advisor.finma_number}</div>}
+              {advisor?.vbv_number && <div style={{ fontSize: '7.5px', color: '#94a3b8' }}>VBV: {advisor.vbv_number}</div>}
+            </div>
+          )}
         </div>
       </div>
 
