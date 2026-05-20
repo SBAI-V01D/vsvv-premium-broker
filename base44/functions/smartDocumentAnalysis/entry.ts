@@ -139,10 +139,12 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
     const firstPolicy = policies[0] || {};
 
     // ================================================================
-    // SCHRITT 2: KUNDENERKENNUNG — STRENGE PRIORITÄTSREIHENFOLGE
+    // SCHRITT 2: KUNDENERKENNUNG — parallel laden (Performance)
     // ================================================================
-    const allCustomers = await base44.asServiceRole.entities.Customer.list(null, 500);
-    const allContracts = await base44.asServiceRole.entities.Contract.list(null, 1000);
+    const [allCustomers, allContracts] = await Promise.all([
+      base44.asServiceRole.entities.Customer.list(null, 500),
+      base44.asServiceRole.entities.Contract.list(null, 1000),
+    ]);
 
     const customerMatches = [];
     let detectionPhase = 'no_match';
@@ -241,7 +243,7 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
       if (addressMatches.length > 0 && detectionPhase === 'no_match') detectionPhase = 'matched_via_address';
     }
 
-    // PRIORITÄT 6: Fuzzy Name (nur als Hinweis, max Confidence 70)
+    // PRIORITÄT 6: Fuzzy Name — nur wenn noch kein sicherer Match gefunden (Performance)
     if (customerMatches.length === 0 && searchFirstName && searchLastName) {
       const fuzzyMatches = allCustomers
         .map(c => ({
