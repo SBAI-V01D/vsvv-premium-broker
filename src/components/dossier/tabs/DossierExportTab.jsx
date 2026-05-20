@@ -10,7 +10,7 @@
  * - created_date Fallback auf created_date (ISO-String von Base44)
  * - Kein Mailversand, keine Automationen, keine produktiven Exporte
  */
-import React, { useState, useMemo, memo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
@@ -66,106 +66,92 @@ const SnapshotRow = memo(function SnapshotRow({ snap, onPreview }) {
   );
 });
 
-// ── Print CSS ────────────────────────────────────────────────────────────────
-// Screen: #dossier-print-only ist mit visibility:hidden+height:0 versteckt
-// (NICHT display:none — sonst ignoriert Browser beim Print!)
-// Print: alles ausblenden, nur #dossier-print-only zeigen
-const PRINT_ONLY_STYLE = `
-  @media print {
-    body > * { display: none !important; visibility: hidden !important; }
-    #dossier-print-only,
-    #dossier-print-only * {
-      display: revert !important;
-      visibility: visible !important;
-      position: static !important;
-      overflow: visible !important;
-      height: auto !important;
-      clip: auto !important;
-    }
-  }
-`;
+// ── renderSnapshotToHtml: serialisiert den Print-Container als vollständiges HTML-Dokument
+// Öffnet einen neuen Tab und druckt dort — umgeht iframe-Beschränkungen komplett.
+function openPrintTab(snapshot) {
+  // Holt das gerenderte HTML aus dem Screen-Vorschau-Container
+  const container = document.getElementById('dossier-screen-preview');
+  if (!container) return;
+  const html = container.innerHTML;
+
+  // Alle aktiven Stylesheets in den neuen Tab übertragen
+  const styles = Array.from(document.styleSheets).map(sheet => {
+    try {
+      return Array.from(sheet.cssRules).map(r => r.cssText).join('\n');
+    } catch { return ''; }
+  }).join('\n');
+
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${snapshot.dossier?.title ?? 'Dossier'}</title>
+  <style>
+    ${styles}
+    @page { size: A4 landscape; margin: 10mm 14mm; }
+    body { background: white; margin: 0; padding: 16px 20px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+  </style>
+</head>
+<body>${html}</body>
+</html>`);
+  win.document.close();
+  // Kurz warten bis Bilder/Fonts geladen sind, dann drucken
+  setTimeout(() => { win.print(); }, 800);
+}
 
 // ── Print-Vorschau Modal ──────────────────────────────────────────────────────
 function PrintPreviewModal({ snapshot, onClose }) {
-  // Injiziere Print-CSS in <head>, entferne beim Unmount
-  useEffect(() => {
-    const tag = document.createElement('style');
-    tag.id = 'dossier-print-style';
-    tag.textContent = PRINT_ONLY_STYLE;
-    document.head.appendChild(tag);
-    return () => { document.getElementById('dossier-print-style')?.remove(); };
-  }, []);
-
-  const handlePrint = () => window.print();
+  const handlePrint = () => openPrintTab(snapshot);
 
   return (
-    <>
-      {/* Print-only: im body-Flow, aber auf Screen versteckt via visibility+height
-          WICHTIG: kein display:none — Browser würde es dann auch beim Drucken ignorieren */}
-      <div
-        id="dossier-print-only"
-        style={{
-          visibility: 'hidden',
-          position: 'absolute',
-          left: '-9999px',
-          top: 0,
-          height: 0,
-          overflow: 'hidden',
-          pointerEvents: 'none',
-        }}
-        aria-hidden="true"
-      >
-        <DossierPrintTemplate snapshot={snapshot} />
-      </div>
-
-      {/* Screen-Modal: fixed overlay für die Vorschau, nie im Print */}
-      <div className="fixed inset-0 z-50 flex flex-col bg-background" style={{ overflow: 'hidden' }}>
-        {/* Toolbar */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <FileText className="w-4 h-4 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">
-                {snapshot.dossier?.title ?? 'Dossier'}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Druckvorschau · v{snapshot.dossier_version ?? 1}
-              </p>
-            </div>
+    <div className="fixed inset-0 z-50 flex flex-col bg-background" style={{ overflow: 'hidden' }}>
+      {/* Toolbar */}
+      <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <FileText className="w-4 h-4 text-primary" />
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              <Printer className="w-4 h-4" />
-              Drucken / Als PDF speichern
-            </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border border-border text-sm font-medium rounded-lg hover:bg-muted transition-colors"
-            >
-              Schliessen
-            </button>
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              {snapshot.dossier?.title ?? 'Dossier'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Druckvorschau · v{snapshot.dossier_version ?? 1}
+            </p>
           </div>
         </div>
-
-        {/* Hinweis */}
-        <div className="px-6 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-700 flex items-center gap-2">
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          Für PDF-Export: Drucken → Ziel «Als PDF speichern» · A4 Querformat, Ränder Normal, Hintergrundgrafiken aktivieren.
-        </div>
-
-        {/* Scrollbare Screen-Vorschau */}
-        <div className="flex-1 overflow-auto bg-slate-100 p-6">
-          <div className="max-w-5xl mx-auto bg-white shadow-modal rounded-xl overflow-hidden p-4">
-            <DossierPrintTemplate snapshot={snapshot} />
-          </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            <Printer className="w-4 h-4" />
+            Drucken / Als PDF speichern
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-border text-sm font-medium rounded-lg hover:bg-muted transition-colors"
+          >
+            Schliessen
+          </button>
         </div>
       </div>
-    </>
+
+      {/* Hinweis */}
+      <div className="px-6 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-700 flex items-center gap-2">
+        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+        Für PDF-Export: Drucken → Ziel «Als PDF speichern» · A4 Querformat, Ränder Normal, Hintergrundgrafiken aktivieren.
+      </div>
+
+      {/* Scrollbare Screen-Vorschau — id wird von openPrintTab gelesen */}
+      <div className="flex-1 overflow-auto bg-slate-100 p-6">
+        <div id="dossier-screen-preview" className="max-w-5xl mx-auto bg-white shadow-modal rounded-xl overflow-hidden p-4">
+          <DossierPrintTemplate snapshot={snapshot} />
+        </div>
+      </div>
+    </div>
   );
 }
 
