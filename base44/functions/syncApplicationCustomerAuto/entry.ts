@@ -39,11 +39,17 @@ Deno.serve(async (req) => {
     try {
       customer = await base44.asServiceRole.entities.Customer.get(app.customer_id);
     } catch (e) {
-      return Response.json({ status: 'skipped', reason: 'Customer not found' });
+      // Customer may have been deleted — skip silently
+      return Response.json({ status: 'skipped', reason: 'Customer not found or deleted' });
     }
 
     if (!customer) {
       return Response.json({ status: 'skipped', reason: 'Customer not found' });
+    }
+
+    // Skip archived customers
+    if (customer.archived) {
+      return Response.json({ status: 'skipped', reason: 'Customer is archived' });
     }
 
     // Extract data from application (direct fields + sparte_data)

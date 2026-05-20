@@ -305,18 +305,21 @@ export default function Vertragsablaeufe() {
   const [search, setSearch] = useState('')
 
   const { data: contracts = [], isLoading } = useQuery({
-    queryKey: ['contracts'],
-    queryFn: () => base44.entities.Contract.list(),
+    queryKey: ['contracts', 'ablaeufe'],
+    queryFn: () => base44.entities.Contract.filter({ archived: false }, '-updated_date', 1000),
+    staleTime: 2 * 60 * 1000,
   })
 
   const { data: verkaufschancen = [] } = useQuery({
     queryKey: ['verkaufschancen'],
-    queryFn: () => base44.entities.Verkaufschance.list(),
+    queryFn: () => base44.entities.Verkaufschance.filter({ status: ['neu', 'in_ausschreibung', 'offerten_erhalten', 'beratung_erfolgt', 'kunde_entscheidet'] }, null, 200),
+    staleTime: 2 * 60 * 1000,
   })
 
   const { data: tasks = [] } = useQuery({
-    queryKey: ['tasks'],
-    queryFn: () => base44.entities.Task.list(),
+    queryKey: ['tasks', 'open'],
+    queryFn: () => base44.entities.Task.filter({ status: ['open', 'in_progress'] }, null, 200),
+    staleTime: 2 * 60 * 1000,
   })
 
   const createVsMutation = useMutation({
@@ -331,6 +334,7 @@ export default function Vertragsablaeufe() {
   const actionableItems = useMemo(() => {
     return contracts
       .filter(c => {
+        if (c.archived) return false
         if (['cancelled', 'archived'].includes(c.status)) return false
         if (c.process_status === 'erledigt' && filterProcessStatus !== 'erledigt') return false
         if (c.status === 'expired') return true
