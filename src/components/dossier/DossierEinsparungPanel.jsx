@@ -11,7 +11,7 @@ export default function DossierEinsparungPanel({ entries }) {
   const s = calcDossierSummary(entries);
 
   // DEBUG: Zeige Berechnungsdetails
-  const currentEntries = entries.filter(e => e.gruppe === 'aktuelle_loesung' || e.is_current);
+  const currentEntries = entries.filter(e => e.gruppe === 'aktuelle_loesung');
   const proposedEntries = s.proposedGruppe ? entries.filter(e => e.gruppe === s.proposedGruppe) : [];
 
   if (!s.hasCurrent && !s.hasRecommendation) {

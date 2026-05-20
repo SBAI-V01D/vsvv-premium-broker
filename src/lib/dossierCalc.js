@@ -216,8 +216,8 @@ export function resolveProposedGruppe(entries) {
 export function calcDossierSummary(entries) {
   const arr = safeArray(entries);
 
-  // Aktuelle Lösung: gruppe='aktuelle_loesung' ODER is_current=true (Legacy)
-  const currentEntries = arr.filter(e => e?.gruppe === 'aktuelle_loesung' || e?.is_current);
+  // Aktuelle Lösung: NUR gruppe='aktuelle_loesung' (is_current wird ignoriert)
+  const currentEntries = arr.filter(e => e?.gruppe === 'aktuelle_loesung');
   const currentMonthly = currentEntries.reduce((sum, e) => {
     const p = safePraemie(e?.praemie_monatlich);
     return p !== null ? sum + p : sum;
