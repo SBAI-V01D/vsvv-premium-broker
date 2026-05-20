@@ -420,9 +420,11 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
       }}>
         {/* Linke Seite: Organisation + Berater */}
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e3a5f', marginBottom: '6px' }}>
-            {organization?.name || 'Swiss Premium Broker'}
-          </div>
+          {organization?.name && (
+            <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e3a5f', marginBottom: '6px' }}>
+              {organization.name}
+            </div>
+          )}
           <div style={{ fontSize: '8.5px', color: '#64748b', lineHeight: '1.5' }}>
             {organization?.street && <div>{organization.street}{organization?.zip_code || organization?.city ? ',' : ''} {organization?.zip_code} {organization?.city}</div>}
             {organization?.phone && <div>Tel: {organization.phone}</div>}
