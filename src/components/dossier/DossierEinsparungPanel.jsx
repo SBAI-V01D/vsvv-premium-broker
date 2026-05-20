@@ -10,6 +10,10 @@ import { calcDossierSummary, fmtCHF } from '@/lib/dossierCalc';
 export default function DossierEinsparungPanel({ entries }) {
   const s = calcDossierSummary(entries);
 
+  // DEBUG: Zeige Berechnungsdetails
+  const currentEntries = entries.filter(e => e.gruppe === 'aktuelle_loesung' || e.is_current);
+  const proposedEntries = s.proposedGruppe ? entries.filter(e => e.gruppe === s.proposedGruppe) : [];
+
   if (!s.hasCurrent && !s.hasRecommendation) {
     return (
       <div className="border border-dashed border-border rounded-xl p-5 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
@@ -111,6 +115,69 @@ export default function DossierEinsparungPanel({ entries }) {
             <p className="text-sm text-muted-foreground py-2">Keine Empfehlung gesetzt</p>
           )}
         </div>
+      </div>
+
+      {/* DEBUG: Berechnungsdetails */}
+      <div className="border-t border-border bg-muted/20 px-5 py-3">
+        <details className="text-xs">
+          <summary className="cursor-pointer text-muted-foreground hover:text-foreground flex items-center gap-2">
+            <Info className="w-3.5 h-3.5" />
+            Berechnungsdetails anzeigen ({entries.length} Einträge total)
+          </summary>
+          <div className="mt-3 space-y-3">
+            {/* Aktuelle Einträge */}
+            <div>
+              <p className="font-semibold text-foreground mb-1">Aktuelle Lösung ({currentEntries.length} Einträge):</p>
+              {currentEntries.length > 0 ? (
+                <div className="bg-white border border-border rounded p-2 space-y-1">
+                  {currentEntries.map((e, i) => (
+                    <div key={i} className="flex items-center justify-between text-[11px]">
+                      <span className="text-muted-foreground">{e.gesellschaft} {e.product_name && `· ${e.product_name}`} ({e.person_name})</span>
+                      <span className="font-medium">{e.praemie_monatlich != null ? `CHF ${Number(e.praemie_monatlich).toFixed(2)}` : '—'}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border mt-1">
+                    <span className="font-semibold">Summe:</span>
+                    <span className="font-bold text-foreground">CHF {s.currentMonthly.toFixed(2)}</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-muted-foreground italic">Keine Einträge mit gruppe="aktuelle_loesung" oder is_current=true</p>
+              )}
+            </div>
+
+            {/* Empfohlene Einträge */}
+            {s.proposedGruppe && (
+              <div>
+                <p className="font-semibold text-foreground mb-1">Empfohlene Lösung — Gruppe "{s.proposedGruppe}" ({proposedEntries.length} Einträge):</p>
+                {proposedEntries.length > 0 ? (
+                  <div className="bg-white border border-border rounded p-2 space-y-1">
+                    {proposedEntries.map((e, i) => (
+                      <div key={i} className="flex items-center justify-between text-[11px]">
+                        <span className="text-muted-foreground">{e.gesellschaft} {e.product_name && `· ${e.product_name}`} ({e.person_name})</span>
+                        <span className="font-medium">{e.praemie_monatlich != null ? `CHF ${Number(e.praemie_monatlich).toFixed(2)}` : '—'}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-border mt-1">
+                      <span className="font-semibold">Summe:</span>
+                      <span className="font-bold text-foreground">CHF {s.proposedMonthly.toFixed(2)}</span>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            {/* Berechnung */}
+            <div className="bg-primary/5 border border-primary/20 rounded p-2 space-y-1">
+              <p className="font-semibold text-primary mb-1">Berechnung:</p>
+              <div className="text-[11px] text-muted-foreground">
+                <p>Aktuell: CHF {s.currentMonthly.toFixed(2)}</p>
+                <p>Empfohlen: CHF {s.proposedMonthly.toFixed(2)}</p>
+                <p className="text-foreground font-medium">Differenz: CHF {(s.currentMonthly - s.proposedMonthly).toFixed(2)} {s.savingsMonthly > 0 ? '(Einsparung)' : s.savingsMonthly < 0 ? '(Mehrkosten)' : '(gleich)'}</p>
+              </div>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   );
