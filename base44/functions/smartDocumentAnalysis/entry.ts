@@ -267,16 +267,16 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
     // ================================================================
     // SCHRITT 3: FAMILIENSTRUKTUR ANALYSIEREN
     // ================================================================
+    // Nur Hauptkunden (keine Familienmitglieder) — max 200 ans Frontend
+    // Das Frontend braucht die Liste nur für die Familiensuche
     const primaryCustomers = allCustomers.filter(c => !c.is_family_member);
-    const availablePrimaryCustomers = primaryCustomers.map(c => ({
+    const availablePrimaryCustomers = primaryCustomers.slice(0, 200).map(c => ({
       id: c.id,
       first_name: c.first_name,
       last_name: c.last_name,
       customer_number: c.customer_number,
       city: c.city,
       zip_code: c.zip_code,
-      organization_id: c.organization_id,
-      advisor_id: c.advisor_id,
     }));
 
     let matchedPrimaryCustomer = null;
