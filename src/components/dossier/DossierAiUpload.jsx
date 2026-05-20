@@ -604,21 +604,7 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
         // Upload über "Angebot 2" → Daten dürfen NUR Angebot 2 aktualisieren
         const targetGruppe = defaultGruppe; // Immer die vom User ausgewählte Gruppe verwenden!
         
-        // GUARD 1: Bestehende Einträge in ANDEREN Gruppen sind READ-ONLY
-        // Wenn bereits ein Eintrag in einer ANDEREN Gruppe existiert → NICHT überschreiben
-        const existingInOtherGroup = await base44.entities.ComparisonEntry.filter({
-          dossier_id: dossierId,
-          person_name: p.person_name || personName,
-          section: p.section,
-          gesellschaft: p.gesellschaft,
-        }).then(r => r.find(e => e.gruppe !== targetGruppe));
-        
-        if (existingInOtherGroup) {
-          console.warn(`[DossierAiUpload] BLOCKED: ${p.gesellschaft} (${p.section}) für ${p.person_name} existiert bereits in Gruppe "${existingInOtherGroup.gruppe}" — darf nicht in "${targetGruppe}" überschrieben werden`);
-          continue; // Cross-Overwrite verhindern!
-        }
-        
-        // GUARD 2: Eintrag in derselben Gruppe existiert bereits → aktualisieren
+        // GUARD: Eintrag in derselben Gruppe existiert bereits → aktualisieren
         const existingInSameGroup = await base44.entities.ComparisonEntry.filter({
           dossier_id: dossierId,
           person_name: p.person_name || personName,
