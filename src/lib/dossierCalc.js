@@ -181,14 +181,21 @@ export function resolveProposedGruppe(entries) {
   const arr = safeArray(entries).filter(e => e?.gruppe !== 'aktuelle_loesung');
   if (arr.length === 0) return null;
 
-  // 1. Explizit empfohlene Gruppe
-  const recommendedEntry = arr.find(e => e?.is_recommended);
+  // Nur Gruppen berücksichtigen, die mindestens einen Eintrag mit Prämie > 0 haben
+  const gruppenMitPraemie = new Set(
+    arr.filter(e => safePraemie(e?.praemie_monatlich) !== null && (safePraemie(e?.praemie_monatlich) ?? 0) > 0)
+       .map(e => e?.gruppe)
+       .filter(Boolean)
+  );
+  if (gruppenMitPraemie.size === 0) return null;
+
+  // 1. Explizit empfohlene Gruppe (muss Prämien haben)
+  const recommendedEntry = arr.find(e => e?.is_recommended && gruppenMitPraemie.has(e?.gruppe));
   if (recommendedEntry?.gruppe) return recommendedEntry.gruppe;
 
-  // 2. Nach Prioritätsliste: erste vorhandene Gruppe
-  const presentGruppen = new Set(arr.map(e => e?.gruppe).filter(Boolean));
+  // 2. Nach Prioritätsliste: erste Gruppe mit gültigen Prämien
   for (const g of PROPOSED_GRUPPE_PRIORITY) {
-    if (presentGruppen.has(g)) return g;
+    if (gruppenMitPraemie.has(g)) return g;
   }
 
   return null;
@@ -219,7 +226,7 @@ export function calcDossierSummary(entries) {
   // Empfohlene / vorgeschlagene Gruppe automatisch bestimmen
   const proposedGruppe  = resolveProposedGruppe(arr);
   const proposedEntries = proposedGruppe
-    ? arr.filter(e => e?.gruppe === proposedGruppe || (proposedGruppe === 'optimiert' && e?.is_recommended && e?.gruppe !== 'aktuelle_loesung'))
+    ? arr.filter(e => e?.gruppe === proposedGruppe)
     : [];
   const proposedMonthly = proposedEntries.reduce((sum, e) => {
     const p = safePraemie(e?.praemie_monatlich);
