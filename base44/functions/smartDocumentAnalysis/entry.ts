@@ -139,11 +139,15 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
     const firstPolicy = policies[0] || {};
 
     // ================================================================
-    // SCHRITT 2: KUNDENERKENNUNG — parallel laden (Performance)
+    // SCHRITT 2: KUNDENERKENNUNG — parallel + gefiltert (Performance)
+    // Verträge nur laden wenn eine Policennummer vorhanden ist
     // ================================================================
+    const hasPoliceNumber = policies.some(p => p.policy_number);
     const [allCustomers, allContracts] = await Promise.all([
       base44.asServiceRole.entities.Customer.list(null, 500),
-      base44.asServiceRole.entities.Contract.list(null, 1000),
+      hasPoliceNumber
+        ? base44.asServiceRole.entities.Contract.list(null, 1000)
+        : Promise.resolve([]),
     ]);
 
     const customerMatches = [];
