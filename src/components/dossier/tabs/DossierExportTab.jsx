@@ -69,14 +69,27 @@ const SnapshotRow = memo(function SnapshotRow({ snap, onPreview }) {
 // ── Print-Vorschau Modal ──────────────────────────────────────────────────────
 const PRINT_MODAL_STYLE = `
   @media print {
-    body * { visibility: hidden !important; }
-    #dossier-print-content, #dossier-print-content * { visibility: visible !important; }
-    #dossier-print-content {
-      position: fixed !important;
-      inset: 0 !important;
+    /* Alles ausblenden ausser dem Print-Inhalt */
+    #dossier-print-portal > *:not(#dossier-print-content-wrapper) {
+      display: none !important;
+    }
+    /* Print-Wrapper: normaler Block-Flow, kein fixed */
+    #dossier-print-content-wrapper {
+      display: block !important;
+      position: static !important;
       overflow: visible !important;
       background: white !important;
-      z-index: 99999 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      width: 100% !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+    }
+    /* Scroll-Container entfernen */
+    #dossier-print-scroll {
+      overflow: visible !important;
+      background: white !important;
+      padding: 0 !important;
     }
   }
 `;
@@ -87,7 +100,7 @@ function PrintPreviewModal({ snapshot, onClose }) {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: PRINT_MODAL_STYLE }} />
-      <div id="dossier-print-portal" className="fixed inset-0 z-50 flex flex-col bg-background">
+      <div id="dossier-print-portal" className="fixed inset-0 z-50 flex flex-col bg-background" style={{ overflow: 'hidden' }}>
         {/* Toolbar */}
         <div className="print-modal-toolbar flex items-center justify-between px-6 py-3 border-b border-border bg-card shrink-0">
           <div className="flex items-center gap-3">
@@ -127,8 +140,8 @@ function PrintPreviewModal({ snapshot, onClose }) {
         </div>
 
         {/* Scrollbare Vorschau */}
-        <div className="flex-1 overflow-auto bg-slate-100 p-6">
-          <div id="dossier-print-content" className="max-w-5xl mx-auto bg-white shadow-modal rounded-xl overflow-hidden p-4">
+        <div id="dossier-print-scroll" className="flex-1 overflow-auto bg-slate-100 p-6">
+          <div id="dossier-print-content-wrapper" className="max-w-5xl mx-auto bg-white shadow-modal rounded-xl overflow-hidden p-4">
             <DossierPrintTemplate snapshot={snapshot} />
           </div>
         </div>
