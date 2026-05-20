@@ -97,6 +97,8 @@ export function buildSnapshot({
     comparison_entries: entries.map(e => ({
       id:                e.id,
       person_name:       e.person_name,
+      gruppe:            e.gruppe ?? 'manuell',
+      gruppe_label:      e.gruppe_label ?? null,
       section:           e.section,
       gesellschaft:      e.gesellschaft,
       product_name:      e.product_name ?? null,
