@@ -118,7 +118,7 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
             commission_estimate: { type: ['number', 'null'] },
           }
         },
-        model: 'gemini_3_flash',
+        model: 'gpt_5_mini',
       });
       if (!extracted || typeof extracted !== 'object') {
         throw new Error('Leere Antwort von KI');
