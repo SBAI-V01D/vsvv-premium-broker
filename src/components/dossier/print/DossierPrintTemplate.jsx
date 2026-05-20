@@ -324,7 +324,7 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
   const hasFamilyMembers = Array.isArray(family_members) && family_members.length > 0;
 
   return (
-    <>
+    <div>
       {/* Dossier-Header — nur wenn showHeader=true (für Fallback) */}
       {showHeader && (
         <div style={{
@@ -473,22 +473,26 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
 
 // ── Hauptkomponente ───────────────────────────────────────────────────────────
 export default function DossierPrintTemplate({ snapshot }) {
-  if (!snapshot?.dossier) return null;
+  const dossier = snapshot?.dossier;
+  const customer = snapshot?.customer;
+  const family_members = snapshot?.family_members;
+  const comparison_entries = snapshot?.comparison_entries;
 
-  const { dossier, customer, family_members, comparison_entries } = snapshot;
-
-  // Organization & Advisor Daten laden
+  // Organization & Advisor Daten laden (Hooks immer aufrufen - Rules of Hooks)
   const { data: organization } = useQuery({
-    queryKey: ['dossier_org_ro', dossier.organization_id],
+    queryKey: ['dossier_org_ro', dossier?.organization_id],
     queryFn: () => base44.entities.Organization.filter({ id: dossier.organization_id }).then(r => r[0]),
-    enabled: !!dossier.organization_id,
+    enabled: !!dossier?.organization_id,
   });
 
   const { data: advisor } = useQuery({
-    queryKey: ['dossier_advisor_ro', dossier.advisor_id],
+    queryKey: ['dossier_advisor_ro', dossier?.advisor_id],
     queryFn: () => base44.entities.Advisor.filter({ id: dossier.advisor_id }).then(r => r[0]),
-    enabled: !!dossier.advisor_id,
+    enabled: !!dossier?.advisor_id,
   });
+
+  if (!dossier) return null;
+
   const entries = Array.isArray(comparison_entries)
     ? comparison_entries.map(e => ({ ...e, gruppe: e.gruppe || 'manuell' }))
     : [];
