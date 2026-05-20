@@ -42,7 +42,7 @@ const PRINT_STYLES = `
     #dossier-print-root,
     #dossier-print-root * { visibility: visible !important; }
     #dossier-print-root {
-      position: fixed;
+      position: absolute;
       left: 0; top: 0;
       width: 100%;
       padding: 0 !important;
@@ -59,6 +59,7 @@ const PRINT_STYLES = `
       margin-bottom: 0 !important;
       border-bottom: none !important;
       padding-bottom: 0 !important;
+      overflow: visible !important;
     }
     .print-page:last-child {
       page-break-after: avoid !important;
