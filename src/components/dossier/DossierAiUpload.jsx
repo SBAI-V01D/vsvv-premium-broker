@@ -162,7 +162,7 @@ function ConfidenceSummary({ products }) {
 }
 
 // ── Produktkarte im Review ────────────────────────────────────────────────────
-function ProductReviewCard({ product, index, personName, onChange, onRemove, knownPersons }) {
+function ProductReviewCard({ product, index, personName, onChange, onRemove, knownPersons, defaultGruppe }) {
   const [expanded, setExpanded] = useState(true);
   const conf = product.confidence || {};
   const totalMonthly = product.praemie_monatlich ? Number(product.praemie_monatlich) : null;
@@ -288,13 +288,12 @@ function ProductReviewCard({ product, index, personName, onChange, onRemove, kno
             </div>
           </div>
 
-          {/* Flags */}
-          <div className="flex items-center gap-4 text-xs">
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" checked={product.is_current || false}
-                onChange={e => handleChange('is_current', e.target.checked)} />
-              Aktuelle Police
-            </label>
+          {/* Hinweis zur Gruppe */}
+          <div className="flex items-center gap-2 text-xs bg-primary/5 border border-primary/20 rounded px-2.5 py-2">
+            <CheckCircle className="w-3.5 h-3.5 text-primary" />
+            <span className="text-primary font-medium">
+              Wird in Gruppe <strong>"{GRUPPE_OPTIONS.find(o => o.value === defaultGruppe)?.label}"</strong> gespeichert
+            </span>
           </div>
         </div>
       )}
@@ -576,7 +575,9 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
           section: p.section || 'grundversicherung',
           // Standardwerte
           person_name: p.person_name || personName,
-          gruppe: p.is_current !== false ? 'aktuelle_loesung' : defaultGruppe,
+          // FIX: Gruppe IMMER vom User ausgewählt (defaultGruppe), NIEMALS von is_current überschreiben
+          // is_current ist nur eine Flag, keine Gruppen-Zuordnung
+          gruppe: defaultGruppe,
           gruppe_label: '',
           confidence: conf,
           _session_id: `session_${Date.now()}_${i}`,
@@ -951,6 +952,7 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
                     knownPersons={allPersons}
                     onChange={handleProductChange}
                     onRemove={handleRemoveProduct}
+                    defaultGruppe={defaultGruppe}
                   />
                 ))}
               </div>
