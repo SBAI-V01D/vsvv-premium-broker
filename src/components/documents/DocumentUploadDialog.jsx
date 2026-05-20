@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Upload, Zap, Paperclip, Loader2, CheckCircle2, AlertCircle, FileText } from 'lucide-react'
+import { Upload, Zap, Paperclip, Loader2, CheckCircle2, AlertCircle, FileText, Shield } from 'lucide-react'
 
 const MAX_FILE_SIZE_MB = 50
 const MAX_ANTRAG_SIZE_MB = 10 // LLM-Limit für KI-Extraktion
@@ -128,11 +128,14 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
           payload: JSON.stringify({ file_url, file_name: form.name, document_id: doc.id }),
         }).catch(err => console.error('Queue creation failed:', err))
       } else {
+        // Police → contract, Anlage → other
+        const docCategory = uploadMode === 'police' ? 'contract' : 'other'
+        const docType = uploadMode === 'police' ? 'anlage' : 'anlage'
         await base44.entities.Document.create({
           name: form.name,
           file_url,
-          category: 'other',
-          doc_type: 'anlage',
+          category: docCategory,
+          doc_type: docType,
           classification_status: 'klassifiziert',
           notes: form.notes || undefined,
           uploaded_by: 'broker',
@@ -191,6 +194,18 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
               </div>
             </button>
             <button
+              onClick={() => handleModeSelect('police')}
+              className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 hover:border-blue-400 transition-all text-left"
+            >
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Shield className="w-5 h-5 text-blue-700" />
+              </div>
+              <div>
+                <p className="font-semibold text-blue-800">Police / Vertragsdokument</p>
+                <p className="text-xs text-blue-700 mt-0.5">Wird als Kategorie «Vertrag» gespeichert. Kein Schaden-Bezug.</p>
+              </div>
+            </button>
+            <button
               onClick={() => handleModeSelect('anlage')}
               className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-400 transition-all text-left"
             >
@@ -208,9 +223,13 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
         {/* Step 2: File form */}
         {step === 'form' && (
           <form onSubmit={handleUpload} className="space-y-4">
-            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${uploadMode === 'antrag' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
-              {uploadMode === 'antrag' ? <Zap className="w-4 h-4" /> : <Paperclip className="w-4 h-4" />}
-              {uploadMode === 'antrag' ? 'Versicherungsantrag – KI verarbeitet automatisch' : 'Anlage / Zusatzdokument'}
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
+              uploadMode === 'antrag' ? 'bg-green-50 text-green-700' :
+              uploadMode === 'police' ? 'bg-blue-50 text-blue-700' :
+              'bg-slate-100 text-slate-600'
+            }`}>
+              {uploadMode === 'antrag' ? <Zap className="w-4 h-4" /> : uploadMode === 'police' ? <Shield className="w-4 h-4" /> : <Paperclip className="w-4 h-4" />}
+              {uploadMode === 'antrag' ? 'Versicherungsantrag – KI verarbeitet automatisch' : uploadMode === 'police' ? 'Police / Vertragsdokument – Kategorie: Vertrag' : 'Anlage / Zusatzdokument'}
               <button type="button" onClick={() => setStep('mode')} className="ml-auto text-xs underline opacity-60 hover:opacity-100">Ändern</button>
             </div>
 
@@ -265,7 +284,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
               <Label>Name</Label>
               <Input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required placeholder="Dokumentname" className="mt-1" />
             </div>
-            {uploadMode === 'anlage' && (
+            {(uploadMode === 'anlage' || uploadMode === 'police') && (
               <>
                 <div>
                   <Label>Kunde (optional)</Label>
