@@ -50,13 +50,15 @@ export default function Customers() {
       
       // Role-based filtering
       if (currentUser?.role === 'admin') {
-        // Admin sees all
         return allCustomers
-      } else if (currentUser?.role === 'advisor') {
-        // Advisor sees only assigned customers
-        return allCustomers.filter(c => c.advisor_id === currentUser.id)
+      } else if (currentUser?.role === 'broker' || currentUser?.role === 'assistenz') {
+        return allCustomers.filter(c =>
+          c.primary_advisor_id === currentUser.id ||
+          (c.assigned_advisors || []).includes(currentUser.id) ||
+          (c.assigned_assistants || []).includes(currentUser.id) ||
+          c.advisor_id === currentUser.id
+        )
       } else {
-        // Customer (shouldn't normally access this page)
         return []
       }
     },
