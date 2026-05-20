@@ -66,12 +66,22 @@ const SnapshotRow = memo(function SnapshotRow({ snap, onPreview }) {
   );
 });
 
-// ── Print CSS: alles ausblenden ausser #dossier-print-only ───────────────────
-// Injiziert global sobald das Modal offen ist, entfernt beim Schliessen.
+// ── Print CSS ────────────────────────────────────────────────────────────────
+// Screen: #dossier-print-only ist mit visibility:hidden+height:0 versteckt
+// (NICHT display:none — sonst ignoriert Browser beim Print!)
+// Print: alles ausblenden, nur #dossier-print-only zeigen
 const PRINT_ONLY_STYLE = `
   @media print {
-    body > * { display: none !important; }
-    #dossier-print-only { display: block !important; }
+    body > * { display: none !important; visibility: hidden !important; }
+    #dossier-print-only,
+    #dossier-print-only * {
+      display: revert !important;
+      visibility: visible !important;
+      position: static !important;
+      overflow: visible !important;
+      height: auto !important;
+      clip: auto !important;
+    }
   }
 `;
 
@@ -90,10 +100,19 @@ function PrintPreviewModal({ snapshot, onClose }) {
 
   return (
     <>
-      {/* Print-only: im normalen body-Flow, screen=unsichtbar, print=sichtbar */}
+      {/* Print-only: im body-Flow, aber auf Screen versteckt via visibility+height
+          WICHTIG: kein display:none — Browser würde es dann auch beim Drucken ignorieren */}
       <div
         id="dossier-print-only"
-        style={{ display: 'none' }}
+        style={{
+          visibility: 'hidden',
+          position: 'absolute',
+          left: '-9999px',
+          top: 0,
+          height: 0,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+        }}
         aria-hidden="true"
       >
         <DossierPrintTemplate snapshot={snapshot} />
