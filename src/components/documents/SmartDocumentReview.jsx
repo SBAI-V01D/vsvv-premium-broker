@@ -63,22 +63,22 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
     return pols.map((pol) => {
       const sparteName = pol.sparte === 'kvg' ? 'KVG' : 'VVG'
       const name = pol.product_short || pol.product || ''
-      const extras = []
-      if (pol.model) extras.push(pol.model)
-      if (pol.coverage_type) extras.push(pol.coverage_type)
-      if (pol.coverage_summary) extras.push(pol.coverage_summary)
-      const detail = extras.length ? ` (${extras.join(', ')})` : ''
-      return `${sparteName}: ${name}${detail}`
+      return `${sparteName}: ${name}`
     }).join('\n')
   }
+
+  const hasKvg = policies.some(p => p.sparte === 'kvg')
+  const hasVvg = policies.some(p => p.sparte === 'vvg_zusatz')
+  const autoSparte = hasKvg && hasVvg ? 'kvg_vvg_kombi' : (hasKvg ? 'kvg' : (hasVvg ? 'vvg_zusatz' : (extracted?.sparte || '')))
+  const kvgPolicy = policies.find(p => p.sparte === 'kvg')
 
   const [appData, setAppData] = useState({
     insurer: extracted?.insurer || '',
     policy_number: extracted?.policy_number || '',
     insurance_type: extracted?.insurance_type || 'health',
-    sparte: extracted?.sparte || '',
+    sparte: autoSparte,
     product: buildAllProductsLabel(policies),
-    franchise: extracted?.franchise ? String(extracted.franchise) : '',
+    franchise: kvgPolicy?.franchise ? String(kvgPolicy.franchise) : (extracted?.franchise ? String(extracted.franchise) : ''),
     model: extracted?.model || '',
     coverage_type: extracted?.coverage_type || '',
     premium_monthly: extracted?.premium_monthly || '',
