@@ -50,12 +50,21 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
 
   const policies = extracted?.policies || []
 
+  const buildProductLabel = (pol) => {
+    if (!pol) return ''
+    const parts = [pol.product || '']
+    if (pol.model) parts.push(`Variante: ${pol.model}`)
+    if (pol.coverage_type) parts.push(pol.coverage_type)
+    if (pol.coverage_summary) parts.push(pol.coverage_summary)
+    return parts.filter(Boolean).join(' — ')
+  }
+
   const [appData, setAppData] = useState({
     insurer: extracted?.insurer || '',
     policy_number: extracted?.policy_number || '',
     insurance_type: extracted?.insurance_type || 'health',
     sparte: extracted?.sparte || '',
-    product: extracted?.product || '',
+    product: buildProductLabel(policies[0] || {}),
     franchise: extracted?.franchise ? String(extracted.franchise) : '',
     model: extracted?.model || '',
     coverage_type: extracted?.coverage_type || '',
@@ -416,7 +425,7 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
                       policy_number: pol.policy_number || '',
                       insurance_type: pol.insurance_type || 'health',
                       sparte: pol.sparte || '',
-                      product: pol.product || '',
+                      product: buildProductLabel(pol),
                       franchise: pol.franchise ? String(pol.franchise) : '',
                       model: pol.model || '',
                       coverage_type: pol.coverage_type || '',
@@ -431,11 +440,14 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
                     selectedPolicyIndex === i ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'border-border hover:bg-muted/40'
                   )}
                 >
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold">{pol.insurer || '–'} {pol.sparte && `· ${pol.sparte}`}</span>
-                    {pol.premium_yearly && <span className="text-emerald-700 font-bold">CHF {Number(pol.premium_yearly).toLocaleString('de-CH')}/J.</span>}
+                  <div className="flex justify-between items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-slate-800 truncate">{pol.product || pol.insurer || '–'}</p>
+                      <p className="text-muted-foreground">{pol.insurer}{pol.coverage_type ? ` · ${pol.coverage_type}` : ''}{pol.model ? ` · ${pol.model}` : ''}</p>
+                    </div>
+                    {pol.premium_monthly && <span className="text-emerald-700 font-bold whitespace-nowrap">CHF {Number(pol.premium_monthly).toLocaleString('de-CH')}/M.</span>}
                   </div>
-                  {pol.policy_number && <p className="text-muted-foreground">Police: {pol.policy_number}</p>}
+                  {pol.policy_number && <p className="text-muted-foreground mt-0.5">Police: {pol.policy_number}</p>}
                 </button>
               ))}
             </div>
@@ -508,12 +520,14 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Produkt / Tarif</label>
-              <Input placeholder="z.B. Grundversicherung (KVG), Ambulantversicherung myFlex" value={appData.product}
-                onChange={e => setAppData(d => ({ ...d, product: e.target.value }))} />
-              {policies[selectedPolicyIndex]?.coverage_summary && (
-                <p className="text-[10px] text-muted-foreground mt-0.5 px-0.5">{policies[selectedPolicyIndex].coverage_summary}</p>
-              )}
+              <label className="text-xs font-medium text-muted-foreground">Produkt / Tarif & Deckung</label>
+              <textarea
+                value={appData.product}
+                onChange={e => setAppData(d => ({ ...d, product: e.target.value }))}
+                rows={3}
+                className="w-full mt-0.5 p-2 border rounded text-sm bg-background resize-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                placeholder="Produktname, Variante, Deckungsdetails..."
+              />
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Franchise (CHF)</label>
