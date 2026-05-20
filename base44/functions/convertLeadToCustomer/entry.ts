@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { addMonths } from 'npm:date-fns@3';
 
 Deno.serve(async (req) => {
   try {
@@ -69,7 +70,6 @@ Deno.serve(async (req) => {
     console.log(`[convertLeadToCustomer] ✅ Customer created: ${newCustomer.id}`);
 
     // AUTO-CREATE Verkaufschance basierend auf Lead-Daten
-    const { addMonths } = await import('npm:date-fns');
     const verkaufschanceData = {
       customer_id: newCustomer.id,
       customer_name: `${firstName} ${lastName}`.trim(),

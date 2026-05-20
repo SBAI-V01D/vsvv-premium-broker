@@ -52,6 +52,8 @@ export default function LeadForm({ open, onClose, onSubmit, lead, advisors = [],
   const [errors, setErrors] = useState({})
   const [uploading, setUploading] = useState(false)
   const [uploadCategory, setUploadCategory] = useState('police')
+  const [converting, setConverting] = useState(false)
+  const [convertError, setConvertError] = useState(null)
 
   useEffect(() => {
     if (open) {
@@ -409,32 +411,40 @@ export default function LeadForm({ open, onClose, onSubmit, lead, advisors = [],
 
           {/* LEAD → VERKAUFSCHANCE KONVERTIERUNG */}
           {lead && !lead.customer_id && (
-            <div className="pt-2 border-t border-border">
+            <div className="pt-2 border-t border-border space-y-2">
+              {convertError && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{convertError}</p>
+              )}
               <Button
                 type="button"
                 variant="outline"
                 className="w-full gap-2 text-primary border-primary/30 hover:bg-primary/5"
+                disabled={converting}
                 onClick={async () => {
+                  setConverting(true)
+                  setConvertError(null)
                   try {
                     const response = await base44.functions.invoke('convertLeadToCustomer', { lead_id: lead.id })
-                    if (response.data.success) {
-                      // Invalidate ALL relevant queries immediately
+                    if (response.data?.success) {
                       await Promise.all([
                         queryClient.invalidateQueries({ queryKey: ['leads'] }),
                         queryClient.invalidateQueries({ queryKey: ['customers'] }),
                         queryClient.invalidateQueries({ queryKey: ['verkaufschancen'] }),
                       ])
                       onClose()
-                      // Navigation zur Verkaufschance-Erstellung mit dem neuen Kunden
                       window.location.href = `/verkaufschancen?new=true&customer_id=${response.data.customer_id}&lead_id=${lead.id}`
+                    } else {
+                      setConvertError(response.data?.message || 'Konvertierung fehlgeschlagen')
                     }
                   } catch (e) {
-                    console.error('Lead conversion failed:', e)
+                    setConvertError(e?.response?.data?.error || e.message || 'Unbekannter Fehler')
+                  } finally {
+                    setConverting(false)
                   }
                 }}
               >
                 <TrendingUp className="w-4 h-4" />
-                In Verkaufschance umwandeln →
+                {converting ? 'Wird konvertiert...' : 'In Verkaufschance umwandeln →'}
               </Button>
             </div>
           )}
