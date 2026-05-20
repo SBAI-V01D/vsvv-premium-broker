@@ -31,6 +31,9 @@ export default function DossierDocumentHeader({ organization, advisor, snapshot,
   const textStyle = { fontSize: '8.5px', color: '#334155' };
   const labelStyle = { fontSize: '7px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' };
 
+  // Fallback wenn keine Daten vorhanden
+  const hasData = orgName || advisorName;
+
   return (
     <div style={{
       display: 'flex',
@@ -39,20 +42,19 @@ export default function DossierDocumentHeader({ organization, advisor, snapshot,
       borderBottom: '3px solid #1e3a5f',
       paddingBottom: '12px',
       marginBottom: '18px',
+      minHeight: hasData ? 'auto' : '60px', // Mindesthöhe wenn keine Daten
     }}>
       {/* Linke Spalte: Organisationsdaten */}
       <div style={{ flex: 1, paddingRight: '20px' }}>
-        {orgName && (
-          <div style={{
-            fontSize: '13px',
-            fontWeight: 800,
-            color: '#1e3a5f',
-            marginBottom: '8px',
-            letterSpacing: '-0.02em',
-          }}>
-            {orgName}
-          </div>
-        )}
+        <div style={{
+          fontSize: '13px',
+          fontWeight: 800,
+          color: '#1e3a5f',
+          marginBottom: '8px',
+          letterSpacing: '-0.02em',
+        }}>
+          {orgName || '—'}
+        </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {/* Adresse */}
@@ -101,21 +103,18 @@ export default function DossierDocumentHeader({ organization, advisor, snapshot,
 
       {/* Rechte Spalte: Beraterdaten */}
       <div style={{ flex: 1, paddingLeft: '20px', borderLeft: '1px solid #e2e8f0' }}>
-        {advisorName && (
-          <div style={{
-            fontSize: '13px',
-            fontWeight: 800,
-            color: '#1e3a5f',
-            marginBottom: '8px',
-            letterSpacing: '-0.02em',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px',
-          }}>
-            <User style={iconStyle} style={iconStyle} />
-            {advisorName}
-          </div>
-        )}
+        <div style={{
+          fontSize: '13px',
+          fontWeight: 800,
+          color: '#1e3a5f',
+          marginBottom: '8px',
+          letterSpacing: '-0.02em',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '5px',
+        }}>
+          {advisorName || '—'}
+        </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {/* Telefon Berater */}
