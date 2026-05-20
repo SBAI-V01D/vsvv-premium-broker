@@ -10,6 +10,7 @@
  */
 import React from 'react';
 import { fmtCHF, fmtDate, calcDossierSummary } from '@/lib/dossierCalc';
+import DossierLegende from '@/components/dossier/print/DossierLegende';
 
 // ── Gruppen-Konfiguration (Farben) ────────────────────────────────────────────
 const GRUPPE_CFG = {
@@ -597,6 +598,12 @@ export default function DossierPrintTemplate({ snapshot }) {
             </div>
           </div>
         )}
+
+        {/* Legende / Hinweise — immer am Ende */}
+        <div className="print-page">
+          <PageHeader dossier={dossier} customer={customer} snapshot={snapshot} pageLabel="Hinweise & Berechnungsgrundlagen" />
+          <DossierLegende entries={entries} snapshot={snapshot} />
+        </div>
 
       </div>
     </>
