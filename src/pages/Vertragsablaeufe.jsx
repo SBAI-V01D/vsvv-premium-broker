@@ -30,11 +30,11 @@ function analyzeContract(contract) {
   if (contract.status === 'expired' || (endDays !== null && endDays < 0)) {
     actions.push({ type: 'expired', label: `Abgelaufen`, severity: 'expired', days: endDays ?? -1 })
   }
-  if (cancelDays !== null && cancelDays >= -30 && cancelDays <= 180) {
+  if (cancelDays !== null && cancelDays >= -30 && cancelDays <= 365) {
     const sev = cancelDays <= 0 ? 'expired' : cancelDays <= 30 ? 'critical' : cancelDays <= 60 ? 'urgent' : cancelDays <= 90 ? 'warning' : cancelDays <= 150 ? 'process' : 'early'
     actions.push({ type: 'kuendigung', severity: sev, days: cancelDays })
   }
-  if (endDays !== null && endDays >= 0 && endDays <= 180) {
+  if (endDays !== null && endDays >= 0 && endDays <= 365) {
     const sev = endDays <= 30 ? 'critical' : endDays <= 60 ? 'urgent' : endDays <= 90 ? 'warning' : endDays <= 150 ? 'process' : 'early'
     actions.push({ type: 'ablauf', severity: sev, days: endDays })
   }
@@ -340,8 +340,8 @@ export default function Vertragsablaeufe() {
         if (c.status === 'expired') return true
         const endDays = daysUntil(c.end_date)
         const cancelDays = daysUntil(c.cancellation_deadline)
-        if (endDays !== null && endDays <= 180) return true
-        if (cancelDays !== null && cancelDays <= 180) return true
+        if (endDays !== null && endDays <= 365) return true
+        if (cancelDays !== null && cancelDays <= 365) return true
         return false
       })
       .map(c => {
