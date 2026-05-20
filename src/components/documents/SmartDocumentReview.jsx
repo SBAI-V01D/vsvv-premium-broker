@@ -60,11 +60,7 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
   }
 
   const buildAllProductsLabel = (pols) => {
-    return pols.map((pol) => {
-      const sparteName = pol.sparte === 'kvg' ? 'KVG' : 'VVG'
-      const name = pol.product_short || pol.product || ''
-      return `${sparteName}: ${name}`
-    }).join('\n')
+    return pols.map((pol) => pol.product_short || pol.product || '').filter(Boolean).join('\n')
   }
 
   const hasKvg = policies.some(p => p.sparte === 'kvg')
