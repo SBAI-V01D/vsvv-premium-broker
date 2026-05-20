@@ -285,7 +285,7 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
   const label2 = cfg2 ? (g2entries[0]?.gruppe_label || cfg2.label) : null;
 
   return (
-    <div className="print-page" style={{ padding: '0', minHeight: '185mm' }}>
+    <div className="print-page" style={{ padding: '0' }}>
       <PageHeader dossier={dossier} customer={customer} snapshot={snapshot} pageLabel={pageLabel} />
 
       <div style={{ display: 'flex', gap: '14px', alignItems: 'stretch' }}>
@@ -314,7 +314,7 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
   const hasFamilyMembers = Array.isArray(family_members) && family_members.length > 0;
 
   return (
-    <div className="print-page" style={{ minHeight: '185mm' }}>
+    <div className="print-page">
       {/* ── Dossier-Header ── */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
