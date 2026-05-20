@@ -7,8 +7,9 @@ import { Card } from '@/components/ui/card'
 import {
   CheckCircle2, AlertCircle, User, Users, UserPlus,
   ChevronRight, ChevronLeft, Loader2, FileText, Search,
-  Sparkles, TrendingUp, Shield, Calendar, Banknote
+  Sparkles, TrendingUp, Shield, Calendar, Banknote, Bot
 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
 const STEPS = ['Analyse', 'Kundenzuweisung', 'Antragsdaten prüfen', 'Bestätigen']
@@ -157,7 +158,7 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
     )
   }
 
-  // ── SCHRITT -1: Analyse-Übersicht ────────────────────────────────────────
+  // ── SCHRITT -1: Analyse-Übersicht mit Kundenauswahl ─────────────────────
   if (step === -1) {
     const confidence = extracted?.document_confidence
     const confLabel = confidence >= 0.9 ? 'Sehr hoch' : confidence >= 0.7 ? 'Hoch' : confidence >= 0.5 ? 'Mittel' : 'Niedrig'
@@ -165,9 +166,105 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
                       confidence >= 0.7 ? 'bg-blue-50 text-blue-700 border-blue-200' :
                       'bg-amber-50 text-amber-700 border-amber-200'
 
+    // KI-Vorschlag (höchster Match)
+    const aiSuggestion = customerMatches?.[0]
+
     return (
       <div className="space-y-4">
         <StepIndicator current={-1} />
+
+        {/* KI-Vorschlag Banner */}
+        {aiSuggestion && (
+          <div className={cn(
+            'p-3 rounded-lg border text-sm flex items-center gap-2 cursor-pointer transition-colors',
+            selectedCustomerId === aiSuggestion.customer.id
+              ? 'bg-primary/10 border-primary text-primary'
+              : aiSuggestion.confidence >= 90
+                ? 'bg-green-50 border-green-300 text-green-800 hover:bg-green-100'
+                : 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100'
+          )} onClick={() => setSelectedCustomerId(aiSuggestion.customer.id)}>
+            <Bot className="w-4 h-4 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold">
+                KI-Vorschlag: {aiSuggestion.customer.first_name} {aiSuggestion.customer.last_name}
+              </p>
+              <p className="text-xs opacity-75 truncate">{aiSuggestion.notes}</p>
+            </div>
+            <Badge className={cn('text-xs', aiSuggestion.confidence >= 90 ? 'bg-green-600' : 'bg-amber-600')}>
+              {aiSuggestion.confidence}%
+            </Badge>
+          </div>
+        )}
+
+        {/* Suchfeld für alternative Kunden */}
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Andere Möglichkeit wählen
+          </p>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Kunde suchen..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          {/* Suchergebnisse */}
+          {searchQuery.length > 0 && (
+            <div className="max-h-48 overflow-y-auto space-y-1 border rounded-lg p-2 bg-card">
+              {filteredCustomers.slice(0, 8).map(customer => (
+                <button
+                  key={customer.id}
+                  onClick={() => { setSelectedCustomerId(customer.id); setCustomerAction('use_existing') }}
+                  className={cn(
+                    'w-full text-left p-2 rounded-md text-sm transition-colors',
+                    selectedCustomerId === customer.id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-muted'
+                  )}
+                >
+                  <p className="font-medium">{customer.first_name} {customer.last_name}</p>
+                  {customer.customer_number && <p className="text-xs opacity-75">{customer.customer_number}</p>}
+                </button>
+              ))}
+              {filteredCustomers.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-2">Keine Kunden gefunden</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Optionen: Familienmitglied / Neuer Kunde */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            className={cn(
+              'p-3 rounded-lg border text-sm transition-colors text-left',
+              customerAction === 'create_family_member'
+                ? 'bg-amber-50 border-amber-400 text-amber-800'
+                : 'bg-muted/40 border-border hover:bg-muted'
+            )}
+            onClick={() => setCustomerAction('create_family_member')}
+          >
+            <Users className="w-4 h-4 mb-1" />
+            <p className="font-semibold text-xs">Familienmitglied</p>
+            <p className="text-[10px] text-muted-foreground">Kind, Partner, etc.</p>
+          </button>
+          <button
+            className={cn(
+              'p-3 rounded-lg border text-sm transition-colors text-left',
+              customerAction === 'create_primary'
+                ? 'bg-blue-50 border-blue-400 text-blue-800'
+                : 'bg-muted/40 border-border hover:bg-muted'
+            )}
+            onClick={() => setCustomerAction('create_primary')}
+          >
+            <UserPlus className="w-4 h-4 mb-1" />
+            <p className="font-semibold text-xs">Neuer Hauptkontakt</p>
+            <p className="text-[10px] text-muted-foreground">Völlig neuer Kunde</p>
+          </button>
+        </div>
 
         {/* Dokumenttyp & Konfidenz */}
         <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
@@ -274,46 +371,6 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
             </div>
           </div>
         )}
-
-        {/* Kunden-Zuweisung Vorschau */}
-        <div className="space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Kundenzuweisung</p>
-
-          {/* Erkannte Matches */}
-          {customerMatches?.length > 0 && customerMatches.slice(0, 3).map(({ customer, confidence, matchType, notes }) => (
-            <div key={customer.id} className={cn(
-              'p-3 rounded-lg border text-sm flex items-center gap-2',
-              confidence >= 90 ? 'bg-green-50 border-green-300 text-green-800' : 'bg-amber-50 border-amber-300 text-amber-800'
-            )}>
-              <User className="w-4 h-4 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold">{customer.first_name} {customer.last_name}</p>
-                <p className="text-xs opacity-75">{notes}</p>
-              </div>
-              <span className="text-xs font-medium opacity-75 flex-shrink-0">{confidence}%</span>
-            </div>
-          ))}
-
-          {/* Familienmitglied Option */}
-          <div className="p-3 rounded-lg border border-amber-200 bg-amber-50 text-sm flex items-center gap-2 text-amber-800">
-            <Users className="w-4 h-4 flex-shrink-0 text-amber-600" />
-            <div>
-              <p className="font-semibold">Neues Familienmitglied</p>
-              <p className="text-xs opacity-75">Kind, Partner oder Mitglied einer bestehenden Familie</p>
-            </div>
-          </div>
-
-          {/* Neuer Hauptkontakt Option */}
-          <div className="p-3 rounded-lg border border-border bg-muted/20 text-sm flex items-center gap-2 text-foreground">
-            <UserPlus className="w-4 h-4 flex-shrink-0" />
-            <div>
-              <p className="font-semibold">Neuer Hauptkontakt</p>
-              <p className="text-xs text-muted-foreground">Völlig neuer Kunde ohne bestehende Familie</p>
-            </div>
-          </div>
-
-          <p className="text-xs text-muted-foreground pt-1">Im nächsten Schritt können Sie die Zuweisung wählen und anpassen.</p>
-        </div>
 
         <div className="flex gap-2 pt-2 border-t">
           <Button variant="outline" onClick={onRestart}>Abbrechen</Button>
