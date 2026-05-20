@@ -19,7 +19,7 @@ function StepIndicator({ current }) {
   return (
     <div className="flex items-center gap-1 mb-4">
       {STEPS.map((label, i) => (
-        <React.Fragment key={i}>
+        <div key={i} className="flex items-center gap-1">
           <div className={cn(
             'flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full',
             i < displayIndex ? 'bg-green-100 text-green-700' :
@@ -30,7 +30,7 @@ function StepIndicator({ current }) {
             <span className="hidden sm:inline">{label}</span>
           </div>
           {i < STEPS.length - 1 && <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
-        </React.Fragment>
+        </div>
       ))}
     </div>
   )
@@ -308,9 +308,15 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
                 )}
               >
                 <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 flex-shrink-0" />
+                  {customer.is_family_member ? <Users className="w-4 h-4 flex-shrink-0 text-amber-600" /> : <User className="w-4 h-4 flex-shrink-0" />}
                   <div className="flex-1">
-                    <p className="font-semibold text-sm">{customer.first_name} {customer.last_name}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-semibold text-sm">{customer.first_name} {customer.last_name}</p>
+                      {customer.is_family_member
+                        ? <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full border border-amber-200">Familienmitglied</span>
+                        : <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full border border-blue-200">Hauptkontakt</span>
+                      }
+                    </div>
                     <p className="text-xs text-muted-foreground">{notes} · {conf}%</p>
                   </div>
                   {selectedCustomerId === customer.id && customerAction === 'use_existing' && (

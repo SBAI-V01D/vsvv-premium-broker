@@ -38,7 +38,7 @@ const DOCUMENT_TYPES = [
     key: 'anlage',
     label: 'Anlage / Zusatzdokument',
     description: 'Police-Kopie, Korrespondenz, Rechnung – direkt einem Kunden/Vertrag zuweisen',
-    icon: null, // Paperclip — imported below
+    icon: Paperclip,
     color: 'border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700',
   },
 ]
