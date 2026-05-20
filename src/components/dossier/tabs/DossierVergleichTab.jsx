@@ -8,7 +8,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Shield, Plus, ChevronDown, ChevronUp, Star, Sparkles } from 'lucide-react';
+import { Shield, Plus, ChevronDown, ChevronUp, Star, Sparkles, Edit3 } from 'lucide-react';
 import DossierEinsparungPanel from '@/components/dossier/DossierEinsparungPanel';
 import ComparisonSideBySide from '@/components/dossier/ComparisonSideBySide';
 import ComparisonGruppenView from '@/components/dossier/ComparisonGruppenView';
@@ -241,6 +241,8 @@ export default function DossierVergleichTab({ dossier, pendingImportContract, on
   const [addingFor, setAddingFor] = useState(null); // { personName, section, prefill? }
   const [showAiUpload, setShowAiUpload] = useState(false);
   const [viewMode, setViewMode] = useState('gruppen');
+  const [customDossierTitle, setCustomDossierTitle] = useState(dossier?.title || '');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
   const dossierId = dossier?.id;
   const customerId = dossier?.customer_id;
 
@@ -275,6 +277,14 @@ export default function DossierVergleichTab({ dossier, pendingImportContract, on
     return list;
   }, [mainCustomer, familyMembers]);
 
+  // Dossier-Titel Mutation
+  const titleMutation = useMutation({
+    mutationFn: (title) => base44.entities.AdvisoryDossier.update(dossierId, { title }),
+    onSuccess: () => {
+      setIsEditingTitle(false);
+    },
+  });
+
   // Phase 5.3: Pending Import aus Policen-Tab verarbeiten
   useEffect(() => {
     if (pendingImportContract && persons.length > 0) {
@@ -308,29 +318,68 @@ export default function DossierVergleichTab({ dossier, pendingImportContract, on
       {/* Einsparungsübersicht — zentrale Berechnung via dossierCalc */}
       <DossierEinsparungPanel entries={entries} />
 
-      {/* Toolbar */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h3 className="text-sm font-semibold text-foreground">
-          Vergleichseinträge
-          <span className="ml-2 text-xs font-normal text-muted-foreground">({entries.length} Anbieter)</span>
-        </h3>
-        <div className="flex items-center gap-2">
-          <div className="flex border border-border rounded-lg overflow-hidden text-xs font-medium">
-            <button
-              onClick={() => setViewMode('gruppen')}
-              className={`px-3 py-1.5 transition-colors ${viewMode === 'gruppen' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>
-              Gesamtlösungen
-            </button>
-            <button
-              onClick={() => setViewMode('sidebyside')}
-              className={`px-3 py-1.5 transition-colors border-l border-border ${viewMode === 'sidebyside' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>
-              Side-by-Side
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`px-3 py-1.5 transition-colors border-l border-border ${viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>
-              Liste
-            </button>
+      {/* Toolbar mit Dossier-Titel */}
+      <div className="space-y-3">
+        {/* Dossier-Titel — manuell änderbar */}
+        <div className="flex items-center gap-2 flex-1">
+          <Shield className="w-4 h-4 text-muted-foreground" />
+          {isEditingTitle ? (
+            <input
+              value={customDossierTitle}
+              onChange={(e) => setCustomDossierTitle(e.target.value)}
+              onBlur={() => titleMutation.mutate(customDossierTitle)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') titleMutation.mutate(customDossierTitle);
+                if (e.key === 'Escape') {
+                  setCustomDossierTitle(dossier?.title || '');
+                  setIsEditingTitle(false);
+                }
+              }}
+              className="flex-1 border border-input bg-transparent rounded-md px-3 py-1.5 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-ring"
+              autoFocus
+            />
+          ) : (
+            <h2
+              onClick={() => setIsEditingTitle(!isEditingTitle)}
+              className="text-base font-bold text-foreground cursor-pointer hover:text-primary transition-colors"
+              title="Klicken zum Bearbeiten"
+            >
+              {customDossierTitle || dossier?.title || 'Dossier-Titel'}
+            </h2>
+          )}
+          <button
+            onClick={() => setIsEditingTitle(!isEditingTitle)}
+            className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+            title="Titel bearbeiten"
+          >
+            <Edit3 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Vergleichseinträge Header */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h3 className="text-sm font-semibold text-foreground">
+            Vergleichseinträge
+            <span className="ml-2 text-xs font-normal text-muted-foreground">({entries.length} Anbieter)</span>
+          </h3>
+          <div className="flex items-center gap-2">
+            <div className="flex border border-border rounded-lg overflow-hidden text-xs font-medium">
+              <button
+                onClick={() => setViewMode('gruppen')}
+                className={`px-3 py-1.5 transition-colors ${viewMode === 'gruppen' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>
+                Gesamtlösungen
+              </button>
+              <button
+                onClick={() => setViewMode('sidebyside')}
+                className={`px-3 py-1.5 transition-colors border-l border-border ${viewMode === 'sidebyside' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>
+                Side-by-Side
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-1.5 transition-colors border-l border-border ${viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>
+                Liste
+              </button>
+            </div>
           </div>
         </div>
       </div>

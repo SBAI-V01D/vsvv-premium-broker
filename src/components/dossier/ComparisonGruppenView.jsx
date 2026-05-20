@@ -314,9 +314,14 @@ function LösungsContainer({ gruppe, label, entries, dossierId, referenceTotal, 
   const cfg = GRUPPE_CFG[gruppe] || GRUPPE_CFG.manuell;
   const [collapsed, setCollapsed] = useState(false);
 
-  // Gesellschaften in dieser Lösung (für Logo/Anzeige)
-  const gesellschaften = [...new Set(entries.map(e => e.gesellschaft).filter(Boolean))];
-  const primaryGesellschaft = gesellschaften[0] || '';
+  // Gesellschaften in dieser Lösung — KVG zuerst, dann VVG
+  const kvgEntries = entries.filter(e => e.section === 'grundversicherung');
+  const vvgEntries = entries.filter(e => e.section === 'zusatzversicherung');
+  const kvgGesellschaften = [...new Set(kvgEntries.map(e => e.gesellschaft).filter(Boolean))];
+  const vvgGesellschaften = [...new Set(vvgEntries.map(e => e.gesellschaft).filter(Boolean))];
+  // KVG Gesellschaften zuerst, dann VVG (ohne Duplikate)
+  const gesellschaften = [...kvgGesellschaften, ...vvgGesellschaften.filter(g => !kvgGesellschaften.includes(g))];
+  const primaryGesellschaft = kvgGesellschaften[0] || gesellschaften[0] || '';
 
   // Personen in dieser Lösung
   const persons = [...new Set(entries.map(e => e.person_name || 'Unbekannt'))];
