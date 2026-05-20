@@ -405,7 +405,7 @@ Deno.serve(async (req) => {
       application_id: app.id,
       old_status: oldStatus,
       new_status: newStatus,
-      contract_creation: guardResult ? (guardResult.allowed ? 'created' : 'skipped') : 'not_applicable',
+      contract_creation: isNewAcceptance ? 'processed' : 'not_applicable',
     });
 
   } catch (error) {
