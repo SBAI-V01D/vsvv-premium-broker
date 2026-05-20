@@ -403,6 +403,7 @@ Groupe Mutuel Policen sind typischerweise so aufgebaut:
 
 SEITE 1: "Versicherungsausweis" (KVG-Teil)
   → Überschrift: "Versicherungen gemäss Bundesgesetz über die Krankenversicherung (KVG)"
+  → section: "grundversicherung"
   → Produkte haben 2-Buchstaben-Code + Name, z.B.:
     "RT  SanaTel - obligatorische Krankenpflegeversicherung   433.00"
     "RF  SanaFlex..."  "RS  SanaStart..."
@@ -411,6 +412,7 @@ SEITE 1: "Versicherungsausweis" (KVG-Teil)
 
 SEITE 2+: "Versicherungspolice" (VVG-Teil)
   → Überschrift: "Versicherungen gemäss Bundesgesetz über den Versicherungsvertrag (VVG)"
+  → section: "zusatzversicherung" (WICHTIG!)
   → Produkte mit 2-Buchstaben-Code + Name:
     "BH  Taggeldversicherung bei Spitalaufenthalt   20.00"
     "GO  Global smart - Zusatzversicherung ...   28.20"
@@ -428,13 +430,19 @@ LETZTE SEITE: Zusammenfassung
 ANDERE VERSICHERER (CSS, Helsana, SWICA, Sanitas, etc.)
 ═══════════════════════════════════════════════════════
 KVG (section: "grundversicherung"): Standard, HMO, HAM, Hausarzt, TelFirst, Medbase, Callmed, flexmed
+  → Produkte mit "Grundversicherung", "KVG", "obligatorisch" im Namen
 VVG (section: "zusatzversicherung"): Spital allg./halbprivat/privat, Ambulant, Dental, Komplementär, Reise, Taggeld, Global, Ausland
+  → Produkte mit "Zusatzversicherung", "VVG", "Spital", "Ambulant", "Dental", "Taggeld", "Reise" im Namen
+  → ALLE Produkte die NICHT explizit "Grundversicherung" oder "KVG" sind = zusatzversicherung
 
 ═══════════════════════════════════════════════════════
 EXTRAKTIONSREGELN
 ═══════════════════════════════════════════════════════
 1. JEDER Produktblock = 1 separater Eintrag im products-Array
-2. section: "grundversicherung" für KVG, "zusatzversicherung" für VVG
+2. section: "grundversicherung" NUR für KVG (obligatorische Grundversicherung), "zusatzversicherung" für ALLE VVG-Produkte
+   → Wenn Produkt "Grundversicherung" oder "KVG" oder "obligatorisch" enthält = grundversicherung
+   → Wenn Produkt "Zusatzversicherung", "VVG", "Spital", "Ambulant", "Dental", "Taggeld", "Reise", "Global", "H-Capital", "Mundo" enthält = zusatzversicherung
+   → Im ZWEIFEL: lieber "zusatzversicherung" (VVG ist der häufigere Fall bei Zusatzprodukten)
 3. gesellschaft: Hauptversicherer (z.B. "Groupe Mutuel", "CSS", "Helsana")
 4. product_name: Exakter Produktname (z.B. "SanaTel", "Global Smart", "H-Capital", "Mundo", "Taggeldversicherung bei Spitalaufenthalt")
 5. praemie_monatlich: CHF-Betrag rechts neben dem Produktnamen (nur Zahl, z.B. 433.00)

@@ -33,10 +33,13 @@ export function mapContractToEntry(contract, personName) {
     contract.sparte_data?.Modell ??
     '';
 
-  // Sektion ableiten: health → grundversicherung, sonst zusatzversicherung
-  const section = contract.insurance_type === 'health'
-    ? 'grundversicherung'
-    : 'zusatzversicherung';
+  // Sektion ableiten: KVG = Grundversicherung, VVG/Life/Property/etc = Zusatzversicherung
+  // WICHTIG: insurance_type ist oft 'health' für BEIDE (KVG + VVG), daher sparte prüfen
+  const isKVG = contract.sparte === 'kvg' || 
+                (contract.insurance_type === 'health' && 
+                 (contract.product?.toLowerCase().includes('grundversicherung') || 
+                  contract.product?.toLowerCase().includes('kvg')));
+  const section = isKVG ? 'grundversicherung' : 'zusatzversicherung';
 
   // Produkt-Bezeichnung
   const product_name = contract.product || contract.sparte || '';
