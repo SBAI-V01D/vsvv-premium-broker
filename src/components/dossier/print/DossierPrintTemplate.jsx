@@ -19,7 +19,7 @@ import DossierDocumentHeader from '@/components/dossier/print/DossierDocumentHea
 const GRUPPE_CFG = {
   aktuelle_loesung: { label: 'Aktuelle Lösung',    headerBg: '#475569', accentColor: '#475569' },
   optimiert:        { label: 'Optimierte Lösung',  headerBg: '#1d4ed8', accentColor: '#1d4ed8' },
-  angebot_1:        { label: 'Angebot 1',          headerBg: '#047857', accentColor: '#047857' },
+  angebot_1:        { label: 'Angebot 1',          headerBg: '#1d4ed8', accentColor: '#1d4ed8' },
   angebot_2:        { label: 'Angebot 2',          headerBg: '#6d28d9', accentColor: '#6d28d9' },
   angebot_3:        { label: 'Angebot 3',          headerBg: '#b45309', accentColor: '#b45309' },
   angebot_4:        { label: 'Angebot 4',          headerBg: '#be123c', accentColor: '#be123c' },
@@ -781,11 +781,13 @@ export default function DossierPrintTemplate({ snapshot }) {
 
         {/* Legende / Hinweise — immer am Ende */}
         <div className="print-page" style={{ padding: '0' }}>
-          <DossierDocumentHeader 
-            organization={organization} 
-            advisor={advisor} 
-            snapshot={snapshot}
+          <PageHeader 
             dossier={dossier}
+            customer={customer}
+            pageLabel="Legende / Hinweise"
+            snapshot={snapshot}
+            organization={organization}
+            advisor={advisor}
           />
           <DossierLegende entries={entries} snapshot={snapshot} />
         </div>
