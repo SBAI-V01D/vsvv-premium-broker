@@ -300,11 +300,13 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
   );
 }
 
-// ── Seite 0: Deckblatt + Prämienübersicht ─────────────────────────────────────
+// ── Seite 1: Deckblatt — Personen oben, Prämienübersicht unten ────────────────
 function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, savings }) {
+  const hasFamilyMembers = Array.isArray(family_members) && family_members.length > 0;
+
   return (
     <div className="print-page" style={{ minHeight: '185mm' }}>
-      {/* Header */}
+      {/* ── Dossier-Header ── */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
         borderBottom: '3px solid #1e3a5f', paddingBottom: '12px', marginBottom: '18px',
@@ -314,12 +316,6 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
             {TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
           </div>
           <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>{dossier.title}</div>
-          {customer && (
-            <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px' }}>
-              {[customer.first_name, customer.last_name].filter(Boolean).join(' ')}
-              {customer.city ? ` · ${customer.city}` : ''}
-            </div>
-          )}
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>Swiss Premium Broker</div>
@@ -331,40 +327,19 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
         </div>
       </div>
 
-      {/* Prämienübersicht */}
-      {(summary.hasCurrent || summary.hasRecommendation) && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '18px',
-          WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-          {[
-            { label: 'Aktuelle Prämie / Monat', value: fmtCHF(summary.currentMonthly), sub: `${fmtCHF(summary.currentYearly)} / Jahr`, color: '#334155', bg: '#f8fafc' },
-            {
-              label: savings != null && savings > 0.005 ? 'Einsparung / Monat' : savings != null && savings < -0.005 ? 'Mehrkosten / Monat' : 'Differenz',
-              value: savings != null ? `${savings > 0.005 ? '− ' : savings < -0.005 ? '+ ' : ''}${fmtCHF(Math.abs(savings))}` : '—',
-              sub: summary.savingsYearly != null ? `${savings > 0 ? '− ' : '+ '}${fmtCHF(Math.abs(summary.savingsYearly))} / Jahr` : '',
-              percent: summary.savingsPercent != null ? `${savings > 0 ? '−' : '+'}${Math.abs(summary.savingsPercent).toFixed(1)}%` : null,
-              color: savings != null && savings > 0.005 ? '#059669' : savings != null && savings < -0.005 ? '#dc2626' : '#64748b',
-              bg: savings != null && savings > 0.005 ? '#f0fdf4' : savings != null && savings < -0.005 ? '#fef2f2' : '#f8fafc',
-            },
-            { label: 'Empfohlene Prämie / Monat', value: fmtCHF(summary.proposedMonthly), sub: `${fmtCHF(summary.proposedYearly)} / Jahr`, color: '#334155', bg: '#f8fafc' },
-          ].map((col, i) => (
-            <div key={i} style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 16px', background: col.bg, textAlign: 'center' }}>
-              <div style={{ fontSize: '8px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>{col.label}</div>
-              <div style={{ fontSize: '18px', fontWeight: 900, color: col.color }}>{col.value}</div>
-              {col.sub && <div style={{ fontSize: '8.5px', color: '#94a3b8', marginTop: '2px' }}>{col.sub}</div>}
-              {col.percent && <div style={{ fontSize: '12px', fontWeight: 800, color: col.color, marginTop: '2px' }}>{col.percent}</div>}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div style={{ display: 'grid', gridTemplateColumns: customer ? '1fr 1fr' : '1fr', gap: '14px' }}>
+      {/* ── 1. Versicherungsnehmer + Familienmitglieder ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: hasFamilyMembers ? '1fr 1fr' : '1fr', gap: '16px', marginBottom: '20px' }}>
         {/* Versicherungsnehmer */}
         {customer && (
-          <div>
-            <div style={{ fontSize: '9px', fontWeight: 700, color: '#1e3a5f', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', marginBottom: '8px' }}>
+          <div style={{
+            border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px 16px',
+            background: '#f8fafc',
+            WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
+          }}>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: '#1e3a5f', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #e2e8f0', paddingBottom: '5px', marginBottom: '10px' }}>
               Versicherungsnehmer
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', fontSize: '9.5px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 14px', fontSize: '9.5px' }}>
               {[
                 ['Name', [customer.first_name, customer.last_name].filter(Boolean).join(' ')],
                 ['Geburtsdatum', fmtDate(customer.birthdate)],
@@ -383,24 +358,88 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
         )}
 
         {/* Haushaltsmitglieder */}
-        {Array.isArray(family_members) && family_members.length > 0 && (
-          <div>
-            <div style={{ fontSize: '9px', fontWeight: 700, color: '#1e3a5f', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', marginBottom: '8px' }}>
+        {hasFamilyMembers && (
+          <div style={{
+            border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px 16px',
+            background: '#f8fafc',
+            WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
+          }}>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: '#1e3a5f', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #e2e8f0', paddingBottom: '5px', marginBottom: '10px' }}>
               Haushaltsmitglieder
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(family_members.length, 3)}, 1fr)`, gap: '6px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(family_members.length, 3)}, 1fr)`, gap: '8px' }}>
               {family_members.map((m, i) => (
-                <div key={m.id || i} style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '6px 8px', background: '#f8fafc', fontSize: '9px' }}>
-                  <div style={{ fontWeight: 700, color: '#1e293b', marginBottom: '2px' }}>
+                <div key={m.id || i} style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '8px 10px', background: '#ffffff', fontSize: '9px' }}>
+                  <div style={{ fontWeight: 700, color: '#1e293b', marginBottom: '3px' }}>
                     {[m.first_name, m.last_name].filter(Boolean).join(' ') || '—'}
                   </div>
                   {m.birthdate && <div style={{ color: '#64748b' }}>Geb. {fmtDate(m.birthdate)}</div>}
+                  {m.family_role && <div style={{ color: '#94a3b8', fontSize: '8px', marginTop: '1px', textTransform: 'capitalize' }}>{m.family_role}</div>}
                 </div>
               ))}
             </div>
           </div>
         )}
       </div>
+
+      {/* ── 2. Prämienübersicht ── */}
+      {(summary.hasCurrent || summary.hasRecommendation) && (
+        <div style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+          <div style={{ fontSize: '9px', fontWeight: 700, color: '#1e3a5f', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+            Prämienübersicht
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+            {[
+              {
+                label: 'Aktuelle Prämie / Monat',
+                value: fmtCHF(summary.currentMonthly),
+                sub: `${fmtCHF(summary.currentYearly)} / Jahr`,
+                color: '#334155', bg: '#f8fafc', border: '#e2e8f0',
+                icon: '📋',
+              },
+              {
+                label: savings != null && savings > 0.005 ? 'Einsparung / Monat' : savings != null && savings < -0.005 ? 'Mehrkosten / Monat' : 'Differenz',
+                value: savings != null ? `${savings > 0.005 ? '− ' : savings < -0.005 ? '+ ' : ''}${fmtCHF(Math.abs(savings))}` : '—',
+                sub: summary.savingsYearly != null ? `${savings > 0 ? '− ' : '+ '}${fmtCHF(Math.abs(summary.savingsYearly))} / Jahr` : '',
+                percent: summary.savingsPercent != null ? `${savings > 0 ? '−' : '+'}${Math.abs(summary.savingsPercent).toFixed(1)}%` : null,
+                color: savings != null && savings > 0.005 ? '#059669' : savings != null && savings < -0.005 ? '#dc2626' : '#64748b',
+                bg: savings != null && savings > 0.005 ? '#f0fdf4' : savings != null && savings < -0.005 ? '#fef2f2' : '#f8fafc',
+                border: savings != null && savings > 0.005 ? '#bbf7d0' : savings != null && savings < -0.005 ? '#fecaca' : '#e2e8f0',
+                icon: savings != null && savings > 0.005 ? '↓' : savings != null && savings < -0.005 ? '↑' : '=',
+              },
+              {
+                label: 'Optimierte Prämie / Monat',
+                value: fmtCHF(summary.proposedMonthly),
+                sub: `${fmtCHF(summary.proposedYearly)} / Jahr`,
+                color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe',
+                icon: '✓',
+              },
+            ].map((col, i) => (
+              <div key={i} style={{
+                border: `1px solid ${col.border}`, borderRadius: '10px',
+                padding: '14px 16px', background: col.bg, textAlign: 'center',
+              }}>
+                <div style={{ fontSize: '8px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>{col.label}</div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: col.color }}>{col.value}</div>
+                {col.sub && <div style={{ fontSize: '8.5px', color: '#94a3b8', marginTop: '3px' }}>{col.sub}</div>}
+                {col.percent && <div style={{ fontSize: '13px', fontWeight: 800, color: col.color, marginTop: '4px' }}>{col.percent}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Beratungsnotiz falls kurz */}
+      {dossier.recommendation_notes && dossier.recommendation_notes.length < 300 && (
+        <div style={{
+          marginTop: '16px', border: '1px solid #bbf7d0', background: '#f0fdf4',
+          borderRadius: '8px', padding: '10px 14px', fontSize: '9.5px', color: '#166534', lineHeight: '1.6',
+          WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
+        }}>
+          <div style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px', color: '#15803d' }}>Beratungsempfehlung</div>
+          {dossier.recommendation_notes}
+        </div>
+      )}
     </div>
   );
 }
@@ -424,23 +463,27 @@ export default function DossierPrintTemplate({ snapshot }) {
     .filter(e => e.gruppe === 'aktuelle_loesung')
     .reduce((s, e) => s + (Number(e.praemie_monatlich) || 0), 0);
 
-  // Seitenpaare: Seite 1 = aktuelle_loesung + optimiert, dann je 2 Angebote
+  // Seitenpaare:
+  //   Seite 2: Aktuelle Lösung + Optimierte Lösung nebeneinander
+  //   Seite 3: Angebot 1 + Angebot 2
+  //   Seite 4: Angebot 3 + Angebot 4, usw.
   const vergleichsSeiten = [];
   const remaining = presentGruppen.filter(g => g !== 'aktuelle_loesung' && g !== 'optimiert');
 
-  // Seite 2: Aktuelle Lösung (alleine, ganzseitig)
-  if (presentGruppen.includes('aktuelle_loesung')) {
-    vergleichsSeiten.push({ g1: 'aktuelle_loesung', g2: null, label: 'Seite 2 — Aktuelle Versicherungslösung' });
+  // Seite 2: Aktuelle Lösung + Optimierte Lösung nebeneinander
+  const hasAktuell  = presentGruppen.includes('aktuelle_loesung');
+  const hasOptimiert = presentGruppen.includes('optimiert');
+  if (hasAktuell || hasOptimiert) {
+    vergleichsSeiten.push({
+      g1: hasAktuell ? 'aktuelle_loesung' : 'optimiert',
+      g2: hasAktuell && hasOptimiert ? 'optimiert' : null,
+      label: 'Seite 2 — Aktuelle Lösung & Optimierte Lösung',
+    });
   }
 
-  // Seite 3: Optimierte Lösung (alleine, ganzseitig)
-  if (presentGruppen.includes('optimiert')) {
-    vergleichsSeiten.push({ g1: 'optimiert', g2: null, label: 'Seite 3 — Optimierte Versicherungslösung' });
-  }
-
-  // Seite 4+: je 2 Angebote nebeneinander
+  // Seite 3+: je 2 Angebote nebeneinander
   for (let i = 0; i < remaining.length; i += 2) {
-    const pageNum = vergleichsSeiten.length + 2; // +2 weil Deckblatt = Seite 1
+    const pageNum = vergleichsSeiten.length + 2;
     vergleichsSeiten.push({
       g1: remaining[i],
       g2: remaining[i + 1] || null,
@@ -489,8 +532,8 @@ export default function DossierPrintTemplate({ snapshot }) {
           />
         ))}
 
-        {/* Beratungsnotiz */}
-        {dossier.recommendation_notes && (
+        {/* Beratungsnotiz — nur als eigene Seite wenn Text lang (kurze Notizen stehen bereits auf Deckblatt) */}
+        {dossier.recommendation_notes && dossier.recommendation_notes.length >= 300 && (
           <div className="print-page" style={{ minHeight: '185mm' }}>
             <PageHeader dossier={dossier} customer={customer} snapshot={snapshot} pageLabel="Beratungsnotiz" />
             <div style={{ fontSize: '9px', fontWeight: 700, color: '#1e3a5f', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', marginBottom: '10px' }}>
