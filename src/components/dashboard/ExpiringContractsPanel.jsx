@@ -29,14 +29,14 @@ const urgencyBg = (days) => {
 export default function ExpiringContractsPanel({ contracts = [] }) {
   const navigate = useNavigate()
 
-  // Filter & sort expiring contracts (within 180 days, active only, sorted by end_date ASC)
+  // Filter & sort expiring contracts (within 365 days, active only, sorted by end_date ASC)
   const expiringList = useMemo(() => {
     const today = new Date()
-    const in180 = new Date(today)
-    in180.setDate(today.getDate() + 180)
+    const in365 = new Date(today)
+    in365.setDate(today.getDate() + 365)
     
     return contracts
-      .filter(c => c.status === 'active' && c.end_date && new Date(c.end_date) <= in180)
+      .filter(c => c.status === 'active' && c.end_date && new Date(c.end_date) <= in365)
       .sort((a, b) => new Date(a.end_date) - new Date(b.end_date))
   }, [contracts])
 
