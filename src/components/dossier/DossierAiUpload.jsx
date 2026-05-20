@@ -606,17 +606,23 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
         const personNameFinal = p.person_name || personName;
         const sectionFinal = p.section || 'grundversicherung';
         
-        console.log(`[DossierAiUpload SAVE] Verarbeite: ${p.gesellschaft} | ${personNameFinal} | ${sectionFinal}`);
+        console.log(`[DossierAiUpload SAVE] Verarbeite: ${p.gesellschaft} ${p.product_name || ''} | ${personNameFinal} | ${sectionFinal}`);
         
-        // Prüfen ob Eintrag in derselben Gruppe bereits existiert
-        const existingInSameGroup = await base44.entities.ComparisonEntry.filter({
+        // FIX: Nach gesellschaft + product_name filtern (verhindert Überschreiben bei mehreren Produkten derselben Gesellschaft)
+        const filterQuery = {
           dossier_id: dossierId,
           person_name: personNameFinal,
           section: sectionFinal,
           gesellschaft: p.gesellschaft,
           gruppe: targetGruppe,
-        }).then(r => {
-          console.log(`[DossierAiUpload SAVE] Filter ergab ${r.length} Einträge in Gruppe "${targetGruppe}"`);
+        };
+        // Nur nach product_name filtern wenn vorhanden (präzisere Zuordnung)
+        if (p.product_name && p.product_name.trim()) {
+          filterQuery.product_name = p.product_name;
+        }
+        
+        const existingInSameGroup = await base44.entities.ComparisonEntry.filter(filterQuery).then(r => {
+          console.log(`[DossierAiUpload SAVE] Filter ergab ${r.length} Einträge (gesellschaft=${p.gesellschaft}, product=${p.product_name || 'any'})`);
           return r[0];
         });
         
