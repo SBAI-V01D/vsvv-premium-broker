@@ -30,6 +30,30 @@
       "type": "string",
       "description": "FINMA-Registrierungsnummer der Organisation"
     },
+    "street": {
+      "type": "string",
+      "description": "Strasse"
+    },
+    "zip_code": {
+      "type": "string",
+      "description": "Postleitzahl"
+    },
+    "city": {
+      "type": "string",
+      "description": "Stadt"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefon"
+    },
+    "email": {
+      "type": "string",
+      "description": "E-Mail"
+    },
+    "website": {
+      "type": "string",
+      "description": "Website"
+    },
     "notes": {
       "type": "string",
       "description": "Notizen"

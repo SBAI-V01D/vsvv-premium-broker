@@ -8,9 +8,12 @@
  * Lösungsorientierung: Jede Gruppe = eigenständiges Beratungsangebot.
  * Keine CRM-Entities, nur ComparisonEntry.
  */
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { fmtCHF, fmtDate, calcDossierSummary } from '@/lib/dossierCalc';
 import DossierLegende from '@/components/dossier/print/DossierLegende';
+import DossierDocumentHeader from '@/components/dossier/print/DossierDocumentHeader';
 
 // ── Gruppen-Konfiguration (Farben) ────────────────────────────────────────────
 const GRUPPE_CFG = {
@@ -277,7 +280,7 @@ function ProductRow({ entry, accentColor }) {
 }
 
 // ── Seiten-Layout: 2 Lösungen nebeneinander (A4 Quer) ────────────────────────
-function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entries, referenceTotal, pageLabel }) {
+function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entries, referenceTotal, pageLabel, organization, advisor }) {
   const g1entries = entries.filter(e => (e.gruppe || 'manuell') === gruppe1);
   const g2entries = gruppe2 ? entries.filter(e => (e.gruppe || 'manuell') === gruppe2) : [];
   const cfg1 = GRUPPE_CFG[gruppe1] || GRUPPE_CFG.manuell;
@@ -287,21 +290,13 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
 
   return (
     <div className="print-page" style={{ padding: '0' }}>
-      {/* Deckblatt-Stil Titel für Seite 2+ */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-        borderBottom: '3px solid #1e3a5f', paddingBottom: '12px', marginBottom: '14px',
-      }}>
-        <div>
-          <div style={{ fontSize: '22px', fontWeight: 900, color: '#1e3a5f', letterSpacing: '-0.02em' }}>
-            {dossier.title}
-          </div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>{pageLabel}</div>
-          <div style={{ fontSize: '8.5px', color: '#94a3b8' }}>Swiss Premium Broker · {fmtDate(snapshot?.snapshot_created_at)} · v{dossier.version ?? 1}</div>
-        </div>
-      </div>
+      {/* Einheitlicher Header mit Berater/Org-Daten */}
+      <DossierDocumentHeader 
+        organization={organization} 
+        advisor={advisor} 
+        snapshot={snapshot}
+        dossier={dossier}
+      />
 
       <div style={{ display: 'flex', gap: '14px', alignItems: 'stretch' }}>
         <LösungsSäule
@@ -325,35 +320,37 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
 }
 
 // ── Seite 1: Deckblatt — Personen oben, Prämienübersicht unten ────────────────
-function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, savings }) {
+function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, savings, showHeader = true }) {
   const hasFamilyMembers = Array.isArray(family_members) && family_members.length > 0;
 
   return (
-    <div className="print-page">
-      {/* ── Dossier-Header ── */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-        borderBottom: '3px solid #1e3a5f', paddingBottom: '12px', marginBottom: '18px',
-      }}>
-        <div>
-          <div style={{ fontSize: '22px', fontWeight: 900, color: '#1e3a5f', letterSpacing: '-0.02em', marginBottom: '3px' }}>
-            {dossier.title || (TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type)}
-          </div>
-          {dossier.title && dossier.title !== (TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type) && (
-            <div style={{ fontSize: '11px', fontWeight: 500, color: '#64748b', marginTop: '2px' }}>
-              {TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
+    <>
+      {/* Dossier-Header — nur wenn showHeader=true (für Fallback) */}
+      {showHeader && (
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+          borderBottom: '3px solid #1e3a5f', paddingBottom: '12px', marginBottom: '18px',
+        }}>
+          <div>
+            <div style={{ fontSize: '22px', fontWeight: 900, color: '#1e3a5f', letterSpacing: '-0.02em', marginBottom: '3px' }}>
+              {dossier.title || (TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type)}
             </div>
-          )}
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>Swiss Premium Broker</div>
-          <div style={{ fontSize: '9.5px', color: '#64748b' }}>Erstellt: {fmtDate(snapshot?.snapshot_created_at)}</div>
-          {snapshot?.created_by_name && <div style={{ fontSize: '9.5px', color: '#64748b' }}>durch {snapshot.created_by_name}</div>}
-          <div style={{ fontSize: '8.5px', color: '#94a3b8', marginTop: '3px', background: '#f1f5f9', padding: '2px 7px', borderRadius: '4px', display: 'inline-block' }}>
-            v{dossier.version ?? 1}
+            {dossier.title && dossier.title !== (TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type) && (
+              <div style={{ fontSize: '11px', fontWeight: 500, color: '#64748b', marginTop: '2px' }}>
+                {TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
+              </div>
+            )}
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>Swiss Premium Broker</div>
+            <div style={{ fontSize: '9.5px', color: '#64748b' }}>Erstellt: {fmtDate(snapshot?.snapshot_created_at)}</div>
+            {snapshot?.created_by_name && <div style={{ fontSize: '9.5px', color: '#64748b' }}>durch {snapshot.created_by_name}</div>}
+            <div style={{ fontSize: '8.5px', color: '#94a3b8', marginTop: '3px', background: '#f1f5f9', padding: '2px 7px', borderRadius: '4px', display: 'inline-block' }}>
+              v{dossier.version ?? 1}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── 1. Versicherungsnehmer + Familienmitglieder ── */}
       <div style={{ display: 'grid', gridTemplateColumns: hasFamilyMembers ? '1fr 1fr' : '1fr', gap: '16px', marginBottom: '20px' }}>
@@ -479,6 +476,19 @@ export default function DossierPrintTemplate({ snapshot }) {
   if (!snapshot?.dossier) return null;
 
   const { dossier, customer, family_members, comparison_entries } = snapshot;
+
+  // Organization & Advisor Daten laden
+  const { data: organization } = useQuery({
+    queryKey: ['dossier_org_ro', dossier.organization_id],
+    queryFn: () => base44.entities.Organization.filter({ id: dossier.organization_id }).then(r => r[0]),
+    enabled: !!dossier.organization_id,
+  });
+
+  const { data: advisor } = useQuery({
+    queryKey: ['dossier_advisor_ro', dossier.advisor_id],
+    queryFn: () => base44.entities.Advisor.filter({ id: dossier.advisor_id }).then(r => r[0]),
+    enabled: !!dossier.advisor_id,
+  });
   const entries = Array.isArray(comparison_entries)
     ? comparison_entries.map(e => ({ ...e, gruppe: e.gruppe || 'manuell' }))
     : [];
@@ -556,15 +566,24 @@ export default function DossierPrintTemplate({ snapshot }) {
       <style dangerouslySetInnerHTML={{ __html: PRINT_STYLES }} />
       <div id="dossier-print-root" style={containerStyle}>
 
-        {/* Deckblatt */}
-        <DeckblattSeite
-          dossier={dossier}
-          customer={customer}
-          family_members={family_members}
-          snapshot={snapshot}
-          summary={summary}
-          savings={savings}
-        />
+        {/* Deckblatt mit neuem professionellem Header */}
+        <div className="print-page">
+          <DossierDocumentHeader 
+            organization={organization} 
+            advisor={advisor} 
+            snapshot={snapshot}
+            dossier={dossier}
+          />
+          <DeckblattSeite
+            dossier={dossier}
+            customer={customer}
+            family_members={family_members}
+            snapshot={snapshot}
+            summary={summary}
+            savings={savings}
+            showHeader={false}
+          />
+        </div>
 
         {/* Vergleichs-Seiten */}
         {vergleichsSeiten.map((seite, i) => seite.g1 && (
@@ -578,6 +597,8 @@ export default function DossierPrintTemplate({ snapshot }) {
             entries={entries}
             referenceTotal={referenceTotal}
             pageLabel={seite.label}
+            organization={organization}
+            advisor={advisor}
           />
         ))}
 
@@ -601,25 +622,12 @@ export default function DossierPrintTemplate({ snapshot }) {
 
         {/* Legende / Hinweise — immer am Ende */}
         <div className="print-page" style={{ padding: '0' }}>
-          {/* Einheitlicher Header wie Seite 2+ */}
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-            borderBottom: '3px solid #1e3a5f', paddingBottom: '12px', marginBottom: '14px',
-          }}>
-            <div>
-              <div style={{ fontSize: '22px', fontWeight: 900, color: '#1e3a5f', letterSpacing: '-0.02em' }}>
-                {dossier.title}
-              </div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>
-                {'Hinweise & Berechnungsgrundlagen'}
-              </div>
-              <div style={{ fontSize: '8.5px', color: '#94a3b8' }}>
-                Swiss Premium Broker · {fmtDate(snapshot?.snapshot_created_at)} · v{dossier.version ?? 1}
-              </div>
-            </div>
-          </div>
+          <DossierDocumentHeader 
+            organization={organization} 
+            advisor={advisor} 
+            snapshot={snapshot}
+            dossier={dossier}
+          />
           <DossierLegende entries={entries} snapshot={snapshot} />
         </div>
 
