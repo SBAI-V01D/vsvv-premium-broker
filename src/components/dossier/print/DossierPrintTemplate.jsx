@@ -82,29 +82,29 @@ const TYPE_LABELS = {
 
 // ── Gemeinsamer Seiten-Header (klein, wiederholt auf jeder Seite) ─────────────
 function PageHeader({ dossier, customer, pageLabel, snapshot, organization, advisor }) {
-  const customerName = customer ? `${customer.first_name} ${customer.last_name}`.trim() : '';
-  
   return (
     <div style={{
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
       borderBottom: '2px solid #1e3a5f', paddingBottom: '8px', marginBottom: '14px',
     }}>
       <div>
-        {/* Haupttitel: Dossier-Titel + Kunde */}
+        {/* Haupttitel: Dossier-Titel (ohne Kundennamen) */}
         <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e3a5f', letterSpacing: '-0.02em', marginBottom: '2px' }}>
           {dossier.title || TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
-          {customerName && <span style={{ fontWeight: 400, color: '#64748b' }}> · {customerName}</span>}
         </div>
         {/* Untertitel: Seiten-spezifisch */}
         <div style={{ fontSize: '9px', color: '#64748b' }}>
           {pageLabel}
         </div>
+        {/* Berater/Organisation (klein, nur wenn vorhanden) */}
+        {(organization?.name || advisor) && (
+          <div style={{ fontSize: '7.5px', color: '#94a3b8', marginTop: '4px' }}>
+            {organization?.name && <div>{organization.name}</div>}
+            {advisor && <div>{advisor.firstname} {advisor.lastname}</div>}
+          </div>
+        )}
       </div>
       <div style={{ textAlign: 'right' }}>
-        {/* Berater/Org-Kurzfassung */}
-        <div style={{ fontSize: '8px', color: '#94a3b8', marginBottom: '1px' }}>
-          {organization?.name || advisor?.firstname ? `${organization?.name || ''}${advisor?.firstname ? ' · ' + advisor.firstname + ' ' + advisor.lastname : ''}` : 'Swiss Premium Broker'}
-        </div>
         <div style={{ fontSize: '8.5px', color: '#94a3b8' }}>
           {fmtDate(snapshot?.snapshot_created_at)} · v{dossier.version ?? 1}
         </div>
@@ -327,14 +327,7 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
 
   return (
     <div className="print-page" style={{ padding: '0' }}>
-      {/* Einheitlicher Header mit Berater/Org-Daten + Dossier-Titel */}
-      <DossierDocumentHeader 
-        organization={organization} 
-        advisor={advisor} 
-        snapshot={snapshot}
-        dossier={dossier}
-      />
-      {/* Seiten-spezifischer Untertitel */}
+      {/* Seiten-spezifischer Header */}
       <PageHeader 
         dossier={dossier}
         customer={customer}
@@ -368,18 +361,23 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
 }
 
 // ── Seite 1: Deckblatt — Personen oben, Prämienübersicht unten ────────────────
-function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, savings, entries, showHeader = true }) {
+function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, savings, entries, organization, advisor }) {
   const hasFamilyMembers = Array.isArray(family_members) && family_members.length > 0;
 
-  // Prämien für ALLE Angebote berechnen
+  // Referenz für Vergleich = Optimierte Lösung (nicht Aktuelle, da mehr Leistungen)
+  const referenceTotal = summary.proposedMonthly || summary.currentMonthly;
+  const referenceLabel = summary.proposedMonthly ? 'optimierte Lösung' : 'aktuelle Lösung';
+
+  // Prämien für ALLE Angebote berechnen (Vergleich gegen Optimierte Lösung)
   const angebotPrämien = useMemo(() => {
     const result = [];
     ['angebot_1', 'angebot_2', 'angebot_3', 'angebot_4', 'angebot_5'].forEach(gruppe => {
       const gruppeEntries = (entries || []).filter(e => e.gruppe === gruppe);
       if (gruppeEntries.length > 0) {
         const total = gruppeEntries.reduce((s, e) => s + (Number(e.praemie_monatlich) || 0), 0);
-        const diff = summary.currentMonthly - total;
-        const pct = summary.currentMonthly > 0 ? ((diff / summary.currentMonthly) * 100) : 0;
+        // Vergleich gegen Optimierte Lösung
+        const diff = referenceTotal - total;
+        const pct = referenceTotal > 0 ? ((diff / referenceTotal) * 100) : 0;
         result.push({
           gruppe,
           label: GRUPPE_CFG[gruppe]?.label || gruppe,
@@ -391,36 +389,48 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
       }
     });
     return result;
-  }, [entries, summary.currentMonthly]);
+  }, [entries, referenceTotal]);
 
   return (
     <div>
-      {/* Dossier-Header — nur wenn showHeader=true (für Fallback) */}
-      {showHeader && (
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-          borderBottom: '3px solid #1e3a5f', paddingBottom: '12px', marginBottom: '18px',
-        }}>
-          <div>
-            <div style={{ fontSize: '22px', fontWeight: 900, color: '#1e3a5f', letterSpacing: '-0.02em', marginBottom: '3px' }}>
-              {dossier.title || (TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type)}
-            </div>
-            {dossier.title && dossier.title !== (TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type) && (
-              <div style={{ fontSize: '11px', fontWeight: 500, color: '#64748b', marginTop: '2px' }}>
-                {TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
+      {/* Dossier-Header mit Berater/Organisation */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+        borderBottom: '3px solid #1e3a5f', paddingBottom: '12px', marginBottom: '18px',
+      }}>
+        {/* Linke Seite: Organisation + Berater */}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e3a5f', marginBottom: '6px' }}>
+            {organization?.name || 'Swiss Premium Broker'}
+          </div>
+          <div style={{ fontSize: '8.5px', color: '#64748b', lineHeight: '1.5' }}>
+            {organization?.street && <div>{organization.street}{organization?.zip_code || organization?.city ? ',' : ''} {organization?.zip_code} {organization?.city}</div>}
+            {organization?.phone && <div>Tel: {organization.phone}</div>}
+            {organization?.email && <div>Email: {organization.email}</div>}
+            {advisor && (
+              <div style={{ marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #e2e8f0' }}>
+                <div style={{ fontWeight: 600, color: '#1e3a5f' }}>{advisor.firstname} {advisor.lastname}</div>
+                {advisor?.phone && <div>Tel: {advisor.phone}</div>}
+                {advisor?.email && <div>Email: {advisor.email}</div>}
+                {advisor?.finma_number && <div>FINMA: {advisor.finma_number}</div>}
+                {advisor?.vbv_number && <div>VBV: {advisor.vbv_number}</div>}
               </div>
             )}
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>Swiss Premium Broker</div>
-            <div style={{ fontSize: '9.5px', color: '#64748b' }}>Erstellt: {fmtDate(snapshot?.snapshot_created_at)}</div>
-            {snapshot?.created_by_name && <div style={{ fontSize: '9.5px', color: '#64748b' }}>durch {snapshot.created_by_name}</div>}
-            <div style={{ fontSize: '8.5px', color: '#94a3b8', marginTop: '3px', background: '#f1f5f9', padding: '2px 7px', borderRadius: '4px', display: 'inline-block' }}>
-              v{dossier.version ?? 1}
-            </div>
+        </div>
+        
+        {/* Rechte Seite: Dossier-Info */}
+        <div style={{ textAlign: 'right', minWidth: '180px' }}>
+          <div style={{ fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>
+            {dossier.title || TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
+          </div>
+          <div style={{ fontSize: '9.5px', color: '#64748b' }}>Erstellt: {fmtDate(snapshot?.snapshot_created_at)}</div>
+          {snapshot?.created_by_name && <div style={{ fontSize: '9.5px', color: '#64748b' }}>durch {snapshot.created_by_name}</div>}
+          <div style={{ fontSize: '8.5px', color: '#94a3b8', marginTop: '3px', background: '#f1f5f9', padding: '2px 7px', borderRadius: '4px', display: 'inline-block' }}>
+            v{dossier.version ?? 1}
           </div>
         </div>
-      )}
+      </div>
 
       {/* ── 1. Versicherungsnehmer + Familienmitglieder ── */}
       <div style={{ display: 'grid', gridTemplateColumns: hasFamilyMembers ? '1fr 1fr' : '1fr', gap: '16px', marginBottom: '20px' }}>
@@ -532,11 +542,11 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
             </div>
           </div>
           
-          {/* Zeile 2: Alle Angebote im Vergleich */}
+          {/* Zeile 2: Alle Angebote im Vergleich zur optimierten Lösung */}
           {angebotPrämien.length > 0 && (
             <div>
               <div style={{ fontSize: '8px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
-                Angebote im Vergleich zur aktuellen Lösung
+                Angebote im Vergleich zur {referenceLabel}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(angebotPrämien.length, 4)}, 1fr)`, gap: '10px' }}>
                 {angebotPrämien.map((angebot, i) => (
@@ -692,14 +702,8 @@ export default function DossierPrintTemplate({ snapshot }) {
       <style dangerouslySetInnerHTML={{ __html: PRINT_STYLES }} />
       <div id="dossier-print-root" style={containerStyle}>
 
-        {/* Deckblatt mit neuem professionellem Header */}
+        {/* Deckblatt mit Berater/Organisation im Header */}
         <div className="print-page">
-          <DossierDocumentHeader 
-            organization={organization} 
-            advisor={advisor} 
-            snapshot={snapshot}
-            dossier={dossier}
-          />
           <DeckblattSeite
             dossier={dossier}
             customer={customer}
@@ -708,7 +712,8 @@ export default function DossierPrintTemplate({ snapshot }) {
             summary={summary}
             savings={savings}
             entries={entries}
-            showHeader={false}
+            organization={organization}
+            advisor={advisor}
           />
         </div>
 
@@ -732,7 +737,14 @@ export default function DossierPrintTemplate({ snapshot }) {
         {/* Beratungsnotiz — nur als eigene Seite wenn Text lang (kurze Notizen stehen bereits auf Deckblatt) */}
         {dossier.recommendation_notes && dossier.recommendation_notes.length >= 300 && (
           <div className="print-page" style={{ minHeight: '185mm' }}>
-            <PageHeader dossier={dossier} customer={customer} snapshot={snapshot} pageLabel="Beratungsnotiz" />
+            <PageHeader 
+              dossier={dossier} 
+              customer={customer} 
+              snapshot={snapshot} 
+              pageLabel="Beratungsnotiz"
+              organization={organization}
+              advisor={advisor}
+            />
             <div style={{ fontSize: '9px', fontWeight: 700, color: '#1e3a5f', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', marginBottom: '10px' }}>
               Beratungsnotiz / Empfehlung
             </div>
