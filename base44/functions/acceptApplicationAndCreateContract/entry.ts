@@ -24,13 +24,24 @@ Deno.serve(async (req) => {
     const app = await base44.entities.Application.get(application_id);
     if (!app) return Response.json({ error: 'Antrag nicht gefunden' }, { status: 404 });
 
-    // 2. Guard: Bereits verknüpft?
+    // 2. Guard: Bereits verknüpft? — Nur wenn verlinkter Vertrag noch aktiv existiert
     if (app.linked_contract_id) {
-      return Response.json({
-        success: false,
-        message: 'Antrag bereits mit Vertrag verknüpft',
-        contract_id: app.linked_contract_id,
-      });
+      let existingContract = null;
+      try {
+        existingContract = await base44.entities.Contract.get(app.linked_contract_id);
+      } catch (_) {
+        existingContract = null;
+      }
+      if (existingContract && !existingContract.archived) {
+        return Response.json({
+          success: false,
+          message: 'Antrag bereits mit Vertrag verknüpft',
+          contract_id: app.linked_contract_id,
+        });
+      }
+      // Verknüpfter Vertrag existiert nicht mehr oder archiviert → Link leeren und neu erstellen
+      await base44.entities.Application.update(application_id, { linked_contract_id: null });
+      app.linked_contract_id = null;
     }
 
     // 3. Status auf "angenommen" setzen → triggert onApplicationUpdate
