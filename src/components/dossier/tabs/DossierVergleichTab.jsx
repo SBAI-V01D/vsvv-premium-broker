@@ -371,6 +371,7 @@ export default function DossierVergleichTab({ dossier, pendingImportContract, on
             knownPersons={persons}
             onEntryAdded={() => setShowAiUpload(false)}
             onClose={() => setShowAiUpload(false)}
+            defaultGruppe="optimiert"
           />
         )}
 

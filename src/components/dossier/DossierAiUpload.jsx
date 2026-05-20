@@ -509,7 +509,7 @@ function StepBar({ step }) {
 }
 
 // ── Hauptkomponente ───────────────────────────────────────────────────────────
-export default function DossierAiUpload({ dossierId, personName, onEntryAdded, onClose, knownPersons = [] }) {
+export default function DossierAiUpload({ dossierId, personName, onEntryAdded, onClose, knownPersons = [], defaultGruppe: propDefaultGruppe = 'aktuelle_loesung' }) {
   const [file, setFile] = useState(null);
   const [fileError, setFileError] = useState('');
   const [step, setStep] = useState('upload');
@@ -517,7 +517,7 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
   const [detectedPersons, setDetectedPersons] = useState([]);
   const [documentType, setDocumentType] = useState('');
   const [extractionNotes, setExtractionNotes] = useState('');
-  const [defaultGruppe, setDefaultGruppe] = useState('aktuelle_loesung');
+  const [defaultGruppe, setDefaultGruppe] = useState(propDefaultGruppe);
   const [confirmedCount, setConfirmedCount] = useState(0);
   const [originalProducts, setOriginalProducts] = useState([]); // Phase C: Korrektur-Tracking
   const fileInputRef = useRef();
@@ -599,6 +599,20 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
     mutationFn: async (products) => {
       const results = [];
       for (const p of products) {
+        // GUARD: Nur erstellen wenn nicht bereits exists (person + section + gesellschaft + gruppe)
+        const existing = await base44.entities.ComparisonEntry.filter({
+          dossier_id: dossierId,
+          person_name: p.person_name || personName,
+          section: p.section,
+          gesellschaft: p.gesellschaft,
+          gruppe: p.gruppe,
+        }).then(r => r[0]);
+        
+        if (existing) {
+          console.warn(`[DossierAiUpload] SKIP: ${p.gesellschaft} (${p.section}) für ${p.person_name} in Gruppe ${p.gruppe} existiert bereits`);
+          continue; // Nicht erstellen, nicht updaten (ausser gleiche Gruppe)
+        }
+        
         const entry = await base44.entities.ComparisonEntry.create({
           dossier_id:        dossierId,
           person_name:       p.person_name || personName,
@@ -768,6 +782,16 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
                 <AlertTriangle className="w-3 h-3" /> {fileError}
               </p>
             )}
+
+            {/* Hinweis auf ausgewählte Gruppe */}
+            <div className="bg-primary/5 border border-primary/20 rounded-lg px-3 py-2 text-xs">
+              <p className="text-primary font-semibold">
+                Alle extrahierten Produkte werden der Gruppe <strong>"{GRUPPE_OPTIONS.find(o => o.value === defaultGruppe)?.label}"</strong> zugeordnet.
+              </p>
+              <p className="text-muted-foreground mt-0.5">
+                Bestehende Einträge in anderen Gruppen werden NICHT verändert.
+              </p>
+            </div>
 
             <button onClick={() => { setStep('analyzing'); analyzeMutation.mutate(file); }}
               disabled={!file || !!fileError}
