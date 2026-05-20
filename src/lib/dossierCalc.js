@@ -166,19 +166,35 @@ export function fmtCHF(amount, decimals = 2) {
 /**
  * Gesamtübersicht für Dossier-Summary.
  * Alle Felder sind immer definiert (null für "keine Daten", nie undefined).
+ *
+ * Priorität für "proposed":
+ *   1. is_recommended=true Einträge (explizit empfohlen)
+ *   2. gruppe='optimiert' Einträge (falls keine is_recommended vorhanden)
  */
 export function calcDossierSummary(entries) {
   const arr = safeArray(entries);
-  const currentMonthly     = sumPraemieMonatlich(arr, true);
-  const recommendedEntries = arr.filter(e => e?.is_recommended);
-  const proposedMonthly    = sumPraemieMonatlich(recommendedEntries);
 
-  // savingsMonthly: null wenn keine verwertbaren Daten auf beiden Seiten
-  const hasCurrent          = arr.some(e => e?.is_current && safePraemie(e?.praemie_monatlich) !== null);
-  const hasRecommendation   = recommendedEntries.some(e => safePraemie(e?.praemie_monatlich) !== null);
-  const savingsMonthly      = hasCurrent || hasRecommendation ? currentMonthly - proposedMonthly : null;
-  const savingsYearly       = savingsMonthly !== null ? savingsMonthly * 12 : null;
-  const savingsPercent      = hasCurrent && currentMonthly > 0
+  // Aktuelle Lösung: gruppe='aktuelle_loesung' ODER is_current=true (Legacy)
+  const currentEntries = arr.filter(e => e?.gruppe === 'aktuelle_loesung' || e?.is_current);
+  const currentMonthly = currentEntries.reduce((sum, e) => {
+    const p = safePraemie(e?.praemie_monatlich);
+    return p !== null ? sum + p : sum;
+  }, 0);
+
+  // Empfohlene Lösung: is_recommended=true → sonst gruppe='optimiert'
+  const recommendedEntries = arr.filter(e => e?.is_recommended);
+  const optimiertEntries   = arr.filter(e => e?.gruppe === 'optimiert');
+  const proposedEntries    = recommendedEntries.length > 0 ? recommendedEntries : optimiertEntries;
+  const proposedMonthly    = proposedEntries.reduce((sum, e) => {
+    const p = safePraemie(e?.praemie_monatlich);
+    return p !== null ? sum + p : sum;
+  }, 0);
+
+  const hasCurrent       = currentEntries.some(e => safePraemie(e?.praemie_monatlich) !== null);
+  const hasRecommendation = proposedEntries.some(e => safePraemie(e?.praemie_monatlich) !== null);
+  const savingsMonthly   = hasCurrent || hasRecommendation ? currentMonthly - proposedMonthly : null;
+  const savingsYearly    = savingsMonthly !== null ? savingsMonthly * 12 : null;
+  const savingsPercent   = hasCurrent && currentMonthly > 0
     ? ((currentMonthly - proposedMonthly) / currentMonthly) * 100
     : null;
 
@@ -190,7 +206,7 @@ export function calcDossierSummary(entries) {
     savingsMonthly,
     savingsYearly,
     savingsPercent,
-    hasRecommendation: recommendedEntries.length > 0,
-    hasCurrent:        arr.some(e => e?.is_current),
+    hasRecommendation: proposedEntries.length > 0,
+    hasCurrent:        currentEntries.length > 0,
   };
 }

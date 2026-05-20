@@ -26,33 +26,45 @@ const GRUPPE_ORDER = ['aktuelle_loesung', 'optimiert', 'angebot_1', 'angebot_2',
 
 // ── Print CSS — A4 Querformat ─────────────────────────────────────────────────
 const PRINT_STYLES = `
+  /* ── Screen: Seiten als einzelne Blöcke mit Trenner ── */
+  .print-page {
+    margin-bottom: 32px;
+    border-bottom: 2px dashed #e2e8f0;
+    padding-bottom: 24px;
+  }
+  .print-page:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+
   @media print {
     body * { visibility: hidden !important; }
     #dossier-print-root,
     #dossier-print-root * { visibility: visible !important; }
     #dossier-print-root {
-      position: absolute;
+      position: fixed;
       left: 0; top: 0;
       width: 100%;
       padding: 0 !important;
       margin: 0 !important;
+      background: white !important;
     }
     @page {
       size: A4 landscape;
-      margin: 10mm 12mm;
+      margin: 10mm 14mm;
     }
     .print-page {
-      page-break-after: always;
-      break-after: page;
+      page-break-after: always !important;
+      break-after: page !important;
+      margin-bottom: 0 !important;
+      border-bottom: none !important;
+      padding-bottom: 0 !important;
     }
     .print-page:last-child {
-      page-break-after: avoid;
-      break-after: avoid;
+      page-break-after: avoid !important;
+      break-after: avoid !important;
     }
     .print-no-break { page-break-inside: avoid; break-inside: avoid; }
-    table { page-break-inside: auto; break-inside: auto; }
-    thead { display: table-header-group; page-break-inside: avoid; break-inside: avoid; }
-    tr    { page-break-inside: avoid; break-inside: avoid; }
   }
 `;
 
@@ -116,8 +128,10 @@ function LösungsSäule({ gruppe, label, entries, referenceTotal }) {
         <div style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', opacity: 0.8, marginBottom: '2px' }}>
           {label}
         </div>
-        <div style={{ fontSize: '12px', fontWeight: 800 }}>
-          {gesellschaften.join(' · ') || <span style={{ opacity: 0.5, fontStyle: 'italic' }}>Keine Gesellschaft</span>}
+        <div style={{ fontSize: '12px', fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {gesellschaften.length > 0
+            ? gesellschaften.map(g => g.length > 30 ? g.substring(0, 28) + '…' : g).join(' · ')
+            : <span style={{ opacity: 0.5, fontStyle: 'italic' }}>Keine Gesellschaft</span>}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '8px' }}>
           <div>
