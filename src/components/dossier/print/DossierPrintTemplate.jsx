@@ -322,9 +322,13 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
       }}>
         <div>
           <div style={{ fontSize: '22px', fontWeight: 900, color: '#1e3a5f', letterSpacing: '-0.02em', marginBottom: '3px' }}>
-            {TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
+            {dossier.title || (TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type)}
           </div>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>{dossier.title}</div>
+          {dossier.title && dossier.title !== (TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type) && (
+            <div style={{ fontSize: '11px', fontWeight: 500, color: '#64748b', marginTop: '2px' }}>
+              {TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
+            </div>
+          )}
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: '9px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>Swiss Premium Broker</div>
