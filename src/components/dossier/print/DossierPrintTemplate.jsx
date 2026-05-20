@@ -420,11 +420,8 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
       }}>
         {/* Linke Seite: Titel (linksbündig, gleich gross wie Seite 2-4) */}
         <div style={{ flex: 1, paddingRight: '20px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e3a5f', letterSpacing: '-0.02em', marginBottom: '2px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e3a5f', letterSpacing: '-0.02em' }}>
             {dossier.title || TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
-          </div>
-          <div style={{ fontSize: '9px', color: '#64748b' }}>
-            {customer && [customer.first_name, customer.last_name].filter(Boolean).join(' ')}
           </div>
         </div>
         
