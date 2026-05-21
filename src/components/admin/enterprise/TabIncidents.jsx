@@ -43,8 +43,9 @@ const CATEGORY_LABELS = {
 };
 
 const REPAIR_ACTIONS = {
-  sync_customer_status:   { label: 'Kundenstatus synchronisieren', fn: 'syncCustomerStatusFromContracts' },
-  check_data_consistency: { label: 'Konsistenz pruefen',           fn: 'checkDataConsistency' },
+  sync_customer_status:     { label: 'Kundenstatus synchronisieren', fn: 'syncCustomerStatusFromContracts' },
+  check_data_consistency:   { label: 'Konsistenz pruefen',           fn: 'checkDataConsistency' },
+  repair_dossier_org_ids:   { label: 'organization_id automatisch ergänzen', fn: 'repairDossierOrgIds' },
 };
 
 function RootCauseSection({ incident }) {
