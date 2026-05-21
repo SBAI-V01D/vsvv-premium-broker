@@ -171,7 +171,7 @@ function sortCustomers(list, sortBy) {
   });
 }
 
-const NAV_KEYS = ['all','private','business','critical','mandate','tasks','active','vip','new','prospect'];
+const NAV_KEYS = ['all','vip','private','business','prospect','tasks','critical','mandate','new'];
 
 // ── Grouped customer feed ─────────────────────────────────────────────────
 function CustomerFeed({ displayed, customers, segments, matchedFamilyIds, onEdit, onDelete }) {
@@ -432,6 +432,7 @@ export default function Customers() {
         <div className="mt-5 flex items-stretch gap-8 overflow-x-auto scrollbar-none">
           {[
             { label: 'Aktive Kunden', value: segments.active?.count ?? 0, onClick: () => setActiveSegment('active') },
+            { label: 'Neuzugänge',    value: segments.new?.count ?? 0,    onClick: () => setActiveSegment('new') },
             { label: 'Policen',       value: contracts.length,             onClick: () => {} },
             { label: 'Jahresprämien', value: `CHF ${Math.round(totalPremium / 1000)}k`, onClick: () => {} },
             { label: 'Offene Tasks',  value: openTasks,    alert: openTasks > 0,      onClick: () => setActiveSegment('tasks') },
