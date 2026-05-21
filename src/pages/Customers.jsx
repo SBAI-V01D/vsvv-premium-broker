@@ -251,13 +251,14 @@ export default function Customers() {
     return primaryCustomers.filter(seg.filter);
   }, [primaryCustomers, activeSegment, segments]);
 
-  // Family member search: surface parent customers when family members match
+  // Search: when query active, search ALL primary customers (not just current segment)
   const { displayed, matchedFamilyIds } = useMemo(() => {
     const familyMembers = customers.filter(c => c.is_family_member);
     if (!search.trim()) {
       return { displayed: sortCustomers(segFiltered, sortBy), matchedFamilyIds: new Set() };
     }
-    const directMatches = searchCustomers(segFiltered, search);
+    // Search across all primary customers so segment filter doesn't hide results
+    const directMatches = searchCustomers(primaryCustomers, search);
     const directMatchIds = new Set(directMatches.map(c => c.id));
     const matchedFamily = searchCustomers(familyMembers, search);
     const matchedFamilyMemberIds = new Set(matchedFamily.map(m => m.id));
