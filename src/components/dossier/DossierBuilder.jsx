@@ -28,15 +28,30 @@ const TABS = [
   { key: 'export',      label: 'Export / PDF',     icon: '📄', phase: 4 },
 ];
 
+const TAB_PERSIST_KEY = (id) => `dossier_tab_${id || 'new'}`;
+
 export default function DossierBuilder({ dossierId, onSaved }) {
-  const [activeTab, setActiveTab] = useState('stammdaten');
   const [pendingImportContract, setPendingImportContract] = useState(null);
   const qc = useQueryClient();
+
+  // Tab-Persistenz: restore aus localStorage, fallback stammdaten
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = dossierId && localStorage.getItem(TAB_PERSIST_KEY(dossierId));
+    if (saved && TABS.find(t => t.key === saved)) return saved;
+    return 'stammdaten';
+  });
+
+  // Tab in localStorage speichern bei Änderung
+  useEffect(() => {
+    if (dossierId) localStorage.setItem(TAB_PERSIST_KEY(dossierId), activeTab);
+  }, [activeTab, dossierId]);
 
   const { data: dossier, isLoading } = useQuery({
     queryKey: ['advisory_dossier', dossierId],
     queryFn: () => base44.entities.AdvisoryDossier.filter({ id: dossierId }).then(r => r[0]),
     enabled: !!dossierId,
+    staleTime: 30_000,
+    retry: 1,
   });
 
   const createMutation = useMutation({
@@ -44,6 +59,7 @@ export default function DossierBuilder({ dossierId, onSaved }) {
     onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: ['advisory_dossiers'] });
       onSaved(created.id);
+      // Direkt zu Personalien nach Erstanlage (einmalig)
       setActiveTab('personalien');
     },
   });
@@ -53,7 +69,7 @@ export default function DossierBuilder({ dossierId, onSaved }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['advisory_dossier', dossierId] });
       qc.invalidateQueries({ queryKey: ['advisory_dossiers'] });
-      setActiveTab('personalien');
+      // Kein forced tab-jump — Tab-Persistenz bleibt erhalten
     },
   });
 
