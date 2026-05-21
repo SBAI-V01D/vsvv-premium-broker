@@ -307,13 +307,18 @@ export default function Customers() {
     // Search across ALL customers (primary + family) so segment filter doesn't hide results
     const allCustomers = [...primaryCustomers, ...familyMembers];
     const directMatches = searchCustomers(allCustomers, search);
-    const directMatchIds = new Set(directMatches.map(c => c.id));
+    
+    // Separate matches into primary customers and family members
+    const primaryMatches = directMatches.filter(c => !c.is_family_member);
     const matchedFamily = directMatches.filter(m => m.is_family_member);
     const matchedFamilyMemberIds = new Set(matchedFamily.map(m => m.id));
+    
+    // Get parent customers for matched family members (if not already in direct matches)
+    const primaryMatchIds = new Set(primaryMatches.map(c => c.id));
     const parentIds = new Set(matchedFamily.map(m => m.primary_customer_id).filter(Boolean));
-    const familyParents = primaryCustomers.filter(c => parentIds.has(c.id) && !directMatchIds.has(c.id));
-    // Only show primary customers in results (not family members directly)
-    const primaryMatches = directMatches.filter(c => !c.is_family_member);
+    const familyParents = primaryCustomers.filter(c => parentIds.has(c.id) && !primaryMatchIds.has(c.id));
+    
+    // Combine and sort results
     return {
       displayed: sortCustomers([...primaryMatches, ...familyParents], sortBy),
       matchedFamilyIds: matchedFamilyMemberIds,
