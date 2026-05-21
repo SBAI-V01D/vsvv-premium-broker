@@ -35,7 +35,7 @@ function expandSynonyms(token) {
 }
 
 // Score a single customer against a list of tokens
-function scoreCustomer(customer, tokens) {
+export function scoreCustomer(customer, tokens) {
   const firstName = normalize(customer.first_name)
   const lastName = normalize(customer.last_name)
   const companyName = normalize(customer.company_name)
