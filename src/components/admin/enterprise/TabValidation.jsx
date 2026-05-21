@@ -6,6 +6,10 @@ import { base44 } from '@/api/base44Client';
 import { CheckCircle2, XCircle, AlertTriangle, Loader2, PlayCircle, Shield, Award } from 'lucide-react';
 
 const CATEGORY_LABELS = {
+  pdf_integrity:   'PDF-Hash-Integrität',
+  security:        'Security / Rollen',
+  document_integrity: 'Dokumentintegrität',
+  recovery:        'Recovery-Readiness',
   export_gate:     'Export-Gate',
   approval:        'Approval-Integrität',
   snapshots:       'Snapshot-Konsistenz',
