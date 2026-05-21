@@ -511,6 +511,7 @@ export default function Customers() {
                 onEdit={(c) => { setEditing(c); setShowForm(true); }}
                 onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
               />
+            )}
           </div>
         </div>
 
