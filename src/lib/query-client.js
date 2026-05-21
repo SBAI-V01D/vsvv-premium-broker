@@ -4,11 +4,12 @@ export const queryClientInstance = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnMount: true,
-      refetchOnWindowFocus: true,   // Daten beim Tab-Wechsel automatisch neu laden
-      staleTime: 60 * 1000,         // 1 Minute: nach 1 Min werden Daten beim Focus neu geladen
-      gcTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: false,      // kein Reload bei Tab-Wechsel
+      staleTime: 5 * 60 * 1000,         // 5 Min: Daten bleiben warm
+      gcTime: 30 * 60 * 1000,           // 30 Min: Cache bleibt erhalten
       retry: 1,
       retryDelay: 1000,
+      placeholderData: (prev) => prev,  // alte Daten sichtbar während Reload (kein Flackern)
     },
     mutations: {
       retry: 0,

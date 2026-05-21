@@ -50,14 +50,15 @@ export default function CustomerDetail() {
    const [hasAccess, setHasAccess] = useState(false)
    const queryClient = useQueryClient()
 
-  // Real-time: Sobald ein neuer Vertrag erstellt wird, sofort alle abhängigen Queries invalidieren
+  // Real-time: Nur betroffenen Kunden invalidieren, nicht alles
   useEffect(() => {
     const unsubscribe = base44.entities.Contract.subscribe((event) => {
       if (event.type === 'create' || event.type === 'update') {
-        queryClient.invalidateQueries({ queryKey: ['contracts'] })
-        queryClient.invalidateQueries({ queryKey: ['customers'] })
-        queryClient.invalidateQueries({ queryKey: ['applications'] })
-        queryClient.invalidateQueries({ queryKey: ['tasks'] })
+        const cid = event.data?.customer_id
+        if (cid) {
+          queryClient.invalidateQueries({ queryKey: ['contracts', cid] })
+          queryClient.invalidateQueries({ queryKey: ['household-contracts', cid] })
+        }
       }
     })
     return unsubscribe
@@ -90,14 +91,16 @@ export default function CustomerDetail() {
 
   const customer = allCustomers.find(x => x.id === id)
 
-  const { data: contracts = [] } = useQuery({
-    queryKey: ['contracts'],
-    queryFn: () => base44.entities.Contract.list(null, 1000),
+  const { data: relatedContracts = [] } = useQuery({
+    queryKey: ['contracts', id],
+    queryFn: () => base44.entities.Contract.filter({ customer_id: id, archived: false }),
+    enabled: !!id,
   })
 
-  const { data: applications = [] } = useQuery({
-    queryKey: ['applications'],
-    queryFn: () => base44.entities.Application.list(null, 1000),
+  const { data: relatedApplications = [] } = useQuery({
+    queryKey: ['applications', id],
+    queryFn: () => base44.entities.Application.filter({ customer_id: id }),
+    enabled: !!id,
   })
 
   const { data: messages = [] } = useQuery({
@@ -106,9 +109,10 @@ export default function CustomerDetail() {
     enabled: !!id,
   })
 
-  const { data: allDocuments = [] } = useQuery({
-    queryKey: ['documents'],
-    queryFn: () => base44.entities.Document.list(null, 1000),
+  const { data: relatedDocuments = [] } = useQuery({
+    queryKey: ['documents', id],
+    queryFn: () => base44.entities.Document.filter({ customer_id: id }),
+    enabled: !!id,
   })
 
   const { data: statusDefs = [] } = useQuery({
@@ -121,15 +125,31 @@ export default function CustomerDetail() {
     queryFn: () => base44.entities.Organization.list(),
   })
 
-  const { data: tasks = [] } = useQuery({
-    queryKey: ['tasks'],
-    queryFn: () => base44.entities.Task.list(null, 1000),
+  const { data: custTasks = [] } = useQuery({
+    queryKey: ['tasks', id],
+    queryFn: () => base44.entities.Task.filter({ customer_id: id }),
+    enabled: !!id,
   })
 
   const { data: verkaufschancen = [] } = useQuery({
     queryKey: ['verkaufschancen', id],
     queryFn: () => base44.entities.Verkaufschance.filter({ customer_id: id }),
     enabled: !!id,
+  })
+
+  // Haushalt-Verträge für PDF-Export (andere Haushaltsmitglieder, lazy)
+  const { data: householdContractsExtra = [] } = useQuery({
+    queryKey: ['household-contracts', primaryCustomerId],
+    queryFn: async () => {
+      const otherIds = householdCustomerIds.filter(mid => mid !== id)
+      if (!otherIds.length) return []
+      const results = await Promise.all(
+        otherIds.map(mid => base44.entities.Contract.filter({ customer_id: mid, archived: false }))
+      )
+      return results.flat()
+    },
+    enabled: !!primaryCustomerId && householdCustomerIds.length > 1,
+    staleTime: 5 * 60 * 1000,
   })
 
   const downloadPDFMutation = useMutation({
@@ -185,25 +205,18 @@ export default function CustomerDetail() {
   // familyMembers bleibt kompatibel (wird in bestehenden Komponenten genutzt)
   const familyMembers = householdMembers
 
-  // Alle Verträge des gesamten Haushalts (für PDF & Hauptkontakt-Ansicht)
+  // Haushalt-IDs + alle Haushaltsverträge (relatedContracts = eigene, extra = Familie)
   const householdCustomerIds = householdMembers.map(m => m.id).filter(Boolean)
-  const allHouseholdContracts = contracts.filter(c => householdCustomerIds.includes(c.customer_id) && !c.archived)
-
-  // Für Tab-Ansicht: Jeder Kunde sieht nur seine eigenen, nicht-archivierten Verträge
-  const relatedContracts = contracts.filter(c => c.customer_id === customer?.id && !c.archived)
-  const relatedApplications = applications.filter(a => a.customer_id === customer?.id)
-  const relatedMessages = (Array.isArray(allCustomers) ? allCustomers : []).filter(c => c.id === customer?.id).flatMap(c => c.messages || [])
-  const relatedDocuments = allDocuments.filter(d => d.customer_id === customer?.id)
-  const custTasks = tasks.filter(t => t.customer_id === customer?.id && ['open', 'in_progress', 'waiting'].includes(t.status))
+  const allHouseholdContracts = [...relatedContracts, ...householdContractsExtra]
 
   const updateCustomerMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Customer.update(id, data),
+    mutationFn: ({ id: cid, data }) => base44.entities.Customer.update(cid, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setShowEdit(false); },
   })
 
   const updateContractMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Contract.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contracts'] }); setEditingContract(null); },
+    mutationFn: ({ id: cid, data }) => base44.entities.Contract.update(cid, data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contracts', id] }); setEditingContract(null); },
   })
 
   const handleContractSave = (data) => {
@@ -226,7 +239,7 @@ export default function CustomerDetail() {
       metadata: JSON.stringify(metadata),
     })
     await base44.entities.Contract.update(contract.id, { custom_status: status })
-    queryClient.invalidateQueries({ queryKey: ['contracts'] })
+    queryClient.invalidateQueries({ queryKey: ['contracts', id] })
     setStatusChangingContract(null)
   }
 
@@ -484,8 +497,8 @@ export default function CustomerDetail() {
             contracts={relatedContracts}
             applications={relatedApplications}
             documents={relatedDocuments}
-            tasks={tasks.filter(t => t.customer_id === customer?.id)}
-            messages={relatedMessages}
+            tasks={custTasks}
+            messages={[]}
             verkaufschancen={verkaufschancen}
             limit={50}
           />
@@ -508,7 +521,7 @@ export default function CustomerDetail() {
                   <div className="w-20"></div>
                 </div>
                 {relatedContracts.map((c, idx) => {
-                  const relatedCustomer = (Array.isArray(allCustomers) ? allCustomers : []).find(x => x.id === c.customer_id)
+                  const relatedCustomer = customer
                   const formatDate = (dateStr) => {
                     if (!dateStr) return '–'
                     if (dateStr.startsWith('9999')) return 'Unbegrenzt'
@@ -631,7 +644,7 @@ export default function CustomerDetail() {
                   <div>Status</div>
                 </div>
                 {relatedApplications.map((a, idx) => {
-                  const relatedCustomer = (Array.isArray(allCustomers) ? allCustomers : []).find(x => x.id === a.customer_id)
+                  const relatedCustomer = customer
                   const premiumMonthly = a.estimated_premium_monthly
                   const premiumYearly = a.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12) : null)
                   const franchise = a.sparte_data?.franchise
