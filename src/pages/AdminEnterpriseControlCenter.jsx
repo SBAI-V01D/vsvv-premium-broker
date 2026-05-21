@@ -12,8 +12,10 @@ import TabPerformance from '@/components/admin/enterprise/TabPerformance';
 import TabSecurity    from '@/components/admin/enterprise/TabSecurity';
 import TabReviews     from '@/components/admin/enterprise/TabReviews';
 import TabCompliance  from '@/components/admin/enterprise/TabCompliance';
+import TabModules     from '@/components/admin/enterprise/TabModules';
 
 const TABS = [
+  { id: 'modules',     label: 'Alle Module', component: TabModules },
   { id: 'integrity',   label: 'Integrity',   component: TabIntegrity },
   { id: 'audit',       label: 'Audit',       component: TabAudit },
   { id: 'exports',     label: 'Exports',     component: TabExports },
@@ -25,7 +27,7 @@ const TABS = [
 
 export default function AdminEnterpriseControlCenter() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('integrity');
+  const [activeTab, setActiveTab] = useState('modules');
 
   if (user?.role !== 'admin') {
     return (

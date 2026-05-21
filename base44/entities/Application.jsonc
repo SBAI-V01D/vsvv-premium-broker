@@ -3,29 +3,23 @@
   "type": "object",
   "properties": {
     "customer_id": {
-      "type": "string",
-      "description": "Kunden-ID (Hauptkunde oder Familienmitglied)"
+      "type": "string"
     },
     "customer_name": {
-      "type": "string",
-      "description": "Kundenname"
+      "type": "string"
     },
     "primary_customer_id": {
-      "type": "string",
-      "description": "ID des Hauptkunden (f\u00fcr \u00dcbersicht)"
+      "type": "string"
     },
     "is_family_member": {
       "type": "boolean",
-      "default": false,
-      "description": "Antrag geh\u00f6rt zu Familienmitglied"
+      "default": false
     },
     "organization_id": {
-      "type": "string",
-      "description": "Organisations-ID (aus Kunde geerbt)"
+      "type": "string"
     },
     "advisor_id": {
-      "type": "string",
-      "description": "Berater-ID (aus Kunde geerbt)"
+      "type": "string"
     },
     "kundentyp": {
       "type": "string",
@@ -33,29 +27,23 @@
         "privat",
         "firma"
       ],
-      "default": "privat",
-      "description": "Kundentyp (privat/firma)"
+      "default": "privat"
     },
     "sparte": {
-      "type": "string",
-      "description": "Versicherungssparte (Schl\u00fcssel aus insuranceSparten)"
+      "type": "string"
     },
     "sparte_data": {
       "type": "object",
-      "description": "Spartenspezifische Daten (Franchise, Modell, AHV, etc.)",
       "additionalProperties": true
     },
     "insurance_type": {
-      "type": "string",
-      "description": "Versicherungsart (Legacy oder Sparte-Schl\u00fcssel)"
+      "type": "string"
     },
     "product": {
-      "type": "string",
-      "description": "Produkt/Tarif"
+      "type": "string"
     },
     "insurer": {
-      "type": "string",
-      "description": "Versicherungsgesellschaft"
+      "type": "string"
     },
     "status": {
       "type": "string",
@@ -67,78 +55,91 @@
         "rejected",
         "archived"
       ],
-      "default": "new",
-      "description": "Status (stabilisierte Liste)"
+      "default": "new"
     },
     "custom_status": {
-      "type": "string",
-      "description": "Dynamischer Status-Schl\u00fcssel (aus StatusDefinition)"
+      "type": "string"
     },
     "status_changed_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "Datum der letzten Status\u00e4nderung"
+      "format": "date-time"
+    },
+    "status_history": {
+      "type": "array",
+      "description": "Vollst\u00e4ndiger Audit-Trail aller Status\u00e4nderungen",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          },
+          "previous_status": {
+            "type": "string"
+          },
+          "new_status": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
     },
     "estimated_premium_monthly": {
-      "type": "number",
-      "description": "Gesch\u00e4tzte Monatspr\u00e4mie (CHF)"
+      "type": "number"
     },
     "estimated_premium_yearly": {
-      "type": "number",
-      "description": "Gesch\u00e4tzte Jahrespr\u00e4mie (CHF)"
+      "type": "number"
     },
     "requested_start_date": {
       "type": "string",
-      "format": "date",
-      "description": "Gew\u00fcnschtes Startdatum"
+      "format": "date"
     },
     "policy_number": {
-      "type": "string",
-      "description": "Policennummer (nach Annahme)"
+      "type": "string"
     },
     "contract_start_date": {
       "type": "string",
-      "format": "date",
-      "description": "Vertragsbeginn"
+      "format": "date"
     },
     "contract_end_date": {
       "type": "string",
-      "format": "date",
-      "description": "Vertragsende"
+      "format": "date"
     },
     "commission_estimate": {
-      "type": "number",
-      "description": "Gesch\u00e4tzte Provision (CHF)"
+      "type": "number"
     },
     "assigned_broker": {
-      "type": "string",
-      "description": "Zust\u00e4ndiger Broker (E-Mail)"
+      "type": "string"
     },
     "linked_contract_id": {
-      "type": "string",
-      "description": "Verkn\u00fcpfte Vertrags-ID (nach Genehmigung)"
+      "type": "string"
     },
     "notes": {
-      "type": "string",
-      "description": "Notizen"
+      "type": "string"
     },
     "archived": {
       "type": "boolean",
-      "default": false,
-      "description": "SOFT DELETE: Antrag ist archiviert"
+      "default": false
     },
     "archived_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "SOFT DELETE: Archivierungsdatum"
+      "format": "date-time"
     },
     "archived_by": {
-      "type": "string",
-      "description": "SOFT DELETE: E-Mail des Archivierenden"
+      "type": "string"
     },
     "archived_reason": {
-      "type": "string",
-      "description": "SOFT DELETE: Grund f\u00fcr Archivierung"
+      "type": "string"
     }
   },
   "required": [

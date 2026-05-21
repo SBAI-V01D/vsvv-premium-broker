@@ -38,16 +38,13 @@
       "description": "Pipeline-Status"
     },
     "policy_holder_name": {
-      "type": "string",
-      "description": "Versicherungsnehmer"
+      "type": "string"
     },
     "driver_name": {
-      "type": "string",
-      "description": "Lenker/Fahrer"
+      "type": "string"
     },
     "insured_person_name": {
-      "type": "string",
-      "description": "Versicherte Person"
+      "type": "string"
     },
     "name": {
       "type": "string",
@@ -57,6 +54,20 @@
       "type": "string",
       "description": "Datei-URL"
     },
+    "file_hash": {
+      "type": "string",
+      "description": "SHA-256 Hash der Datei (Integrit\u00e4tsnachweis)"
+    },
+    "version": {
+      "type": "number",
+      "default": 1,
+      "description": "Dokumentversion (monoton steigend)"
+    },
+    "immutable": {
+      "type": "boolean",
+      "default": false,
+      "description": "Wenn true: Dokument darf nicht \u00fcberschrieben werden"
+    },
     "category": {
       "type": "string",
       "enum": [
@@ -65,8 +76,7 @@
         "identification",
         "correspondence",
         "other"
-      ],
-      "description": "Kategorie"
+      ]
     },
     "doc_type": {
       "type": "string",
@@ -75,8 +85,7 @@
         "anlage",
         "unbekannt"
       ],
-      "default": "unbekannt",
-      "description": "Klassifizierungstyp"
+      "default": "unbekannt"
     },
     "classification_status": {
       "type": "string",
@@ -86,43 +95,40 @@
         "pruefung_erforderlich",
         "manuell"
       ],
-      "default": "ausstehend",
-      "description": "Status der Klassifizierung"
+      "default": "ausstehend"
     },
     "classification_confidence": {
-      "type": "number",
-      "description": "Konfidenz der automatischen Klassifizierung"
+      "type": "number"
     },
     "classification_reason": {
-      "type": "string",
-      "description": "Begr\u00fcndung der Klassifizierung"
+      "type": "string"
     },
     "linked_contract_id": {
-      "type": "string",
-      "description": "Verkn\u00ad\u00fcpfte Vertrags-ID"
+      "type": "string"
     },
     "linked_application_id": {
-      "type": "string",
-      "description": "Verkn\u00ad\u00fcpfte Antrags-ID"
+      "type": "string"
     },
     "uploaded_by": {
       "type": "string",
-      "description": "Hochgeladen von (E-Mail)"
+      "description": "Hochgeladen von (E-Mail) \u2014 Audit-Pflichtfeld"
+    },
+    "uploaded_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Upload-Zeitstempel \u2014 Audit-Pflichtfeld"
     },
     "notes": {
-      "type": "string",
-      "description": "Notizen"
+      "type": "string"
     },
     "access_advisors": {
       "type": "array",
-      "description": "ACCESS CONTROL: Berater-IDs mit Zugriff",
       "items": {
         "type": "string"
       }
     },
     "access_teams": {
       "type": "array",
-      "description": "ACCESS CONTROL: Team-IDs mit Zugriff",
       "items": {
         "type": "string"
       }
@@ -135,108 +141,11 @@
         "team_visible",
         "all_internal"
       ],
-      "default": "assigned_advisors_only",
-      "description": "ACCESS CONTROL: Sichtbarkeitsstufe"
+      "default": "assigned_advisors_only"
     }
   },
   "required": [
     "name",
     "file_url"
-  ],
-  "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "broker"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "assistenz"
-          }
-        },
-        {
-          "data.uploaded_by_role": "customer",
-          "data.customer_id": "{{user.id}}"
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "data.customer_id": "{{user.id}}"
-        },
-        {
-          "data.primary_customer_id": "{{user.id}}"
-        },
-        {
-          "data.access_level": "all_internal",
-          "user_condition": {
-            "$ne": "anonymous"
-          }
-        },
-        {
-          "data.access_level": "team_visible",
-          "user_condition": {
-            "role": "broker"
-          },
-          "data.organization_id": "{{user.data.organization_id}}"
-        },
-        {
-          "data.access_level": "assigned_advisors_only",
-          "$or": [
-            {
-              "data.access_advisors": {
-                "$in": [
-                  "{{user.id}}"
-                ]
-              }
-            },
-            {
-              "data.access_teams": {
-                "$in": [
-                  "{{user.data.team_id}}"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "created_by": "{{user.email}}"
-        },
-        {
-          "data.access_advisors": {
-            "$in": [
-              "{{user.id}}"
-            ]
-          }
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }

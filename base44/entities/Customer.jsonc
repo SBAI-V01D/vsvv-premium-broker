@@ -3,40 +3,31 @@
   "type": "object",
   "properties": {
     "customer_number": {
-      "type": "string",
-      "description": "Eindeutige sichtbare Kundennummer (z.B. K-500, K-501, ...)"
+      "type": "string"
     },
     "first_name": {
-      "type": "string",
-      "description": "Vorname"
+      "type": "string"
     },
     "last_name": {
-      "type": "string",
-      "description": "Nachname"
+      "type": "string"
     },
     "email": {
-      "type": "string",
-      "description": "E-Mail Adresse"
+      "type": "string"
     },
     "phone": {
-      "type": "string",
-      "description": "Telefonnummer"
+      "type": "string"
     },
     "mobile": {
-      "type": "string",
-      "description": "Mobilnummer"
+      "type": "string"
     },
     "street": {
-      "type": "string",
-      "description": "Stra\u00dfe"
+      "type": "string"
     },
     "zip_code": {
-      "type": "string",
-      "description": "Postleitzahl"
+      "type": "string"
     },
     "city": {
-      "type": "string",
-      "description": "Stadt"
+      "type": "string"
     },
     "canton": {
       "type": "string",
@@ -67,17 +58,14 @@
         "VS",
         "ZG",
         "ZH"
-      ],
-      "description": "Kanton"
+      ]
     },
     "birthdate": {
       "type": "string",
-      "format": "date",
-      "description": "Geburtsdatum"
+      "format": "date"
     },
     "ahv_number": {
-      "type": "string",
-      "description": "AHV-Nummer"
+      "type": "string"
     },
     "civil_status": {
       "type": "string",
@@ -88,25 +76,20 @@
         "widowed",
         "registered_partnership",
         "dissolved_partnership"
-      ],
-      "description": "Zivilstand"
+      ]
     },
     "profession": {
-      "type": "string",
-      "description": "Beruf"
+      "type": "string"
     },
     "nationality": {
-      "type": "string",
-      "description": "Nationalit\u00e4t"
+      "type": "string"
     },
     "drivers_license_date": {
       "type": "string",
-      "format": "date",
-      "description": "Datum F\u00fchrerausweis"
+      "format": "date"
     },
     "bank_account": {
-      "type": "string",
-      "description": "Bank- oder Postkontoverbindung"
+      "type": "string"
     },
     "risk_profile": {
       "type": "string",
@@ -114,8 +97,7 @@
         "low",
         "medium",
         "high"
-      ],
-      "description": "Risikoprofil"
+      ]
     },
     "customer_type": {
       "type": "string",
@@ -123,8 +105,7 @@
         "private",
         "business"
       ],
-      "default": "private",
-      "description": "Kundentyp"
+      "default": "private"
     },
     "status": {
       "type": "string",
@@ -133,8 +114,7 @@
         "inactive",
         "prospect"
       ],
-      "default": "active",
-      "description": "Status"
+      "default": "active"
     },
     "mandate_status": {
       "type": "string",
@@ -144,8 +124,7 @@
         "pending",
         "expired"
       ],
-      "default": "pending",
-      "description": "Mandat-Status"
+      "default": "pending"
     },
     "association_membership": {
       "type": "string",
@@ -156,8 +135,7 @@
         "vfs",
         "pro_life",
         "none"
-      ],
-      "description": "Verbandzugeh\u00f6rigkeit"
+      ]
     },
     "permit_type": {
       "type": "string",
@@ -169,17 +147,14 @@
         "ci_permit",
         "g_permit",
         "none"
-      ],
-      "description": "Bewilligung"
+      ]
     },
     "is_family_member": {
       "type": "boolean",
-      "default": false,
-      "description": "Ist Familienmitglied"
+      "default": false
     },
     "primary_customer_id": {
-      "type": "string",
-      "description": "ID des Hauptkunden"
+      "type": "string"
     },
     "family_role": {
       "type": "string",
@@ -190,127 +165,99 @@
         "parent",
         "other"
       ],
-      "default": "primary",
-      "description": "Rolle in der Familie"
+      "default": "primary"
     },
     "notes": {
-      "type": "string",
-      "description": "Notizen"
+      "type": "string"
     },
     "assigned_broker": {
-      "type": "string",
-      "description": "Zust\u00e4ndiger Broker (E-Mail)"
+      "type": "string"
     },
     "portal_enabled": {
       "type": "boolean",
-      "default": false,
-      "description": "Portal-Freischaltung"
+      "default": false
     },
     "portal_password_hash": {
-      "type": "string",
-      "description": "Passwort-Hash f\u00fcr Portal"
+      "type": "string"
     },
     "portal_must_change_password": {
       "type": "boolean",
-      "default": true,
-      "description": "Passwort MUSS beim n\u00e4chsten Login ge\u00e4ndert werden"
+      "default": true
     },
     "portal_password_last_changed": {
       "type": "string",
-      "format": "date",
-      "description": "Datum letzte Passwort\u00e4nderung"
+      "format": "date"
     },
     "portal_last_login": {
       "type": "string",
-      "format": "date-time",
-      "description": "Letzter Login ins Portal"
+      "format": "date-time"
     },
     "company_name": {
-      "type": "string",
-      "description": "Unternehmensname"
+      "type": "string"
     },
     "legal_form": {
-      "type": "string",
-      "description": "Rechtsform"
+      "type": "string"
     },
     "uid_number": {
-      "type": "string",
-      "description": "UID-Nummer"
+      "type": "string"
     },
     "industry": {
-      "type": "string",
-      "description": "Branche"
+      "type": "string"
     },
     "contact_person_firstname": {
-      "type": "string",
-      "description": "Vorname Kontaktperson"
+      "type": "string"
     },
     "contact_person_lastname": {
-      "type": "string",
-      "description": "Nachname Kontaktperson"
+      "type": "string"
     },
     "organization_id": {
-      "type": "string",
-      "description": "Organisations-ID"
+      "type": "string"
     },
     "teamlead_id": {
-      "type": "string",
-      "description": "ID des Teamleiters"
+      "type": "string"
     },
     "advisor_id": {
-      "type": "string",
-      "description": "ID des Beraters"
+      "type": "string"
     },
     "total_premium": {
       "type": "number",
-      "default": 0,
-      "description": "Gesamte Jahrespr\u00e4mie"
+      "default": 0
     },
     "import_batch_id": {
-      "type": "string",
-      "description": "Batch-ID f\u00fcr Import-Tracking"
+      "type": "string"
     },
     "imported_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "Zeitstempel des Imports"
+      "format": "date-time"
     },
     "imported_by": {
-      "type": "string",
-      "description": "E-Mail des Importers"
+      "type": "string"
     },
     "archived": {
       "type": "boolean",
-      "default": false,
-      "description": "Kunde ist archiviert"
+      "default": false
     },
     "archived_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "Zeitstempel der Archivierung"
+      "format": "date-time"
     },
     "archived_by": {
-      "type": "string",
-      "description": "E-Mail des Archivierenden"
+      "type": "string"
     },
     "archived_reason": {
-      "type": "string",
-      "description": "Grund f\u00fcr Archivierung"
+      "type": "string"
     },
     "primary_advisor_id": {
-      "type": "string",
-      "description": "ACCESS CONTROL: Hauptberater-ID (User)"
+      "type": "string"
     },
     "assigned_advisors": {
       "type": "array",
-      "description": "ACCESS CONTROL: Array von zugewiesenen Berater-IDs",
       "items": {
         "type": "string"
       }
     },
     "assigned_assistants": {
       "type": "array",
-      "description": "ACCESS CONTROL: Array von zugewiesenen Assistenten-IDs",
       "items": {
         "type": "string"
       }
@@ -323,8 +270,42 @@
         "team_visible",
         "all_internal"
       ],
-      "default": "assigned_advisors_only",
-      "description": "ACCESS CONTROL: Sichtbarkeitsstufe"
+      "default": "assigned_advisors_only"
+    },
+    "change_history": {
+      "type": "array",
+      "description": "Audit-Trail aller kritischen Feld\u00e4nderungen",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "description": "field_changed | status_changed | archived | restored"
+          },
+          "changed_fields": {
+            "type": "string",
+            "description": "Komma-getrennte Feldliste"
+          },
+          "previous_value": {
+            "type": "string"
+          },
+          "new_value": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "required": [
@@ -332,107 +313,5 @@
     "last_name",
     "email",
     "organization_id"
-  ],
-  "rls": {
-    "create": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "broker"
-          }
-        },
-        {
-          "user_condition": {
-            "role": "assistenz"
-          }
-        }
-      ]
-    },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "id": "{{user.id}}"
-        },
-        {
-          "data.primary_customer_id": "{{user.id}}"
-        },
-        {
-          "data.access_level": "all_internal",
-          "user_condition": {
-            "$ne": "anonymous"
-          }
-        },
-        {
-          "data.access_level": "team_visible",
-          "data.organization_id": "{{user.data.organization_id}}"
-        },
-        {
-          "data.access_level": "assigned_advisors_only",
-          "$or": [
-            {
-              "data.primary_advisor_id": "{{user.id}}"
-            },
-            {
-              "data.assigned_advisors": {
-                "$in": [
-                  "{{user.id}}"
-                ]
-              }
-            },
-            {
-              "data.assigned_assistants": {
-                "$in": [
-                  "{{user.id}}"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "id": "{{user.id}}"
-        },
-        {
-          "data.primary_advisor_id": "{{user.id}}"
-        },
-        {
-          "data.assigned_advisors": {
-            "$in": [
-              "{{user.id}}"
-            ]
-          }
-        },
-        {
-          "data.assigned_assistants": {
-            "$in": [
-              "{{user.id}}"
-            ]
-          }
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }
