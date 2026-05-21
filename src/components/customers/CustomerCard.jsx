@@ -4,7 +4,7 @@
  */
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Building2, ChevronDown, ChevronUp, AlertTriangle, Edit, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, AlertTriangle, Edit, Trash2 } from 'lucide-react';
 import ActionMenu from '@/components/shared/ActionMenu';
 import { FAMILY_ROLE_LABELS, label } from '@/lib/labels';
 
@@ -21,8 +21,18 @@ function initials(c) {
   return `${f}${l}`.toUpperCase() || '—';
 }
 
-export default function CustomerCard({ customer, familyMembers = [], contractCount = 0, taskCount = 0, onEdit, onDelete }) {
+export default function CustomerCard({
+  customer,
+  familyMembers = [],
+  contractCount = 0,
+  taskCount = 0,
+  matchedFamilyIds = new Set(),
+  onEdit,
+  onDelete,
+}) {
+  const hasFamilyMatch = familyMembers.some(m => matchedFamilyIds.has(m.id));
   const [expanded, setExpanded] = useState(false);
+  const shouldExpand = hasFamilyMatch || expanded;
   const navigate = useNavigate();
   const status = getStatus(customer);
   const isCompany = customer.customer_type === 'business';
@@ -31,23 +41,20 @@ export default function CustomerCard({ customer, familyMembers = [], contractCou
     ? (customer.company_name || `${customer.last_name} ${customer.first_name}`)
     : `${customer.last_name} ${customer.first_name}`;
 
+  const hasMetrics = contractCount > 0 || customer.total_premium > 0 || taskCount > 0 || familyMembers.length > 0 || status !== 'active';
+
   return (
-    <div className={`bg-card rounded-2xl transition-all hover:shadow-card-md group ${
-      status === 'critical'
-        ? 'border border-red-200 shadow-sm'
-        : 'border border-border/60 shadow-xs'
+    <div className={`bg-card rounded-2xl transition-all hover:shadow-card-md ${
+      status === 'critical' ? 'border border-red-200 shadow-sm' : 'border border-border/60 shadow-xs'
     }`}>
       <div className="px-6 py-5">
-        {/* Top row: avatar + name + status */}
+
+        {/* Top row: avatar + name + status badge + menu */}
         <div className="flex items-start gap-4">
-          {/* Avatar */}
-          <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 font-semibold text-sm tracking-wide ${
-            isCompany ? 'bg-slate-100 text-slate-600' : 'bg-slate-100 text-slate-600'
-          }`}>
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 font-semibold text-sm tracking-wide bg-slate-100 text-slate-600">
             {initials(customer)}
           </div>
 
-          {/* Name block */}
           <div className="flex-1 min-w-0 pt-0.5">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -61,7 +68,6 @@ export default function CustomerCard({ customer, familyMembers = [], contractCou
                 </p>
               </div>
 
-              {/* Status indicator — minimal */}
               <div className="flex items-center gap-2 shrink-0 mt-0.5">
                 {status === 'critical' && (
                   <span className="text-[10px] font-semibold tracking-wide uppercase text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded">
@@ -82,8 +88,8 @@ export default function CustomerCard({ customer, familyMembers = [], contractCou
           </div>
         </div>
 
-        {/* Key metrics row — only what matters */}
-        {(contractCount > 0 || customer.total_premium > 0 || taskCount > 0 || familyMembers.length > 0 || status !== 'active') && (
+        {/* Metrics + actions row */}
+        {hasMetrics ? (
           <div className="mt-4 pt-4 border-t border-border/40 flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-5 flex-wrap">
               {contractCount > 0 && (
@@ -115,8 +121,7 @@ export default function CustomerCard({ customer, familyMembers = [], contractCou
                   <AlertTriangle className="w-3.5 h-3.5 text-red-500 shrink-0" />
                   <p className="text-[12px] text-red-600">
                     {customer.mandate_status === 'invalid' ? 'Mandat ungültig' :
-                     customer.mandate_status === 'expired' ? 'Mandat abgelaufen' :
-                     'Inaktiv'}
+                     customer.mandate_status === 'expired' ? 'Mandat abgelaufen' : 'Inaktiv'}
                   </p>
                 </div>
               )}
@@ -128,10 +133,8 @@ export default function CustomerCard({ customer, familyMembers = [], contractCou
               )}
             </div>
 
-            {/* Actions */}
             <div className="flex items-center gap-2 shrink-0">
-              <Link to={`/kunden/${customer.id}`}
-                className="text-[12px] font-medium text-primary hover:underline">
+              <Link to={`/kunden/${customer.id}`} className="text-[12px] font-medium text-primary hover:underline">
                 Profil öffnen →
               </Link>
               <span className="text-slate-200">|</span>
@@ -142,18 +145,18 @@ export default function CustomerCard({ customer, familyMembers = [], contractCou
               {familyMembers.length > 0 && (
                 <>
                   <span className="text-slate-200">|</span>
-                  <button onClick={() => setExpanded(e => !e)}
-                    className="text-[12px] font-medium text-slate-400 hover:text-slate-700 transition-colors flex items-center gap-0.5">
-                    Haushalt {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  <button
+                    onClick={() => setExpanded(e => !e)}
+                    className="text-[12px] font-medium text-slate-400 hover:text-slate-700 transition-colors flex items-center gap-0.5"
+                  >
+                    Haushalt ({familyMembers.length})
+                    {shouldExpand ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                   </button>
                 </>
               )}
             </div>
           </div>
-        )}
-
-        {/* If no metrics, still show actions */}
-        {contractCount === 0 && !customer.total_premium && taskCount === 0 && !familyMembers.length && status === 'active' && (
+        ) : (
           <div className="mt-3 flex items-center gap-3">
             <Link to={`/kunden/${customer.id}`} className="text-[12px] font-medium text-primary hover:underline">
               Profil öffnen →
@@ -168,19 +171,23 @@ export default function CustomerCard({ customer, familyMembers = [], contractCou
       </div>
 
       {/* Family members */}
-      {expanded && familyMembers.length > 0 && (
+      {shouldExpand && familyMembers.length > 0 && (
         <div className="border-t border-border/40 divide-y divide-border/30 bg-slate-50/50">
           {familyMembers.map(member => (
-            <div key={member.id} className="px-6 py-3 flex items-center justify-between gap-3">
+            <div key={member.id} className={`px-6 py-3 flex items-center justify-between gap-3 ${matchedFamilyIds.has(member.id) ? 'bg-primary/5' : ''}`}>
               <Link to={`/kunden/${member.id}`} className="flex-1 min-w-0 group/m">
-                <p className="text-[13px] font-medium text-slate-700 group-hover/m:text-primary">
+                <p className={`text-[13px] font-medium group-hover/m:text-primary ${matchedFamilyIds.has(member.id) ? 'text-primary' : 'text-slate-700'}`}>
                   {member.last_name} {member.first_name}
+                  {matchedFamilyIds.has(member.id) && (
+                    <span className="ml-2 text-[10px] font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded">Suchtreffer</span>
+                  )}
                 </p>
                 <p className="text-[11px] text-slate-400">
                   {label(FAMILY_ROLE_LABELS, member.family_role)} · {member.email}
+                  {member.birthdate && ` · *${member.birthdate.slice(0, 4)}`}
                 </p>
               </Link>
-              <span className="text-[10px] text-slate-400 uppercase tracking-wide font-medium">Haushalt</span>
+              <span className="text-[10px] text-slate-400 uppercase tracking-wide font-medium shrink-0">Haushalt</span>
               <ActionMenu items={[
                 { label: 'Bearbeiten', icon: Edit, onClick: () => onEdit(member) },
                 { label: 'Löschen', icon: Trash2, variant: 'destructive', separator: true, onClick: () => onDelete(member.id) },
