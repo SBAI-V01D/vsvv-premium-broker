@@ -97,6 +97,23 @@
       "type": "string",
       "description": "Interne Notizen"
     },
+    "advisor_final_recommendation": {
+      "type": "string",
+      "description": "Beraterentscheid: Welche Vergleichsgruppe ist die finale Empfehlung (z.B. 'angebot_1', 'optimiert')"
+    },
+    "advisor_recommendation_label": {
+      "type": "string",
+      "description": "Beraterentscheid: Positionierung/Label (z.B. 'Preis-Leistungs-Empfehlung', 'Komfortl\u00f6sung')"
+    },
+    "advisor_recommendation_reason": {
+      "type": "string",
+      "description": "Beraterentscheid: Begr\u00fcndung f\u00fcr die finale Empfehlung"
+    },
+    "advisor_approved": {
+      "type": "boolean",
+      "default": false,
+      "description": "Beraterentscheid: Dossier freigegeben f\u00fcr PDF-Export"
+    },
     "snap_org_name": {
       "type": "string",
       "description": "Snapshot: Organisationsname"

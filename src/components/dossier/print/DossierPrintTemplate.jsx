@@ -130,7 +130,7 @@ function PageHeader({ dossier, customer, pageLabel, snapshot, organization, advi
 }
 
 // ── Lösungs-Säule: eine Gruppe als Beratungsangebot ──────────────────────────
-function LösungsSäule({ gruppe, label, entries, referenceTotal, titel }) {
+function LösungsSäule({ gruppe, label, entries, referenceTotal, titel, isAdvisorRec = false, advisorRecLabel = '' }) {
   const cfg = GRUPPE_CFG[gruppe] || GRUPPE_CFG.manuell;
   const persons = [...new Set(entries.map(e => e.person_name || 'Unbekannt'))];
   const gruppeTotal = entries.reduce((s, e) => s + (Number(e.praemie_monatlich) || 0), 0);
@@ -152,6 +152,19 @@ function LösungsSäule({ gruppe, label, entries, referenceTotal, titel }) {
         background: isRef ? '#f8fafc' : '#ffffff',
         WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
       }}>
+        {/* Advisor Rec Badge */}
+        {isAdvisorRec && (
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: '4px',
+            background: '#1d4ed8', color: 'white',
+            fontSize: '7px', fontWeight: 800, letterSpacing: '0.08em',
+            textTransform: 'uppercase', padding: '3px 8px', borderRadius: '4px',
+            marginBottom: '8px',
+            WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
+          }}>
+            ★ {advisorRecLabel || 'Empfehlung des Beraters'}
+          </div>
+        )}
         {/* Label */}
         <div style={{ fontSize: '7px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: cfg.accentColor, marginBottom: '4px' }}>
           {label}
@@ -345,6 +358,8 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
           entries={g1entries}
           referenceTotal={referenceTotal}
           titel={titel1}
+          isAdvisorRec={!!dossier?.advisor_final_recommendation && dossier.advisor_final_recommendation === gruppe1}
+          advisorRecLabel={dossier?.advisor_recommendation_label || ''}
         />
         {gruppe2 && (
           <LösungsSäule
@@ -353,6 +368,8 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
             entries={g2entries}
             referenceTotal={referenceTotal}
             titel={titel2}
+            isAdvisorRec={!!dossier?.advisor_final_recommendation && dossier.advisor_final_recommendation === gruppe2}
+            advisorRecLabel={dossier?.advisor_recommendation_label || ''}
           />
         )}
         {!gruppe2 && <div style={{ flex: 1 }} />}

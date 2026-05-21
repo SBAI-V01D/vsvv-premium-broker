@@ -14,6 +14,7 @@ import ComparisonSideBySide from '@/components/dossier/ComparisonSideBySide';
 import ComparisonGruppenView from '@/components/dossier/ComparisonGruppenView';
 import DossierAiUpload from '@/components/dossier/DossierAiUpload';
 import { mapContractToEntry, getImportSummary } from '@/lib/contractToEntryMapper';
+import BeraterEntscheidPanel from '@/components/dossier/BeraterEntscheidPanel';
 
 const GRUPPE_OPTIONS = [
   { value: 'aktuelle_loesung', label: 'Aktuelle Lösung' },
@@ -317,6 +318,9 @@ export default function DossierVergleichTab({ dossier, pendingImportContract, on
 
       {/* Einsparungsübersicht — zentrale Berechnung via dossierCalc */}
       <DossierEinsparungPanel entries={entries} />
+
+      {/* Beraterentscheid — KI liefert Optionen, Berater liefert Empfehlung */}
+      <BeraterEntscheidPanel dossier={dossier} entries={entries} />
 
       {/* Toolbar mit Dossier-Titel */}
       <div className="space-y-3">
