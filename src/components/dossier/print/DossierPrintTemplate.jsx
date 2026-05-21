@@ -100,35 +100,29 @@ const TYPE_LABELS = {
   sachversicherung: 'Sachversicherungsdossier', gesamtdossier: 'Gesamtdossier',
 };
 
-// ── Gemeinsamer Seiten-Header (Enterprise-Stil, konsistent) ───────────────────
+// ── Gemeinsamer Seiten-Header (Enterprise-Stil, minimalistisch) ────────────────
 function PageHeader({ dossier, customer, pageLabel, snapshot, organization, advisor }) {
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)',
-      borderRadius: '10px',
-      padding: '14px 18px',
-      marginBottom: '18px',
       display: 'flex',
       justifyContent: 'space-between',
-      alignItems: 'center',
-      boxShadow: '0 2px 8px rgba(15, 23, 42, 0.1)',
+      alignItems: 'flex-end',
+      borderBottom: '2px solid #0f172a',
+      paddingBottom: '10px',
+      marginBottom: '16px',
     }}>
       <div>
-        {/* Haupttitel: Dossier-Titel */}
-        <div style={{ fontSize: '14px', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', marginBottom: '3px' }}>
+        <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '2px' }}>
           {dossier.title || TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
         </div>
-        {/* Untertitel: Seiten-spezifisch */}
-        <div style={{ fontSize: '9.5px', color: 'rgba(255,255,255,0.85)' }}>
-          {pageLabel}
-        </div>
+        <div style={{ fontSize: '8.5px', color: '#64748b' }}>{pageLabel}</div>
       </div>
       <div style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.75)' }}>
-          {fmtDate(snapshot?.snapshot_created_at)}
-        </div>
-        <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.6)', marginTop: '2px' }}>
-          Version {dossier.version ?? 1}
+        {organization?.name && (
+          <div style={{ fontSize: '9px', fontWeight: 600, color: '#334155', marginBottom: '1px' }}>{organization.name}</div>
+        )}
+        <div style={{ fontSize: '8px', color: '#94a3b8' }}>
+          {fmtDate(snapshot?.snapshot_created_at)} · Version {dossier.version ?? 1}
         </div>
       </div>
     </div>
@@ -140,90 +134,77 @@ function LösungsSäule({ gruppe, label, entries, referenceTotal, titel }) {
   const cfg = GRUPPE_CFG[gruppe] || GRUPPE_CFG.manuell;
   const persons = [...new Set(entries.map(e => e.person_name || 'Unbekannt'))];
   const gruppeTotal = entries.reduce((s, e) => s + (Number(e.praemie_monatlich) || 0), 0);
-  const gesellschaften = [...new Set(entries.map(e => e.gesellschaft).filter(Boolean))];
-  // Titel aus Prop oder generieren
-  const titelToUse = titel || generateTitelFromGesellschaften(entries);
   const isRef = gruppe === 'aktuelle_loesung';
+  const titelToUse = titel || generateTitelFromGesellschaften(entries);
 
-  // Einsparung vs. Aktuelle Lösung
   const diff = referenceTotal && referenceTotal > 0 ? referenceTotal - gruppeTotal : null;
   const diffPct = diff !== null ? ((diff / referenceTotal) * 100).toFixed(1) : null;
 
   return (
     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-      {/* ── Säulen-Header ── */}
+      {/* ── Spalten-Header: saubere Accent-Linie oben, kein dunkler Block ── */}
       <div style={{
-        background: cfg.headerBg, borderRadius: '8px 8px 0 0',
-        padding: '10px 14px', color: 'white',
+        borderTop: `3px solid ${cfg.accentColor}`,
+        border: `1px solid #e2e8f0`,
+        borderTopColor: cfg.accentColor,
+        borderRadius: '8px 8px 0 0',
+        padding: '12px 14px',
+        background: isRef ? '#f8fafc' : '#ffffff',
         WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
       }}>
-        <div style={{ fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', opacity: 0.8, marginBottom: '2px' }}>
+        {/* Label */}
+        <div style={{ fontSize: '7px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: cfg.accentColor, marginBottom: '4px' }}>
           {label}
         </div>
-        {/* Dynamischer Titel aus allen Gesellschaften */}
-        <div style={{ fontSize: '11px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
-          {titelToUse || <span style={{ opacity: 0.5, fontStyle: 'italic' }}>Keine Gesellschaft</span>}
+        {/* Titel (alle Gesellschaften) */}
+        <div style={{ fontSize: '11px', fontWeight: 700, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '10px' }}>
+          {titelToUse || <span style={{ opacity: 0.35, fontStyle: 'italic', fontWeight: 400 }}>Keine Gesellschaft</span>}
         </div>
-        {/* Gesellschaften als kleine Badges */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px', marginBottom: '8px' }}>
-          {gesellschaften.slice(0, 5).map((g, i) => (
-            <span key={i} style={{
-              fontSize: '7px',
-              fontWeight: 600,
-              background: 'rgba(255,255,255,0.2)',
-              padding: '2px 5px',
-              borderRadius: '3px',
-            }}>
-              {g.length > 20 ? g.substring(0, 18) + '…' : g}
-            </span>
-          ))}
-          {gesellschaften.length > 5 && (
-            <span style={{ fontSize: '7px', opacity: 0.8 }}>+{gesellschaften.length - 5}</span>
-          )}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '8px' }}>
+        {/* Prämie + Differenz */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <div>
-            <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '-0.02em' }}>
+            <div style={{ fontSize: '20px', fontWeight: 900, color: cfg.accentColor, letterSpacing: '-0.02em', lineHeight: 1 }}>
               {gruppeTotal > 0 ? fmtCHF(gruppeTotal) : '—'}
             </div>
-            <div style={{ fontSize: '8px', opacity: 0.75 }}>Total / Monat · {gruppeTotal > 0 ? fmtCHF(gruppeTotal * 12) + '/Jahr' : ''}</div>
+            <div style={{ fontSize: '7.5px', color: '#94a3b8', marginTop: '2px' }}>
+              pro Monat{gruppeTotal > 0 ? ` · ${fmtCHF(gruppeTotal * 12)}/Jahr` : ''}
+            </div>
           </div>
-          {/* Einsparung */}
           {!isRef && diff !== null && gruppeTotal > 0 && (
             <div style={{
-              background: diff > 0.01 ? 'rgba(255,255,255,0.2)' : 'rgba(255,100,100,0.2)',
-              border: '1px solid rgba(255,255,255,0.3)',
+              background: diff > 0.01 ? '#f0fdf4' : diff < -0.01 ? '#fef2f2' : '#f8fafc',
+              border: `1px solid ${diff > 0.01 ? '#bbf7d0' : diff < -0.01 ? '#fecaca' : '#e2e8f0'}`,
               borderRadius: '6px', padding: '4px 8px', textAlign: 'right',
+              WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
             }}>
-              <div style={{ fontSize: '11px', fontWeight: 800 }}>
-                {diff > 0.01 ? `− ${fmtCHF(diff)}/Mt.` : diff < -0.01 ? `+ ${fmtCHF(Math.abs(diff))}/Mt.` : '= gleich'}
+              <div style={{ fontSize: '10px', fontWeight: 800, color: diff > 0.01 ? '#059669' : diff < -0.01 ? '#dc2626' : '#64748b' }}>
+                {diff > 0.01 ? `−${fmtCHF(diff)}/Mt.` : diff < -0.01 ? `+${fmtCHF(Math.abs(diff))}/Mt.` : '= gleich'}
               </div>
               {diffPct && Math.abs(diff) > 0.01 && (
-                <div style={{ fontSize: '8px', opacity: 0.85 }}>
+                <div style={{ fontSize: '7.5px', color: '#94a3b8' }}>
                   {diff > 0 ? `${diffPct}% günstiger` : `${diffPct}% teurer`}
                 </div>
               )}
             </div>
           )}
           {isRef && (
-            <div style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '6px', padding: '4px 8px' }}>
-              <div style={{ fontSize: '9px', fontWeight: 700 }}>Referenz</div>
+            <div style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '4px 8px' }}>
+              <div style={{ fontSize: '8px', fontWeight: 700, color: '#64748b' }}>Referenz</div>
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Säulen-Body: Personen-Blöcke ── */}
+      {/* ── Spalten-Body: Personen-Blöcke ── */}
       <div style={{
-        border: `1px solid ${cfg.headerBg}`, borderTop: 'none', borderRadius: '0 0 8px 8px',
-        flex: 1, padding: '10px',
+        border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 8px 8px',
+        flex: 1, padding: '10px 12px',
         WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
       }}>
         {persons.map(person => {
           const pEntries = entries.filter(e => (e.person_name || 'Unbekannt') === person);
           const kvg = pEntries.filter(e => e.section === 'grundversicherung');
           const vvgAll = pEntries.filter(e => e.section === 'zusatzversicherung');
-          // VVG-Sortierung: Grundversicherer-VVG zuerst, dann andere Gesellschaften
           const kvgGesellschaft = kvg[0]?.gesellschaft || null;
           const vvg = [
             ...vvgAll.filter(e => e.gesellschaft === kvgGesellschaft),
@@ -237,7 +218,7 @@ function LösungsSäule({ gruppe, label, entries, referenceTotal, titel }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                 <div style={{
                   width: '16px', height: '16px', borderRadius: '50%',
-                  background: cfg.headerBg, color: 'white',
+                  background: cfg.accentColor, color: 'white',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '8px', fontWeight: 800, flexShrink: 0,
                   WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
@@ -251,11 +232,10 @@ function LösungsSäule({ gruppe, label, entries, referenceTotal, titel }) {
               {kvg.length > 0 && (
                 <div style={{ marginBottom: '6px' }}>
                   <div style={{
-                    fontSize: '7.5px', fontWeight: 700, color: '#1d4ed8',
+                    fontSize: '7px', fontWeight: 700, color: '#1d4ed8',
                     textTransform: 'uppercase', letterSpacing: '0.08em',
-                    background: '#eff6ff', border: '1px solid #bfdbfe',
-                    borderRadius: '4px', padding: '2px 6px', display: 'inline-block',
-                    marginBottom: '4px',
+                    borderBottom: '1px solid #dbeafe',
+                    paddingBottom: '2px', marginBottom: '4px',
                     WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
                   }}>KVG — Grundversicherung</div>
                   {kvg.map(e => <ProductRow key={e.id} entry={e} accentColor={cfg.accentColor} />)}
@@ -266,11 +246,10 @@ function LösungsSäule({ gruppe, label, entries, referenceTotal, titel }) {
               {vvg.length > 0 && (
                 <div style={{ marginBottom: '6px' }}>
                   <div style={{
-                    fontSize: '7.5px', fontWeight: 700, color: '#6d28d9',
+                    fontSize: '7px', fontWeight: 700, color: '#6d28d9',
                     textTransform: 'uppercase', letterSpacing: '0.08em',
-                    background: '#f5f3ff', border: '1px solid #ddd6fe',
-                    borderRadius: '4px', padding: '2px 6px', display: 'inline-block',
-                    marginBottom: '4px',
+                    borderBottom: '1px solid #ede9fe',
+                    paddingBottom: '2px', marginBottom: '4px',
                     WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
                   }}>VVG — Zusatzversicherungen</div>
                   {vvg.map(e => <ProductRow key={e.id} entry={e} accentColor={cfg.accentColor} />)}
