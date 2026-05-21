@@ -17,7 +17,7 @@ import CompanyForm from '@/components/customers/CompanyForm';
 import FastImportWizard from '@/components/customers/FastImportWizard';
 import CustomerMergeDialog from '@/components/customers/CustomerMergeDialog';
 import CustomerCard from '@/components/customers/CustomerCard';
-import { searchCustomers } from '@/lib/customerSearch';
+import { searchCustomers, scoreCustomer } from '@/lib/customerSearch';
 
 // ── Segment builder ────────────────────────────────────────────────────────
 function buildSegments(customers, tasks, contracts) {
@@ -326,8 +326,19 @@ export default function Customers() {
       }
     });
     
+    // When searching, sort by relevance (score), not alphabetically
+    const searchResults = Array.from(combinedMap.values());
+    if (search.trim()) {
+      const tokens = search.trim().split(/\s+/);
+      const withScores = searchResults.map(c => ({ customer: c, score: scoreCustomer(c, tokens) }));
+      return {
+        displayed: withScores.sort((a, b) => b.score - a.score).map(({ customer }) => customer),
+        matchedFamilyIds: matchedFamilyMemberIds,
+      };
+    }
+    
     return {
-      displayed: sortCustomers(Array.from(combinedMap.values()), sortBy),
+      displayed: sortCustomers(searchResults, sortBy),
       matchedFamilyIds: matchedFamilyMemberIds,
     };
   }, [segFiltered, search, customers, primaryCustomers, sortBy]);
