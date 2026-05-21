@@ -173,6 +173,53 @@ function sortCustomers(list, sortBy) {
 
 const NAV_KEYS = ['all','critical','mandate','tasks','active','vip','new','prospect','private','business'];
 
+// ── Grouped customer feed ─────────────────────────────────────────────────
+function CustomerFeed({ displayed, customers, segments, matchedFamilyIds, onEdit, onDelete }) {
+  const businesses = displayed.filter(c => c.customer_type === 'business');
+  const privates   = displayed.filter(c => c.customer_type !== 'business');
+  const showGroups = businesses.length > 0 && privates.length > 0;
+
+  const renderCard = (customer) => (
+    <CustomerCard
+      key={customer.id}
+      customer={customer}
+      familyMembers={customers.filter(c => c.primary_customer_id === customer.id)}
+      contractCount={segments.contractsByCustomer?.[customer.id] || 0}
+      taskCount={segments.tasksByCustomer?.[customer.id] || 0}
+      matchedFamilyIds={matchedFamilyIds}
+      onEdit={onEdit}
+      onDelete={onDelete}
+    />
+  );
+
+  if (!showGroups) return <>{displayed.map(renderCard)}</>;
+
+  return (
+    <>
+      {privates.length > 0 && (
+        <>
+          <div className="flex items-center gap-3 pt-2 pb-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Privatkunden</span>
+            <span className="text-[10px] text-slate-300">{privates.length}</span>
+            <div className="flex-1 h-px bg-border/50" />
+          </div>
+          {privates.map(renderCard)}
+        </>
+      )}
+      {businesses.length > 0 && (
+        <>
+          <div className="flex items-center gap-3 pt-4 pb-1">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Unternehmen</span>
+            <span className="text-[10px] text-slate-300">{businesses.length}</span>
+            <div className="flex-1 h-px bg-border/50" />
+          </div>
+          {businesses.map(renderCard)}
+        </>
+      )}
+    </>
+  );
+}
+
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function Customers() {
   const [showForm, setShowForm]         = useState(false);
@@ -456,19 +503,14 @@ export default function Customers() {
                 <p className="text-[12px] text-slate-400 mt-1">{search ? 'Suchbegriff anpassen.' : 'Dieses Segment ist leer.'}</p>
               </div>
             ) : (
-              displayed.map(customer => (
-                <CustomerCard
-                  key={customer.id}
-                  customer={customer}
-                  familyMembers={customers.filter(c => c.primary_customer_id === customer.id)}
-                  contractCount={segments.contractsByCustomer?.[customer.id] || 0}
-                  taskCount={segments.tasksByCustomer?.[customer.id] || 0}
-                  matchedFamilyIds={matchedFamilyIds}
-                  onEdit={(c) => { setEditing(c); setShowForm(true); }}
-                  onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
-                />
-              ))
-            )}
+              <CustomerFeed
+                displayed={displayed}
+                customers={customers}
+                segments={segments}
+                matchedFamilyIds={matchedFamilyIds}
+                onEdit={(c) => { setEditing(c); setShowForm(true); }}
+                onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
+              />
           </div>
         </div>
 
