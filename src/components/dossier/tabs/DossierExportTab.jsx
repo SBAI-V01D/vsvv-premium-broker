@@ -247,14 +247,22 @@ export default function DossierExportTab({ dossier }) {
       const snap = buildSnapshot({
         dossier, customer, familyMembers, contracts, entries, verkaufschance,
       });
-      const version  = nextSnapshotVersion(snapshots); // stabile Versionsnummer
+      const version  = nextSnapshotVersion(snapshots);
       const jsonBlob = serializeSnapshot(snap);
-      await base44.entities.DossierSnapshot.create({
+      const created = await base44.entities.DossierSnapshot.create({
         dossier_id:    dossierId,
         version,
         snapshot_data: jsonBlob,
         notes:         snapshotNote.trim() || null,
       });
+      // Freigabe-Snapshot koppeln: wenn Dossier freigegeben, diesen Snapshot als approved_snapshot_id speichern
+      if (dossier?.advisor_approved && created?.id && !dossier?.approved_snapshot_id) {
+        await base44.entities.AdvisoryDossier.update(dossierId, {
+          approved_snapshot_id: created.id,
+        });
+        qc.invalidateQueries({ queryKey: ['advisory_dossier'] });
+        qc.invalidateQueries({ queryKey: ['dossier_detail'] });
+      }
       return snap;
     },
     onSuccess: (snap) => {

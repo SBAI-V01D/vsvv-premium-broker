@@ -61,18 +61,31 @@ export default function BeraterEntscheidPanel({ dossier, entries = [] }) {
   }, [dossier?.id]);
 
   const mutation = useMutation({
-    mutationFn: (data) => {
-      // Approval-History-Eintrag wenn advisor_approved sich ändert
+    mutationFn: async (data) => {
       const approvalChanged =
         data.advisor_approved !== undefined &&
         data.advisor_approved !== (dossier.advisor_approved || false);
       if (approvalChanged) {
+        // Benutzer laden für Audit-Trail
+        let userInfo = {};
+        try {
+          const me = await base44.auth.me();
+          userInfo = { user_id: me.id, user_name: me.full_name || me.email };
+        } catch {}
         const entry = {
           action: data.advisor_approved ? 'approved' : 'approval_revoked',
           timestamp: new Date().toISOString(),
           previous_approved: dossier.advisor_approved || false,
+          new_approved: data.advisor_approved,
+          ...userInfo,
         };
         data = { ...data, approval_history: [...(dossier.approval_history || []), entry] };
+        // Bei Freigabe: approved_at / approved_by setzen; bei Widerruf: leeren
+        if (data.advisor_approved) {
+          data = { ...data, approved_at: entry.timestamp, approved_by: userInfo.user_name || '' };
+        } else {
+          data = { ...data, approved_at: null, approved_by: null, approved_snapshot_id: null };
+        }
       }
       return base44.entities.AdvisoryDossier.update(dossier.id, data);
     },

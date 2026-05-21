@@ -117,22 +117,42 @@
       "default": false,
       "description": "Beraterentscheid: Freigegeben f\u00fcr PDF-Export"
     },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Zeitstempel der letzten Freigabe"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "E-Mail / Name des freigebenden Beraters"
+    },
+    "approved_snapshot_id": {
+      "type": "string",
+      "description": "Snapshot-ID der zum Freigabezeitpunkt erstellten Version (Revisionssicherheit)"
+    },
     "approval_history": {
       "type": "array",
-      "description": "Audit-Log: Alle Freigabe-Aktionen (action, timestamp, user_name, previous_approved, notes)",
+      "description": "Audit-Log: Alle Freigabe-Aktionen",
       "items": {
         "type": "object",
         "properties": {
           "action": {
-            "type": "string"
+            "type": "string",
+            "description": "approved | approval_revoked"
           },
           "timestamp": {
+            "type": "string"
+          },
+          "user_id": {
             "type": "string"
           },
           "user_name": {
             "type": "string"
           },
           "previous_approved": {
+            "type": "boolean"
+          },
+          "new_approved": {
             "type": "boolean"
           },
           "notes": {
