@@ -42,6 +42,7 @@ export function buildSnapshot({
       title:                    dossier.title,
       dossier_type:             dossier.dossier_type,
       status:                   dossier.status,
+      version:                  dossier.version ?? 1,
       valid_from:               dossier.valid_from ?? null,
       valid_until:              dossier.valid_until ?? null,
       recommendation_notes:     dossier.recommendation_notes ?? null,
@@ -49,6 +50,25 @@ export function buildSnapshot({
       total_proposed_premium:   dossier.total_proposed_premium ?? null,
       savings_monthly:          dossier.savings_monthly ?? null,
       notes:                    dossier.notes ?? null,
+      // IDs für Live-Fallback
+      advisor_id:               dossier.advisor_id ?? null,
+      organization_id:          dossier.organization_id ?? null,
+      // Historisierte Absenderdaten (snap_* Felder)
+      snap_org_name:            dossier.snap_org_name ?? null,
+      snap_org_street:          dossier.snap_org_street ?? null,
+      snap_org_zip:             dossier.snap_org_zip ?? null,
+      snap_org_city:            dossier.snap_org_city ?? null,
+      snap_org_phone:           dossier.snap_org_phone ?? null,
+      snap_org_email:           dossier.snap_org_email ?? null,
+      snap_org_website:         dossier.snap_org_website ?? null,
+      snap_org_finma:           dossier.snap_org_finma ?? null,
+      snap_adv_firstname:       dossier.snap_adv_firstname ?? null,
+      snap_adv_lastname:        dossier.snap_adv_lastname ?? null,
+      snap_adv_function:        dossier.snap_adv_function ?? null,
+      snap_adv_phone:           dossier.snap_adv_phone ?? null,
+      snap_adv_email:           dossier.snap_adv_email ?? null,
+      snap_adv_finma:           dossier.snap_adv_finma ?? null,
+      snap_adv_vbv:             dossier.snap_adv_vbv ?? null,
     },
 
     customer: customer ? {
