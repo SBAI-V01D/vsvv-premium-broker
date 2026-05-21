@@ -341,10 +341,17 @@ Deno.serve(async (req) => {
       backups: recentBackups.length,
     };
 
-    // ── Incidents für kritische/blocking Fehler persistieren ─────────────
+    // ── Incidents persistieren — Duplikate vermeiden ──────────────────────
     const runId = `val-${Date.now()}`;
     const failedTests = report.tests.filter(t => !t.passed);
-    await Promise.all(failedTests.map(t => {
+
+    // Bereits offene Incidents laden (Deduplizierung)
+    const existingOpen = await base44.asServiceRole.entities.EnterpriseIncident.filter({ status: 'open' }, '-detected_at', 200);
+    const openTitles = new Set(existingOpen.map(i => i.title));
+
+    const newIncidents = failedTests.filter(t => !openTitles.has(t.name));
+
+    await Promise.all(newIncidents.map(t => {
       const sev = t.severity === 'warning' ? 'warning' : 'critical';
       return base44.asServiceRole.entities.EnterpriseIncident.create({
         severity: sev,
@@ -364,6 +371,9 @@ Deno.serve(async (req) => {
         validation_run_id: runId,
       });
     }));
+
+    report.new_incidents_created = newIncidents.length;
+    report.deduplicated_incidents = failedTests.length - newIncidents.length;
 
     // SystemLog-Eintrag
     await base44.asServiceRole.entities.SystemLog.create({
