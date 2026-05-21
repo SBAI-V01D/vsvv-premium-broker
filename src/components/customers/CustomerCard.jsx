@@ -4,7 +4,7 @@
  */
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, AlertTriangle, Edit, Trash2 } from 'lucide-react';
+import { AlertTriangle, Edit, Trash2 } from 'lucide-react';
 import ActionMenu from '@/components/shared/ActionMenu';
 import { FAMILY_ROLE_LABELS, label } from '@/lib/labels';
 
@@ -31,8 +31,6 @@ export default function CustomerCard({
   onDelete,
 }) {
   const hasFamilyMatch = familyMembers.some(m => matchedFamilyIds.has(m.id));
-  const [expanded, setExpanded] = useState(false);
-  const shouldExpand = hasFamilyMatch || expanded;
   const navigate = useNavigate();
   const status = getStatus(customer);
   const isCompany = customer.customer_type === 'business';
@@ -145,13 +143,9 @@ export default function CustomerCard({
               {familyMembers.length > 0 && (
                 <>
                   <span className="text-slate-200">|</span>
-                  <button
-                    onClick={() => setExpanded(e => !e)}
-                    className="text-[12px] font-medium text-slate-400 hover:text-slate-700 transition-colors flex items-center gap-0.5"
-                  >
-                    Haushalt ({familyMembers.length})
-                    {shouldExpand ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                  </button>
+                  <span className="text-[12px] text-slate-400">
+                    Haushalt ({familyMembers.length + 1} Personen)
+                  </span>
                 </>
               )}
             </div>
@@ -170,8 +164,8 @@ export default function CustomerCard({
         )}
       </div>
 
-      {/* Family members */}
-      {shouldExpand && familyMembers.length > 0 && (
+      {/* Family members — always visible */}
+      {familyMembers.length > 0 && (
         <div className="border-t border-border/40 divide-y divide-border/30 bg-slate-50/50">
           {familyMembers.map(member => (
             <div key={member.id} className={`px-6 py-3 flex items-center justify-between gap-3 ${matchedFamilyIds.has(member.id) ? 'bg-primary/5' : ''}`}>
