@@ -520,11 +520,18 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
               <div style={{ fontSize: '8.5px', fontWeight: 600, color: '#475569', marginTop: '2px' }}>{fmtCHF(summary.currentYearly)} / Jahr</div>
             </div>
 
-            {/* Optimierte Prämie */}
+            {/* Finale Empfehlung / Optimierte Prämie */}
             <div style={{ padding: '16px 18px', borderRight: '1px solid #e2e8f0', background: '#eff6ff', borderTop: '3px solid #1d4ed8', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-              <div style={{ fontSize: '7px', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>
-                {summary.proposedGruppe ? (GRUPPE_CFG[summary.proposedGruppe]?.label || 'Optimiert') : 'Optimierte Prämie'}
+              <div style={{ fontSize: '7px', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: dossier?.advisor_final_recommendation ? '3px' : '10px' }}>
+                {dossier?.advisor_final_recommendation
+                  ? (dossier.advisor_recommendation_label || 'Finale Empfehlung')
+                  : (summary.proposedGruppe ? (GRUPPE_CFG[summary.proposedGruppe]?.label || 'Optimiert') : 'Optimierte Prämie')}
               </div>
+              {dossier?.advisor_final_recommendation && (
+                <div style={{ fontSize: '7px', color: '#93c5fd', marginBottom: '8px', fontWeight: 500 }}>
+                  Beraterentscheid
+                </div>
+              )}
               <div style={{ fontSize: '26px', fontWeight: 900, color: '#1d4ed8', letterSpacing: '-0.03em', lineHeight: 1 }}>{fmtCHF(summary.proposedMonthly)}</div>
               <div style={{ fontSize: '8px', color: '#93c5fd', marginTop: '4px' }}>pro Monat</div>
               <div style={{ fontSize: '8.5px', fontWeight: 600, color: '#1e40af', marginTop: '2px' }}>{fmtCHF(summary.proposedYearly)} / Jahr</div>
@@ -557,6 +564,26 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
               <div style={{ fontSize: '8px', color: '#94a3b8', marginTop: '4px' }}>pro Jahr</div>
             </div>
           </div>
+
+          {/* Beratungsbegründung (wenn gesetzt und freigegeben) */}
+          {dossier?.advisor_recommendation_reason && dossier?.advisor_approved && (
+            <div style={{
+              marginTop: '14px',
+              background: '#f0f9ff',
+              border: '1px solid #bae6fd',
+              borderLeft: '3px solid #1d4ed8',
+              borderRadius: '6px',
+              padding: '10px 14px',
+              WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
+            }}>
+              <div style={{ fontSize: '7px', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
+                Beratungsbegründung
+              </div>
+              <div style={{ fontSize: '8.5px', color: '#1e40af', lineHeight: '1.5', fontStyle: 'italic' }}>
+                {dossier.advisor_recommendation_reason}
+              </div>
+            </div>
+          )}
 
           {/* Angebote-Zeile (falls vorhanden) */}
           {angebotPrämien.length > 0 && (
