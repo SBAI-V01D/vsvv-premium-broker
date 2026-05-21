@@ -144,12 +144,12 @@ function LösungsSäule({ gruppe, label, entries, referenceTotal, titel, isAdvis
     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
       {/* ── Spalten-Header: saubere Accent-Linie oben, kein dunkler Block ── */}
       <div style={{
-        borderTop: `3px solid ${cfg.accentColor}`,
-        border: `1px solid #e2e8f0`,
+        borderTop: `${isAdvisorRec ? '5px' : '3px'} solid ${cfg.accentColor}`,
+        border: isAdvisorRec ? '1.5px solid #bfdbfe' : '1px solid #e2e8f0',
         borderTopColor: cfg.accentColor,
         borderRadius: '8px 8px 0 0',
         padding: '12px 14px',
-        background: isRef ? '#f8fafc' : '#ffffff',
+        background: isRef ? '#f8fafc' : isAdvisorRec ? '#f0f7ff' : '#ffffff',
         WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
       }}>
         {/* Advisor Rec Badge */}
@@ -567,23 +567,58 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
             </div>
           </div>
 
-          {/* Beratungsbegründung (wenn gesetzt und freigegeben) */}
-          {dossier?.advisor_recommendation_reason && dossier?.advisor_approved && (
+          {/* Executive Recommendation Block */}
+          {dossier?.advisor_final_recommendation && (
             <div style={{
-              marginTop: '14px',
-              background: '#f0f9ff',
-              border: '1px solid #bae6fd',
-              borderLeft: '3px solid #1d4ed8',
-              borderRadius: '6px',
-              padding: '10px 14px',
+              marginTop: '18px',
+              background: '#f0f7ff',
+              border: '1.5px solid #bfdbfe',
+              borderLeft: '5px solid #1d4ed8',
+              borderRadius: '10px',
+              padding: '18px 22px',
               WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
             }}>
-              <div style={{ fontSize: '7px', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
-                Beratungsbegründung
+              {/* Label */}
+              <div style={{ fontSize: '7px', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: '6px' }}>
+                Empfehlung des Beraters
               </div>
-              <div style={{ fontSize: '8.5px', color: '#1e40af', lineHeight: '1.5', fontStyle: 'italic' }}>
-                {dossier.advisor_recommendation_reason}
-              </div>
+
+              {/* Titel der Empfehlung */}
+              {dossier.advisor_recommendation_label && (
+                <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1.15, marginBottom: '10px' }}>
+                  {dossier.advisor_recommendation_label}
+                </div>
+              )}
+
+              {/* Begründungstext */}
+              {dossier.advisor_recommendation_reason && (
+                <div style={{
+                  fontSize: '9.5px', color: '#1e3a8a', lineHeight: '1.65',
+                  fontStyle: 'italic', borderTop: '1px solid #bfdbfe',
+                  paddingTop: '10px', marginTop: '4px',
+                }}>
+                  „{dossier.advisor_recommendation_reason}“
+                </div>
+              )}
+
+              {/* Freigabe-Indikator */}
+              {dossier.advisor_approved && (
+                <div style={{
+                  marginTop: '12px', display: 'flex', alignItems: 'center', gap: '6px',
+                  borderTop: '1px solid #bfdbfe', paddingTop: '8px',
+                  WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
+                }}>
+                  <div style={{
+                    width: '14px', height: '14px', borderRadius: '50%',
+                    background: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '8px', color: 'white', fontWeight: 900, flexShrink: 0,
+                    WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
+                  }}>✓</div>
+                  <span style={{ fontSize: '8px', fontWeight: 700, color: '#059669' }}>
+                    Vom Berater geprüft und freigegeben
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
