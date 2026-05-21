@@ -500,7 +500,7 @@ export default function Customers() {
             </div>
           </div>
 
-          <div className="p-6 space-y-3 max-w-3xl">
+          <div className="p-6 space-y-6 max-w-3xl">
             {isLoading ? (
               <div className="flex items-center gap-2 text-sm text-slate-400 py-20 justify-center">
                 <Loader2 className="w-4 h-4 animate-spin" /> Lade Portfolio…
@@ -511,14 +511,45 @@ export default function Customers() {
                 <p className="text-[12px] text-slate-400 mt-1">{search ? 'Suchbegriff anpassen.' : 'Dieses Segment ist leer.'}</p>
               </div>
             ) : (
-              <CustomerFeed
-                displayed={displayed}
-                customers={customers}
-                segments={segments}
-                matchedFamilyIds={matchedFamilyIds}
-                onEdit={(c) => { setEditing(c); setShowForm(true); }}
-                onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
-              />
+              <>
+                {/* Privatkunden Gruppe */}
+                {displayed.filter(c => c.customer_type !== 'business').length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <User className="w-3.5 h-3.5 text-slate-400" />
+                      <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Privatkunden</h3>
+                      <span className="text-[10px] text-slate-400">({displayed.filter(c => c.customer_type !== 'business').length})</span>
+                    </div>
+                    <CustomerFeed
+                      displayed={displayed.filter(c => c.customer_type !== 'business')}
+                      customers={customers}
+                      segments={segments}
+                      matchedFamilyIds={matchedFamilyIds}
+                      onEdit={(c) => { setEditing(c); setShowForm(true); }}
+                      onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
+                    />
+                  </div>
+                )}
+
+                {/* Firmenkunden Gruppe */}
+                {displayed.filter(c => c.customer_type === 'business').length > 0 && (
+                  <div className="space-y-3 pt-4 border-t border-border/40">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                      <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Firmenkunden</h3>
+                      <span className="text-[10px] text-slate-400">({displayed.filter(c => c.customer_type === 'business').length})</span>
+                    </div>
+                    <CustomerFeed
+                      displayed={displayed.filter(c => c.customer_type === 'business')}
+                      customers={customers}
+                      segments={segments}
+                      matchedFamilyIds={matchedFamilyIds}
+                      onEdit={(c) => { setEditing(c); setShowForm(true); }}
+                      onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
