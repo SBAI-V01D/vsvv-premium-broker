@@ -1,0 +1,118 @@
+{
+  "name": "EnterpriseIncident",
+  "type": "object",
+  "properties": {
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "warning",
+        "critical",
+        "blocking"
+      ],
+      "default": "warning",
+      "description": "Schweregrad: info=keine Aktion, warning=Pr\u00fcfung empfohlen, critical=Aktion erforderlich, blocking=System gesperrt bis behoben"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "export_gate",
+        "approval",
+        "snapshots",
+        "tenant_isolation",
+        "data_integrity",
+        "audit_trail",
+        "pdf_integrity",
+        "security",
+        "document_integrity",
+        "recovery",
+        "performance",
+        "other"
+      ],
+      "description": "Fehlerkategorie"
+    },
+    "module": {
+      "type": "string",
+      "description": "Betroffenes Modul (z.B. AdvisoryDossier, Contract, Document)"
+    },
+    "entity_type": {
+      "type": "string",
+      "description": "Entity-Typ des betroffenen Datensatzes"
+    },
+    "entity_id": {
+      "type": "string",
+      "description": "ID des betroffenen Datensatzes"
+    },
+    "title": {
+      "type": "string",
+      "description": "Kurztitel des Incidents"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailbeschreibung des Problems"
+    },
+    "recommended_action": {
+      "type": "string",
+      "description": "Empfohlene Massnahme"
+    },
+    "auto_fix_possible": {
+      "type": "boolean",
+      "default": false,
+      "description": "Kann das System eine sichere technische Reparatur vorschlagen? (NIEMALS Governance/Business-Daten automatisch \u00e4ndern)"
+    },
+    "auto_fix_action": {
+      "type": "string",
+      "description": "Name der Repair-Action (nur f\u00fcr sichere technische Fixes)"
+    },
+    "manual_review_required": {
+      "type": "boolean",
+      "default": true,
+      "description": "Erfordert manuellen Entscheid durch Berater/Admin"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "in_review",
+        "resolved",
+        "accepted_risk",
+        "auto_fixed"
+      ],
+      "default": "open",
+      "description": "open=offen, in_review=in Pr\u00fcfung, resolved=behoben, accepted_risk=Risiko akzeptiert, auto_fixed=technisch repariert"
+    },
+    "assigned_to": {
+      "type": "string",
+      "description": "Zugewiesen an (User-Email)"
+    },
+    "resolution_notes": {
+      "type": "string",
+      "description": "Erkl\u00e4rung zur Behebung oder Risikoakzeptanz"
+    },
+    "resolved_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "resolved_by": {
+      "type": "string"
+    },
+    "detected_by": {
+      "type": "string",
+      "description": "Erkannt durch (z.B. runLiveSystemValidation, manual)"
+    },
+    "detected_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "validation_run_id": {
+      "type": "string",
+      "description": "ID des Validierungslaufs der diesen Incident erzeugt hat"
+    }
+  },
+  "required": [
+    "severity",
+    "category",
+    "title",
+    "description"
+  ]
+}

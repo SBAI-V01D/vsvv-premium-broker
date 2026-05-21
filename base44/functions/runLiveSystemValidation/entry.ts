@@ -308,6 +308,26 @@ Deno.serve(async (req) => {
       backups: recentBackups.length,
     };
 
+    // ── Incidents für kritische/blocking Fehler persistieren ─────────────
+    const runId = `val-${Date.now()}`;
+    const failedTests = report.tests.filter(t => !t.passed);
+    await Promise.all(failedTests.map(t => {
+      const sev = t.severity === 'warning' ? 'warning' : 'critical';
+      return base44.asServiceRole.entities.EnterpriseIncident.create({
+        severity: sev,
+        category: t.category,
+        title: t.name,
+        description: t.details,
+        recommended_action: 'Bitte manuell prüfen und beheben. Keine automatische Korrektur für Governance-Daten.',
+        auto_fix_possible: false,
+        manual_review_required: true,
+        status: 'open',
+        detected_by: 'runLiveSystemValidation',
+        detected_at: report.timestamp,
+        validation_run_id: runId,
+      });
+    }));
+
     // SystemLog-Eintrag
     await base44.asServiceRole.entities.SystemLog.create({
       level: report.production_ready ? 'info' : 'error',
