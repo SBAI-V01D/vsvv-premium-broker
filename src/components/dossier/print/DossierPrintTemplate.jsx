@@ -361,74 +361,58 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
   );
 }
 
-// ── Enterprise Header Komponente — horizontal, minimal, premium ─────────────────
+// ── Enterprise Header Komponente — Titel links, Org+Berater rechts ──────────────
 function EnterpriseHeader({ organization, advisor, dossier, snapshot }) {
-  const hasFinma = organization?.finma_number || advisor?.finma_number;
-  const hasVbv = advisor?.vbv_number;
+  const advName = advisor ? `${advisor.firstname || ''} ${advisor.lastname || ''}`.trim() : '';
+  const finmaOrg = organization?.finma_number;
+  const finmaAdv = advisor?.finma_number;
+  const vbvAdv   = advisor?.vbv_number;
+  const hasRight = !!(organization?.name || advName);
+
   return (
     <div style={{
       borderBottom: '2.5px solid #0f172a',
       paddingBottom: '14px',
       marginBottom: '22px',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: '24px',
       WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '24px' }}>
-        {/* LEFT: Organisation */}
-        <div style={{ flex: 1 }}>
-          {organization?.name && (
-            <div style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '7px' }}>
-              {organization.name}
-            </div>
-          )}
-          <div style={{ display: 'flex', flexWrap: 'wrap', columnGap: '14px', rowGap: '2px' }}>
-            {organization?.street && (
-              <div style={{ fontSize: '8.5px', color: '#64748b' }}>
-                {organization.street}{organization.zip_code ? `, ${organization.zip_code}` : ''}{organization.city ? ` ${organization.city}` : ''}
-              </div>
-            )}
-            {organization?.phone && (
-              <div style={{ fontSize: '8.5px', color: '#64748b' }}>Tel {organization.phone}</div>
-            )}
-            {organization?.email && (
-              <div style={{ fontSize: '8.5px', color: '#64748b' }}>{organization.email}</div>
-            )}
-            {organization?.website && (
-              <div style={{ fontSize: '8.5px', color: '#94a3b8' }}>{organization.website}</div>
-            )}
-          </div>
+      {/* LEFT: Dossier-Titel */}
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '5px' }}>
+          {dossier?.title || TYPE_LABELS[dossier?.dossier_type] || dossier?.dossier_type}
         </div>
-
-        {/* DIVIDER */}
-        <div style={{ width: '1px', background: '#e2e8f0', alignSelf: 'stretch', flexShrink: 0 }} />
-
-        {/* RIGHT: Berater */}
-        {advisor && (
-          <div style={{ minWidth: '180px', textAlign: 'right' }}>
-            <div style={{ fontSize: '8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8', marginBottom: '5px' }}>
-              Ihr persönlicher Berater
-            </div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em', marginBottom: '5px' }}>
-              {advisor.firstname} {advisor.lastname}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
-              {advisor.phone && <div style={{ fontSize: '8.5px', color: '#64748b' }}>Tel {advisor.phone}</div>}
-              {advisor.email && <div style={{ fontSize: '8.5px', color: '#64748b' }}>{advisor.email}</div>}
-            </div>
-          </div>
-        )}
+        <div style={{ fontSize: '8.5px', color: '#94a3b8' }}>
+          Erstellt am {fmtDate(snapshot?.snapshot_created_at)} · Version {dossier?.version ?? 1}
+        </div>
       </div>
 
-      {/* FINMA / VBV — regulatorische Zeile */}
-      {(hasFinma || hasVbv) && (
-        <div style={{ marginTop: '9px', paddingTop: '7px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: '20px' }}>
-          {hasFinma && (
-            <div style={{ fontSize: '7.5px', color: '#94a3b8' }}>
-              <span style={{ fontWeight: 700, color: '#475569' }}>FINMA-Reg.-Nr.</span> {organization?.finma_number || advisor?.finma_number}
+      {/* RIGHT: Organisation + Berater kompakt */}
+      {hasRight && (
+        <div style={{ textAlign: 'right', minWidth: '190px', flexShrink: 0 }}>
+          {organization?.name && (
+            <div style={{ marginBottom: advName ? '8px' : 0 }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em' }}>
+                {organization.name}
+              </div>
+              {finmaOrg && (
+                <div style={{ fontSize: '7.5px', color: '#64748b', marginTop: '2px' }}>FINMA {finmaOrg}</div>
+              )}
             </div>
           )}
-          {hasVbv && (
-            <div style={{ fontSize: '7.5px', color: '#94a3b8' }}>
-              <span style={{ fontWeight: 700, color: '#475569' }}>VBV-Mitglied</span> {advisor.vbv_number}
+          {advName && (
+            <div style={{
+              borderTop: organization?.name ? '1px solid #e2e8f0' : 'none',
+              paddingTop: organization?.name ? '7px' : 0,
+            }}>
+              <div style={{ fontSize: '9px', fontWeight: 600, color: '#334155' }}>{advName}</div>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap', marginTop: '2px' }}>
+                {finmaAdv && <div style={{ fontSize: '7.5px', color: '#64748b' }}>FINMA {finmaAdv}</div>}
+                {vbvAdv   && <div style={{ fontSize: '7.5px', color: '#64748b' }}>VBV {vbvAdv}</div>}
+              </div>
             </div>
           )}
         </div>
@@ -478,15 +462,7 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
         snapshot={snapshot}
       />
 
-      {/* Dokumententitel */}
-      <div style={{ marginBottom: '18px' }}>
-        <div style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '4px' }}>
-          {dossier.title || TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
-        </div>
-        <div style={{ fontSize: '9px', color: '#94a3b8' }}>
-          Erstellt am {fmtDate(snapshot?.snapshot_created_at)} · Version {dossier.version ?? 1}
-        </div>
-      </div>
+
 
       {/* ── 1. Versicherungsnehmer + Familienmitglieder ── */}
       <div style={{ display: 'grid', gridTemplateColumns: hasFamilyMembers ? '1fr 1fr' : '1fr', gap: '20px', marginBottom: '20px' }}>
