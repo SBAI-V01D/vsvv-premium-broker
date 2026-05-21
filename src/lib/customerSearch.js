@@ -36,20 +36,24 @@ function expandSynonyms(token) {
 
 // Score a single customer against a list of tokens
 function scoreCustomer(customer, tokens) {
+  const firstName = normalize(customer.first_name)
+  const lastName = normalize(customer.last_name)
+  const companyName = normalize(customer.company_name)
+  
   const fields = [
-    customer.first_name,
-    customer.last_name,
-    customer.company_name,
-    customer.email,
-    customer.phone,
-    customer.mobile,
-    customer.city,
-    customer.zip_code,
-    customer.profession,
-    customer.notes,
-    customer.family_role,
-    customer.customer_number,
-  ].map(normalize)
+    firstName,
+    lastName,
+    companyName,
+    normalize(customer.email),
+    normalize(customer.phone),
+    normalize(customer.mobile),
+    normalize(customer.city),
+    normalize(customer.zip_code),
+    normalize(customer.profession),
+    normalize(customer.notes),
+    normalize(customer.family_role),
+    normalize(customer.customer_number),
+  ].filter(f => f)
 
   const fullText = fields.join(' ')
 
@@ -64,11 +68,21 @@ function scoreCustomer(customer, tokens) {
       // Exact match in any field (especially important for customer_number)
       if (fields.some(f => f === syn)) { tokenScore = Math.max(tokenScore, 100); break }
       // Customer number exact match (e.g., "K-500")
-      if (customer.customer_number && customer.customer_number.toLowerCase() === syn) { tokenScore = Math.max(tokenScore, 100); break }
-      // Starts with
+      if (customer.customer_number && normalize(customer.customer_number) === syn) { tokenScore = Math.max(tokenScore, 100); break }
+      
+      // Prioritize last_name and first_name exact matches
+      if (lastName === syn) { tokenScore = Math.max(tokenScore, 95) }
+      if (firstName === syn) { tokenScore = Math.max(tokenScore, 95) }
+      if (companyName === syn) { tokenScore = Math.max(tokenScore, 95) }
+      
+      // Starts with (prioritize names)
+      if (lastName && lastName.startsWith(syn)) { tokenScore = Math.max(tokenScore, 85) }
+      if (firstName && firstName.startsWith(syn)) { tokenScore = Math.max(tokenScore, 85) }
       if (fields.some(f => f.startsWith(syn))) { tokenScore = Math.max(tokenScore, 80) }
+      
       // Contains (substring)
       if (fullText.includes(syn)) { tokenScore = Math.max(tokenScore, 60) }
+      
       // Fuzzy: check each word in fullText
       const words = fullText.split(/\s+/)
       for (const word of words) {
