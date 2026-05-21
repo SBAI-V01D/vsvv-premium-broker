@@ -168,7 +168,19 @@
     },
     "final_pdf_url": {
       "type": "string",
-      "description": "URL zur archivierten finalen PDF-Version"
+      "description": "URL zur archivierten finalen PDF-Version (legacy)"
+    },
+    "final_pdf_file_uri": {
+      "type": "string",
+      "description": "Private Storage URI des letzten PDFs (Sprint D \u2014 immutable)"
+    },
+    "final_pdf_hash": {
+      "type": "string",
+      "description": "SHA-256 Hash des letzten PDFs (Integrit\u00e4tsnachweis)"
+    },
+    "final_pdf_generated_by": {
+      "type": "string",
+      "description": "Name des Exporteurs (Cache)"
     },
     "final_pdf_generated_at": {
       "type": "string",

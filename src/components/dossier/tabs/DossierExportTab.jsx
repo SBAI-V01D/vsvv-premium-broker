@@ -15,7 +15,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
   Printer, Eye, Save, Clock, FileText, ChevronDown, ChevronUp,
-  Shield, AlertCircle, Loader2, RefreshCw, Download, CheckCircle2,
+  Shield, AlertCircle, Loader2, RefreshCw, Download, CheckCircle2, Hash, ExternalLink,
 } from 'lucide-react';
 import DossierApprovalTimeline from '@/components/dossier/DossierApprovalTimeline';
 import DossierPrintTemplate from '@/components/dossier/print/DossierPrintTemplate';
@@ -293,7 +293,25 @@ export default function DossierExportTab({ dossier }) {
     onSuccess: (res) => {
       setServerPdfResult(res.data);
       qc.invalidateQueries({ queryKey: ['advisory_dossier', dossierId] });
+      qc.invalidateQueries({ queryKey: ['pdf_export_logs', dossierId] });
     },
+  });
+
+  // Signierte URL für Private Storage
+  const [signedUrlLoading, setSignedUrlLoading] = useState(false);
+  const openPrivatePdf = async (fileUri) => {
+    setSignedUrlLoading(true);
+    const res = await base44.integrations.Core.CreateFileSignedUrl({ file_uri: fileUri, expires_in: 300 });
+    setSignedUrlLoading(false);
+    if (res?.signed_url) window.open(res.signed_url, '_blank');
+  };
+
+  // Export-Log laden
+  const { data: exportLogs = [] } = useQuery({
+    queryKey: ['pdf_export_logs', dossierId],
+    queryFn: () => base44.entities.PdfExportLog.filter({ dossier_id: dossierId }, '-exported_at', 20),
+    enabled: !!dossierId,
+    staleTime: 30_000,
   });
 
   if (!dossierId) {
@@ -398,16 +416,15 @@ export default function DossierExportTab({ dossier }) {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {dossier?.final_pdf_url && (
-                <a
-                  href={dossier.final_pdf_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-1.5 text-xs text-emerald-700 border border-emerald-300 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors"
+              {dossier?.final_pdf_file_uri && (
+                <button
+                  onClick={() => openPrivatePdf(dossier.final_pdf_file_uri)}
+                  disabled={signedUrlLoading}
+                  className="flex items-center gap-1.5 text-xs text-emerald-700 border border-emerald-300 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  Letztes PDF öffnen
-                </a>
+                  {signedUrlLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5" />}
+                  Letztes PDF öffnen (privat)
+                </button>
               )}
               <button
                 onClick={() => serverPdfMutation.mutate()}
@@ -428,20 +445,30 @@ export default function DossierExportTab({ dossier }) {
             </div>
           )}
           {serverPdfResult && (
-            <div className="px-5 py-3 flex items-center gap-3 border-t border-emerald-200 bg-emerald-50/50">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-emerald-800">PDF erfolgreich generiert — v{serverPdfResult.pdf_version}</p>
-                <p className="text-xs text-emerald-700 mt-0.5">{serverPdfResult.filename}</p>
+            <div className="px-5 py-3 space-y-2 border-t border-emerald-200 bg-emerald-50/50">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-emerald-800">PDF erfolgreich generiert — v{serverPdfResult.pdf_version}</p>
+                  <p className="text-xs text-emerald-700 mt-0.5">{serverPdfResult.filename}</p>
+                </div>
+                <button
+                  onClick={() => openPrivatePdf(serverPdfResult.file_uri)}
+                  disabled={signedUrlLoading}
+                  className="text-xs font-semibold text-emerald-700 border border-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                >
+                  PDF öffnen →
+                </button>
               </div>
-              <a
-                href={serverPdfResult.pdf_url}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs font-semibold text-emerald-700 border border-emerald-400 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors"
-              >
-                PDF öffnen →
-              </a>
+              {serverPdfResult.pdf_hash && (
+                <div className="flex items-start gap-2 bg-white/60 border border-emerald-200 rounded-lg px-3 py-2">
+                  <Hash className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide">SHA-256 Integritäts-Hash</p>
+                    <p className="font-mono text-[10px] text-slate-600 break-all mt-0.5">{serverPdfResult.pdf_hash}</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -508,6 +535,40 @@ export default function DossierExportTab({ dossier }) {
             </div>
           )}
         </div>
+
+        {/* Export-Log */}
+        {exportLogs.length > 0 && (
+          <div className="border border-border rounded-xl overflow-hidden">
+            <div className="px-5 py-4 bg-muted/30 border-b border-border/60">
+              <p className="text-sm font-semibold text-foreground">Export-Protokoll</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Alle generierten PDFs — {exportLogs.length} Export{exportLogs.length !== 1 ? 's' : ''}</p>
+            </div>
+            <div className="divide-y divide-border/60">
+              {exportLogs.map(log => (
+                <div key={log.id} className="px-5 py-3 flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Hash className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <span className="font-semibold text-foreground">PDF v{log.pdf_version}</span>
+                      <span className="text-muted-foreground ml-2">· {log.generated_by_name}</span>
+                      <span className="text-muted-foreground ml-2">· {fmtDate(log.exported_at)}</span>
+                      {log.pdf_hash && <span className="font-mono text-muted-foreground/60 ml-2 truncate max-w-32 inline-block">{log.pdf_hash.slice(0, 16)}…</span>}
+                    </div>
+                  </div>
+                  {log.file_uri && (
+                    <button
+                      onClick={() => openPrivatePdf(log.file_uri)}
+                      disabled={signedUrlLoading}
+                      className="shrink-0 text-primary hover:underline disabled:opacity-50"
+                    >
+                      Öffnen
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Approval Timeline */}
         <div className="border border-border rounded-xl overflow-hidden">

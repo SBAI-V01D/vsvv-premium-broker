@@ -1,0 +1,69 @@
+{
+  "name": "PdfExportLog",
+  "type": "object",
+  "properties": {
+    "dossier_id": {
+      "type": "string",
+      "description": "Zugeh\u00f6riges Dossier"
+    },
+    "dossier_title": {
+      "type": "string",
+      "description": "Dossier-Titel (Cache)"
+    },
+    "dossier_version": {
+      "type": "number",
+      "description": "Dossier-Version zum Zeitpunkt des Exports"
+    },
+    "pdf_version": {
+      "type": "number",
+      "description": "PDF-Versionsnummer (monoton steigend)"
+    },
+    "pdf_hash": {
+      "type": "string",
+      "description": "SHA-256 Hash des generierten PDFs (Hex)"
+    },
+    "file_uri": {
+      "type": "string",
+      "description": "Private Storage URI (nicht \u00f6ffentlich)"
+    },
+    "filename": {
+      "type": "string",
+      "description": "Dateiname"
+    },
+    "generated_by_id": {
+      "type": "string",
+      "description": "User-ID des Exporteurs"
+    },
+    "generated_by_name": {
+      "type": "string",
+      "description": "Name des Exporteurs (Cache)"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Name des freigebenden Beraters (zum Export-Zeitpunkt)"
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Freigabe-Zeitstempel (zum Export-Zeitpunkt)"
+    },
+    "snapshot_id": {
+      "type": "string",
+      "description": "Verkn\u00fcpfte Snapshot-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Kundenname (Cache)"
+    },
+    "exported_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Export-Zeitstempel"
+    }
+  },
+  "required": [
+    "dossier_id",
+    "pdf_hash",
+    "exported_at"
+  ]
+}
