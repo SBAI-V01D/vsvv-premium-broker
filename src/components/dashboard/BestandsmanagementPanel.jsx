@@ -209,8 +209,8 @@ export default function BestandsmanagementPanel({ contracts = [] }) {
         if (c.status === 'expired') return true
         const endDays = daysUntil(c.end_date)
         const cancelDays = daysUntil(c.cancellation_deadline)
-        if (endDays !== null && endDays <= 180) return true
-        if (cancelDays !== null && cancelDays <= 180) return true
+        if (endDays !== null && endDays <= 360) return true
+        if (cancelDays !== null && cancelDays <= 360) return true
         return false
       })
       .map(c => {
@@ -277,7 +277,7 @@ export default function BestandsmanagementPanel({ contracts = [] }) {
           <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
             <Repeat2 className="w-3.5 h-3.5 text-emerald-600" />
           </div>
-          <span className="text-[13px] font-bold flex-1">Vertragsabläufe & Kündigungen</span>
+          <span className="text-[13px] font-bold flex-1">Vertragsabläufe &amp; Kündigungen</span>
           <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           <span className="text-[11px] text-emerald-600 font-medium">Kein Handlungsbedarf in 120 Tagen ✓</span>
         </div>
@@ -296,7 +296,7 @@ export default function BestandsmanagementPanel({ contracts = [] }) {
             stats.expired > 0 ? 'text-red-700' : stats.critical > 0 ? 'text-red-600' : 'text-orange-600'
           )} />
         </div>
-        <span className="text-[13px] font-bold flex-1">Vertragsabläufe & Kündigungen</span>
+        <span className="text-[13px] font-bold flex-1">Vertragsabläufe &amp; Kündigungen</span>
 
         {/* Status-Badges */}
         <div className="flex items-center gap-1.5 flex-wrap">

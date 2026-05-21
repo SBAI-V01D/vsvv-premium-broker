@@ -39,14 +39,14 @@ export default function Dashboard() {
   const openTasks = tasks
 
   const today = new Date()
-  const in90 = new Date(today); in90.setDate(today.getDate() + 90)
+  const in360 = new Date(today); in360.setDate(today.getDate() + 360)
 
-  // expiringContracts: aktive Verträge die in den nächsten 90 Tagen ablaufen (bereits server-seitig auf active gefiltert)
+  // expiringContracts: aktive Verträge die in den nächsten 360 Tagen ablaufen (bereits server-seitig auf active gefiltert)
   const expiringContracts = useMemo(() =>
     contracts.filter(c => {
       if (!c.end_date) return false
       const d = new Date(c.end_date + 'T00:00:00')
-      return d <= in90 && !c.end_date.startsWith('9999')
+      return d <= in360 && !c.end_date.startsWith('9999')
     }),
     [contracts]
   )
