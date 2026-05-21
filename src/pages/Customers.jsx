@@ -313,14 +313,21 @@ export default function Customers() {
     const matchedFamily = directMatches.filter(m => m.is_family_member);
     const matchedFamilyMemberIds = new Set(matchedFamily.map(m => m.id));
     
-    // Get parent customers for matched family members (if not already in direct matches)
-    const primaryMatchIds = new Set(primaryMatches.map(c => c.id));
+    // Get ALL parent customers for matched family members
     const parentIds = new Set(matchedFamily.map(m => m.primary_customer_id).filter(Boolean));
-    const familyParents = primaryCustomers.filter(c => parentIds.has(c.id) && !primaryMatchIds.has(c.id));
+    // Include parent customers even if they're also direct matches (they should appear once)
+    const familyParents = primaryCustomers.filter(c => parentIds.has(c.id));
     
-    // Combine and sort results
+    // Combine: primary matches + parents of matched family members (deduplicated)
+    const combinedMap = new Map();
+    [...primaryMatches, ...familyParents].forEach(c => {
+      if (!combinedMap.has(c.id)) {
+        combinedMap.set(c.id, c);
+      }
+    });
+    
     return {
-      displayed: sortCustomers([...primaryMatches, ...familyParents], sortBy),
+      displayed: sortCustomers(Array.from(combinedMap.values()), sortBy),
       matchedFamilyIds: matchedFamilyMemberIds,
     };
   }, [segFiltered, search, customers, primaryCustomers, sortBy]);
