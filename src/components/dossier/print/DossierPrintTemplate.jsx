@@ -460,7 +460,9 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
   // Prämien für ALLE Angebote berechnen (Vergleich gegen Optimierte Lösung)
   const angebotPrämien = useMemo(() => {
     const result = [];
-    ['angebot_1', 'angebot_2', 'angebot_3', 'angebot_4', 'angebot_5'].forEach(gruppe => {
+    ['angebot_1', 'angebot_2', 'angebot_3', 'angebot_4', 'angebot_5']
+      .filter(g => g !== dossier?.advisor_final_recommendation)
+      .forEach(gruppe => {
       const gruppeEntries = (entries || []).filter(e => e.gruppe === gruppe);
       if (gruppeEntries.length > 0) {
         const total = gruppeEntries.reduce((s, e) => s + (Number(e.praemie_monatlich) || 0), 0);
@@ -718,6 +720,24 @@ export default function DossierPrintTemplate({ snapshot }) {
     ? comparison_entries.map(e => ({ ...e, gruppe: e.gruppe || 'manuell' }))
     : [];
   const summary = calcDossierSummary(entries);
+
+  // Beraterentscheid überschreibt die KI-Empfehlung (proposedGruppe)
+  if (dossier?.advisor_final_recommendation) {
+    const recEntries = entries.filter(e => e.gruppe === dossier.advisor_final_recommendation);
+    const recMonthly = recEntries.reduce((s, e) => s + (Number(e.praemie_monatlich) || 0), 0);
+    if (recMonthly > 0) {
+      summary.proposedGruppe = dossier.advisor_final_recommendation;
+      summary.proposedMonthly = recMonthly;
+      summary.proposedYearly = recMonthly * 12;
+      summary.savingsMonthly = (summary.currentMonthly || 0) - recMonthly;
+      summary.savingsYearly = summary.savingsMonthly * 12;
+      summary.savingsPercent = summary.currentMonthly > 0
+        ? (summary.savingsMonthly / summary.currentMonthly) * 100
+        : null;
+      summary.hasRecommendation = true;
+    }
+  }
+
   const savings = summary.savingsMonthly;
 
   // DEBUG: Console-Log für Berechnung
