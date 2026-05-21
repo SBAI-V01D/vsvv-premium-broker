@@ -63,6 +63,15 @@
     "ip_address": {
       "type": "string",
       "description": "IP-Adresse des Exporteurs (Audit)"
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Session-ID des Exporteurs (Audit)"
+    },
+    "immutable": {
+      "type": "boolean",
+      "default": true,
+      "description": "Immer true \u2014 PDFs sind niemals l\u00f6schbar/\u00fcberschreibbar"
     }
   },
   "required": [
