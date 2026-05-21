@@ -1,13 +1,14 @@
 /**
- * Customers — Broker Desk / Operational Command Center
+ * Customers — Relationship Intelligence Workspace
+ * Premium Financial Platform: monochrome · whitespace · typography-first
  */
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
   Plus, User, Building2, Upload, Download, Users, Search,
-  Shield, CheckSquare, AlertTriangle, Target, Clock, Loader2,
-  Filter, XCircle, TrendingUp, Briefcase
+  Shield, AlertTriangle, Target, Clock, Loader2, XCircle,
+  ChevronRight
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -16,194 +17,156 @@ import CustomerForm from '@/components/customers/CustomerForm';
 import CompanyForm from '@/components/customers/CompanyForm';
 import FastImportWizard from '@/components/customers/FastImportWizard';
 import CustomerMergeDialog from '@/components/customers/CustomerMergeDialog';
-import EmptyState from '@/components/shared/EmptyState';
 import CustomerCard from '@/components/customers/CustomerCard';
 import { searchCustomers } from '@/lib/customerSearch';
 
-// ── Static color map (Tailwind needs literal class strings) ─────────────────
-const KPI_COLORS = {
-  blue:    { bg: 'bg-blue-50',    border: 'border-blue-100',    icon: 'text-blue-600',    num: 'text-blue-700' },
-  teal:    { bg: 'bg-teal-50',    border: 'border-teal-100',    icon: 'text-teal-600',    num: 'text-teal-700' },
-  emerald: { bg: 'bg-emerald-50', border: 'border-emerald-100', icon: 'text-emerald-600', num: 'text-emerald-700' },
-  amber:   { bg: 'bg-amber-50',   border: 'border-amber-100',   icon: 'text-amber-600',   num: 'text-amber-700' },
-  red:     { bg: 'bg-red-50',     border: 'border-red-100',     icon: 'text-red-600',     num: 'text-red-700' },
-};
-
-// ── Segments ─────────────────────────────────────────────────────────────────
+// ── Segment builder ────────────────────────────────────────────────────────
 function buildSegments(customers, tasks, contracts) {
   const thirtyAgo = new Date();
   thirtyAgo.setDate(thirtyAgo.getDate() - 30);
 
   const tasksByCustomer = {};
   (tasks || []).forEach(t => {
-    if (t.customer_id && (t.status === 'open' || t.status === 'in_progress')) {
+    if (t.customer_id && (t.status === 'open' || t.status === 'in_progress'))
       tasksByCustomer[t.customer_id] = (tasksByCustomer[t.customer_id] || 0) + 1;
-    }
   });
 
   const contractsByCustomer = {};
   (contracts || []).forEach(c => {
-    if (c.customer_id && c.status === 'active') {
+    if (c.customer_id && c.status === 'active')
       contractsByCustomer[c.customer_id] = (contractsByCustomer[c.customer_id] || 0) + 1;
-    }
   });
 
   const primary = customers.filter(c => !c.is_family_member);
 
-  const segs = {
-    all:      { label: 'Alle',                  count: primary.length,   filter: () => true },
-    critical: { label: 'Kritisch',              count: 0,                filter: c => c.status === 'inactive' || ['invalid','expired'].includes(c.mandate_status) },
-    mandate:  { label: 'Mandat ausstehend',     count: 0,                filter: c => c.mandate_status === 'pending' },
-    tasks:    { label: 'Offene Tasks',          count: 0,                filter: c => (tasksByCustomer[c.id] || 0) > 0 },
-    active:   { label: 'Aktiv',                 count: 0,                filter: c => c.status === 'active' },
-    vip:      { label: 'VIP / High-Value',      count: 0,                filter: c => (c.total_premium || 0) >= 5000 },
-    new:      { label: 'Neu (30 Tage)',         count: 0,                filter: c => new Date(c.created_date) >= thirtyAgo },
-    prospect: { label: 'Interessenten',         count: 0,                filter: c => c.status === 'prospect' },
-    private:  { label: 'Privatkunden',          count: 0,                filter: c => c.customer_type !== 'business' },
-    business: { label: 'Unternehmen',           count: 0,                filter: c => c.customer_type === 'business' },
+  const defs = {
+    all:      { label: 'Alle Kunden',          filter: () => true },
+    critical: { label: 'Attention Required',    filter: c => c.status === 'inactive' || ['invalid','expired'].includes(c.mandate_status) },
+    mandate:  { label: 'Mandat ausstehend',     filter: c => c.mandate_status === 'pending' },
+    tasks:    { label: 'Offene Tasks',          filter: c => (tasksByCustomer[c.id] || 0) > 0 },
+    active:   { label: 'Aktiv',                 filter: c => c.status === 'active' },
+    vip:      { label: 'High Value',            filter: c => (c.total_premium || 0) >= 5000 },
+    new:      { label: 'Neuzugänge',            filter: c => new Date(c.created_date) >= thirtyAgo },
+    prospect: { label: 'Interessenten',         filter: c => c.status === 'prospect' },
+    private:  { label: 'Privatkunden',          filter: c => c.customer_type !== 'business' },
+    business: { label: 'Unternehmen',           filter: c => c.customer_type === 'business' },
   };
 
-  // Pre-compute counts
-  Object.keys(segs).forEach(k => {
-    if (k !== 'all') segs[k].count = primary.filter(segs[k].filter).length;
+  const segs = {};
+  Object.entries(defs).forEach(([k, v]) => {
+    segs[k] = { ...v, count: primary.filter(v.filter).length };
   });
 
   return { ...segs, tasksByCustomer, contractsByCustomer };
 }
 
-// ── KPI Card ─────────────────────────────────────────────────────────────────
-function KpiCard({ label, value, sub, icon: Icon, color, onClick }) {
-  const c = KPI_COLORS[color] || KPI_COLORS.blue;
-  return (
-    <button
-      onClick={onClick}
-      className="group flex-1 min-w-[130px] bg-card border border-border rounded-xl px-4 py-4 text-left hover:shadow-card-md hover:border-border/80 transition-all"
-    >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <p className="text-[11px] text-muted-foreground font-medium leading-tight">{label}</p>
-        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${c.bg} border ${c.border}`}>
-          <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
-        </div>
-      </div>
-      <p className={`text-3xl font-black leading-none ${c.num}`}>{value}</p>
-      {sub && <p className="text-[10px] text-muted-foreground mt-1.5">{sub}</p>}
-    </button>
-  );
-}
-
-// ── Today Focus ───────────────────────────────────────────────────────────────
+// ── Today Focus Panel ──────────────────────────────────────────────────────
 function TodayFocusPanel({ tasks, contracts }) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
   const in14 = new Date(today); in14.setDate(in14.getDate() + 14);
 
-  const urgentTasks = (tasks || []).filter(t =>
+  const urgent = (tasks || []).filter(t =>
     (t.status === 'open' || t.status === 'in_progress') && t.priority === 'urgent'
   );
-  const dueTodayTasks = (tasks || []).filter(t =>
+  const dueToday = (tasks || []).filter(t =>
     (t.status === 'open' || t.status === 'in_progress') &&
     t.due_date && new Date(t.due_date) <= tomorrow && t.priority !== 'urgent'
   );
-  const expiringContracts = (contracts || []).filter(c => {
+  const expiring = (contracts || []).filter(c => {
     if (['cancelled', 'archived', 'expired'].includes(c.status)) return false;
     const cd = c.cancellation_deadline ? new Date(c.cancellation_deadline) : null;
     return cd && cd >= today && cd <= in14;
   });
 
   const allOpen = (tasks || []).filter(t => t.status === 'open' || t.status === 'in_progress');
-  const isEmpty = urgentTasks.length === 0 && dueTodayTasks.length === 0 && expiringContracts.length === 0;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* Header */}
       <div>
-        <p className="text-xs font-black text-foreground uppercase tracking-wide">Today Focus</p>
-        <p className="text-[10px] text-muted-foreground mt-0.5">{new Date().toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+        <p className="text-[11px] uppercase tracking-widest font-semibold text-slate-400">
+          {new Date().toLocaleDateString('de-CH', { weekday: 'long' })}
+        </p>
+        <p className="text-sm font-semibold text-slate-800 mt-0.5">
+          {new Date().toLocaleDateString('de-CH', { day: 'numeric', month: 'long' })}
+        </p>
       </div>
-
-      {urgentTasks.length > 0 && (
-        <div>
-          <p className="text-[9px] font-black uppercase tracking-widest text-red-600 mb-2">⚡ Dringend</p>
-          <div className="space-y-1.5">
-            {urgentTasks.slice(0, 4).map(t => (
-              <div key={t.id} className="bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                <p className="text-[11px] font-bold text-red-900 truncate">{t.title}</p>
-                {t.customer_name && <p className="text-[10px] text-red-700 mt-0.5">{t.customer_name}</p>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {dueTodayTasks.length > 0 && (
-        <div>
-          <p className="text-[9px] font-black uppercase tracking-widest text-amber-600 mb-2">📅 Heute fällig</p>
-          <div className="space-y-1.5">
-            {dueTodayTasks.slice(0, 4).map(t => (
-              <div key={t.id} className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                <p className="text-[11px] font-bold text-amber-900 truncate">{t.title}</p>
-                {t.customer_name && <p className="text-[10px] text-amber-700 mt-0.5">{t.customer_name}</p>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {expiringContracts.length > 0 && (
-        <div>
-          <p className="text-[9px] font-black uppercase tracking-widest text-orange-600 mb-2">⏰ Policen (14d)</p>
-          <div className="space-y-1.5">
-            {expiringContracts.slice(0, 3).map(c => (
-              <div key={c.id} className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
-                <p className="text-[11px] font-bold text-orange-900 truncate">{c.insurer}</p>
-                <p className="text-[10px] text-orange-700 mt-0.5">{c.customer_name}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {isEmpty && (
-        <div className="border border-dashed border-emerald-200 rounded-xl px-4 py-6 text-center bg-emerald-50/50">
-          <CheckSquare className="w-6 h-6 text-emerald-500 mx-auto mb-2" />
-          <p className="text-xs font-bold text-emerald-700">Alles erledigt</p>
-          <p className="text-[10px] text-emerald-600 mt-0.5">Keine Aktionen heute.</p>
-        </div>
-      )}
 
       {/* Summary stats */}
-      <div className="space-y-2 pt-2 border-t border-border/60">
-        <div className="flex items-center justify-between py-1">
-          <span className="text-[11px] text-muted-foreground">Offene Tasks</span>
-          <span className="text-sm font-bold text-foreground">{allOpen.length}</span>
-        </div>
-        <div className="flex items-center justify-between py-1">
-          <span className="text-[11px] text-muted-foreground">Dringende Tasks</span>
-          <span className="text-sm font-bold text-red-600">{urgentTasks.length}</span>
-        </div>
-        <div className="flex items-center justify-between py-1">
-          <span className="text-[11px] text-muted-foreground">Policen ablaufend</span>
-          <span className="text-sm font-bold text-orange-600">{expiringContracts.length}</span>
-        </div>
+      <div className="space-y-3">
+        {[
+          { label: 'Offene Tasks',   value: allOpen.length,    alert: allOpen.length > 0 },
+          { label: 'Dringend',       value: urgent.length,     alert: urgent.length > 0, red: true },
+          { label: 'Policen ablaufend', value: expiring.length, alert: expiring.length > 0 },
+        ].map(item => (
+          <div key={item.label} className="flex items-center justify-between">
+            <span className="text-[11px] text-slate-400">{item.label}</span>
+            <span className={`text-[13px] font-bold tabular-nums ${
+              item.red && item.alert ? 'text-red-600' :
+              item.alert ? 'text-amber-600' : 'text-slate-400'
+            }`}>
+              {item.value}
+            </span>
+          </div>
+        ))}
       </div>
+
+      {/* Urgent tasks */}
+      {urgent.length > 0 && (
+        <div>
+          <p className="text-[9px] uppercase tracking-widest font-bold text-red-500 mb-2">Dringend</p>
+          <div className="space-y-1.5">
+            {urgent.slice(0, 4).map(t => (
+              <div key={t.id} className="border-l-2 border-red-400 pl-3 py-1">
+                <p className="text-[11px] font-semibold text-slate-700 truncate">{t.title}</p>
+                {t.customer_name && <p className="text-[10px] text-slate-400">{t.customer_name}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Due today */}
+      {dueToday.length > 0 && (
+        <div>
+          <p className="text-[9px] uppercase tracking-widest font-bold text-amber-500 mb-2">Heute fällig</p>
+          <div className="space-y-1.5">
+            {dueToday.slice(0, 4).map(t => (
+              <div key={t.id} className="border-l-2 border-amber-300 pl-3 py-1">
+                <p className="text-[11px] font-semibold text-slate-700 truncate">{t.title}</p>
+                {t.customer_name && <p className="text-[10px] text-slate-400">{t.customer_name}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Expiring */}
+      {expiring.length > 0 && (
+        <div>
+          <p className="text-[9px] uppercase tracking-widest font-bold text-slate-400 mb-2">Renewal Risk</p>
+          <div className="space-y-1.5">
+            {expiring.slice(0, 3).map(c => (
+              <div key={c.id} className="border-l-2 border-slate-300 pl-3 py-1">
+                <p className="text-[11px] font-semibold text-slate-700 truncate">{c.insurer}</p>
+                <p className="text-[10px] text-slate-400">{c.customer_name}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {urgent.length === 0 && dueToday.length === 0 && expiring.length === 0 && (
+        <div className="py-4 text-center">
+          <p className="text-[11px] text-slate-400">Keine Aktionen heute</p>
+        </div>
+      )}
     </div>
   );
 }
 
-// ── Nav Segment Config (static) ───────────────────────────────────────────────
-const NAV_SEGMENTS = [
-  { key: 'all',      dotCls: 'bg-slate-400' },
-  { key: 'critical', dotCls: 'bg-red-500' },
-  { key: 'mandate',  dotCls: 'bg-amber-400' },
-  { key: 'tasks',    dotCls: 'bg-amber-500' },
-  { key: 'active',   dotCls: 'bg-emerald-500' },
-  { key: 'vip',      dotCls: 'bg-violet-500' },
-  { key: 'new',      dotCls: 'bg-blue-500' },
-  { key: 'prospect', dotCls: 'bg-teal-500' },
-  { key: 'private',  dotCls: 'bg-slate-400' },
-  { key: 'business', dotCls: 'bg-purple-500' },
-];
-
-// ── Main Page ─────────────────────────────────────────────────────────────────
+// ── Main Page ──────────────────────────────────────────────────────────────
 export default function Customers() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -222,7 +185,7 @@ export default function Customers() {
     staleTime: 10 * 60 * 1000,
   });
 
-  const { data: customers = [], isLoading: loadingCustomers } = useQuery({
+  const { data: customers = [], isLoading } = useQuery({
     queryKey: ['customers'],
     queryFn: async () => {
       const all = await base44.entities.Customer.filter({ archived: false }, '-updated_date', 500);
@@ -274,36 +237,33 @@ export default function Customers() {
   const segments = useMemo(() => buildSegments(customers, tasks, contracts), [customers, tasks, contracts]);
   const primaryCustomers = customers.filter(c => !c.is_family_member);
 
-  const segmentFiltered = useMemo(() => {
+  const segFiltered = useMemo(() => {
     const seg = segments[activeSegment];
     if (!seg?.filter) return primaryCustomers;
     return primaryCustomers.filter(seg.filter);
   }, [primaryCustomers, activeSegment, segments]);
 
   const displayed = useMemo(() => {
-    if (!search.trim()) return segmentFiltered;
-    return searchCustomers(segmentFiltered, search);
-  }, [segmentFiltered, search]);
+    if (!search.trim()) return segFiltered;
+    return searchCustomers(segFiltered, search);
+  }, [segFiltered, search]);
 
-  // KPIs
+  // KPI values
   const openTasks = tasks.filter(t => t.status === 'open' || t.status === 'in_progress').length;
-  const urgentCount = tasks.filter(t => t.priority === 'urgent' && (t.status === 'open' || t.status === 'in_progress')).length;
+  const criticalCount = segments.critical?.count ?? 0;
   const totalPremium = contracts.reduce((s, c) => s + (c.premium_yearly || 0), 0);
 
   const handleSave = async (data) => {
-    if (editing) {
-      updateMutation.mutate({ id: editing.id, data });
-    } else {
-      const orgId = data.organization_id || organizations[0]?.id || '';
-      let cData = { ...data, organization_id: orgId };
-      if (!cData.customer_number) {
-        try {
-          const r = await base44.functions.invoke('generateCustomerNumber', {});
-          if (r?.data?.customer_number) cData.customer_number = r.data.customer_number;
-        } catch {}
-      }
-      createMutation.mutate(cData);
+    if (editing) { updateMutation.mutate({ id: editing.id, data }); return; }
+    const orgId = data.organization_id || organizations[0]?.id || '';
+    let cData = { ...data, organization_id: orgId };
+    if (!cData.customer_number) {
+      try {
+        const r = await base44.functions.invoke('generateCustomerNumber', {});
+        if (r?.data?.customer_number) cData.customer_number = r.data.customer_number;
+      } catch {}
     }
+    createMutation.mutate(cData);
   };
 
   const handleExport = () => {
@@ -311,110 +271,125 @@ export default function Customers() {
     const headers = ['Nr.', 'Vorname', 'Nachname', 'Email', 'Telefon', 'Stadt', 'Status'];
     const rows = displayed.map(c => [c.customer_number || '', c.first_name, c.last_name, c.email, c.phone || '', c.city || '', c.status]);
     const csv = [headers, ...rows].map(r => r.map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `portfolio_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    a.download = `portfolio_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
   };
 
-  return (
-    <div className="flex flex-col h-full page-enter">
+  const NAV_KEYS = ['all','critical','mandate','tasks','active','vip','new','prospect','private','business'];
 
-      {/* ── Top Action Bar ── */}
-      <div className="px-6 py-3.5 border-b border-border bg-card shrink-0">
-        <div className="flex items-center gap-3 flex-wrap">
+  return (
+    <div className="flex flex-col h-full bg-background">
+
+      {/* ── Executive Header ── */}
+      <div className="px-8 py-5 border-b border-border/50 bg-card shrink-0">
+        <div className="flex items-center gap-6 flex-wrap">
           {/* Title */}
-          <div className="flex items-center gap-2 mr-2 shrink-0">
-            <Briefcase className="w-4 h-4 text-primary" />
-            <span className="text-sm font-bold text-foreground">Broker Desk</span>
-            <span className="text-muted-foreground/40 text-sm font-light">·</span>
-            <span className="text-sm text-muted-foreground">Kunden</span>
+          <div className="shrink-0">
+            <h1 className="text-[15px] font-semibold text-slate-900 leading-none">Portfolio</h1>
+            <p className="text-[11px] text-slate-400 mt-0.5 tracking-wide">{primaryCustomers.length} Kunden</p>
           </div>
 
-          {/* Search */}
-          <div className="flex-1 min-w-[200px]">
+          {/* Search — central */}
+          <div className="flex-1 min-w-[240px] max-w-lg">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300" />
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Name, E-Mail, Kundennummer, Stadt…"
-                className="w-full pl-9 pr-8 py-2 text-sm border border-input rounded-lg bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                placeholder="Name, E-Mail, Kundennummer…"
+                className="w-full pl-10 pr-9 py-2 text-[13px] border border-border/60 rounded-xl bg-background text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40 transition-all"
               />
               {search && (
-                <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
                   <XCircle className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Button variant="ghost" size="sm" onClick={handleExport} className="text-muted-foreground">
-              <Download className="w-3.5 h-3.5" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setShowMerge(true)} className="text-muted-foreground">
-              <Users className="w-3.5 h-3.5" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setShowImport(true)} className="text-muted-foreground">
-              <Upload className="w-3.5 h-3.5" />
-            </Button>
+          {/* Actions — minimal */}
+          <div className="flex items-center gap-1 shrink-0 ml-auto">
+            <button onClick={handleExport} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors" title="Export">
+              <Download className="w-4 h-4" />
+            </button>
+            <button onClick={() => setShowMerge(true)} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors" title="Zusammenführen">
+              <Users className="w-4 h-4" />
+            </button>
+            <button onClick={() => setShowImport(true)} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors" title="Import">
+              <Upload className="w-4 h-4" />
+            </button>
+            <div className="w-px h-5 bg-border mx-1" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" className="gap-1.5">
-                  <Plus className="w-3.5 h-3.5" /> Neuer Kunde
+                <Button size="sm" className="rounded-xl">
+                  <Plus className="w-3.5 h-3.5 mr-1.5" /> Neuer Kunde
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}>
-                  <User className="w-4 h-4 mr-2 text-blue-600" /> Privatkunde
+                  <User className="w-4 h-4 mr-2 text-slate-400" /> Privatkunde
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}>
-                  <Building2 className="w-4 h-4 mr-2 text-purple-600" /> Firmenkunde
+                  <Building2 className="w-4 h-4 mr-2 text-slate-400" /> Firmenkunde
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
-      </div>
 
-      {/* ── KPI Strip ── */}
-      <div className="px-6 py-4 border-b border-border/60 bg-muted/10 shrink-0">
-        <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1">
-          <KpiCard label="Aktive Kunden"    value={segments.active?.count ?? 0}  sub={`${primaryCustomers.length} im Portfolio`} icon={Users}         color="blue"    onClick={() => setActiveSegment('active')} />
-          <KpiCard label="Leads offen"      value={leads.length}                   sub="Neue Interessenten"                        icon={Target}        color="teal"    onClick={() => {}} />
-          <KpiCard label="Policen aktiv"    value={contracts.length}               sub={`CHF ${Math.round(totalPremium / 12).toLocaleString('de-CH')}/Mt.`} icon={Shield} color="emerald" onClick={() => {}} />
-          <KpiCard label="Offene Tasks"     value={openTasks}                      sub={urgentCount > 0 ? `${urgentCount} dringend` : 'Alle im Griff'}  icon={CheckSquare} color="amber" onClick={() => setActiveSegment('tasks')} />
-          <KpiCard label="Kritisch"         value={segments.critical?.count ?? 0} sub="Mandat / Status"                           icon={AlertTriangle} color="red"     onClick={() => setActiveSegment('critical')} />
+        {/* ── KPI Strip — monochrome ── */}
+        <div className="mt-5 flex items-stretch gap-8 overflow-x-auto scrollbar-none">
+          {[
+            { label: 'Aktive Kunden', value: segments.active?.count ?? 0, onClick: () => setActiveSegment('active') },
+            { label: 'Policen',       value: contracts.length,             onClick: () => {} },
+            { label: 'Jahresprämien', value: `CHF ${Math.round(totalPremium / 1000)}k`, onClick: () => {} },
+            { label: 'Offene Tasks',  value: openTasks, alert: openTasks > 0, onClick: () => setActiveSegment('tasks') },
+            { label: 'Leads offen',   value: leads.length,                 onClick: () => {} },
+            { label: 'Kritisch',      value: criticalCount, alert: criticalCount > 0, red: true, onClick: () => setActiveSegment('critical') },
+          ].map((kpi, i, arr) => (
+            <button
+              key={kpi.label}
+              onClick={kpi.onClick}
+              className={`shrink-0 text-left hover:opacity-70 transition-opacity ${i < arr.length - 1 ? 'pr-8 border-r border-border/40' : ''}`}
+            >
+              <p className="text-[10px] uppercase tracking-widest font-medium text-slate-400">{kpi.label}</p>
+              <p className={`text-2xl font-black mt-0.5 tabular-nums leading-none ${
+                kpi.red && kpi.alert ? 'text-red-600' :
+                kpi.alert ? 'text-amber-600' : 'text-slate-800'
+              }`}>
+                {kpi.value}
+              </p>
+            </button>
+          ))}
         </div>
       </div>
 
       {/* ── 3-Column Layout ── */}
       <div className="flex-1 flex overflow-hidden">
 
-        {/* LEFT — Smart Nav */}
-        <div className="w-52 shrink-0 border-r border-border bg-card/60 overflow-y-auto py-5 px-3 hidden md:flex md:flex-col gap-1">
-          <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground px-2 mb-3">Segmente</p>
-          {NAV_SEGMENTS.map(({ key, dotCls }) => {
+        {/* LEFT — Clean Navigation */}
+        <div className="w-48 shrink-0 border-r border-border/40 bg-card overflow-y-auto py-6 px-4 hidden md:flex md:flex-col gap-0.5">
+          {NAV_KEYS.map(key => {
             const seg = segments[key];
             if (!seg) return null;
             const isActive = activeSegment === key;
+            const isCritical = key === 'critical' && seg.count > 0;
             return (
               <button
                 key={key}
                 onClick={() => setActiveSegment(key)}
-                className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-left transition-colors ${
-                  isActive ? 'bg-primary text-primary-foreground font-semibold shadow-sm' : 'hover:bg-muted/70 text-muted-foreground hover:text-foreground'
+                className={`flex items-center justify-between gap-2 w-full px-3 py-2 rounded-lg text-left transition-colors ${
+                  isActive
+                    ? 'bg-slate-900 text-white'
+                    : 'hover:bg-slate-50 text-slate-500 hover:text-slate-800'
                 }`}
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'bg-primary-foreground' : dotCls}`} />
-                  <span className="text-xs truncate">{seg.label}</span>
-                </div>
+                <span className="text-[12px] font-medium truncate">{seg.label}</span>
                 {seg.count > 0 && (
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
-                    isActive ? 'bg-white/20 text-primary-foreground' : 'bg-muted text-muted-foreground'
+                  <span className={`text-[10px] font-bold tabular-nums ${
+                    isActive ? 'text-white/60' :
+                    isCritical ? 'text-red-500' :
+                    key === 'mandate' && seg.count > 0 ? 'text-amber-500' : 'text-slate-400'
                   }`}>
                     {seg.count}
                   </span>
@@ -424,37 +399,33 @@ export default function Customers() {
           })}
         </div>
 
-        {/* CENTER — Customer Feed */}
-        <div className="flex-1 overflow-y-auto">
-          {/* Sticky segment bar */}
-          <div className="sticky top-0 z-10 px-5 py-2.5 bg-card/95 backdrop-blur-sm border-b border-border/50 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Filter className="w-3 h-3 text-muted-foreground" />
-              <span className="text-xs font-semibold text-foreground">{segments[activeSegment]?.label ?? 'Alle'}</span>
-              <span className="text-xs text-muted-foreground">· {displayed.length} Kunden</span>
-              {search && <span className="text-xs text-primary">· "{search}"</span>}
+        {/* CENTER — Relationship Feed */}
+        <div className="flex-1 overflow-y-auto bg-slate-50/30">
+          {/* Minimal segment header */}
+          <div className="sticky top-0 z-10 px-6 py-3 bg-white/90 backdrop-blur-sm border-b border-border/30 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-[13px] font-semibold text-slate-800">{segments[activeSegment]?.label ?? 'Alle'}</span>
+              <span className="text-[11px] text-slate-400">{displayed.length} Kunden{search ? ` · "${search}"` : ''}</span>
             </div>
-            {/* Mobile seg select */}
+            {/* Mobile nav */}
             <div className="md:hidden">
               <select value={activeSegment} onChange={e => setActiveSegment(e.target.value)}
-                className="text-xs border border-input rounded px-2 py-1 bg-background">
-                {NAV_SEGMENTS.map(({ key }) => (
-                  <option key={key} value={key}>{segments[key]?.label}</option>
-                ))}
+                className="text-xs border border-border rounded px-2 py-1 bg-background">
+                {NAV_KEYS.map(k => <option key={k} value={k}>{segments[k]?.label}</option>)}
               </select>
             </div>
           </div>
 
-          <div className="p-5 space-y-3">
-            {loadingCustomers ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground py-16 justify-center">
+          <div className="p-6 space-y-3 max-w-3xl">
+            {isLoading ? (
+              <div className="flex items-center gap-2 text-sm text-slate-400 py-20 justify-center">
                 <Loader2 className="w-4 h-4 animate-spin" /> Lade Portfolio…
               </div>
             ) : displayed.length === 0 ? (
-              <EmptyState icon={User}
-                title="Keine Kunden in diesem Segment"
-                description={search ? 'Suche anpassen oder Segment wechseln.' : 'Dieses Segment ist leer.'}
-              />
+              <div className="py-20 text-center">
+                <p className="text-sm font-medium text-slate-500">Keine Kunden in diesem Segment</p>
+                <p className="text-[12px] text-slate-400 mt-1">{search ? 'Suchbegriff anpassen.' : 'Dieses Segment ist leer.'}</p>
+              </div>
             ) : (
               displayed.map(customer => (
                 <CustomerCard
@@ -471,8 +442,8 @@ export default function Customers() {
           </div>
         </div>
 
-        {/* RIGHT — Today Focus */}
-        <div className="w-60 shrink-0 border-l border-border bg-card/60 overflow-y-auto py-5 px-4 hidden lg:block">
+        {/* RIGHT — Operational Intelligence */}
+        <div className="w-52 shrink-0 border-l border-border/40 bg-card overflow-y-auto py-6 px-5 hidden lg:block">
           <TodayFocusPanel tasks={tasks} contracts={contracts} />
         </div>
       </div>
@@ -483,7 +454,7 @@ export default function Customers() {
           <DialogHeader>
             <DialogTitle>
               {editing
-                ? (editing.is_family_member ? 'Familienmitglied bearbeiten' : editing.customer_type === 'business' ? 'Unternehmen bearbeiten' : 'Privatkunde bearbeiten')
+                ? (editing.is_family_member ? 'Familienmitglied' : editing.customer_type === 'business' ? 'Unternehmen' : 'Privatkunde') + ' bearbeiten'
                 : newCustomerType === 'business' ? 'Neuer Firmenkunde' : 'Neuer Privatkunde'}
             </DialogTitle>
           </DialogHeader>
@@ -494,7 +465,6 @@ export default function Customers() {
           )}
         </DialogContent>
       </Dialog>
-
       <FastImportWizard open={showImport} onOpenChange={setShowImport}
         onSuccess={() => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setSearch(''); setActiveSegment('all'); }} />
       <CustomerMergeDialog open={showMerge} onOpenChange={setShowMerge} />
