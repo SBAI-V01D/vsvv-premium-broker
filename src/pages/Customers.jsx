@@ -298,21 +298,24 @@ export default function Customers() {
     return primaryCustomers.filter(seg.filter);
   }, [primaryCustomers, activeSegment, segments]);
 
-  // Search: when query active, search ALL primary customers (not just current segment)
+  // Search: when query active, search ALL customers (primary + family members)
   const { displayed, matchedFamilyIds } = useMemo(() => {
     const familyMembers = customers.filter(c => c.is_family_member);
     if (!search.trim()) {
       return { displayed: sortCustomers(segFiltered, sortBy), matchedFamilyIds: new Set() };
     }
-    // Search across all primary customers so segment filter doesn't hide results
-    const directMatches = searchCustomers(primaryCustomers, search);
+    // Search across ALL customers (primary + family) so segment filter doesn't hide results
+    const allCustomers = [...primaryCustomers, ...familyMembers];
+    const directMatches = searchCustomers(allCustomers, search);
     const directMatchIds = new Set(directMatches.map(c => c.id));
-    const matchedFamily = searchCustomers(familyMembers, search);
+    const matchedFamily = directMatches.filter(m => m.is_family_member);
     const matchedFamilyMemberIds = new Set(matchedFamily.map(m => m.id));
     const parentIds = new Set(matchedFamily.map(m => m.primary_customer_id).filter(Boolean));
     const familyParents = primaryCustomers.filter(c => parentIds.has(c.id) && !directMatchIds.has(c.id));
+    // Only show primary customers in results (not family members directly)
+    const primaryMatches = directMatches.filter(c => !c.is_family_member);
     return {
-      displayed: sortCustomers([...directMatches, ...familyParents], sortBy),
+      displayed: sortCustomers([...primaryMatches, ...familyParents], sortBy),
       matchedFamilyIds: matchedFamilyMemberIds,
     };
   }, [segFiltered, search, customers, primaryCustomers, sortBy]);
