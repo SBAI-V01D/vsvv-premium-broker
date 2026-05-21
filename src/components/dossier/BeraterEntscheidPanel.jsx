@@ -65,13 +65,15 @@ export default function BeraterEntscheidPanel({ dossier, entries = [] }) {
       const approvalChanged =
         data.advisor_approved !== undefined &&
         data.advisor_approved !== (dossier.advisor_approved || false);
+
+      // Benutzer laden für Audit-Trail
+      let userInfo = {};
+      try {
+        const me = await base44.auth.me();
+        userInfo = { user_id: me.id, user_name: me.full_name || me.email };
+      } catch {}
+
       if (approvalChanged) {
-        // Benutzer laden für Audit-Trail
-        let userInfo = {};
-        try {
-          const me = await base44.auth.me();
-          userInfo = { user_id: me.id, user_name: me.full_name || me.email };
-        } catch {}
         const entry = {
           action: data.advisor_approved ? 'approved' : 'approval_revoked',
           timestamp: new Date().toISOString(),
@@ -80,11 +82,52 @@ export default function BeraterEntscheidPanel({ dossier, entries = [] }) {
           ...userInfo,
         };
         data = { ...data, approval_history: [...(dossier.approval_history || []), entry] };
-        // Bei Freigabe: approved_at / approved_by setzen; bei Widerruf: leeren
         if (data.advisor_approved) {
-          data = { ...data, approved_at: entry.timestamp, approved_by: userInfo.user_name || '' };
+          // Freigabe: setze approved_at, approved_by, lösche reapproval_required
+          data = {
+            ...data,
+            approved_at: entry.timestamp,
+            approved_by: userInfo.user_name || '',
+            approved_version: (dossier.version || 1),
+            reapproval_required: false,
+            reapproval_reason: null,
+            review_status: 'freigegeben',
+          };
         } else {
-          data = { ...data, approved_at: null, approved_by: null, approved_snapshot_id: null };
+          // Widerruf: setze revoked_at, revoked_by, lösche Freigabefelder
+          data = {
+            ...data,
+            approved_at: null,
+            approved_by: null,
+            approved_snapshot_id: null,
+            revoked_at: entry.timestamp,
+            revoked_by: userInfo.user_name || '',
+            review_status: 'berater_angepasst',
+          };
+        }
+      } else if (dossier.advisor_approved) {
+        // Felderänderung NACH Freigabe → Immutable-Schutz auslösen
+        const CRITICAL_FIELDS = ['advisor_final_recommendation', 'advisor_recommendation_label', 'advisor_recommendation_reason', 'advisor_recommendation_highlights'];
+        const changedFields = CRITICAL_FIELDS.filter(f => data[f] !== undefined && data[f] !== dossier[f]);
+        if (changedFields.length > 0) {
+          const entry = {
+            action: 'reapproval_triggered',
+            timestamp: new Date().toISOString(),
+            changed_fields: changedFields.join(', '),
+            previous_approved: true,
+            new_approved: false,
+            ...userInfo,
+          };
+          data = {
+            ...data,
+            advisor_approved: false,
+            reapproval_required: true,
+            reapproval_reason: `Änderungen an: ${changedFields.join(', ')}`,
+            revoked_at: entry.timestamp,
+            revoked_by: userInfo.user_name || '',
+            review_status: 'needs_reapproval',
+            approval_history: [...(dossier.approval_history || []), entry],
+          };
         }
       }
       return base44.entities.AdvisoryDossier.update(dossier.id, data);
@@ -104,6 +147,7 @@ export default function BeraterEntscheidPanel({ dossier, entries = [] }) {
 
   const isApproved = form.advisor_approved;
   const hasRec = !!form.advisor_final_recommendation;
+  const needsReapproval = dossier?.reapproval_required && !form.advisor_approved;
 
   // Nur Gruppen anzeigen, die tatsächlich Einträge haben
   const presentGruppen = GRUPPE_OPTIONS.filter(o =>
@@ -152,6 +196,18 @@ export default function BeraterEntscheidPanel({ dossier, entries = [] }) {
 
       {/* Form */}
       <div className="px-5 py-4 bg-white space-y-4 border-t border-border/40">
+        {/* Reapproval-Warnung */}
+        {needsReapproval && (
+          <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-300 rounded-lg px-4 py-3">
+            <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs font-bold text-amber-800">Erneute Freigabe erforderlich</p>
+              {dossier.reapproval_reason && (
+                <p className="text-xs text-amber-700 mt-0.5">{dossier.reapproval_reason}</p>
+              )}
+            </div>
+          </div>
+        )}
         <p className="text-xs text-muted-foreground italic">
           KI liefert Optionen. Der Berater liefert die Empfehlung.
           Wählen Sie die finale Lösung — erst dann ist das PDF bereit.

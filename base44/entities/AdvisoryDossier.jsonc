@@ -3,24 +3,19 @@
   "type": "object",
   "properties": {
     "customer_id": {
-      "type": "string",
-      "description": "Read-link zu Customer"
+      "type": "string"
     },
     "customer_name": {
-      "type": "string",
-      "description": "Kundenname (Cache)"
+      "type": "string"
     },
     "advisor_id": {
-      "type": "string",
-      "description": "Berater-ID"
+      "type": "string"
     },
     "organization_id": {
-      "type": "string",
-      "description": "Organisations-ID"
+      "type": "string"
     },
     "title": {
-      "type": "string",
-      "description": "Dossier-Titel"
+      "type": "string"
     },
     "dossier_type": {
       "type": "string",
@@ -49,10 +44,11 @@
         "ki_analysiert",
         "in_pruefung",
         "berater_angepasst",
-        "freigegeben"
+        "freigegeben",
+        "needs_reapproval"
       ],
       "default": "offen",
-      "description": "Review-Pipeline: dokumentierter Beratungsprozess-Status"
+      "description": "Review-Pipeline inkl. needs_reapproval nach nachtr\u00e4glichen \u00c4nderungen"
     },
     "valid_from": {
       "type": "string",
@@ -97,48 +93,99 @@
       "type": "string"
     },
     "advisor_final_recommendation": {
-      "type": "string",
-      "description": "Beraterentscheid: Finale Empfehlung (Vergleichsgruppe)"
+      "type": "string"
     },
     "advisor_recommendation_label": {
-      "type": "string",
-      "description": "Beraterentscheid: Positionierung/Label"
+      "type": "string"
     },
     "advisor_recommendation_reason": {
-      "type": "string",
-      "description": "Beraterentscheid: Begr\u00fcndung"
+      "type": "string"
     },
     "advisor_recommendation_highlights": {
-      "type": "string",
-      "description": "Beraterentscheid: Vorteile als Zeilenumbruch-getrennte Liste (Checkmarks im PDF)"
+      "type": "string"
     },
     "advisor_approved": {
       "type": "boolean",
       "default": false,
-      "description": "Beraterentscheid: Freigegeben f\u00fcr PDF-Export"
+      "description": "Freigabe-Flag \u2014 wird automatisch zur\u00fcckgesetzt wenn reapproval_required ausgel\u00f6st wird"
     },
     "approved_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "Zeitstempel der letzten Freigabe"
+      "format": "date-time"
     },
     "approved_by": {
-      "type": "string",
-      "description": "E-Mail / Name des freigebenden Beraters"
+      "type": "string"
+    },
+    "approved_version": {
+      "type": "number",
+      "description": "Versionsnummer bei letzter Freigabe"
     },
     "approved_snapshot_id": {
+      "type": "string"
+    },
+    "reapproval_required": {
+      "type": "boolean",
+      "default": false,
+      "description": "Dossier wurde nach Freigabe ver\u00e4ndert \u2014 erneute Freigabe erforderlich"
+    },
+    "reapproval_reason": {
       "type": "string",
-      "description": "Snapshot-ID der zum Freigabezeitpunkt erstellten Version (Revisionssicherheit)"
+      "description": "Warum wurde die erneute Freigabe ausgel\u00f6st?"
+    },
+    "revoked_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "revoked_by": {
+      "type": "string"
+    },
+    "extraction_confidence": {
+      "type": "number",
+      "description": "Durchschnittliche KI-Extraktionsconfidence 0.0\u20131.0"
+    },
+    "review_confidence": {
+      "type": "number",
+      "description": "Berechnete Review-Qualit\u00e4t nach manuellem Check 0.0\u20131.0"
+    },
+    "requires_manual_review": {
+      "type": "boolean",
+      "default": false,
+      "description": "Pflichtreview wegen niedriger Confidence"
+    },
+    "ai_risk_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "description": "KI-Risikobewertung basierend auf Confidence-Scores"
+    },
+    "confidence_reason": {
+      "type": "string",
+      "description": "Begr\u00fcndung des Confidence-Levels"
+    },
+    "final_pdf_url": {
+      "type": "string",
+      "description": "URL zur archivierten finalen PDF-Version"
+    },
+    "final_pdf_generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "final_pdf_version": {
+      "type": "number"
     },
     "approval_history": {
       "type": "array",
-      "description": "Audit-Log: Alle Freigabe-Aktionen",
+      "description": "Vollst\u00e4ndiger Audit-Trail aller Freigabe-Aktionen",
       "items": {
         "type": "object",
         "properties": {
           "action": {
             "type": "string",
-            "description": "approved | approval_revoked"
+            "description": "approved | approval_revoked | reapproval_triggered | field_changed"
           },
           "timestamp": {
             "type": "string"
@@ -154,6 +201,10 @@
           },
           "new_approved": {
             "type": "boolean"
+          },
+          "changed_fields": {
+            "type": "string",
+            "description": "Komma-getrennte Feldliste bei \u00c4nderungen"
           },
           "notes": {
             "type": "string"

@@ -15,8 +15,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
   Printer, Eye, Save, Clock, FileText, ChevronDown, ChevronUp,
-  Shield, AlertCircle, Loader2,
+  Shield, AlertCircle, Loader2, RefreshCw,
 } from 'lucide-react';
+import DossierApprovalTimeline from '@/components/dossier/DossierApprovalTimeline';
 import DossierPrintTemplate from '@/components/dossier/print/DossierPrintTemplate';
 import {
   buildSnapshot, serializeSnapshot, deserializeSnapshot,
@@ -295,6 +296,7 @@ export default function DossierExportTab({ dossier }) {
 
   const isDataLoading = loadingCustomer || loadingContracts;
   const isApproved = dossier?.advisor_approved === true;
+  const needsReapproval = dossier?.reapproval_required === true;
 
   return (
     <>
@@ -306,8 +308,27 @@ export default function DossierExportTab({ dossier }) {
       )}
 
       <div className="space-y-5">
+        {/* Reapproval-Warnung — höchste Priorität */}
+        {needsReapproval && (
+          <div className="flex items-start gap-3 bg-amber-50 border-2 border-amber-400 rounded-xl px-5 py-4">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+              <RefreshCw className="w-4 h-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-amber-800 mb-1">Erneute Freigabe erforderlich — Dossier wurde nach Freigabe geändert</p>
+              {dossier?.reapproval_reason && (
+                <p className="text-xs text-amber-700 mb-1">{dossier.reapproval_reason}</p>
+              )}
+              <p className="text-xs text-amber-700">
+                Die Änderungen haben die bestehende Freigabe automatisch zurückgesetzt.
+                Bitte Beraterentscheid prüfen und erneut freigeben.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* PDF-Gate: Freigabe erforderlich */}
-        {!isApproved && (
+        {!isApproved && !needsReapproval && (
           <div className="flex items-start gap-3 bg-amber-50 border-2 border-amber-300 rounded-xl px-5 py-4">
             <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
               <Shield className="w-4 h-4 text-amber-600" />
@@ -413,6 +434,17 @@ export default function DossierExportTab({ dossier }) {
               Fehler: {createSnapMutation.error?.message ?? 'Snapshot konnte nicht gespeichert werden.'}
             </div>
           )}
+        </div>
+
+        {/* Approval Timeline */}
+        <div className="border border-border rounded-xl overflow-hidden">
+          <div className="px-5 py-4 bg-muted/30 border-b border-border/60">
+            <p className="text-sm font-semibold text-foreground">Freigabe-Protokoll</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Vollständiger Audit-Trail aller Freigabe-Aktionen</p>
+          </div>
+          <div className="p-4">
+            <DossierApprovalTimeline dossier={dossier} />
+          </div>
         </div>
 
         {/* Snapshot-Verlauf */}
