@@ -1,12 +1,13 @@
 /**
  * DossierBrokerSection — Berater & Organisation im Dossier
  *
- * - Zeigt/editiert snap_org_* und snap_adv_* Felder auf dem Dossier
- * - Schreibt NUR auf AdvisoryDossier, NICHT auf Org/Advisor Stammdaten
- * - Auto-Befüllung aus Live-Daten (einmalig, auf Wunsch)
- * - Historisiert: Änderungen am Stammdaten beeinflussen dieses Dossier nicht
+ * Datenquellen (Priorität):
+ *   1. Dossier snap_* Felder (historisiert, persistent)
+ *   2. Live-Daten aus Advisor + Organization (via customer.advisor_id / customer.organization_id)
+ *
+ * Schreibt NUR auf AdvisoryDossier. Keine Mutation an Stammdaten.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Building2, User, Edit3, Check, X, Download, BadgeCheck } from 'lucide-react';
@@ -43,16 +44,26 @@ export default function DossierBrokerSection({ dossier }) {
 
   const hasSnapData = !!(dossier?.snap_org_name || dossier?.snap_adv_firstname);
 
-  // Live-Daten nur für Auto-Befüllung laden
+  // 1. Kunde laden → liefert advisor_id + organization_id als Fallback
+  const { data: customer } = useQuery({
+    queryKey: ['broker_section_customer', dossier?.customer_id],
+    queryFn: () => base44.entities.Customer.filter({ id: dossier.customer_id }).then(r => r[0]),
+    enabled: !!dossier?.customer_id,
+  });
+
+  const advisorId = dossier?.advisor_id || customer?.advisor_id;
+  const orgId = dossier?.organization_id || customer?.organization_id;
+
+  // 2. Live-Daten immer laden (für Anzeige + Auto-Befüllung)
   const { data: liveOrg } = useQuery({
-    queryKey: ['snap_org', dossier?.organization_id],
-    queryFn: () => base44.entities.Organization.filter({ id: dossier.organization_id }).then(r => r[0]),
-    enabled: !!dossier?.organization_id && !hasSnapData,
+    queryKey: ['broker_section_org', orgId],
+    queryFn: () => base44.entities.Organization.filter({ id: orgId }).then(r => r[0]),
+    enabled: !!orgId,
   });
   const { data: liveAdv } = useQuery({
-    queryKey: ['snap_adv', dossier?.advisor_id],
-    queryFn: () => base44.entities.Advisor.filter({ id: dossier.advisor_id }).then(r => r[0]),
-    enabled: !!dossier?.advisor_id && !hasSnapData,
+    queryKey: ['broker_section_adv', advisorId],
+    queryFn: () => base44.entities.Advisor.filter({ id: advisorId }).then(r => r[0]),
+    enabled: !!advisorId,
   });
 
   const updateMutation = useMutation({
@@ -65,64 +76,55 @@ export default function DossierBrokerSection({ dossier }) {
     },
   });
 
-  const buildFormFromDossier = () => ({
-    snap_org_name:    dossier.snap_org_name    || '',
-    snap_org_street:  dossier.snap_org_street  || '',
-    snap_org_zip:     dossier.snap_org_zip     || '',
-    snap_org_city:    dossier.snap_org_city    || '',
-    snap_org_phone:   dossier.snap_org_phone   || '',
-    snap_org_email:   dossier.snap_org_email   || '',
-    snap_org_website: dossier.snap_org_website || '',
-    snap_org_finma:   dossier.snap_org_finma   || '',
-    snap_adv_firstname: dossier.snap_adv_firstname || '',
-    snap_adv_lastname:  dossier.snap_adv_lastname  || '',
-    snap_adv_function:  dossier.snap_adv_function  || '',
-    snap_adv_phone:     dossier.snap_adv_phone     || '',
-    snap_adv_email:     dossier.snap_adv_email     || '',
-    snap_adv_finma:     dossier.snap_adv_finma     || '',
-    snap_adv_vbv:       dossier.snap_adv_vbv       || '',
+  const buildFromLive = () => ({
+    snap_org_name:      liveOrg?.name         || '',
+    snap_org_street:    liveOrg?.street        || '',
+    snap_org_zip:       liveOrg?.zip_code      || '',
+    snap_org_city:      liveOrg?.city          || '',
+    snap_org_phone:     liveOrg?.phone         || '',
+    snap_org_email:     liveOrg?.email         || '',
+    snap_org_website:   liveOrg?.website       || '',
+    snap_org_finma:     liveOrg?.finma_number  || '',
+    snap_adv_firstname: liveAdv?.firstname     || '',
+    snap_adv_lastname:  liveAdv?.lastname      || '',
+    snap_adv_function:  '',
+    snap_adv_phone:     liveAdv?.phone         || '',
+    snap_adv_email:     liveAdv?.email         || '',
+    snap_adv_finma:     liveAdv?.finma_number  || '',
+    snap_adv_vbv:       liveAdv?.vbv_number    || '',
   });
 
-  const handleAutoFill = () => {
-    const prefilled = {
-      snap_org_name:    liveOrg?.name    || '',
-      snap_org_street:  liveOrg?.street  || '',
-      snap_org_zip:     liveOrg?.zip_code || '',
-      snap_org_city:    liveOrg?.city    || '',
-      snap_org_phone:   liveOrg?.phone   || '',
-      snap_org_email:   liveOrg?.email   || '',
-      snap_org_website: liveOrg?.website || '',
-      snap_org_finma:   liveOrg?.finma_number || '',
-      snap_adv_firstname: liveAdv?.firstname || '',
-      snap_adv_lastname:  liveAdv?.lastname  || '',
-      snap_adv_function:  '',
-      snap_adv_phone:     liveAdv?.phone || '',
-      snap_adv_email:     liveAdv?.email || '',
-      snap_adv_finma:     liveAdv?.finma_number || '',
-      snap_adv_vbv:       liveAdv?.vbv_number  || '',
-    };
-    setForm(prefilled);
-    setEditing(true);
-  };
+  const buildFromSnap = () => ({
+    snap_org_name:      dossier?.snap_org_name      || '',
+    snap_org_street:    dossier?.snap_org_street    || '',
+    snap_org_zip:       dossier?.snap_org_zip       || '',
+    snap_org_city:      dossier?.snap_org_city      || '',
+    snap_org_phone:     dossier?.snap_org_phone     || '',
+    snap_org_email:     dossier?.snap_org_email     || '',
+    snap_org_website:   dossier?.snap_org_website   || '',
+    snap_org_finma:     dossier?.snap_org_finma     || '',
+    snap_adv_firstname: dossier?.snap_adv_firstname || '',
+    snap_adv_lastname:  dossier?.snap_adv_lastname  || '',
+    snap_adv_function:  dossier?.snap_adv_function  || '',
+    snap_adv_phone:     dossier?.snap_adv_phone     || '',
+    snap_adv_email:     dossier?.snap_adv_email     || '',
+    snap_adv_finma:     dossier?.snap_adv_finma     || '',
+    snap_adv_vbv:       dossier?.snap_adv_vbv       || '',
+  });
 
-  const handleEdit = () => {
-    setForm(buildFormFromDossier());
-    setEditing(true);
-  };
-
-  const handleSave = () => {
-    updateMutation.mutate(form);
-  };
-
+  const handleAutoFill = () => { setForm(buildFromLive()); setEditing(true); };
+  const handleEdit = () => { setForm(buildFromSnap()); setEditing(true); };
+  const handleSave = () => updateMutation.mutate(form);
   const set = (field) => (val) => setForm(f => ({ ...f, [field]: val }));
 
+  // ── Edit-Modus ─────────────────────────────────────────────────────────────
   if (editing) {
     return (
       <div className="space-y-4 mt-4">
         <div className="flex items-center justify-between gap-3 bg-primary/5 border border-primary/20 rounded-lg px-4 py-2.5">
           <div className="flex items-center gap-2 text-xs text-primary font-medium">
             <Edit3 className="w-3.5 h-3.5" />
-            Absenderdaten bearbeiten — wird nur in diesem Dossier gespeichert
+            Absenderdaten — wird nur in diesem Dossier gespeichert (historisiert)
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -144,7 +146,6 @@ export default function DossierBrokerSection({ dossier }) {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Organisation */}
           <div className="bg-card border border-border rounded-xl p-5 space-y-3">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
@@ -159,12 +160,11 @@ export default function DossierBrokerSection({ dossier }) {
               <EditField label="Ort" value={form.snap_org_city} onChange={set('snap_org_city')} />
             </div>
             <EditField label="Telefon" value={form.snap_org_phone} onChange={set('snap_org_phone')} />
-            <EditField label="E-Mail" value={form.snap_org_email} onChange={set('snap_org_email')} type="email" />
+            <EditField label="E-Mail" type="email" value={form.snap_org_email} onChange={set('snap_org_email')} />
             <EditField label="Website" value={form.snap_org_website} onChange={set('snap_org_website')} />
             <EditField label="FINMA-Nr." value={form.snap_org_finma} onChange={set('snap_org_finma')} />
           </div>
 
-          {/* Berater */}
           <div className="bg-card border border-border rounded-xl p-5 space-y-3">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center">
@@ -178,7 +178,7 @@ export default function DossierBrokerSection({ dossier }) {
             </div>
             <EditField label="Funktion / Titel" value={form.snap_adv_function} onChange={set('snap_adv_function')} />
             <EditField label="Telefon" value={form.snap_adv_phone} onChange={set('snap_adv_phone')} />
-            <EditField label="E-Mail" value={form.snap_adv_email} onChange={set('snap_adv_email')} type="email" />
+            <EditField label="E-Mail" type="email" value={form.snap_adv_email} onChange={set('snap_adv_email')} />
             <EditField label="FINMA-Nr." value={form.snap_adv_finma} onChange={set('snap_adv_finma')} />
             <EditField label="VBV-Nr." value={form.snap_adv_vbv} onChange={set('snap_adv_vbv')} />
           </div>
@@ -187,84 +187,124 @@ export default function DossierBrokerSection({ dossier }) {
     );
   }
 
-  // ── Read-only Ansicht ─────────────────────────────────────────────────────
+  // ── Read-only — zeigt entweder Snap-Daten oder Live-Vorschau ───────────────
+  const displayOrg = hasSnapData ? {
+    name:    dossier.snap_org_name,
+    address: [dossier.snap_org_street, `${dossier.snap_org_zip || ''} ${dossier.snap_org_city || ''}`.trim()].filter(Boolean).join(', '),
+    phone:   dossier.snap_org_phone,
+    email:   dossier.snap_org_email,
+    website: dossier.snap_org_website,
+    finma:   dossier.snap_org_finma,
+  } : liveOrg ? {
+    name:    liveOrg.name,
+    address: [liveOrg.street, `${liveOrg.zip_code || ''} ${liveOrg.city || ''}`.trim()].filter(Boolean).join(', '),
+    phone:   liveOrg.phone,
+    email:   liveOrg.email,
+    website: liveOrg.website,
+    finma:   liveOrg.finma_number,
+  } : null;
+
+  const displayAdv = hasSnapData ? {
+    name:     [dossier.snap_adv_firstname, dossier.snap_adv_lastname].filter(Boolean).join(' '),
+    function: dossier.snap_adv_function,
+    phone:    dossier.snap_adv_phone,
+    email:    dossier.snap_adv_email,
+    finma:    dossier.snap_adv_finma,
+    vbv:      dossier.snap_adv_vbv,
+  } : liveAdv ? {
+    name:     [liveAdv.firstname, liveAdv.lastname].filter(Boolean).join(' '),
+    function: '',
+    phone:    liveAdv.phone,
+    email:    liveAdv.email,
+    finma:    liveAdv.finma_number,
+    vbv:      liveAdv.vbv_number,
+  } : null;
+
+  const hasAnyData = !!(displayOrg || displayAdv);
+
   return (
     <div className="mt-4 space-y-4">
-      <div className="flex items-center justify-between gap-3 text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-        <div className="flex items-center gap-2 text-amber-800">
+      {/* Status-Banner */}
+      <div className="flex items-center justify-between gap-3 text-xs rounded-lg px-3 py-2 border"
+        style={hasSnapData
+          ? { background: '#f0fdf4', borderColor: '#bbf7d0' }
+          : { background: '#fffbeb', borderColor: '#fde68a' }}
+      >
+        <div className="flex items-center gap-2" style={{ color: hasSnapData ? '#166534' : '#92400e' }}>
           <BadgeCheck className="w-3.5 h-3.5 shrink-0" />
-          <span>
-            <strong>Absenderdaten (historisiert)</strong> — werden im PDF-Header angezeigt und ändern sich nie rückwirkend.
-          </span>
+          {hasSnapData
+            ? <span><strong>Im Dossier gespeichert</strong> — historisch stabil, unabhängig von Stammdatenänderungen.</span>
+            : <span><strong>Live-Vorschau aus Stammdaten</strong> — noch nicht im Dossier gespeichert. Daten für PDF übernehmen.</span>
+          }
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {!hasSnapData && (liveOrg || liveAdv) && (
+          {!hasSnapData && hasAnyData && (
             <button
               onClick={handleAutoFill}
-              className="flex items-center gap-1.5 text-amber-700 font-medium hover:underline"
+              className="flex items-center gap-1.5 font-medium hover:underline text-amber-700"
             >
               <Download className="w-3 h-3" />
-              Auto-befüllen
+              Ins Dossier übernehmen
             </button>
           )}
           <button
-            onClick={handleEdit}
+            onClick={hasSnapData ? handleEdit : handleAutoFill}
             className="flex items-center gap-1.5 text-primary font-medium hover:underline"
           >
             <Edit3 className="w-3 h-3" />
-            Bearbeiten
+            {hasSnapData ? 'Bearbeiten' : 'Erfassen'}
           </button>
         </div>
       </div>
 
-      {!hasSnapData ? (
+      {!hasAnyData ? (
         <div className="bg-card border border-dashed border-border rounded-xl p-6 text-center text-sm text-muted-foreground">
-          Noch keine Absenderdaten hinterlegt.{' '}
-          {(liveOrg || liveAdv) ? (
-            <button onClick={handleAutoFill} className="text-primary font-medium hover:underline">
-              Aus Stammdaten übernehmen
-            </button>
-          ) : (
-            <button onClick={handleEdit} className="text-primary font-medium hover:underline">
-              Jetzt erfassen
-            </button>
-          )}
+          Kein Berater oder keine Organisation am Kunden/Dossier hinterlegt.{' '}
+          <button onClick={handleEdit} className="text-primary font-medium hover:underline">Manuell erfassen</button>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="bg-card border border-border rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
-                <Building2 className="w-3.5 h-3.5 text-blue-600" />
+          {/* Organisation */}
+          {displayOrg && (
+            <div className="bg-card border border-border rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                </div>
+                <h3 className="text-sm font-semibold">Organisation</h3>
+                {!hasSnapData && <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">Live</span>}
               </div>
-              <h3 className="text-sm font-semibold">Organisation</h3>
+              <div className="space-y-2.5">
+                <InfoRow label="Name" value={displayOrg.name} />
+                <InfoRow label="Adresse" value={displayOrg.address} />
+                <InfoRow label="Telefon" value={displayOrg.phone} />
+                <InfoRow label="E-Mail" value={displayOrg.email} />
+                <InfoRow label="Website" value={displayOrg.website} />
+                <InfoRow label="FINMA-Nr." value={displayOrg.finma} />
+              </div>
             </div>
-            <div className="space-y-2.5">
-              <InfoRow label="Name" value={dossier.snap_org_name} />
-              <InfoRow label="Adresse" value={[dossier.snap_org_street, `${dossier.snap_org_zip || ''} ${dossier.snap_org_city || ''}`.trim()].filter(Boolean).join(', ')} />
-              <InfoRow label="Telefon" value={dossier.snap_org_phone} />
-              <InfoRow label="E-Mail" value={dossier.snap_org_email} />
-              <InfoRow label="Website" value={dossier.snap_org_website} />
-              <InfoRow label="FINMA-Nr." value={dossier.snap_org_finma} />
-            </div>
-          </div>
+          )}
 
-          <div className="bg-card border border-border rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center">
-                <User className="w-3.5 h-3.5 text-indigo-600" />
+          {/* Berater */}
+          {displayAdv && (
+            <div className="bg-card border border-border rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center">
+                  <User className="w-3.5 h-3.5 text-indigo-600" />
+                </div>
+                <h3 className="text-sm font-semibold">Berater</h3>
+                {!hasSnapData && <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">Live</span>}
               </div>
-              <h3 className="text-sm font-semibold">Berater</h3>
+              <div className="space-y-2.5">
+                <InfoRow label="Name" value={displayAdv.name} />
+                <InfoRow label="Funktion" value={displayAdv.function} />
+                <InfoRow label="Telefon" value={displayAdv.phone} />
+                <InfoRow label="E-Mail" value={displayAdv.email} />
+                <InfoRow label="FINMA-Nr." value={displayAdv.finma} />
+                <InfoRow label="VBV-Nr." value={displayAdv.vbv} />
+              </div>
             </div>
-            <div className="space-y-2.5">
-              <InfoRow label="Name" value={[dossier.snap_adv_firstname, dossier.snap_adv_lastname].filter(Boolean).join(' ')} />
-              <InfoRow label="Funktion" value={dossier.snap_adv_function} />
-              <InfoRow label="Telefon" value={dossier.snap_adv_phone} />
-              <InfoRow label="E-Mail" value={dossier.snap_adv_email} />
-              <InfoRow label="FINMA-Nr." value={dossier.snap_adv_finma} />
-              <InfoRow label="VBV-Nr." value={dossier.snap_adv_vbv} />
-            </div>
-          </div>
+          )}
         </div>
       )}
     </div>
