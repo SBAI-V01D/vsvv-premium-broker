@@ -171,7 +171,7 @@ function sortCustomers(list, sortBy) {
   });
 }
 
-const NAV_KEYS = ['all','critical','mandate','tasks','active','vip','new','prospect','private','business'];
+const NAV_KEYS = ['all','private','business','critical','mandate','tasks','active','vip','new','prospect'];
 
 // ── Grouped customer feed ─────────────────────────────────────────────────
 function CustomerFeed({ displayed, customers, segments, matchedFamilyIds, onEdit, onDelete }) {
