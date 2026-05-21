@@ -35,8 +35,41 @@ Deno.serve(async (req) => {
       production_ready: false,
     };
 
+    // Remediation-Map: Root-Cause + Recommended Fix + AutoFix pro Test
+    const REMEDIATION = {
+      'Kein PDF ohne Freigabe':                 { root_cause: 'Ein Dossier hat eine PDF-Version obwohl advisor_approved=false. Export-Gate wurde umgangen oder Approval nachtraglich widerrufen.', recommended_fix: '1. Dossier oeffnen\n2. Approval-Status pruefen\n3. Falls Reapproval noetig: Freigabe erneuern\n4. Falls Fehler: PDF-Version zuruecksetzen und neu exportieren', auto_fix: false, governance: true },
+      'Kein PDF bei offenem Reapproval':        { root_cause: 'Dossier wurde nach Freigabe geaendert (reapproval_required=true), aber PDF-Version existiert noch. Das PDF spiegelt nicht den freigegebenen Stand wider.', recommended_fix: '1. Dossier oeffnen\n2. Aenderungen pruefen die Reapproval ausgeloest haben\n3. Erneut freigeben (Supervisor)\n4. PDF neu exportieren', auto_fix: false, governance: true },
+      'Alle Exporte haben SHA-256-Hash':        { root_cause: 'PDF wurde generiert bevor SHA-256-Hashing eingefuehrt wurde, oder Hash-Berechnung ist fehlgeschlagen.', recommended_fix: '1. Betroffene PdfExportLog-Eintraege identifizieren\n2. Falls file_uri vorhanden: Hash nachberechnen\n3. Falls kein file_uri: Export als unvollstaendig markieren', auto_fix: false, governance: false },
+      'Alle Exporte immutable=true':            { root_cause: 'PdfExportLog-Eintrag wurde ohne immutable=true erstellt.', recommended_fix: 'Admin: immutable=true manuell auf betroffene Eintraege setzen. Niemals loeschen.', auto_fix: true, repair_action: 'check_data_consistency', governance: false },
+      'approved_by bei allen Freigaben':        { root_cause: 'Freigabe-Aktion hat den Berater-Namen nicht gespeichert. Audit-Trail unvollstaendig.', recommended_fix: '1. Dossier oeffnen, Approval-History pruefen\n2. Berater manuell nachtragen\n3. Approval neu ausloesen fuer vollstaendigen Trail', auto_fix: false, governance: true },
+      'approved_at bei allen Freigaben':        { root_cause: 'Freigabe-Zeitstempel fehlt. Compliance-Anforderung nicht erfuellt (FINMA-Konformitaet).', recommended_fix: 'Dossier-Freigabe wiederholen um korrekten Zeitstempel zu erzeugen. Manuelles Nachtragen nicht empfohlen.', auto_fix: false, governance: true },
+      'Reapproval-Konsistenz (kein Widerspruch)': { root_cause: 'reapproval_required=true und advisor_approved=true gleichzeitig gesetzt - logischer Widerspruch im Approval-State.', recommended_fix: '1. Dossier sofort sperren\n2. Supervisor informieren\n3. Approval-History pruefen\n4. Einen der beiden Flags korrekt setzen', auto_fix: false, governance: true },
+      'Keine verwaisten Snapshots':             { root_cause: 'Dossier wurde geloescht aber zugehoerige DossierSnapshot-Eintraege existieren noch.', recommended_fix: 'Verwaiste Snapshots koennen archiviert werden. Pruefen ob Dossier irrtuemlicherweise geloescht wurde.', auto_fix: false, governance: false },
+      'PDF-Snapshots vollstaendig verknuepft':  { root_cause: 'Dossier hat final_pdf_version aber keine approved_snapshot_id. Snapshot-Referenz fehlt fuer PDF-Integritaet.', recommended_fix: '1. Letzten Snapshot des Dossiers finden\n2. approved_snapshot_id manuell setzen\n3. Oder PDF neu exportieren (erstellt automatisch Snapshot)', auto_fix: false, governance: true },
+      'Kunden haben organization_id':           { root_cause: 'Kunde wurde ohne organization_id erstellt. Tenant-Isolation verletzt. Moegliche Cross-Tenant-Datenleckage.', recommended_fix: '1. Sofort pruefen welcher Organisation der Kunde gehoert\n2. organization_id setzen\n3. Alle Vertraege/Antraege des Kunden pruefen', auto_fix: true, repair_action: 'sync_customer_status', governance: false },
+      'Vertraege haben organization_id':        { root_cause: 'Vertrag ohne organization_id. Tenant-Isolation verletzt.', recommended_fix: 'organization_id des zugehoerigen Kunden auf den Vertrag uebertragen.', auto_fix: true, repair_action: 'sync_customer_status', governance: false },
+      'Household-Referenzen konsistent':        { root_cause: 'Familienmitglied referenziert primary_customer_id die nicht mehr existiert. Haushalt ist inkonsistent.', recommended_fix: '1. primary_customer_id pruefen\n2. Falls Hauptkunde geloescht: Familienmitglied als eigenstaendigen Kunden behandeln\n3. primary_customer_id bereinigen', auto_fix: false, governance: false },
+      'Dossiers haben organization_id':         { root_cause: 'Dossier ohne organization_id. Tenant-Isolation verletzt.', recommended_fix: 'organization_id des Beraters/Kunden auf das Dossier uebertragen.', auto_fix: false, governance: false },
+      'Alle gespeicherten PDFs haben final_pdf_hash': { root_cause: 'PDF wurde vor Einfuehrung der Hash-Governance generiert oder Hash-Berechnung schlug fehl.', recommended_fix: '1. PDF neu exportieren. Hash wird automatisch berechnet.\n2. Oder: als Legacy-Export dokumentieren und accepted_risk setzen', auto_fix: false, governance: false },
+      'PDFs in Private Storage (file_uri statt URL)': { root_cause: 'PDF liegt in Public Storage - vor Migration zu Private Storage generiert. Sicherheitsrisiko: URL koennte oeffentlich erreichbar sein.', recommended_fix: '1. Migration zu Private Storage durchfuehren\n2. file_uri setzen\n3. Public URL entfernen', auto_fix: false, governance: false },
+      'Alle Benutzer haben gueltige Rollen':    { root_cause: 'Benutzer hat eine Rolle die nicht in der Whitelist ist. Moegliche Berechtigungsluecke.', recommended_fix: 'Rolle sofort auf gueltigen Wert setzen: admin/broker/assistenz/supervisor/reviewer/viewer', auto_fix: false, governance: true },
+      'Alle Benutzer haben eine Rolle':         { root_cause: 'Benutzer ohne Rolle. Berechtigungspruefungen greifen nicht korrekt.', recommended_fix: 'Sofort Rolle zuweisen. Bis dahin: Benutzer keinen Zugriff auf sensitive Daten gewaehren.', auto_fix: false, governance: true },
+      'Admin-Konten vorhanden und begrenzt':    { root_cause: 'Mehr als 5 Admin-Konten. Minimalprinzip verletzt. Erhoehtes Risiko bei Kompromittierung.', recommended_fix: '1. Admin-Liste ueberpruefen\n2. Nicht mehr benoetigte Admin-Rechte entziehen\n3. Auf broker/reviewer Rolle downgraden', auto_fix: false, governance: true },
+      'Letztes Backup < 24 Stunden alt':       { root_cause: 'Kein aktuelles Backup vorhanden. Recovery Point Objective (RPO) ueberschritten.', recommended_fix: '1. Sofort manuelles Backup starten\n2. Automatische Backup-Automation pruefen\n3. BackupLog auf Fehler pruefen', auto_fix: false, governance: false },
+      'Stornos haben storno_reference_id':      { root_cause: 'Storno-Buchung ohne Referenz auf urspruengliche Abrechnung. Audit-Trail unterbrochen.', recommended_fix: '1. Urspruengliche CommissionEntry manuell identifizieren\n2. storno_reference_id nachtragen\n3. Bei Unklarheit: als accepted_risk dokumentieren', auto_fix: false, governance: true },
+      'Konvertierte Leads haben customer_id':   { root_cause: 'Lead wurde als converted markiert ohne customer_id zu setzen. Konvertierungsprozess unvollstaendig.', recommended_fix: 'Kunden-Datensatz fuer Lead suchen oder neu anlegen und customer_id setzen.', auto_fix: false, governance: false },
+    };
+
     function addTest(category, name, passed, details = '', severity = 'critical') {
-      report.tests.push({ category, name, passed, details, severity });
+      const rem = REMEDIATION[name] || {};
+      report.tests.push({
+        category, name, passed, details, severity,
+        root_cause: rem.root_cause || null,
+        recommended_fix: rem.recommended_fix || null,
+        auto_fix_possible: rem.auto_fix || false,
+        repair_action: rem.repair_action || null,
+        governance_block: rem.governance || false,
+      });
       if (passed) report.total_passed++;
       else if (severity === 'warning') report.total_warnings++;
       else report.total_failed++;
@@ -318,8 +351,12 @@ Deno.serve(async (req) => {
         category: t.category,
         title: t.name,
         description: t.details,
-        recommended_action: 'Bitte manuell prüfen und beheben. Keine automatische Korrektur für Governance-Daten.',
-        auto_fix_possible: false,
+        root_cause: t.root_cause || null,
+        technical_details: t.details,
+        recommended_action: t.recommended_fix || 'Bitte manuell pruefen und beheben.',
+        auto_fix_possible: t.auto_fix_possible || false,
+        auto_fix_action: t.repair_action || null,
+        governance_block: t.governance_block || false,
         manual_review_required: true,
         status: 'open',
         detected_by: 'runLiveSystemValidation',
