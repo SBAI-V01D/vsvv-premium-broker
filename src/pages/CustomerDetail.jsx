@@ -137,6 +137,19 @@ export default function CustomerDetail() {
     enabled: !!id,
   })
 
+  // Echter Hauptkontakt: immer stabil, unabhängig davon wer geöffnet ist
+  const primaryCustomerId = customer?.is_family_member
+    ? customer?.primary_customer_id
+    : customer?.id
+  const primaryCustomer = (Array.isArray(allCustomers) ? allCustomers : []).find(c => c.id === primaryCustomerId) || customer
+
+  // Alle Haushaltsmitglieder: Hauptkontakt + alle seine Familienmitglieder
+  const householdMembers = (Array.isArray(allCustomers) ? allCustomers : []).filter(c =>
+    c.id === primaryCustomerId || c.primary_customer_id === primaryCustomerId
+  )
+  const familyMembers = householdMembers
+  const householdCustomerIds = householdMembers.map(m => m.id).filter(Boolean)
+
   // Haushalt-Verträge für PDF-Export (andere Haushaltsmitglieder, lazy)
   const { data: householdContractsExtra = [] } = useQuery({
     queryKey: ['household-contracts', primaryCustomerId],
@@ -192,21 +205,7 @@ export default function CustomerDetail() {
     }
   })
 
-  // Echter Hauptkontakt: immer stabil, unabhängig davon wer geöffnet ist
-  const primaryCustomerId = customer?.is_family_member
-    ? customer?.primary_customer_id
-    : customer?.id
-  const primaryCustomer = (Array.isArray(allCustomers) ? allCustomers : []).find(c => c.id === primaryCustomerId) || customer
-
-  // Alle Haushaltsmitglieder: Hauptkontakt + alle seine Familienmitglieder
-  const householdMembers = (Array.isArray(allCustomers) ? allCustomers : []).filter(c =>
-    c.id === primaryCustomerId || c.primary_customer_id === primaryCustomerId
-  )
-  // familyMembers bleibt kompatibel (wird in bestehenden Komponenten genutzt)
-  const familyMembers = householdMembers
-
   // Haushalt-IDs + alle Haushaltsverträge (relatedContracts = eigene, extra = Familie)
-  const householdCustomerIds = householdMembers.map(m => m.id).filter(Boolean)
   const allHouseholdContracts = [...relatedContracts, ...householdContractsExtra]
 
   const updateCustomerMutation = useMutation({
