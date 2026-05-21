@@ -361,105 +361,76 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
   );
 }
 
-// ── Enterprise Header Komponente (wiederverwendbar) ───────────────────────────
+// ── Enterprise Header Komponente — horizontal, minimal, premium ─────────────────
 function EnterpriseHeader({ organization, advisor, dossier, snapshot }) {
+  const hasFinma = organization?.finma_number || advisor?.finma_number;
+  const hasVbv = advisor?.vbv_number;
   return (
     <div style={{
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)',
-      borderRadius: '12px',
-      padding: '20px 24px',
-      marginBottom: '24px',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      boxShadow: '0 4px 12px rgba(15, 23, 42, 0.15)',
+      borderBottom: '2.5px solid #0f172a',
+      paddingBottom: '14px',
+      marginBottom: '22px',
+      WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
     }}>
-      {/* LINKE SPALTE: Organisation / Brokerunternehmen */}
-      <div style={{ flex: 1, paddingRight: '24px', borderRight: '1px solid rgba(255,255,255,0.15)' }}>
-        {/* Firmenname */}
-        {organization?.name && (
-          <div style={{
-            fontSize: '16px',
-            fontWeight: 800,
-            color: '#ffffff',
-            marginBottom: '12px',
-            letterSpacing: '-0.02em',
-          }}>
-            {organization.name}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '24px' }}>
+        {/* LEFT: Organisation */}
+        <div style={{ flex: 1 }}>
+          {organization?.name && (
+            <div style={{ fontSize: '17px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '7px' }}>
+              {organization.name}
+            </div>
+          )}
+          <div style={{ display: 'flex', flexWrap: 'wrap', columnGap: '14px', rowGap: '2px' }}>
+            {organization?.street && (
+              <div style={{ fontSize: '8.5px', color: '#64748b' }}>
+                {organization.street}{organization.zip_code ? `, ${organization.zip_code}` : ''}{organization.city ? ` ${organization.city}` : ''}
+              </div>
+            )}
+            {organization?.phone && (
+              <div style={{ fontSize: '8.5px', color: '#64748b' }}>Tel {organization.phone}</div>
+            )}
+            {organization?.email && (
+              <div style={{ fontSize: '8.5px', color: '#64748b' }}>{organization.email}</div>
+            )}
+            {organization?.website && (
+              <div style={{ fontSize: '8.5px', color: '#94a3b8' }}>{organization.website}</div>
+            )}
           </div>
-        )}
-        
-        {/* Kontaktdaten */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {organization?.street && (
-            <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.85)', lineHeight: '1.4' }}>
-              {organization.street} · {organization.zip_code} {organization.city}
-            </div>
-          )}
-          {organization?.phone && (
-            <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.85)' }}>
-              Tel +41 {organization.phone}
-            </div>
-          )}
-          {organization?.email && (
-            <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.85)' }}>
-              {organization.email}
-            </div>
-          )}
-          {organization?.website && (
-            <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.7)' }}>
-              {organization.website}
-            </div>
-          )}
         </div>
 
-        {/* FINMA / VBV - regulatorische Angaben */}
-        {(organization?.finma_number || advisor?.finma_number || advisor?.vbv_number) && (
-          <div style={{
-            marginTop: '14px',
-            paddingTop: '10px',
-            borderTop: '1px solid rgba(255,255,255,0.2)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-          }}>
-            {(organization?.finma_number || advisor?.finma_number) && (
-              <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.75)' }}>
-                FINMA-Reg.-Nr. {(organization?.finma_number || advisor?.finma_number)}
-              </div>
-            )}
-            {advisor?.vbv_number && (
-              <div style={{ fontSize: '8px', color: 'rgba(255,255,255,0.75)' }}>
-                VBV-Mitglied {advisor.vbv_number}
-              </div>
-            )}
+        {/* DIVIDER */}
+        <div style={{ width: '1px', background: '#e2e8f0', alignSelf: 'stretch', flexShrink: 0 }} />
+
+        {/* RIGHT: Berater */}
+        {advisor && (
+          <div style={{ minWidth: '180px', textAlign: 'right' }}>
+            <div style={{ fontSize: '8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8', marginBottom: '5px' }}>
+              Ihr persönlicher Berater
+            </div>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em', marginBottom: '5px' }}>
+              {advisor.firstname} {advisor.lastname}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end' }}>
+              {advisor.phone && <div style={{ fontSize: '8.5px', color: '#64748b' }}>Tel {advisor.phone}</div>}
+              {advisor.email && <div style={{ fontSize: '8.5px', color: '#64748b' }}>{advisor.email}</div>}
+            </div>
           </div>
         )}
       </div>
 
-      {/* RECHTE SPALTE: Persönlicher Berater */}
-      {advisor && (
-        <div style={{ paddingLeft: '24px', minWidth: '200px' }}>
-          <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
-            Ihr persönlicher Berater
-          </div>
-          
-          <div style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff', marginBottom: '10px' }}>
-            {advisor.firstname} {advisor.lastname}
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            {advisor?.phone && (
-              <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.85)' }}>
-                Tel +41 {advisor.phone}
-              </div>
-            )}
-            {advisor?.email && (
-              <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.85)' }}>
-                {advisor.email}
-              </div>
-            )}
-          </div>
+      {/* FINMA / VBV — regulatorische Zeile */}
+      {(hasFinma || hasVbv) && (
+        <div style={{ marginTop: '9px', paddingTop: '7px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: '20px' }}>
+          {hasFinma && (
+            <div style={{ fontSize: '7.5px', color: '#94a3b8' }}>
+              <span style={{ fontWeight: 700, color: '#475569' }}>FINMA-Reg.-Nr.</span> {organization?.finma_number || advisor?.finma_number}
+            </div>
+          )}
+          {hasVbv && (
+            <div style={{ fontSize: '7.5px', color: '#94a3b8' }}>
+              <span style={{ fontWeight: 700, color: '#475569' }}>VBV-Mitglied</span> {advisor.vbv_number}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -508,28 +479,28 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
       />
 
       {/* Dokumententitel */}
-      <div style={{ marginBottom: '24px' }}>
-        <div style={{ fontSize: '18px', fontWeight: 800, color: '#1e3a5f', letterSpacing: '-0.02em', marginBottom: '4px' }}>
+      <div style={{ marginBottom: '18px' }}>
+        <div style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '4px' }}>
           {dossier.title || TYPE_LABELS[dossier.dossier_type] || dossier.dossier_type}
         </div>
-        <div style={{ fontSize: '10px', color: '#64748b' }}>
-          {fmtDate(snapshot?.snapshot_created_at)} · Version {dossier.version ?? 1}
+        <div style={{ fontSize: '9px', color: '#94a3b8' }}>
+          Erstellt am {fmtDate(snapshot?.snapshot_created_at)} · Version {dossier.version ?? 1}
         </div>
       </div>
 
       {/* ── 1. Versicherungsnehmer + Familienmitglieder ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: hasFamilyMembers ? '1fr 1fr' : '1fr', gap: '16px', marginBottom: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: hasFamilyMembers ? '1fr 1fr' : '1fr', gap: '20px', marginBottom: '20px' }}>
         {/* Versicherungsnehmer */}
         {customer && (
           <div style={{
-            border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px 16px',
-            background: '#f8fafc',
+            borderTop: '2px solid #1d4ed8',
+            paddingTop: '10px',
             WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
           }}>
-            <div style={{ fontSize: '9px', fontWeight: 700, color: '#1e3a5f', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #e2e8f0', paddingBottom: '5px', marginBottom: '10px' }}>
+            <div style={{ fontSize: '8px', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
               Versicherungsnehmer
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 14px', fontSize: '9.5px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 20px', fontSize: '9.5px' }}>
               {[
                 ['Name', [customer.first_name, customer.last_name].filter(Boolean).join(' ')],
                 ['Geburtsdatum', fmtDate(customer.birthdate)],
@@ -539,7 +510,7 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
                 ['E-Mail', customer.email],
               ].filter(([, v]) => v).map(([l, v]) => (
                 <div key={l}>
-                  <div style={{ fontSize: '7.5px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{l}</div>
+                  <div style={{ fontSize: '7px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1px' }}>{l}</div>
                   <div style={{ fontWeight: 500, color: '#1e293b', wordBreak: 'break-word' }}>{v}</div>
                 </div>
               ))}
@@ -550,17 +521,17 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
         {/* Haushaltsmitglieder */}
         {hasFamilyMembers && (
           <div style={{
-            border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px 16px',
-            background: '#f8fafc',
+            borderTop: '2px solid #6d28d9',
+            paddingTop: '10px',
             WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
           }}>
-            <div style={{ fontSize: '9px', fontWeight: 700, color: '#1e3a5f', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid #e2e8f0', paddingBottom: '5px', marginBottom: '10px' }}>
+            <div style={{ fontSize: '8px', fontWeight: 700, color: '#6d28d9', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
               Haushaltsmitglieder
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(family_members.length, 3)}, 1fr)`, gap: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(family_members.length, 3)}, 1fr)`, gap: '10px' }}>
               {family_members.map((m, i) => (
-                <div key={m.id || i} style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '8px 10px', background: '#ffffff', fontSize: '9px' }}>
-                  <div style={{ fontWeight: 700, color: '#1e293b', marginBottom: '3px' }}>
+                <div key={m.id || i} style={{ borderLeft: '2px solid #ede9fe', paddingLeft: '8px', fontSize: '9px' }}>
+                  <div style={{ fontWeight: 700, color: '#1e293b', marginBottom: '2px' }}>
                     {[m.first_name, m.last_name].filter(Boolean).join(' ') || '—'}
                   </div>
                   {m.birthdate && <div style={{ color: '#64748b' }}>Geb. {fmtDate(m.birthdate)}</div>}
@@ -572,104 +543,72 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
         )}
       </div>
 
-      {/* ── 2. Prämienübersicht — ERWEITERT für alle Angebote ── */}
+      {/* ── 2. Prämienübersicht ── */}
       {(summary.hasCurrent || summary.hasRecommendation || angebotPrämien.length > 0) && (
         <div style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-          <div style={{ fontSize: '9px', fontWeight: 700, color: '#1e3a5f', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
+          <div style={{ fontSize: '8px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
             Prämienübersicht — Alle Lösungen im Vergleich
           </div>
-          
-          {/* Zeile 1: Aktuelle Lösung + Einsparung/Optimiert */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-            <div style={{
-              border: '1px solid #e2e8f0', borderRadius: '10px',
-              padding: '14px 16px', background: '#f8fafc', textAlign: 'center',
-            }}>
-              <div style={{ fontSize: '8px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>Aktuelle Prämie / Monat</div>
-              <div style={{ fontSize: '20px', fontWeight: 900, color: '#334155' }}>{fmtCHF(summary.currentMonthly)}</div>
-              <div style={{ fontSize: '8.5px', color: '#94a3b8', marginTop: '3px' }}>{fmtCHF(summary.currentYearly)} / Jahr</div>
+
+          {/* Zeile 1: Aktuelle Lösung + Einsparung + Optimiert */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '18px' }}>
+            <div style={{ textAlign: 'center', borderTop: '2px solid #64748b', paddingTop: '10px' }}>
+              <div style={{ fontSize: '7.5px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Aktuelle Prämie / Monat</div>
+              <div style={{ fontSize: '22px', fontWeight: 900, color: '#334155', letterSpacing: '-0.03em', lineHeight: 1 }}>{fmtCHF(summary.currentMonthly)}</div>
+              <div style={{ fontSize: '8px', color: '#94a3b8', marginTop: '3px' }}>{fmtCHF(summary.currentYearly)} / Jahr</div>
             </div>
-            
-            <div style={{
-              border: `1px solid ${summary.savingsMonthly > 0.005 ? '#bbf7d0' : summary.savingsMonthly < -0.005 ? '#fecaca' : '#e2e8f0'}`,
-              borderRadius: '10px',
-              padding: '14px 16px',
-              background: summary.savingsMonthly > 0.005 ? '#f0fdf4' : summary.savingsMonthly < -0.005 ? '#fef2f2' : '#f8fafc',
-              textAlign: 'center',
-            }}>
-              <div style={{ fontSize: '8px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+
+            <div style={{ textAlign: 'center', borderTop: `2px solid ${summary.savingsMonthly > 0.005 ? '#059669' : summary.savingsMonthly < -0.005 ? '#dc2626' : '#94a3b8'}`, paddingTop: '10px' }}>
+              <div style={{ fontSize: '7.5px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
                 {summary.savingsMonthly > 0.005 ? 'Einsparung / Monat' : summary.savingsMonthly < -0.005 ? 'Mehrkosten / Monat' : 'Differenz'}
               </div>
-              <div style={{ fontSize: '20px', fontWeight: 900, color: summary.savingsMonthly > 0.005 ? '#059669' : summary.savingsMonthly < -0.005 ? '#dc2626' : '#64748b' }}>
+              <div style={{ fontSize: '22px', fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1, color: summary.savingsMonthly > 0.005 ? '#059669' : summary.savingsMonthly < -0.005 ? '#dc2626' : '#64748b' }}>
                 {summary.savingsMonthly != null ? `${summary.savingsMonthly > 0.005 ? '− ' : summary.savingsMonthly < -0.005 ? '+ ' : ''}${fmtCHF(Math.abs(summary.savingsMonthly))}` : '—'}
               </div>
               {summary.savingsYearly != null && (
-                <div style={{ fontSize: '8.5px', color: '#94a3b8', marginTop: '3px' }}>
+                <div style={{ fontSize: '8px', color: '#94a3b8', marginTop: '3px' }}>
                   {summary.savingsMonthly > 0 ? '− ' : '+ '}{fmtCHF(Math.abs(summary.savingsYearly))} / Jahr
                 </div>
               )}
               {summary.savingsPercent != null && (
-                <div style={{ fontSize: '13px', fontWeight: 800, color: summary.savingsMonthly > 0.005 ? '#059669' : summary.savingsMonthly < -0.005 ? '#dc2626' : '#64748b', marginTop: '4px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 800, marginTop: '4px', color: summary.savingsMonthly > 0.005 ? '#059669' : summary.savingsMonthly < -0.005 ? '#dc2626' : '#64748b' }}>
                   {summary.savingsMonthly > 0 ? '−' : '+'}{Math.abs(summary.savingsPercent).toFixed(1)}%
                 </div>
               )}
             </div>
-            
-            <div style={{
-              border: '1px solid #bfdbfe', borderRadius: '10px',
-              padding: '14px 16px', background: '#eff6ff', textAlign: 'center',
-            }}>
-              <div style={{ fontSize: '8px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+
+            <div style={{ textAlign: 'center', borderTop: '2px solid #1d4ed8', paddingTop: '10px' }}>
+              <div style={{ fontSize: '7.5px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
                 {summary.proposedGruppe ? `${GRUPPE_CFG[summary.proposedGruppe]?.label || summary.proposedGruppe} / Monat` : 'Optimierte Prämie / Monat'}
               </div>
-              <div style={{ fontSize: '20px', fontWeight: 900, color: '#1d4ed8' }}>{fmtCHF(summary.proposedMonthly)}</div>
-              <div style={{ fontSize: '8.5px', color: '#94a3b8', marginTop: '3px' }}>{fmtCHF(summary.proposedYearly)} / Jahr</div>
+              <div style={{ fontSize: '22px', fontWeight: 900, color: '#1d4ed8', letterSpacing: '-0.03em', lineHeight: 1 }}>{fmtCHF(summary.proposedMonthly)}</div>
+              <div style={{ fontSize: '8px', color: '#94a3b8', marginTop: '3px' }}>{fmtCHF(summary.proposedYearly)} / Jahr</div>
             </div>
           </div>
-          
-          {/* Zeile 2: Alle Angebote im Vergleich zur optimierten Lösung */}
+
+          {/* Angebote */}
           {angebotPrämien.length > 0 && (
             <div>
-              <div style={{ fontSize: '8px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+              <div style={{ fontSize: '7.5px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
                 Angebote im Vergleich zur {referenceLabel}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(angebotPrämien.length, 4)}, 1fr)`, gap: '10px' }}>
-                {angebotPrämien.map((angebot, i) => {
-                  // Angebot 1 verwendet blaue Farbe (wie Optimierte Lösung), alle anderen grün/rot je nach Einsparung
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(angebotPrämien.length, 4)}, 1fr)`, gap: '16px' }}>
+                {angebotPrämien.map((angebot) => {
                   const istAngebot1 = angebot.gruppe === 'angebot_1';
                   const farbe = istAngebot1 ? '#1d4ed8' : (angebot.diff > 0 ? '#059669' : angebot.diff < 0 ? '#dc2626' : '#64748b');
-                  const borderFarbe = istAngebot1 ? '#bfdbfe' : (angebot.diff > 0 ? '#bbf7d0' : angebot.diff < 0 ? '#fecaca' : '#e2e8f0');
-                  const bgFarbe = istAngebot1 ? '#eff6ff' : (angebot.diff > 0 ? '#f0fdf4' : angebot.diff < 0 ? '#fef2f2' : '#f8fafc');
-                  
                   return (
                     <div key={angebot.gruppe} style={{
-                      border: `1px solid ${borderFarbe}`,
-                      borderRadius: '10px',
-                      padding: '12px 14px',
-                      background: bgFarbe,
+                      borderTop: `2px solid ${farbe}`,
+                      paddingTop: '8px',
                       textAlign: 'center',
+                      WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
                     }}>
-                      <div style={{ fontSize: '8px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
-                        {angebot.label}
-                      </div>
-                      <div style={{ fontSize: '18px', fontWeight: 900, color: farbe }}>
-                        {fmtCHF(angebot.monthly)}
-                      </div>
-                      <div style={{ fontSize: '7.5px', color: '#94a3b8', marginTop: '2px' }}>
-                        {fmtCHF(angebot.yearly)} / Jahr
-                      </div>
+                      <div style={{ fontSize: '7px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '5px' }}>{angebot.label}</div>
+                      <div style={{ fontSize: '17px', fontWeight: 900, color: farbe, letterSpacing: '-0.02em', lineHeight: 1 }}>{fmtCHF(angebot.monthly)}</div>
+                      <div style={{ fontSize: '7.5px', color: '#94a3b8', marginTop: '2px' }}>{fmtCHF(angebot.yearly)} / Jahr</div>
                       {Math.abs(angebot.diff) > 0.01 && (
-                        <div style={{
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          color: istAngebot1 ? '#1d4ed8' : (angebot.diff > 0 ? '#059669' : '#dc2626'),
-                          marginTop: '4px',
-                          background: istAngebot1 ? 'rgba(29,78,216,0.1)' : (angebot.diff > 0 ? 'rgba(5,150,105,0.1)' : 'rgba(220,38,38,0.1)'),
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          display: 'inline-block',
-                        }}>
-                          {angebot.diff > 0 ? '−' : '+'}{fmtCHF(Math.abs(angebot.diff))}/Mt. {angebot.pct > 0 ? `(${angebot.pct.toFixed(1)}%)` : ''}
+                        <div style={{ fontSize: '9px', fontWeight: 700, color: farbe, marginTop: '4px' }}>
+                          {angebot.diff > 0 ? '−' : '+'}{fmtCHF(Math.abs(angebot.diff))}/Mt.
                         </div>
                       )}
                     </div>
