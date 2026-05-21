@@ -16,6 +16,7 @@ import DossierPolicenTab from './tabs/DossierPolicenTab';
 import DossierVergleichTab from './tabs/DossierVergleichTab';
 import DossierPlaceholderTab from './tabs/DossierPlaceholderTab';
 import DossierExportTab from './tabs/DossierExportTab';
+import DossierReviewPipeline from './DossierReviewPipeline';
 
 const TABS = [
   { key: 'stammdaten',  label: 'Stammdaten',       icon: '📋', phase: 1 },
@@ -149,6 +150,8 @@ export default function DossierBuilder({ dossierId, onSaved }) {
             <p className="text-[11px] text-amber-700">Neues Dossier — Stammdaten speichern, um weitere Tabs freizuschalten.</p>
           </div>
         )}
+        {/* Review-Pipeline (nur wenn Dossier geladen) */}
+        {dossier && <DossierReviewPipeline dossier={dossier} />}
         {/* Fortschrittsbalken */}
         <div className="h-0.5 bg-muted/40 relative">
           <div

@@ -44,6 +44,18 @@
       "default": "entwurf",
       "description": "Dossier-Status"
     },
+    "review_status": {
+      "type": "string",
+      "enum": [
+        "offen",
+        "ki_analysiert",
+        "in_pruefung",
+        "berater_angepasst",
+        "freigegeben"
+      ],
+      "default": "offen",
+      "description": "Review-Pipeline: dokumentierter Beratungsprozess-Status"
+    },
     "valid_from": {
       "type": "string",
       "format": "date",
@@ -99,11 +111,11 @@
     },
     "advisor_final_recommendation": {
       "type": "string",
-      "description": "Beraterentscheid: Welche Vergleichsgruppe ist die finale Empfehlung (z.B. 'angebot_1', 'optimiert')"
+      "description": "Beraterentscheid: Welche Vergleichsgruppe ist die finale Empfehlung"
     },
     "advisor_recommendation_label": {
       "type": "string",
-      "description": "Beraterentscheid: Positionierung/Label (z.B. 'Preis-Leistungs-Empfehlung', 'Komfortl\u00f6sung')"
+      "description": "Beraterentscheid: Positionierung/Label (z.B. Preis-Leistungs-Empfehlung)"
     },
     "advisor_recommendation_reason": {
       "type": "string",
