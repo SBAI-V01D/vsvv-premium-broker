@@ -13,6 +13,7 @@ import TabSecurity    from '@/components/admin/enterprise/TabSecurity';
 import TabReviews     from '@/components/admin/enterprise/TabReviews';
 import TabCompliance  from '@/components/admin/enterprise/TabCompliance';
 import TabModules     from '@/components/admin/enterprise/TabModules';
+import TabValidation  from '@/components/admin/enterprise/TabValidation';
 
 const TABS = [
   { id: 'modules',     label: 'Alle Module', component: TabModules },
@@ -23,6 +24,7 @@ const TABS = [
   { id: 'security',    label: 'Security',    component: TabSecurity },
   { id: 'reviews',     label: 'Reviews',     component: TabReviews },
   { id: 'compliance',  label: 'Compliance',  component: TabCompliance },
+  { id: 'validation',  label: '▶ Live-Validation', component: TabValidation },
 ];
 
 export default function AdminEnterpriseControlCenter() {

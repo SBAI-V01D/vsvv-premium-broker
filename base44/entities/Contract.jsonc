@@ -3,46 +3,36 @@
   "type": "object",
   "properties": {
     "customer_id": {
-      "type": "string",
-      "description": "Kunden-ID"
+      "type": "string"
     },
     "customer_name": {
-      "type": "string",
-      "description": "Kundenname"
+      "type": "string"
     },
     "primary_customer_id": {
-      "type": "string",
-      "description": "ID des Hauptkunden"
+      "type": "string"
     },
     "is_family_member": {
       "type": "boolean",
-      "default": false,
-      "description": "Vertrag geh\u00f6rt zu Familienmitglied"
+      "default": false
     },
     "organization_id": {
-      "type": "string",
-      "description": "Organisations-ID"
+      "type": "string"
     },
     "advisor_id": {
-      "type": "string",
-      "description": "Berater-ID"
+      "type": "string"
     },
     "insurer": {
-      "type": "string",
-      "description": "Versicherungsgesellschaft"
+      "type": "string"
     },
     "policy_number": {
-      "type": "string",
-      "description": "Policen-Nummer"
+      "type": "string"
     },
     "version_number": {
       "type": "number",
-      "default": 1,
-      "description": "Versionsnummer"
+      "default": 1
     },
     "parent_policy_id": {
-      "type": "string",
-      "description": "ID der Vorg\u00e4nger-Policy"
+      "type": "string"
     },
     "insurance_type": {
       "type": "string",
@@ -53,71 +43,56 @@
         "liability",
         "motor",
         "other"
-      ],
-      "description": "Versicherungsart"
+      ]
     },
     "product": {
-      "type": "string",
-      "description": "Produkt/Sparte"
+      "type": "string"
     },
     "premium_monthly": {
-      "type": "number",
-      "description": "Monatspr\u00e4mie (CHF)"
+      "type": "number"
     },
     "premium_yearly": {
-      "type": "number",
-      "description": "Jahrespr\u00e4mie (CHF)"
+      "type": "number"
     },
     "premium_current": {
-      "type": "number",
-      "description": "Aktuelle Jahrespr\u00e4mie"
+      "type": "number"
     },
     "premium_previous": {
-      "type": "number",
-      "description": "Vorherige Jahrespr\u00e4mie"
+      "type": "number"
     },
     "premium_benchmark": {
-      "type": "number",
-      "description": "Benchmark-Pr\u00e4mie"
+      "type": "number"
     },
     "start_date": {
       "type": "string",
-      "format": "date",
-      "description": "Vertragsbeginn"
+      "format": "date"
     },
     "end_date": {
       "type": "string",
-      "format": "date",
-      "description": "Vertragsende"
+      "format": "date"
     },
     "renewal_date": {
       "type": "string",
-      "format": "date",
-      "description": "Verl\u00e4ngerungsdatum"
+      "format": "date"
     },
     "auto_renew": {
       "type": "boolean",
-      "default": true,
-      "description": "Automatische Verl\u00e4ngerung"
+      "default": true
     },
     "cancellation_deadline": {
       "type": "string",
-      "format": "date",
-      "description": "K\u00fcndigungsfrist"
+      "format": "date"
     },
     "cancel_date": {
       "type": "string",
-      "format": "date",
-      "description": "K\u00fcndigungsdatum"
+      "format": "date"
     },
     "cancel_reason": {
-      "type": "string",
-      "description": "K\u00fcndigungsgrund"
+      "type": "string"
     },
     "storno_period_months": {
       "type": "number",
-      "default": 12,
-      "description": "Stornoperiode in Monaten"
+      "default": 12
     },
     "status": {
       "type": "string",
@@ -128,8 +103,7 @@
         "expired",
         "archived"
       ],
-      "default": "active",
-      "description": "Status"
+      "default": "active"
     },
     "process_status": {
       "type": "string",
@@ -141,46 +115,36 @@
         "beratung_erfolgt",
         "erledigt"
       ],
-      "default": "neu",
-      "description": "Operativer Prozess-Status"
+      "default": "neu"
     },
     "custom_status": {
-      "type": "string",
-      "description": "Dynamischer Status-Schl\u00fcssel"
+      "type": "string"
     },
     "sparte": {
-      "type": "string",
-      "description": "Versicherungssparte"
+      "type": "string"
     },
     "sparte_data": {
       "type": "object",
-      "description": "Spartenspezifische Daten",
       "additionalProperties": true
     },
     "commission_rate": {
-      "type": "number",
-      "description": "Provisionsquote (%)"
+      "type": "number"
     },
     "commission_amount": {
-      "type": "number",
-      "description": "Provisionsbetrag (CHF)"
+      "type": "number"
     },
     "assigned_broker": {
-      "type": "string",
-      "description": "Zust\u00e4ndiger Broker (E-Mail)"
+      "type": "string"
     },
     "policy_document_url": {
-      "type": "string",
-      "description": "URL zum Policy-Dokument"
+      "type": "string"
     },
     "source_application_id": {
-      "type": "string",
-      "description": "Quellen-Antrags-ID"
+      "type": "string"
     },
     "renewal_alert_start_date": {
       "type": "string",
-      "format": "date",
-      "description": "Ablauf-Alert startet"
+      "format": "date"
     },
     "renewal_status": {
       "type": "string",
@@ -190,13 +154,11 @@
         "in_progress",
         "completed"
       ],
-      "default": "none",
-      "description": "Verl\u00e4ngerungs-Status"
+      "default": "none"
     },
     "renewal_last_reminder": {
       "type": "string",
-      "format": "date",
-      "description": "Datum der letzten Erinnerung"
+      "format": "date"
     },
     "renewal_priority": {
       "type": "string",
@@ -205,8 +167,7 @@
         "medium",
         "high"
       ],
-      "default": "low",
-      "description": "KI-Priorisierung"
+      "default": "low"
     },
     "renewal_stage": {
       "type": "string",
@@ -218,18 +179,15 @@
         "renewed",
         "lost"
       ],
-      "default": "early",
-      "description": "Sales Pipeline Stage"
+      "default": "early"
     },
     "renewal_stage_updated": {
       "type": "string",
-      "format": "date-time",
-      "description": "Wann wurde die Stage zuletzt aktualisiert"
+      "format": "date-time"
     },
     "renewal_offer_created": {
       "type": "boolean",
-      "default": false,
-      "description": "Angebot wurde vorbereitet"
+      "default": false
     },
     "renewal_offer_status": {
       "type": "string",
@@ -240,32 +198,26 @@
         "accepted",
         "rejected"
       ],
-      "default": "none",
-      "description": "Status des Angebots"
+      "default": "none"
     },
     "renewal_offer_date": {
       "type": "string",
-      "format": "date",
-      "description": "Angebot erstellt am"
+      "format": "date"
     },
     "renewal_offer_policy_id": {
-      "type": "string",
-      "description": "Kopie der Policy als Angebot"
+      "type": "string"
     },
     "renewal_customer_accepted": {
       "type": "boolean",
-      "default": false,
-      "description": "Kunde hat Angebot angenommen"
+      "default": false
     },
     "renewal_accepted_date": {
       "type": "string",
-      "format": "date",
-      "description": "Annahmedatum"
+      "format": "date"
     },
     "renewal_last_activity": {
       "type": "string",
-      "format": "date-time",
-      "description": "Letzter Kontakt/Aktivit\u00e4t in der Renewal"
+      "format": "date-time"
     },
     "upsell_stage": {
       "type": "string",
@@ -277,8 +229,7 @@
         "won",
         "lost"
       ],
-      "default": "identified",
-      "description": "Upsell Pipeline Stage"
+      "default": "identified"
     },
     "upsell_stage_updated": {
       "type": "string",
@@ -330,25 +281,21 @@
         "high",
         "optimized"
       ],
-      "default": "normal",
-      "description": "Pricing-Status"
+      "default": "normal"
     },
     "pricing_suggestion_id": {
       "type": "string"
     },
     "last_review_date": {
       "type": "string",
-      "format": "date",
-      "description": "Datum der letzten Policenpr\u00fcfung"
+      "format": "date"
     },
     "next_review_date": {
       "type": "string",
-      "format": "date",
-      "description": "Datum der n\u00e4chsten geplanten Pr\u00fcfung"
+      "format": "date"
     },
     "notes": {
-      "type": "string",
-      "description": "Notizen"
+      "type": "string"
     },
     "archived": {
       "type": "boolean",
@@ -365,19 +312,16 @@
       "type": "string"
     },
     "primary_broker_id": {
-      "type": "string",
-      "description": "ACCESS CONTROL: Hauptberater-ID (User)"
+      "type": "string"
     },
     "assigned_brokers": {
       "type": "array",
-      "description": "ACCESS CONTROL: Array von zugewiesenen Berater-IDs",
       "items": {
         "type": "string"
       }
     },
     "assigned_team": {
       "type": "array",
-      "description": "ACCESS CONTROL: Array von Mitarbeitern mit Zugriff",
       "items": {
         "type": "string"
       }
@@ -390,8 +334,41 @@
         "team_visible",
         "all_internal"
       ],
-      "default": "assigned_brokers_only",
-      "description": "ACCESS CONTROL: Sichtbarkeitsstufe"
+      "default": "assigned_brokers_only"
+    },
+    "change_history": {
+      "type": "array",
+      "description": "Audit-Trail aller kritischen Vertragsmutationen (Enterprise Governance)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "description": "field_changed | status_changed | archived | renewed | cancelled | upsell_stage_changed"
+          },
+          "changed_fields": {
+            "type": "string"
+          },
+          "previous_value": {
+            "type": "string"
+          },
+          "new_value": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "required": [
