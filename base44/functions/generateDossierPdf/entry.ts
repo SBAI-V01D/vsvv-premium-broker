@@ -339,9 +339,21 @@ Deno.serve(async (req) => {
 
     const dossier = dossierArr[0];
     if (!dossier) return Response.json({ error: 'Dossier nicht gefunden' }, { status: 404 });
+    // ── Sprint D Guards: alle drei Bedingungen müssen erfüllt sein ──
     if (!dossier.advisor_approved) {
-      return Response.json({ error: 'Dossier nicht freigegeben — PDF-Generierung nicht möglich' }, { status: 403 });
+      return Response.json({ error: 'Dossier nicht freigegeben (advisor_approved fehlt)' }, { status: 403 });
     }
+    if (dossier.review_status !== 'freigegeben') {
+      return Response.json({ error: `Dossier-Status nicht freigegeben (aktuell: ${dossier.review_status})` }, { status: 403 });
+    }
+    if (!dossier.approved_snapshot_id) {
+      return Response.json({ error: 'Kein genehmigter Snapshot verknüpft — bitte Snapshot erstellen und Dossier erneut freigeben' }, { status: 403 });
+    }
+
+    // IP-Adresse für Audit
+    const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || req.headers.get('x-real-ip')
+      || 'unknown';
 
     const [customerArr, advisorArr, orgArr] = await Promise.all([
       dossier.customer_id     ? base44.entities.Customer.filter({ id: dossier.customer_id })         : Promise.resolve([]),
@@ -406,6 +418,7 @@ Deno.serve(async (req) => {
       snapshot_id:      dossier.approved_snapshot_id || null,
       customer_name:    dossier.customer_name || '',
       exported_at:      exportedAt,
+      ip_address:       ipAddress,
     });
 
     return Response.json({

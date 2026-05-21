@@ -40,16 +40,16 @@
     },
     "approved_by": {
       "type": "string",
-      "description": "Name des freigebenden Beraters (zum Export-Zeitpunkt)"
+      "description": "Name des freigebenden Beraters"
     },
     "approved_at": {
       "type": "string",
       "format": "date-time",
-      "description": "Freigabe-Zeitstempel (zum Export-Zeitpunkt)"
+      "description": "Freigabe-Zeitstempel"
     },
     "snapshot_id": {
       "type": "string",
-      "description": "Verkn\u00fcpfte Snapshot-ID"
+      "description": "Verkn\u00fcpfte Snapshot-ID (approved_snapshot_id)"
     },
     "customer_name": {
       "type": "string",
@@ -59,6 +59,10 @@
       "type": "string",
       "format": "date-time",
       "description": "Export-Zeitstempel"
+    },
+    "ip_address": {
+      "type": "string",
+      "description": "IP-Adresse des Exporteurs (Audit)"
     }
   },
   "required": [
