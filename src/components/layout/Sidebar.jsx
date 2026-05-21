@@ -85,7 +85,8 @@ const navGroups = [
   {
     label: 'Beta',
     items: [
-      { label: 'Beratungsdossiers', icon: BookOpen, path: '/beratungsdossier', adminOnly: true },
+      { label: 'Beratungsdossiers',      icon: BookOpen, path: '/beratungsdossier',               adminOnly: true },
+      { label: 'Enterprise Control Center', icon: Shield,   path: '/admin/enterprise-control-center', adminOnly: true },
     ],
   },
 ];

@@ -38,6 +38,7 @@ import Verkaufschancen from './pages/Verkaufschancen'
 import Vertragsablaeufe from './pages/Vertragsablaeufe'
 import AdminTeamAccess from './pages/AdminTeamAccess'
 import AdvisoryDossier from './pages/AdvisoryDossier'
+import AdminEnterpriseControlCenter from './pages/AdminEnterpriseControlCenter'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -126,6 +127,7 @@ const AuthenticatedApp = () => {
         <Route path="/admin/team-zugriffsrechte" element={<AdminTeamAccess />} />
         {/* AdvisoryDossierEngine — Phase 1 — Admin-Only */}
         <Route path="/beratungsdossier" element={<AdvisoryDossier />} />
+        <Route path="/admin/enterprise-control-center" element={<AdminEnterpriseControlCenter />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
