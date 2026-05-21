@@ -17,9 +17,20 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
     if (user.role !== 'admin') return Response.json({ error: 'Forbidden: Admin only' }, { status: 403 });
 
-    // Alle Dossiers ohne organization_id laden
-    const dossiers = await base44.asServiceRole.entities.AdvisoryDossier.list('-created_date', 500);
-    const affected = dossiers.filter(d => !d.organization_id);
+    // Optional: einzelnes Dossier per entity_id (aus Automation oder Incident-Repair)
+    let payload = {};
+    try { payload = await req.json(); } catch (_) {}
+    const singleId = payload?.entity_id || payload?.dossierId || null;
+
+    // Alle Dossiers ohne organization_id laden (oder nur das eine)
+    let affected;
+    if (singleId) {
+      const single = await base44.asServiceRole.entities.AdvisoryDossier.get(singleId);
+      affected = single && !single.organization_id ? [single] : [];
+    } else {
+      const dossiers = await base44.asServiceRole.entities.AdvisoryDossier.list('-created_date', 500);
+      affected = dossiers.filter(d => !d.organization_id);
+    }
 
     if (affected.length === 0) {
       return Response.json({ repaired: 0, skipped: 0, failed: 0, message: 'Alle Dossiers haben bereits eine organization_id.' });

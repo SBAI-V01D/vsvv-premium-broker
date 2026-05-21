@@ -38,7 +38,7 @@ export default function AdvisoryDossier() {
           <div className="flex items-center gap-2 mb-1">
             <h1 className="text-2xl font-semibold text-foreground">Beratungsdossiers</h1>
             <span className="text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
-              Beta · Admin only
+              Beta · Validierung ausstehend
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -85,7 +85,7 @@ export default function AdvisoryDossier() {
       <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 text-sm text-emerald-800 flex items-start gap-2">
         <span className="text-base leading-none mt-0.5">✅</span>
         <div>
-          <strong>Phase B+C aktiv:</strong> Multi-Produkt-KI-Extraktion, Personen-Erkennung, Review-Workflow, Confidence-System und Qualitätsmessung verfügbar.
+          <strong>Phase B+C+D aktiv:</strong> KI-Extraktion, Review-Workflow, Freigabe-Audit-Trail, PDF-Export mit SHA-256-Hash, Private Storage, Snapshot-Versionierung und organization_id-Governance implementiert.
           Navigation mit <kbd className="bg-white border border-emerald-300 rounded px-1 py-0.5 text-[11px] font-mono">Alt+←</kbd> <kbd className="bg-white border border-emerald-300 rounded px-1 py-0.5 text-[11px] font-mono">Alt+→</kbd> zwischen Tabs.
         </div>
       </div>
