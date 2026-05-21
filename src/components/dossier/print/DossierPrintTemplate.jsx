@@ -361,7 +361,7 @@ function VergleichsSeite({ dossier, customer, snapshot, gruppe1, gruppe2, entrie
   );
 }
 
-// ── Enterprise Header Komponente — Titel links, Org+Berater rechts ──────────────
+// ── Enterprise Header Komponente — Titel links, Org+Berater rechts (premium) ────
 function EnterpriseHeader({ organization, advisor, dossier, snapshot }) {
   const advName = advisor ? `${advisor.firstname || ''} ${advisor.lastname || ''}`.trim() : '';
   const finmaOrg = organization?.finma_number;
@@ -371,47 +371,58 @@ function EnterpriseHeader({ organization, advisor, dossier, snapshot }) {
 
   return (
     <div style={{
-      borderBottom: '2.5px solid #0f172a',
-      paddingBottom: '14px',
-      marginBottom: '22px',
+      borderBottom: '2px solid #0f172a',
+      paddingBottom: '18px',
+      marginBottom: '24px',
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
-      gap: '24px',
+      gap: '32px',
       WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
     }}>
       {/* LEFT: Dossier-Titel */}
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '5px' }}>
+        <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '6px' }}>
           {dossier?.title || TYPE_LABELS[dossier?.dossier_type] || dossier?.dossier_type}
         </div>
-        <div style={{ fontSize: '8.5px', color: '#94a3b8' }}>
-          Erstellt am {fmtDate(snapshot?.snapshot_created_at)} · Version {dossier?.version ?? 1}
+        <div style={{ fontSize: '8.5px', color: '#94a3b8', letterSpacing: '0.02em' }}>
+          {fmtDate(snapshot?.snapshot_created_at)} &nbsp;·&nbsp; Version {dossier?.version ?? 1}
         </div>
       </div>
 
-      {/* RIGHT: Organisation + Berater kompakt */}
+      {/* RIGHT: Organisation + Berater — Premium-Block */}
       {hasRight && (
-        <div style={{ textAlign: 'right', minWidth: '190px', flexShrink: 0 }}>
+        <div style={{
+          textAlign: 'right',
+          minWidth: '210px',
+          flexShrink: 0,
+          borderLeft: '2px solid #e2e8f0',
+          paddingLeft: '20px',
+        }}>
           {organization?.name && (
-            <div style={{ marginBottom: advName ? '8px' : 0 }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em' }}>
+            <div style={{ marginBottom: advName ? '12px' : 0 }}>
+              <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
                 {organization.name}
               </div>
               {finmaOrg && (
-                <div style={{ fontSize: '7.5px', color: '#64748b', marginTop: '2px' }}>FINMA {finmaOrg}</div>
+                <div style={{ fontSize: '8px', color: '#64748b', marginTop: '3px', letterSpacing: '0.01em' }}>
+                  Reg. FINMA&nbsp;·&nbsp;{finmaOrg}
+                </div>
               )}
             </div>
           )}
           {advName && (
             <div style={{
               borderTop: organization?.name ? '1px solid #e2e8f0' : 'none',
-              paddingTop: organization?.name ? '7px' : 0,
+              paddingTop: organization?.name ? '10px' : 0,
             }}>
-              <div style={{ fontSize: '9px', fontWeight: 600, color: '#334155' }}>{advName}</div>
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap', marginTop: '2px' }}>
-                {finmaAdv && <div style={{ fontSize: '7.5px', color: '#64748b' }}>FINMA {finmaAdv}</div>}
-                {vbvAdv   && <div style={{ fontSize: '7.5px', color: '#64748b' }}>VBV {vbvAdv}</div>}
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#1e293b', letterSpacing: '-0.01em' }}>{advName}</div>
+              {advisor?.function && (
+                <div style={{ fontSize: '8px', color: '#64748b', marginTop: '2px' }}>{advisor.function}</div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', marginTop: '4px' }}>
+                {finmaAdv && <div style={{ fontSize: '7.5px', color: '#64748b' }}>Reg. FINMA&nbsp;·&nbsp;{finmaAdv}</div>}
+                {vbvAdv   && <div style={{ fontSize: '7.5px', color: '#64748b' }}>VBV-zertifiziert&nbsp;·&nbsp;{vbvAdv}</div>}
               </div>
             </div>
           )}
@@ -452,6 +463,10 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
     return result;
   }, [entries, referenceTotal]);
 
+  // ── Sparbetrag-Farbe ──
+  const savingsColor = summary.savingsMonthly > 0.005 ? '#059669' : summary.savingsMonthly < -0.005 ? '#dc2626' : '#64748b';
+  const savingsSign  = summary.savingsMonthly > 0.005 ? '−' : summary.savingsMonthly < -0.005 ? '+' : '';
+
   return (
     <div>
       {/* Enterprise Header */}
@@ -464,18 +479,101 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
 
 
 
-      {/* ── 1. Versicherungsnehmer + Familienmitglieder ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: hasFamilyMembers ? '1fr 1fr' : '1fr', gap: '20px', marginBottom: '20px' }}>
+      {/* ── MITTE: Executive Summary ── */}
+      {(summary.hasCurrent || summary.hasRecommendation) && (
+        <div style={{
+          background: '#f8fafc',
+          border: '1px solid #e2e8f0',
+          borderRadius: '12px',
+          padding: '20px 24px',
+          marginBottom: '22px',
+          WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
+        }}>
+          <div style={{ fontSize: '7.5px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '16px' }}>
+            Prämienübersicht
+          </div>
+
+          {/* 4 KPI-Kacheln */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+            {/* Aktuelle Prämie */}
+            <div style={{ padding: '16px 18px', borderRight: '1px solid #e2e8f0', background: '#ffffff' }}>
+              <div style={{ fontSize: '7px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>Aktuelle Prämie</div>
+              <div style={{ fontSize: '26px', fontWeight: 900, color: '#334155', letterSpacing: '-0.03em', lineHeight: 1 }}>{fmtCHF(summary.currentMonthly)}</div>
+              <div style={{ fontSize: '8px', color: '#94a3b8', marginTop: '4px' }}>pro Monat</div>
+              <div style={{ fontSize: '8.5px', fontWeight: 600, color: '#475569', marginTop: '2px' }}>{fmtCHF(summary.currentYearly)} / Jahr</div>
+            </div>
+
+            {/* Optimierte Prämie */}
+            <div style={{ padding: '16px 18px', borderRight: '1px solid #e2e8f0', background: '#eff6ff', borderTop: '3px solid #1d4ed8', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+              <div style={{ fontSize: '7px', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>
+                {summary.proposedGruppe ? (GRUPPE_CFG[summary.proposedGruppe]?.label || 'Optimiert') : 'Optimierte Prämie'}
+              </div>
+              <div style={{ fontSize: '26px', fontWeight: 900, color: '#1d4ed8', letterSpacing: '-0.03em', lineHeight: 1 }}>{fmtCHF(summary.proposedMonthly)}</div>
+              <div style={{ fontSize: '8px', color: '#93c5fd', marginTop: '4px' }}>pro Monat</div>
+              <div style={{ fontSize: '8.5px', fontWeight: 600, color: '#1e40af', marginTop: '2px' }}>{fmtCHF(summary.proposedYearly)} / Jahr</div>
+            </div>
+
+            {/* Einsparung / Monat */}
+            <div style={{ padding: '16px 18px', borderRight: '1px solid #e2e8f0', background: summary.savingsMonthly > 0.005 ? '#f0fdf4' : '#ffffff', borderTop: `3px solid ${savingsColor}`, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+              <div style={{ fontSize: '7px', fontWeight: 700, color: savingsColor, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>
+                {summary.savingsMonthly > 0.005 ? 'Einsparung' : summary.savingsMonthly < -0.005 ? 'Mehrkosten' : 'Differenz'}
+              </div>
+              <div style={{ fontSize: '26px', fontWeight: 900, color: savingsColor, letterSpacing: '-0.03em', lineHeight: 1 }}>
+                {summary.savingsMonthly != null ? `${savingsSign}${fmtCHF(Math.abs(summary.savingsMonthly))}` : '—'}
+              </div>
+              <div style={{ fontSize: '8px', color: '#94a3b8', marginTop: '4px' }}>pro Monat</div>
+              {summary.savingsPercent != null && (
+                <div style={{ fontSize: '11px', fontWeight: 800, color: savingsColor, marginTop: '4px' }}>
+                  {savingsSign}{Math.abs(summary.savingsPercent).toFixed(1)}%
+                </div>
+              )}
+            </div>
+
+            {/* Einsparung / Jahr */}
+            <div style={{ padding: '16px 18px', background: summary.savingsMonthly > 0.005 ? '#f0fdf4' : '#ffffff', borderTop: `3px solid ${savingsColor}`, WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+              <div style={{ fontSize: '7px', fontWeight: 700, color: savingsColor, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>
+                {summary.savingsMonthly > 0.005 ? 'Einsparung / Jahr' : summary.savingsMonthly < -0.005 ? 'Mehrkosten / Jahr' : 'Differenz / Jahr'}
+              </div>
+              <div style={{ fontSize: '26px', fontWeight: 900, color: savingsColor, letterSpacing: '-0.03em', lineHeight: 1 }}>
+                {summary.savingsYearly != null ? `${savingsSign}${fmtCHF(Math.abs(summary.savingsYearly))}` : '—'}
+              </div>
+              <div style={{ fontSize: '8px', color: '#94a3b8', marginTop: '4px' }}>pro Jahr</div>
+            </div>
+          </div>
+
+          {/* Angebote-Zeile (falls vorhanden) */}
+          {angebotPrämien.length > 0 && (
+            <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '7px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>
+                Weitere Angebote im Vergleich zur {referenceLabel}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(angebotPrämien.length, 5)}, 1fr)`, gap: '12px' }}>
+                {angebotPrämien.map((angebot) => {
+                  const farbe = angebot.diff > 0 ? '#059669' : angebot.diff < 0 ? '#dc2626' : '#64748b';
+                  return (
+                    <div key={angebot.gruppe} style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '7px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>{angebot.label}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: '#334155', letterSpacing: '-0.02em' }}>{fmtCHF(angebot.monthly)}</div>
+                      {Math.abs(angebot.diff) > 0.01 && (
+                        <div style={{ fontSize: '8px', fontWeight: 700, color: farbe }}>
+                          {angebot.diff > 0 ? '−' : '+'}{fmtCHF(Math.abs(angebot.diff))}/Mt.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── UNTEN: Versicherungsnehmer + Familienmitglieder ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: hasFamilyMembers ? '1fr 1fr' : '1fr', gap: '20px', marginBottom: '16px' }}>
         {/* Versicherungsnehmer */}
         {customer && (
-          <div style={{
-            borderTop: '2px solid #1d4ed8',
-            paddingTop: '10px',
-            WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
-          }}>
-            <div style={{ fontSize: '8px', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
-              Versicherungsnehmer
-            </div>
+          <div style={{ borderTop: '2px solid #1d4ed8', paddingTop: '10px', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+            <div style={{ fontSize: '8px', fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Versicherungsnehmer</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 20px', fontSize: '9.5px' }}>
               {[
                 ['Name', [customer.first_name, customer.last_name].filter(Boolean).join(' ')],
@@ -496,14 +594,8 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
 
         {/* Haushaltsmitglieder */}
         {hasFamilyMembers && (
-          <div style={{
-            borderTop: '2px solid #6d28d9',
-            paddingTop: '10px',
-            WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
-          }}>
-            <div style={{ fontSize: '8px', fontWeight: 700, color: '#6d28d9', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
-              Haushaltsmitglieder
-            </div>
+          <div style={{ borderTop: '2px solid #6d28d9', paddingTop: '10px', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+            <div style={{ fontSize: '8px', fontWeight: 700, color: '#6d28d9', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Haushaltsmitglieder</div>
             <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(family_members.length, 3)}, 1fr)`, gap: '10px' }}>
               {family_members.map((m, i) => (
                 <div key={m.id || i} style={{ borderLeft: '2px solid #ede9fe', paddingLeft: '8px', fontSize: '9px' }}>
@@ -519,87 +611,10 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
         )}
       </div>
 
-      {/* ── 2. Prämienübersicht ── */}
-      {(summary.hasCurrent || summary.hasRecommendation || angebotPrämien.length > 0) && (
-        <div style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-          <div style={{ fontSize: '8px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px' }}>
-            Prämienübersicht — Alle Lösungen im Vergleich
-          </div>
-
-          {/* Zeile 1: Aktuelle Lösung + Einsparung + Optimiert */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '18px' }}>
-            <div style={{ textAlign: 'center', borderTop: '2px solid #64748b', paddingTop: '10px' }}>
-              <div style={{ fontSize: '7.5px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Aktuelle Prämie / Monat</div>
-              <div style={{ fontSize: '22px', fontWeight: 900, color: '#334155', letterSpacing: '-0.03em', lineHeight: 1 }}>{fmtCHF(summary.currentMonthly)}</div>
-              <div style={{ fontSize: '8px', color: '#94a3b8', marginTop: '3px' }}>{fmtCHF(summary.currentYearly)} / Jahr</div>
-            </div>
-
-            <div style={{ textAlign: 'center', borderTop: `2px solid ${summary.savingsMonthly > 0.005 ? '#059669' : summary.savingsMonthly < -0.005 ? '#dc2626' : '#94a3b8'}`, paddingTop: '10px' }}>
-              <div style={{ fontSize: '7.5px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
-                {summary.savingsMonthly > 0.005 ? 'Einsparung / Monat' : summary.savingsMonthly < -0.005 ? 'Mehrkosten / Monat' : 'Differenz'}
-              </div>
-              <div style={{ fontSize: '22px', fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1, color: summary.savingsMonthly > 0.005 ? '#059669' : summary.savingsMonthly < -0.005 ? '#dc2626' : '#64748b' }}>
-                {summary.savingsMonthly != null ? `${summary.savingsMonthly > 0.005 ? '− ' : summary.savingsMonthly < -0.005 ? '+ ' : ''}${fmtCHF(Math.abs(summary.savingsMonthly))}` : '—'}
-              </div>
-              {summary.savingsYearly != null && (
-                <div style={{ fontSize: '8px', color: '#94a3b8', marginTop: '3px' }}>
-                  {summary.savingsMonthly > 0 ? '− ' : '+ '}{fmtCHF(Math.abs(summary.savingsYearly))} / Jahr
-                </div>
-              )}
-              {summary.savingsPercent != null && (
-                <div style={{ fontSize: '13px', fontWeight: 800, marginTop: '4px', color: summary.savingsMonthly > 0.005 ? '#059669' : summary.savingsMonthly < -0.005 ? '#dc2626' : '#64748b' }}>
-                  {summary.savingsMonthly > 0 ? '−' : '+'}{Math.abs(summary.savingsPercent).toFixed(1)}%
-                </div>
-              )}
-            </div>
-
-            <div style={{ textAlign: 'center', borderTop: '2px solid #1d4ed8', paddingTop: '10px' }}>
-              <div style={{ fontSize: '7.5px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
-                {summary.proposedGruppe ? `${GRUPPE_CFG[summary.proposedGruppe]?.label || summary.proposedGruppe} / Monat` : 'Optimierte Prämie / Monat'}
-              </div>
-              <div style={{ fontSize: '22px', fontWeight: 900, color: '#1d4ed8', letterSpacing: '-0.03em', lineHeight: 1 }}>{fmtCHF(summary.proposedMonthly)}</div>
-              <div style={{ fontSize: '8px', color: '#94a3b8', marginTop: '3px' }}>{fmtCHF(summary.proposedYearly)} / Jahr</div>
-            </div>
-          </div>
-
-          {/* Angebote */}
-          {angebotPrämien.length > 0 && (
-            <div>
-              <div style={{ fontSize: '7.5px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-                Angebote im Vergleich zur {referenceLabel}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(angebotPrämien.length, 4)}, 1fr)`, gap: '16px' }}>
-                {angebotPrämien.map((angebot) => {
-                  const istAngebot1 = angebot.gruppe === 'angebot_1';
-                  const farbe = istAngebot1 ? '#1d4ed8' : (angebot.diff > 0 ? '#059669' : angebot.diff < 0 ? '#dc2626' : '#64748b');
-                  return (
-                    <div key={angebot.gruppe} style={{
-                      borderTop: `2px solid ${farbe}`,
-                      paddingTop: '8px',
-                      textAlign: 'center',
-                      WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
-                    }}>
-                      <div style={{ fontSize: '7px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '5px' }}>{angebot.label}</div>
-                      <div style={{ fontSize: '17px', fontWeight: 900, color: farbe, letterSpacing: '-0.02em', lineHeight: 1 }}>{fmtCHF(angebot.monthly)}</div>
-                      <div style={{ fontSize: '7.5px', color: '#94a3b8', marginTop: '2px' }}>{fmtCHF(angebot.yearly)} / Jahr</div>
-                      {Math.abs(angebot.diff) > 0.01 && (
-                        <div style={{ fontSize: '9px', fontWeight: 700, color: farbe, marginTop: '4px' }}>
-                          {angebot.diff > 0 ? '−' : '+'}{fmtCHF(Math.abs(angebot.diff))}/Mt.
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Beratungsnotiz falls kurz */}
       {dossier.recommendation_notes && dossier.recommendation_notes.length < 300 && (
         <div style={{
-          marginTop: '16px', border: '1px solid #bbf7d0', background: '#f0fdf4',
+          marginTop: '8px', border: '1px solid #bbf7d0', background: '#f0fdf4',
           borderRadius: '8px', padding: '10px 14px', fontSize: '9.5px', color: '#166534', lineHeight: '1.6',
           WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
         }}>
