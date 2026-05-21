@@ -4,7 +4,7 @@
   "properties": {
     "customer_id": {
       "type": "string",
-      "description": "Read-link zu Customer (kein Cascade, kein Trigger)"
+      "description": "Read-link zu Customer"
     },
     "customer_name": {
       "type": "string",
@@ -20,7 +20,7 @@
     },
     "title": {
       "type": "string",
-      "description": "Dossier-Titel (z.B. 'Krankenversicherungsvergleich 2026')"
+      "description": "Dossier-Titel"
     },
     "dossier_type": {
       "type": "string",
@@ -72,7 +72,7 @@
     },
     "linked_verkaufschance_id": {
       "type": "string",
-      "description": "Optionaler Read-Link zu Verkaufschance (kein Cascade)"
+      "description": "Optionaler Link zu Verkaufschance"
     },
     "version": {
       "type": "number",
@@ -91,12 +91,71 @@
     },
     "archived_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "Archivierungszeitpunkt"
+      "format": "date-time"
     },
     "notes": {
       "type": "string",
       "description": "Interne Notizen"
+    },
+    "snap_org_name": {
+      "type": "string",
+      "description": "Snapshot: Organisationsname"
+    },
+    "snap_org_street": {
+      "type": "string",
+      "description": "Snapshot: Strasse Organisation"
+    },
+    "snap_org_zip": {
+      "type": "string",
+      "description": "Snapshot: PLZ Organisation"
+    },
+    "snap_org_city": {
+      "type": "string",
+      "description": "Snapshot: Ort Organisation"
+    },
+    "snap_org_phone": {
+      "type": "string",
+      "description": "Snapshot: Tel Organisation"
+    },
+    "snap_org_email": {
+      "type": "string",
+      "description": "Snapshot: E-Mail Organisation"
+    },
+    "snap_org_website": {
+      "type": "string",
+      "description": "Snapshot: Website Organisation"
+    },
+    "snap_org_finma": {
+      "type": "string",
+      "description": "Snapshot: FINMA-Nr Organisation"
+    },
+    "snap_adv_firstname": {
+      "type": "string",
+      "description": "Snapshot: Vorname Berater"
+    },
+    "snap_adv_lastname": {
+      "type": "string",
+      "description": "Snapshot: Nachname Berater"
+    },
+    "snap_adv_function": {
+      "type": "string",
+      "description": "Snapshot: Funktion Berater"
+    },
+    "snap_adv_phone": {
+      "type": "string",
+      "description": "Snapshot: Tel Berater"
+    },
+    "snap_adv_email": {
+      "type": "string",
+      "description": "Snapshot: E-Mail Berater"
+    },
+    "snap_adv_finma": {
+      "type": "string",
+      "description": "Snapshot: FINMA-Nr Berater"
+    },
+    "snap_adv_vbv": {
+      "type": "string",
+      "description": "Snapshot: VBV-Nr Berater"
     }
   },
   "required": [

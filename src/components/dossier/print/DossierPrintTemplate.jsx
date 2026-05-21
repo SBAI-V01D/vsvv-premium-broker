@@ -657,6 +657,28 @@ export default function DossierPrintTemplate({ snapshot }) {
 
   if (!dossier) return null;
 
+  // Bevorzuge persistierte Snapshot-Felder — historisch stabil.
+  // Fallback auf Live-Queries nur wenn kein Snapshot vorhanden.
+  const org = dossier.snap_org_name ? {
+    name:         dossier.snap_org_name,
+    street:       dossier.snap_org_street,
+    zip_code:     dossier.snap_org_zip,
+    city:         dossier.snap_org_city,
+    phone:        dossier.snap_org_phone,
+    email:        dossier.snap_org_email,
+    website:      dossier.snap_org_website,
+    finma_number: dossier.snap_org_finma,
+  } : organization;
+
+  const adv = dossier.snap_adv_firstname ? {
+    firstname:    dossier.snap_adv_firstname,
+    lastname:     dossier.snap_adv_lastname,
+    phone:        dossier.snap_adv_phone,
+    email:        dossier.snap_adv_email,
+    finma_number: dossier.snap_adv_finma,
+    vbv_number:   dossier.snap_adv_vbv,
+  } : advisor;
+
   const entries = Array.isArray(comparison_entries)
     ? comparison_entries.map(e => ({ ...e, gruppe: e.gruppe || 'manuell' }))
     : [];
@@ -744,8 +766,8 @@ export default function DossierPrintTemplate({ snapshot }) {
             summary={summary}
             savings={savings}
             entries={entries}
-            organization={organization}
-            advisor={advisor}
+            organization={org}
+            advisor={adv}
           />
         </div>
 
@@ -761,8 +783,8 @@ export default function DossierPrintTemplate({ snapshot }) {
             entries={entries}
             referenceTotal={referenceTotal}
             pageLabel={seite.label}
-            organization={organization}
-            advisor={advisor}
+            organization={org}
+            advisor={adv}
           />
         ))}
 
@@ -774,8 +796,8 @@ export default function DossierPrintTemplate({ snapshot }) {
               customer={customer} 
               snapshot={snapshot} 
               pageLabel="Beratungsnotiz"
-              organization={organization}
-              advisor={advisor}
+              organization={org}
+              advisor={adv}
             />
             <div style={{
               border: '1px solid #bbf7d0', background: '#f0fdf4', borderRadius: '10px',
@@ -795,8 +817,8 @@ export default function DossierPrintTemplate({ snapshot }) {
             customer={customer}
             pageLabel="Legende / Hinweise"
             snapshot={snapshot}
-            organization={organization}
-            advisor={advisor}
+            organization={org}
+            advisor={adv}
           />
           <div style={{ marginTop: '8px' }}>
             <DossierLegende entries={entries} snapshot={snapshot} />

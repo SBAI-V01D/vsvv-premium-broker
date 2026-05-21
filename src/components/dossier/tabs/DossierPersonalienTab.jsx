@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { User, Phone, Mail, MapPin, Calendar, CreditCard, Shield, Edit3, Check, X } from 'lucide-react';
+import DossierBrokerSection from './DossierBrokerSection';
 import { toast } from 'sonner';
 
 const CIVIL_STATUS_OPTIONS = [
@@ -286,6 +287,9 @@ export default function DossierPersonalienTab({ dossier }) {
           </SectionCard>
         )}
       </div>
+
+      {/* Berater & Organisation — historisiert, nur im Dossier gespeichert */}
+      <DossierBrokerSection dossier={dossier} />
     </div>
   );
 }
