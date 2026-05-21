@@ -8,7 +8,8 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Search, FileText, Plus } from 'lucide-react';
+import { Search, FileText, AlertTriangle, RefreshCw, CheckCircle2 } from 'lucide-react';
+import ConfidenceBadge from '@/components/dossier/ConfidenceBadge';
 
 const STATUS_CONFIG = {
   entwurf:        { label: 'Entwurf',         cls: 'bg-slate-100 text-slate-600 border-slate-200' },
@@ -155,6 +156,21 @@ export default function DossierList({ onOpen, onNew }) {
               <span className="hidden md:inline text-[11px] text-muted-foreground/70">
                 {formatDate(dossier.updated_date)}
               </span>
+              {/* Approval / Reapproval Indikator */}
+              {dossier.reapproval_required && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-full">
+                  <RefreshCw className="w-2.5 h-2.5" />Re-Approval
+                </span>
+              )}
+              {dossier.advisor_approved && !dossier.reapproval_required && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                  <CheckCircle2 className="w-2.5 h-2.5" />Freigegeben
+                </span>
+              )}
+              {/* Confidence */}
+              {dossier.extraction_confidence != null && (
+                <ConfidenceBadge confidence={dossier.extraction_confidence} />
+              )}
               {/* Status */}
               <span className={`text-[10px] font-semibold border px-2 py-0.5 rounded-full ${st.cls}`}>
                 {st.label}

@@ -11,13 +11,14 @@ import DossierList from '@/components/dossier/DossierList';
 import DossierBuilder from '@/components/dossier/DossierBuilder.jsx';
 import DossierModuleGuard from '@/components/dossier/DossierModuleGuard';
 import AiExtractionQualityDashboard from '@/components/dossier/AiExtractionQualityDashboard';
+import DossierReviewQueue from '@/components/dossier/DossierReviewQueue';
 
 // Feature-Flag: Modul ist aktuell nur für Admins sichtbar
 const DOSSIER_MODULE_ENABLED = true;
 
 export default function AdvisoryDossier() {
   const { user } = useAuth();
-  const [view, setView] = useState('list'); // 'list' | 'builder' | 'quality'
+  const [view, setView] = useState('list'); // 'list' | 'builder' | 'quality' | 'queue'
   const [selectedDossierId, setSelectedDossierId] = useState(null);
 
   // Admin-Only Guard
@@ -49,6 +50,12 @@ export default function AdvisoryDossier() {
           {view === 'list' && (
             <>
               <button
+                onClick={() => setView('queue')}
+                className="inline-flex items-center gap-1.5 px-3 py-2 border border-border text-sm font-medium rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+              >
+                🎯 Review Queue
+              </button>
+              <button
                 onClick={() => setView('quality')}
                 className="inline-flex items-center gap-1.5 px-3 py-2 border border-border text-sm font-medium rounded-lg hover:bg-muted transition-colors text-muted-foreground"
               >
@@ -63,7 +70,7 @@ export default function AdvisoryDossier() {
               </button>
             </>
           )}
-          {(view === 'builder' || view === 'quality') && (
+          {(view === 'builder' || view === 'quality' || view === 'queue') && (
             <button
               onClick={() => setView('list')}
               className="inline-flex items-center gap-2 px-4 py-2 border border-border text-sm font-medium rounded-lg hover:bg-muted transition-colors"
@@ -95,6 +102,18 @@ export default function AdvisoryDossier() {
           dossierId={selectedDossierId}
           onSaved={(id) => { setSelectedDossierId(id); }}
         />
+      )}
+
+      {view === 'queue' && (
+        <div className="bg-card border border-border rounded-xl p-6">
+          <div className="mb-5">
+            <h2 className="text-lg font-semibold text-foreground">Review WorkQueue</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">Priorisierte Dossiers nach Dringlichkeit — needs_reapproval, KI-Risiko, offene Freigaben.</p>
+          </div>
+          <DossierReviewQueue
+            onOpen={(id) => { setSelectedDossierId(id); setView('builder'); }}
+          />
+        </div>
       )}
 
       {view === 'quality' && (

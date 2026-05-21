@@ -12,7 +12,8 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Award, CheckCircle2, AlertCircle, Lock } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
+import { Award, CheckCircle2, AlertCircle, Lock, ShieldOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 const GRUPPE_OPTIONS = [
@@ -37,7 +38,12 @@ const LABEL_SUGGESTIONS = [
   'Empfehlung Berater',
 ];
 
+// Rollen die final freigeben dürfen
+const APPROVAL_ROLES = ['admin', 'supervisor', 'reviewer'];
+
 export default function BeraterEntscheidPanel({ dossier, entries = [] }) {
+  const { user } = useAuth();
+  const canApprove = APPROVAL_ROLES.includes(user?.role);
   const [form, setForm] = useState({
     advisor_final_recommendation: '',
     advisor_recommendation_label: '',
@@ -278,24 +284,33 @@ export default function BeraterEntscheidPanel({ dossier, entries = [] }) {
         </div>
 
         {/* Freigabe */}
-        <div className="flex items-center justify-between pt-2 border-t border-border/60">
-          <label className="flex items-center gap-2.5 cursor-pointer">
+        <div className="flex flex-col gap-2 pt-2 border-t border-border/60">
+          {!canApprove && (
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-600">
+              <ShieldOff className="w-3.5 h-3.5 shrink-0" />
+              Freigabe erfordert Rolle: <span className="font-mono font-semibold">admin / supervisor / reviewer</span> — Ihre Rolle: <span className="font-mono">{user?.role || '—'}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between">
+          <label className={`flex items-center gap-2.5 ${canApprove ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
             <input
               type="checkbox"
               checked={form.advisor_approved}
-              onChange={e => set('advisor_approved')(e.target.checked)}
-              className="w-4 h-4 rounded accent-primary"
+              onChange={e => canApprove && set('advisor_approved')(e.target.checked)}
+              disabled={!canApprove}
+              className="w-4 h-4 rounded accent-primary disabled:opacity-50"
             />
             <span className="text-sm font-semibold">
               Dossier freigeben für PDF-Export
             </span>
           </label>
-          {!isApproved && (
+          {!isApproved && canApprove && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Lock className="w-3 h-3" />
               Freigabe erforderlich für finales PDF
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>
