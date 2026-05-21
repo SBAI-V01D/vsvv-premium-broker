@@ -70,10 +70,11 @@ export function buildSnapshot({
       snap_adv_finma:           dossier.snap_adv_finma ?? null,
       snap_adv_vbv:             dossier.snap_adv_vbv ?? null,
       // Beraterentscheid
-      advisor_final_recommendation:  dossier.advisor_final_recommendation ?? null,
-      advisor_recommendation_label:  dossier.advisor_recommendation_label ?? null,
-      advisor_recommendation_reason: dossier.advisor_recommendation_reason ?? null,
-      advisor_approved:              dossier.advisor_approved ?? false,
+      advisor_final_recommendation:      dossier.advisor_final_recommendation ?? null,
+      advisor_recommendation_label:      dossier.advisor_recommendation_label ?? null,
+      advisor_recommendation_reason:     dossier.advisor_recommendation_reason ?? null,
+      advisor_recommendation_highlights: dossier.advisor_recommendation_highlights ?? null,
+      advisor_approved:                  dossier.advisor_approved ?? false,
     },
 
     customer: customer ? {

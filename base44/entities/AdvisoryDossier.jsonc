@@ -121,6 +121,10 @@
       "type": "string",
       "description": "Beraterentscheid: Begr\u00fcndung f\u00fcr die finale Empfehlung"
     },
+    "advisor_recommendation_highlights": {
+      "type": "string",
+      "description": "Beraterentscheid: Vorteile/Highlights als Zeilenumbruch-getrennte Liste (erscheinen als Checkmarks im PDF)"
+    },
     "advisor_approved": {
       "type": "boolean",
       "default": false,

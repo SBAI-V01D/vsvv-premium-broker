@@ -601,6 +601,37 @@ function DeckblattSeite({ dossier, customer, family_members, snapshot, summary, 
                 </div>
               )}
 
+              {/* Highlights / Empfohlen aufgrund */}
+              {dossier.advisor_recommendation_highlights && (() => {
+                const bullets = dossier.advisor_recommendation_highlights
+                  .split('\n')
+                  .map(l => l.trim())
+                  .filter(Boolean);
+                return bullets.length > 0 ? (
+                  <div style={{
+                    marginTop: '12px', borderTop: '1px solid #bfdbfe', paddingTop: '10px',
+                  }}>
+                    <div style={{ fontSize: '7px', fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
+                      Empfohlen aufgrund
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: bullets.length > 3 ? '1fr 1fr' : '1fr', gap: '4px' }}>
+                      {bullets.map((b, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                          <div style={{
+                            width: '14px', height: '14px', borderRadius: '50%',
+                            background: '#1d4ed8', color: 'white',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '8px', fontWeight: 900, flexShrink: 0, marginTop: '1px',
+                            WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
+                          }}>✓</div>
+                          <span style={{ fontSize: '9px', color: '#1e3a8a', lineHeight: '1.5' }}>{b}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
               {/* Freigabe-Indikator */}
               {dossier.advisor_approved && (
                 <div style={{

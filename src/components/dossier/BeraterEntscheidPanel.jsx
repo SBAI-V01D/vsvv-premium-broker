@@ -42,6 +42,7 @@ export default function BeraterEntscheidPanel({ dossier, entries = [] }) {
     advisor_final_recommendation: '',
     advisor_recommendation_label: '',
     advisor_recommendation_reason: '',
+    advisor_recommendation_highlights: '',
     advisor_approved: false,
   });
   const [hasChanges, setHasChanges] = useState(false);
@@ -53,6 +54,7 @@ export default function BeraterEntscheidPanel({ dossier, entries = [] }) {
       advisor_final_recommendation: dossier.advisor_final_recommendation || '',
       advisor_recommendation_label: dossier.advisor_recommendation_label || '',
       advisor_recommendation_reason: dossier.advisor_recommendation_reason || '',
+      advisor_recommendation_highlights: dossier.advisor_recommendation_highlights || '',
       advisor_approved: dossier.advisor_approved || false,
     });
     setHasChanges(false);
@@ -175,6 +177,21 @@ export default function BeraterEntscheidPanel({ dossier, entries = [] }) {
             rows={2}
             className="w-full border border-input bg-background rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none"
           />
+        </div>
+
+        {/* Highlights / Empfohlen aufgrund */}
+        <div>
+          <label className="block text-xs font-semibold text-foreground mb-1.5">
+            Empfohlen aufgrund <span className="text-muted-foreground font-normal">(optional — erscheinen als Checkmarks im PDF)</span>
+          </label>
+          <textarea
+            value={form.advisor_recommendation_highlights}
+            onChange={e => set('advisor_recommendation_highlights')(e.target.value)}
+            placeholder={`höhere Flexibilität bei der Spitalabteilung\nbessere ambulante Zusätze\nakzeptable Mehrkosten von CHF 12/Mt.`}
+            rows={3}
+            className="w-full border border-input bg-background rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring resize-none font-mono text-xs"
+          />
+          <p className="text-[10px] text-muted-foreground mt-1">Einen Punkt pro Zeile. Jede Zeile erscheint als ✓-Checkmark im PDF.</p>
         </div>
 
         {/* Freigabe */}
