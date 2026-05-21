@@ -286,6 +286,7 @@ export default function DossierExportTab({ dossier }) {
   }
 
   const isDataLoading = loadingCustomer || loadingContracts;
+  const isApproved = dossier?.advisor_approved === true;
 
   return (
     <>
@@ -297,6 +298,38 @@ export default function DossierExportTab({ dossier }) {
       )}
 
       <div className="space-y-5">
+        {/* PDF-Gate: Freigabe erforderlich */}
+        {!isApproved && (
+          <div className="flex items-start gap-3 bg-amber-50 border-2 border-amber-300 rounded-xl px-5 py-4">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+              <Shield className="w-4 h-4 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-amber-800 mb-1">PDF-Export gesperrt — Beraterfreigabe erforderlich</p>
+              <p className="text-xs text-amber-700 leading-relaxed">
+                Das Dossier wurde noch nicht vom Berater freigegeben. Bitte zuerst im Tab
+                {' '}<strong>Vergleich</strong>{' '}den Beraterentscheid abschließen und das Dossier freigeben.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-3 text-xs">
+                <span className="flex items-center gap-1.5 text-amber-700">
+                  <span className="w-4 h-4 rounded-full border-2 border-amber-400 flex items-center justify-center text-[10px]">1</span>
+                  Finale Empfehlung wählen
+                </span>
+                <span className="text-amber-400">→</span>
+                <span className="flex items-center gap-1.5 text-amber-700">
+                  <span className="w-4 h-4 rounded-full border-2 border-amber-400 flex items-center justify-center text-[10px]">2</span>
+                  Begründung erfassen
+                </span>
+                <span className="text-amber-400">→</span>
+                <span className="flex items-center gap-1.5 text-amber-700">
+                  <span className="w-4 h-4 rounded-full border-2 border-amber-400 flex items-center justify-center text-[10px]">3</span>
+                  Dossier freigeben ✓
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Isolation notice */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 border border-border/60 rounded-lg px-3 py-2">
           <Shield className="w-3.5 h-3.5 shrink-0" />
@@ -320,7 +353,7 @@ export default function DossierExportTab({ dossier }) {
             </div>
             <button
               onClick={handleLivePreview}
-              disabled={isDataLoading || !dossier}
+              disabled={isDataLoading || !dossier || !isApproved}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
               {isDataLoading
@@ -357,7 +390,7 @@ export default function DossierExportTab({ dossier }) {
             />
             <button
               onClick={() => createSnapMutation.mutate()}
-              disabled={createSnapMutation.isPending || !dossier || isDataLoading}
+              disabled={createSnapMutation.isPending || !dossier || isDataLoading || !isApproved}
               className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
             >
               {createSnapMutation.isPending

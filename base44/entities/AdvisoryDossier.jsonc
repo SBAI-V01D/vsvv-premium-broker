@@ -30,8 +30,7 @@
         "sachversicherung",
         "gesamtdossier"
       ],
-      "default": "kk_vergleich",
-      "description": "Dossier-Typ"
+      "default": "kk_vergleich"
     },
     "status": {
       "type": "string",
@@ -41,8 +40,7 @@
         "bereit",
         "archiviert"
       ],
-      "default": "entwurf",
-      "description": "Dossier-Status"
+      "default": "entwurf"
     },
     "review_status": {
       "type": "string",
@@ -58,137 +56,135 @@
     },
     "valid_from": {
       "type": "string",
-      "format": "date",
-      "description": "G\u00fcltig ab"
+      "format": "date"
     },
     "valid_until": {
       "type": "string",
-      "format": "date",
-      "description": "G\u00fcltig bis"
+      "format": "date"
     },
     "total_current_premium": {
-      "type": "number",
-      "description": "Aktuelle Gesamtpr\u00e4mie CHF/Monat"
+      "type": "number"
     },
     "total_proposed_premium": {
-      "type": "number",
-      "description": "Vorgeschlagene Gesamtpr\u00e4mie CHF/Monat"
+      "type": "number"
     },
     "savings_monthly": {
-      "type": "number",
-      "description": "Monatliche Einsparung CHF"
+      "type": "number"
     },
     "recommendation_notes": {
-      "type": "string",
-      "description": "Beratungsnotiz / Empfehlung"
+      "type": "string"
     },
     "linked_verkaufschance_id": {
-      "type": "string",
-      "description": "Optionaler Link zu Verkaufschance"
+      "type": "string"
     },
     "version": {
       "type": "number",
-      "default": 1,
-      "description": "Versionsnummer"
+      "default": 1
     },
     "is_latest": {
       "type": "boolean",
-      "default": true,
-      "description": "Ist aktuelle Version"
+      "default": true
     },
     "archived": {
       "type": "boolean",
-      "default": false,
-      "description": "Archiviert"
+      "default": false
     },
     "archived_at": {
       "type": "string",
       "format": "date-time"
     },
     "notes": {
-      "type": "string",
-      "description": "Interne Notizen"
+      "type": "string"
     },
     "advisor_final_recommendation": {
       "type": "string",
-      "description": "Beraterentscheid: Welche Vergleichsgruppe ist die finale Empfehlung"
+      "description": "Beraterentscheid: Finale Empfehlung (Vergleichsgruppe)"
     },
     "advisor_recommendation_label": {
       "type": "string",
-      "description": "Beraterentscheid: Positionierung/Label (z.B. Preis-Leistungs-Empfehlung)"
+      "description": "Beraterentscheid: Positionierung/Label"
     },
     "advisor_recommendation_reason": {
       "type": "string",
-      "description": "Beraterentscheid: Begr\u00fcndung f\u00fcr die finale Empfehlung"
+      "description": "Beraterentscheid: Begr\u00fcndung"
     },
     "advisor_recommendation_highlights": {
       "type": "string",
-      "description": "Beraterentscheid: Vorteile/Highlights als Zeilenumbruch-getrennte Liste (erscheinen als Checkmarks im PDF)"
+      "description": "Beraterentscheid: Vorteile als Zeilenumbruch-getrennte Liste (Checkmarks im PDF)"
     },
     "advisor_approved": {
       "type": "boolean",
       "default": false,
-      "description": "Beraterentscheid: Dossier freigegeben f\u00fcr PDF-Export"
+      "description": "Beraterentscheid: Freigegeben f\u00fcr PDF-Export"
+    },
+    "approval_history": {
+      "type": "array",
+      "description": "Audit-Log: Alle Freigabe-Aktionen (action, timestamp, user_name, previous_approved, notes)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          },
+          "previous_approved": {
+            "type": "boolean"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
     },
     "snap_org_name": {
-      "type": "string",
-      "description": "Snapshot: Organisationsname"
+      "type": "string"
     },
     "snap_org_street": {
-      "type": "string",
-      "description": "Snapshot: Strasse Organisation"
+      "type": "string"
     },
     "snap_org_zip": {
-      "type": "string",
-      "description": "Snapshot: PLZ Organisation"
+      "type": "string"
     },
     "snap_org_city": {
-      "type": "string",
-      "description": "Snapshot: Ort Organisation"
+      "type": "string"
     },
     "snap_org_phone": {
-      "type": "string",
-      "description": "Snapshot: Tel Organisation"
+      "type": "string"
     },
     "snap_org_email": {
-      "type": "string",
-      "description": "Snapshot: E-Mail Organisation"
+      "type": "string"
     },
     "snap_org_website": {
-      "type": "string",
-      "description": "Snapshot: Website Organisation"
+      "type": "string"
     },
     "snap_org_finma": {
-      "type": "string",
-      "description": "Snapshot: FINMA-Nr Organisation"
+      "type": "string"
     },
     "snap_adv_firstname": {
-      "type": "string",
-      "description": "Snapshot: Vorname Berater"
+      "type": "string"
     },
     "snap_adv_lastname": {
-      "type": "string",
-      "description": "Snapshot: Nachname Berater"
+      "type": "string"
     },
     "snap_adv_function": {
-      "type": "string",
-      "description": "Snapshot: Funktion Berater"
+      "type": "string"
     },
     "snap_adv_phone": {
-      "type": "string",
-      "description": "Snapshot: Tel Berater"
+      "type": "string"
     },
     "snap_adv_email": {
-      "type": "string",
-      "description": "Snapshot: E-Mail Berater"
+      "type": "string"
     },
     "snap_adv_finma": {
-      "type": "string",
-      "description": "Snapshot: FINMA-Nr Berater"
+      "type": "string"
     },
     "snap_adv_vbv": {
-      "type": "string",
-      "description": "Snapshot: VBV-Nr Berater"
+      "type": "string"
     }
   },
   "required": [
