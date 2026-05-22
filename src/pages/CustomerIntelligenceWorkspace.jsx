@@ -415,16 +415,6 @@ export default function CustomerIntelligenceWorkspace() {
       {/* ── Operational Workspace Bar — horizontal, ruhig ───────────────── */}
       <div className="px-6 py-4 border-b border-[hsl(var(--border-subtle))] bg-white shrink-0">
         <div className="flex items-center gap-6 flex-wrap">
-          {/* Title */}
-          <div className="shrink-0">
-            <h1 className="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight">
-              Kundenübersicht
-            </h1>
-            {(!isIntelligenceMode || (workspaceMode === 'private' || workspaceMode === 'business')) && (
-              <p className="text-body-sm text-[hsl(var(--text-muted))] mt-0.5">{displayed.length} Kunden</p>
-            )}
-          </div>
-
           {/* Workspace Modes - Horizontal Scroll */}
           <div className="flex items-center gap-1 overflow-x-auto pb-1">
             {WORKSPACE_MODES.map(mode => {
