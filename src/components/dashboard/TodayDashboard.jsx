@@ -218,77 +218,34 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
   return (
     <div className="space-y-3">
 
-      {/* ── DRINGENDE AKTIONEN ──────────────────────────────────────────── */}
-      {(overdueCount > 0 || wiedervorlagen.length > 0 || expiringContracts.filter(c => daysUntil(c.end_date) <= 7).length > 0) && (
-        <div id="urgent-actions" className="rounded-xl border border-rose-200 bg-rose-50/60 overflow-hidden">
-          <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-rose-200/60">
-            <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-            <span className="text-[12.5px] font-bold text-rose-800">Dringende Aktionen</span>
-            <span className="ml-auto text-[10px] font-bold text-rose-700 bg-rose-100 border border-rose-300/60 px-1.5 py-0.5 rounded-full">
-              {overdueCount + wiedervorlagen.length + expiringContracts.filter(c => daysUntil(c.end_date) <= 7).length}
-            </span>
-          </div>
-          <div className="p-3 space-y-2">
-            {/* Überfällige Tasks */}
-            {sortedTasks.filter(t => daysUntil(t.due_date) <= 0).slice(0, 2).map(t => (
-              <TaskRow key={t.id} task={t} onComplete={onTaskComplete} onOpen={onTaskClick} />
-            ))}
-            {/* Wiedervorlagen */}
-            {wiedervorlagen.slice(0, 2).map(vs => (
-              <VsRow key={vs.id} vs={vs} onClick={() => navigate('/verkaufschancen')} />
-            ))}
-            {/* Verträge die in ≤7 Tagen ablaufen */}
-            {expiringContracts.filter(c => daysUntil(c.end_date) <= 7).slice(0, 2).map(c => (
-              <div
-                key={c.id}
-                onClick={() => navigate(`/kunden/${c.customer_id}/360`)}
-                className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg border border-rose-200 bg-rose-50/40 hover:bg-rose-50/70 cursor-pointer transition-all"
-              >
-                <div className="w-1 h-7 rounded-full bg-rose-500 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[12.5px] font-semibold truncate">{c.customer_name || 'Kunde'}</p>
-                  <p className="text-[11px] text-rose-700 font-medium">{c.insurer} · {c.policy_number || 'Police'}</p>
-                </div>
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-rose-500 text-white">
-                  {daysUntil(c.end_date)}d
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── Tages-Zusammenfassung ───────────────────────────────────────── */}
+      {/* ── Tages-Übersicht — monochrome KPIs ────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {[
-          { label: 'Offene Aufgaben',    value: openTasks.length,          color: 'text-amber-700',  bg: 'bg-amber-50/70 border-amber-200/60',   path: '/aufgaben',          icon: CheckSquare },
-          { label: 'Verkaufschancen',    value: verkaufschancen.filter(v => !['gewonnen','verloren'].includes(v.status)).length, color: 'text-blue-700', bg: 'bg-blue-50/70 border-blue-200/60', path: '/verkaufschancen', icon: TrendingUp },
-          { label: 'Neue Leads',         value: newLeadsCount, color: 'text-violet-700', bg: 'bg-violet-50/70 border-violet-200/60', path: '/leads', icon: Target },
-          { label: 'Vertragsabläufe',    value: expiringContracts.length,   color: expiringContracts.length > 0 ? 'text-amber-700' : 'text-muted-foreground', bg: expiringContracts.length > 0 ? 'bg-amber-50/70 border-amber-200/60' : 'bg-muted/50 border-border', path: '/vertragsablaeufe', icon: RefreshCw },
+          { label: 'Tasks', value: openTasks.length, path: '/aufgaben', icon: CheckSquare },
+          { label: 'Offerten', value: verkaufschancen.filter(v => !['gewonnen','verloren'].includes(v.status)).length, path: '/verkaufschancen', icon: TrendingUp },
+          { label: 'Neu', value: newLeadsCount, path: '/leads', icon: Target },
+          { label: 'Abläufe', value: expiringContracts.length, path: '/vertragsablaeufe', icon: RefreshCw },
         ].map(k => (
           <button
             key={k.label}
             onClick={() => navigate(k.path)}
-            className={cn('flex items-center gap-3 p-3 rounded-xl border hover:shadow-xs hover:scale-[1.01] transition-all text-left bg-card', k.bg)}
+            className="flex flex-col gap-0.5 p-3 rounded-lg border border-[hsl(var(--border-subtle))] bg-[hsl(var(--surface-0))] hover:bg-[hsl(var(--surface-2))] transition-colors text-left"
           >
-            <k.icon className={cn('w-4 h-4 flex-shrink-0 opacity-80', k.color)} />
-            <div className="min-w-0">
-              <p className={cn('text-[22px] font-bold leading-none', k.color)}>{k.value}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{k.label}</p>
-            </div>
+            <k.icon className="w-3.5 h-3.5 text-[hsl(var(--text-muted))]" />
+            <p className="text-[20px] font-bold text-[hsl(var(--text-heading))] leading-none">{k.value}</p>
+            <p className="text-[10px] text-[hsl(var(--text-muted))]">{k.label}</p>
           </button>
         ))}
       </div>
 
-      {/* ── Wiedervorlagen HEUTE ─────────────────────────────────────────── */}
+      {/* Wiedervorlagen — nur wenn kritisch */}
       {wiedervorlagen.length > 0 && (
-        <div className="rounded-xl border border-amber-200/80 bg-amber-50/60 overflow-hidden">
-          <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-amber-200/60">
-            <CalendarClock className="w-3.5 h-3.5 text-amber-600" />
-            <span className="text-[12.5px] font-bold text-amber-800">Wiedervorlagen heute / überfällig</span>
-            <span className="ml-auto text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-300/60 px-1.5 py-0.5 rounded-full">{wiedervorlagen.length}</span>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-subheading text-[hsl(var(--text-heading))]">Wiedervorlagen</h3>
+            <span className="text-body-sm text-[hsl(var(--text-muted))]">{wiedervorlagen.length}</span>
           </div>
-          <div className="p-3 space-y-1.5">
+          <div className="space-y-1.5">
             {wiedervorlagen.map(vs => (
               <VsRow key={vs.id} vs={vs} onClick={() => navigate('/verkaufschancen')} />
             ))}
@@ -296,123 +253,92 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
         </div>
       )}
 
-      {/* 1. Vertragsabläufe */}
-      <BestandsmanagementPanel contracts={contracts} />
+      {/* ── Sections — unified structure ─────────────────────────────────── */}
+      <div className="space-y-6">
+        {/* 1. Vertragsabläufe */}
+        <BestandsmanagementPanel contracts={contracts} />
 
-      {/* 2. Aufgaben mit Filter-Tabs */}
-      <Section
-        title="Aufgaben"
-        icon={CheckSquare}
-        iconColor="bg-amber-100 text-amber-600"
-        count={openTasks.length}
-        urgentCount={overdueCount}
-        cta={
-          <button onClick={() => navigate('/aufgaben')} className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
-            <ArrowRight className="w-3 h-3" /> Alle Aufgaben
-          </button>
-        }
-      >
-        {/* Filter-Tabs */}
-        <div className="flex gap-1 mb-2.5 overflow-x-auto scrollbar-none">
-          {TASK_FILTERS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setTaskFilter(tab.key)}
-              className={cn(
-                'flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full border whitespace-nowrap transition-colors flex-shrink-0',
-                taskFilter === tab.key
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
-              )}
-            >
-              {tab.label}
-              {taskCounts[tab.key] > 0 && (
-                <span className={cn('text-[9px] font-bold', taskFilter === tab.key ? 'text-primary-foreground/80' : 'text-muted-foreground')}>
-                  {taskCounts[tab.key]}
-                </span>
-              )}
-            </button>
-          ))}
+        {/* 2. Aufgaben */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-subheading text-[hsl(var(--text-heading))]">Aufgaben</h3>
+            <div className="flex gap-1">
+              {TASK_FILTERS.map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setTaskFilter(tab.key)}
+                  className={cn(
+                    'text-[11px] font-medium px-2.5 py-1 rounded-md transition-colors',
+                    taskFilter === tab.key
+                      ? 'bg-[hsl(var(--primary))] text-white'
+                      : 'bg-[hsl(var(--surface-2))] text-[hsl(var(--text-muted))] hover:bg-[hsl(var(--surface-3))]'
+                  )}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {filteredTasks.length === 0 ? (
+            <p className="py-6 text-center text-body-sm text-[hsl(var(--text-muted))]">Keine Aufgaben</p>
+          ) : (
+            <div className="space-y-1.5">
+              {filteredTasks.map(t => (
+                <TaskRow key={t.id} task={t} onComplete={onTaskComplete} onOpen={onTaskClick} />
+              ))}
+            </div>
+          )}
         </div>
-        {filteredTasks.length === 0 ? (
-          <p className="py-4 text-center text-[12px] text-muted-foreground">Keine Aufgaben in diesem Zeitraum</p>
-        ) : (
-          <div className="space-y-1.5">
-            {filteredTasks.map(t => (
-              <TaskRow key={t.id} task={t} onComplete={onTaskComplete} onOpen={onTaskClick} />
-            ))}
-          </div>
-        )}
-      </Section>
 
-      {/* 3. Verkaufschancen — eigenständiger Bereich */}
-      <Section
-        title="Verkaufschancen"
-        icon={TrendingUp}
-        iconColor="bg-blue-100 text-blue-600"
-        count={actionableVs.length}
-        cta={
-          <button onClick={() => navigate('/verkaufschancen')} className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
-            <ArrowRight className="w-3 h-3" /> Alle Verkaufschancen
-          </button>
-        }
-      >
-        {actionableVs.length === 0 ? null : (
-          <div className="space-y-1.5">
-            {actionableVs.map(vs => (
-              <VsRow key={vs.id} vs={vs} onClick={() => navigate('/verkaufschancen')} />
-            ))}
-          </div>
-        )}
-      </Section>
-
-      {/* 4. Heiße Leads */}
-      {hotLeads.length > 0 && (
-        <Section
-          title="Hot Leads"
-          icon={Target}
-          iconColor="bg-violet-100 text-violet-600"
-          count={hotLeads.length}
-          cta={
-            <button onClick={() => navigate('/leads')} className="flex items-center gap-1 text-xs text-primary hover:underline font-medium">
-              <ArrowRight className="w-3 h-3" /> Alle Leads
-            </button>
-          }
-        >
-          <div className="space-y-1.5">
-            {hotLeads.map(l => (
-              <button
-                key={l.id}
-                onClick={() => navigate('/leads')}
-                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg border border-violet-100/80 bg-violet-50/30 hover:shadow-xs hover:bg-violet-50/60 transition-all text-left group"
-              >
-                <div className="w-7 h-7 rounded-full bg-violet-100 flex items-center justify-center font-bold text-violet-700 text-[11px] flex-shrink-0">
-                  {l.first_name?.[0]}{l.last_name?.[0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[12.5px] font-semibold truncate">{l.first_name} {l.last_name}</p>
-                  <p className="text-[11px] text-muted-foreground">{l.status === 'qualified' ? 'Qualifiziert' : 'Kontaktieren'}</p>
-                </div>
-                {l.lead_score > 0 && (
-                  <span className="text-[10px] font-bold text-violet-700 bg-violet-100 border border-violet-200/60 px-1.5 py-0.5 rounded-full flex-shrink-0">{l.lead_score}%</span>
-                )}
+        {/* 3. Verkaufschancen */}
+        {actionableVs.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-subheading text-[hsl(var(--text-heading))]">Verkaufschancen</h3>
+              <button onClick={() => navigate('/verkaufschancen')} className="text-body-sm text-[hsl(var(--primary))] hover:underline">
+                Alle →
               </button>
-            ))}
+            </div>
+            <div className="space-y-1.5">
+              {actionableVs.map(vs => (
+                <VsRow key={vs.id} vs={vs} onClick={() => navigate('/verkaufschancen')} />
+              ))}
+            </div>
           </div>
-        </Section>
-      )}
+        )}
 
-      {/* Alles erledigt */}
-      {allEmpty && (
-        <div className="py-10 text-center rounded-xl border border-dashed border-emerald-200/80 bg-emerald-50/20">
-          <CheckCircle2 className="w-10 h-10 mx-auto mb-2.5 text-emerald-400/80" />
-          <p className="text-[14px] font-bold text-emerald-700">Alles unter Kontrolle</p>
-          <p className="text-[12px] text-emerald-600/80 mt-1">Keine dringenden Aufgaben heute.</p>
-          <Button className="mt-4 gap-2" size="sm" variant="outline" onClick={() => navigate('/verkaufschancen')}>
-            <Plus className="w-3.5 h-3.5" /> Neue Verkaufschance
-          </Button>
-        </div>
-      )}
+        {/* 4. Hot Leads */}
+        {hotLeads.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-subheading text-[hsl(var(--text-heading))]">Hot Leads</h3>
+              <button onClick={() => navigate('/leads')} className="text-body-sm text-[hsl(var(--primary))] hover:underline">
+                Alle →
+              </button>
+            </div>
+            <div className="space-y-1.5">
+              {hotLeads.map(l => (
+                <button
+                  key={l.id}
+                  onClick={() => navigate('/leads')}
+                  className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg border border-[hsl(var(--border-subtle))] bg-[hsl(var(--surface-0))] hover:bg-[hsl(var(--surface-2))] transition-colors text-left"
+                >
+                  <div className="w-7 h-7 rounded-full bg-[hsl(var(--primary))/0.1] flex items-center justify-center font-semibold text-[hsl(var(--primary))] text-[11px] flex-shrink-0">
+                    {l.first_name?.[0]}{l.last_name?.[0]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12.5px] font-semibold text-[hsl(var(--text-heading))] truncate">{l.first_name} {l.last_name}</p>
+                    <p className="text-[11px] text-[hsl(var(--text-muted))]">{l.status === 'qualified' ? 'Qualifiziert' : 'Kontaktieren'}</p>
+                  </div>
+                  {l.lead_score > 0 && (
+                    <span className="text-[10px] font-bold text-[hsl(var(--primary))] bg-[hsl(var(--primary))/0.1] px-1.5 py-0.5 rounded-md flex-shrink-0">{l.lead_score}%</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
     </div>
   )

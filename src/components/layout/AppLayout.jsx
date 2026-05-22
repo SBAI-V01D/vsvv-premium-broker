@@ -43,9 +43,9 @@ export default function AppLayout() {
           <span className="font-semibold text-sm">Swiss Premium Broker</span>
         </div>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-auto">
-          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-12">
+        {/* Page content — unified spatial rhythm */}
+        <main className="flex-1 overflow-auto bg-[hsl(var(--background))]">
+          <div className="mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-12 w-full max-w-[1920px]">
             <Outlet />
           </div>
         </main>

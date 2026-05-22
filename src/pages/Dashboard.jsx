@@ -171,125 +171,107 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-5 page-enter">
+    <div className="space-y-6 page-enter">
 
-      {/* ── Command Center Header ──────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      {/* ── Page Context — minimal (no hero greeting) ─────────────────────── */}
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-label text-slate-400 mb-0.5">
-            {new Date().toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          <h1 className="text-h2 font-bold text-[hsl(var(--text-heading))] tracking-tight">Cockpit</h1>
+          <p className="text-body-sm text-[hsl(var(--text-muted))] mt-0.5">
+            {openTasks.length} offene Aufgaben · {hotLeads.length} heiße Leads
           </p>
-          <h1 className="text-h1 font-bold tracking-tight">{getGreeting()}</h1>
-          {urgentCount > 0 && (
-            <p className="text-body-sm text-amber-700 font-semibold mt-1">
-              {urgentCount} dringende Aktion{urgentCount > 1 ? 'en' : ''} ausstehend
-            </p>
-          )}
         </div>
-        <div className="flex gap-2 shrink-0 flex-wrap">
-          <button
-            onClick={() => navigate('/leads')}
-            className="inline-flex items-center gap-1.5 text-body-sm font-medium px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors shadow-sm"
-          >
-            <Zap className="w-3.5 h-3.5" /> Neuer Lead
-          </button>
-          <button
-            onClick={() => navigate('/verkaufschancen')}
-            className="inline-flex items-center gap-1.5 text-body-sm font-medium px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-slate-50 transition-colors"
-          >
-            <TrendingUp className="w-3.5 h-3.5" /> Opportunity
-          </button>
+        <div className="flex gap-2 shrink-0">
           <button
             onClick={() => navigate('/kunden')}
-            className="inline-flex items-center gap-1.5 text-body-sm font-medium px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-slate-50 transition-colors"
+            className="inline-flex items-center gap-1.5 text-body-sm font-medium px-3 py-1.5 rounded-md bg-[hsl(var(--primary))] text-white hover:bg-[hsl(var(--primary))/0.9] transition-colors"
           >
-            <Building2 className="w-3.5 h-3.5" /> Neuer Kunde
+            <Building2 className="w-3.5 h-3.5" /> Neu
           </button>
         </div>
       </div>
 
-      {/* ── Urgent Alert ──────────────────────────────────────────────────── */}
+      {/* ── Urgent Alert — only if critical ───────────────────────────────── */}
       {urgentCount > 0 && (
         <button
           onClick={() => document.getElementById('urgent-actions')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-rose-50/80 border border-rose-200/70 hover:bg-rose-50 transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg bg-[hsl(var(--destructive))/0.08] border border-[hsl(var(--destructive))/0.2] hover:bg-[hsl(var(--destructive))/0.12] transition-colors"
         >
-          <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0 animate-pulse" />
-          <span className="text-body-sm font-semibold text-rose-800 flex-1 text-left">
-            {urgentCount} dringende Aktion{urgentCount > 1 ? 'en' : ''} · sofort handeln
+          <span className="w-2 h-2 rounded-full bg-[hsl(var(--destructive))] shrink-0 animate-pulse" />
+          <span className="text-body-sm font-semibold text-[hsl(var(--destructive))] flex-1 text-left">
+            {urgentCount} dringende Aktion{urgentCount > 1 ? 'en' : ''}
           </span>
-          <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-          <ChevronRight className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+          <ChevronRight className="w-3.5 h-3.5 text-[hsl(var(--destructive))]/0.6 shrink-0" />
         </button>
       )}
 
-      {/* ── Operative KPI Row ──────────────────────────────────────────────── */}
+      {/* ── Operative KPI Row — monochrome, reduced visual noise ─────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <KpiTile
-          label="Renewal in 30d"
+          label="30d Renewal"
           value={renewalIn30.length}
-          sub={urgentRenewal > 0 ? `${urgentRenewal} kritisch` : 'fällig bald'}
+          sub={urgentRenewal > 0 ? `${urgentRenewal} krit.` : 'demnächst'}
           icon={RefreshCw}
-          colorClass="text-amber-700"
-          bgClass="bg-amber-50/70"
-          borderClass="border-amber-200/60"
+          colorClass={urgentRenewal > 0 ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--text-heading))]'}
+          bgClass={urgentRenewal > 0 ? 'bg-[hsl(var(--destructive))/0.08]' : 'bg-[hsl(var(--surface-0))]'}
+          borderClass="border-[hsl(var(--border-subtle))]"
           urgent={urgentRenewal > 0}
           onClick={() => navigate('/vertragsablaeufe')}
         />
         <KpiTile
           label="Hot Leads"
           value={hotLeads.length}
-          sub={`${activeLeads.length} total aktiv`}
+          sub={`${activeLeads.length} aktiv`}
           icon={Zap}
-          colorClass="text-violet-700"
-          bgClass="bg-violet-50/60"
-          borderClass="border-violet-200/50"
+          colorClass="text-[hsl(var(--primary))]"
+          bgClass="bg-[hsl(var(--primary))/0.08]"
+          borderClass="border-[hsl(var(--border-subtle))]"
           onClick={() => navigate('/leads')}
         />
         <KpiTile
-          label="Opportunities"
+          label="Offerten"
           value={openVerkaufschancen.length}
-          sub={`${openVerkaufschancen.filter(v => v.status === 'kunde_entscheidet').length} entscheidungsreif`}
+          sub={`${openVerkaufschancen.filter(v => v.status === 'kunde_entscheidet').length} ready`}
           icon={Target}
-          colorClass="text-blue-700"
-          bgClass="bg-blue-50/60"
-          borderClass="border-blue-200/50"
+          colorClass="text-[hsl(var(--info))]"
+          bgClass="bg-[hsl(var(--info))/0.08]"
+          borderClass="border-[hsl(var(--border-subtle))]"
           onClick={() => navigate('/verkaufschancen')}
         />
         <KpiTile
-          label="Offene Tasks"
+          label="Tasks"
           value={openTasks.length}
-          sub={overdueCount > 0 ? `${overdueCount} überfällig` : 'alles pünktlich'}
+          sub={overdueCount > 0 ? `${overdueCount} spät` : 'ok'}
           icon={CheckSquare}
-          colorClass={overdueCount > 0 ? 'text-rose-700' : 'text-slate-700'}
-          bgClass={overdueCount > 0 ? 'bg-rose-50/60' : 'bg-slate-50/60'}
-          borderClass={overdueCount > 0 ? 'border-rose-200/60' : 'border-slate-200/50'}
+          colorClass={overdueCount > 0 ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--text-heading))]'}
+          bgClass={overdueCount > 0 ? 'bg-[hsl(var(--destructive))/0.08]' : 'bg-[hsl(var(--surface-0))]'}
+          borderClass="border-[hsl(var(--border-subtle))]"
           urgent={overdueCount > 0}
           onClick={() => navigate('/aufgaben')}
         />
         <KpiTile
-          label="Neue Leads"
+          label="Neu"
           value={activeLeads.filter(l => l.status === 'new').length}
-          sub="noch nicht kontaktiert"
+          sub="unbearbeitet"
           icon={Target}
-          colorClass="text-emerald-700"
-          bgClass="bg-emerald-50/60"
-          borderClass="border-emerald-200/50"
+          colorClass="text-[hsl(var(--success))]"
+          bgClass="bg-[hsl(var(--success))/0.08]"
+          borderClass="border-[hsl(var(--border-subtle))]"
           onClick={() => navigate('/leads')}
         />
         <KpiTile
-          label="Vertragsabläufe"
+          label="Total"
           value={expiringContracts.length}
-          sub="in 360 Tagen"
+          sub="365d"
           icon={RefreshCw}
-          colorClass="text-slate-700"
-          bgClass="bg-slate-50/60"
-          borderClass="border-slate-200/50"
+          colorClass="text-[hsl(var(--text-muted))]"
+          bgClass="bg-[hsl(var(--surface-2))]"
+          borderClass="border-[hsl(var(--border-subtle))]"
           onClick={() => navigate('/vertragsablaeufe')}
         />
       </div>
 
-      {/* ── Operative Content ─────────────────────────────────────────────── */}
+      {/* ── Operative Content — reduced visual weight ────────────────────── */}
       <TodayDashboard
         openTasks={openTasks}
         expiringContracts={expiringContracts}
@@ -301,35 +283,7 @@ export default function Dashboard() {
         onTaskComplete={handleTaskComplete}
       />
 
-      {/* ── Opportunity Intelligence Feed ───────────────────────────────── */}
-      {openVerkaufschancen.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-heading font-bold text-slate-800">Opportunities im Fokus</h2>
-              <p className="text-body-sm text-slate-500">Priorisiert nach Wahrscheinlichkeit und Dringlichkeit</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {openVerkaufschancen
-              .sort((a, b) => {
-                const probA = a.status === 'kunde_entscheidet' ? 85 : a.status === 'beratung_erfolgt' ? 70 : a.status === 'offerten_erhalten' ? 55 : 35
-                const probB = b.status === 'kunde_entscheidet' ? 85 : b.status === 'beratung_erfolgt' ? 70 : b.status === 'offerten_erhalten' ? 55 : 35
-                return probB - probA
-              })
-              .slice(0, 6)
-              .map(vs => (
-                <OpportunityIntelligenceCard
-                  key={vs.id}
-                  opportunity={vs}
-                  onClick={() => navigate('/verkaufschancen')}
-                />
-              ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── Finance & Reporting (collapsible / sekundär) ──────────────────── */}
+      {/* ── Finance & Reporting (kollabierbar / sekundär) ───────────────── */}
       <FinanceSection>
         <MoneyDashboard />
       </FinanceSection>
