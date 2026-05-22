@@ -63,7 +63,8 @@ Für jede Police/Versicherung:
   - premium_monthly: NETTO Monatsprämie als CHF-Zahl (nach Rabatten)
   - premium_yearly: Jahresprämie als CHF-Zahl (falls nur monatlich: mal 12)
   - start_date: Format YYYY-MM-DD
-  - end_date: Format YYYY-MM-DD (aus "Vertragsablauf")
+  - end_date: Format YYYY-MM-DD (aus "Vertragsablauf" oder "Laufzeit")
+  - cancellation_deadline: Format YYYY-MM-DD (Kündigungsfrist falls vorhanden)
   - health_declaration_required: true/false
   - product_short: KURZE Produktbezeichnung (max. 2 Wörter), z.B.: "Grundversicherung", "Ambulant", "Alternativ", "Spital", "Zahn", "Tod/Invalidität", "Heilungskosten", "Rechtschutz", "Haftpflicht", "Hausrat", "Motorfahrzeug"
   - coverage_summary: Wichtigste Deckungsdetails (Leistungsprozent, Maximalbetrag, Variante etc.)
@@ -111,6 +112,7 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
                   premium_yearly: { type: ['number', 'null'] },
                   start_date: { type: ['string', 'null'] },
                   end_date: { type: ['string', 'null'] },
+                  cancellation_deadline: { type: ['string', 'null'] },
                   health_declaration_required: { type: ['boolean', 'null'] },
                   coverage_summary: { type: ['string', 'null'] },
                 }
@@ -386,6 +388,7 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
         premium_yearly: firstPolicy.premium_yearly || (firstPolicy.premium_monthly ? Math.round(firstPolicy.premium_monthly * 12 * 100) / 100 : null),
         start_date: firstPolicy.start_date || null,
         end_date: firstPolicy.end_date || null,
+        cancellation_deadline: firstPolicy.cancellation_deadline || null,
         health_declaration_required: firstPolicy.health_declaration_required || false,
         broker_name: extracted.broker_name || null,
         commission_estimate: extracted.commission_estimate || null,
