@@ -353,88 +353,101 @@ export default function CustomerIntelligenceWorkspace() {
           <RenewalsSection contracts={contracts} customers={customers} verkaufschancen={verkaufschancen} />
           <CancellationsSection contracts={contracts} customers={customers} />
           
-          {/* Kunden ohne Mandat oder Berater */}
-          {mandateIssues.length > 0 && (
-            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-[hsl(var(--border-subtle))]/40">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xs font-semibold text-[hsl(var(--text-heading))] uppercase tracking-wide">Kunden ohne Mandat oder Berater</h3>
-                <span className="text-[10px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-2 py-0.5 rounded-full">
-                  {mandateIssues.length}
-                </span>
+          {/* Combined layout: Mandate/Advisor issues and Household side by side */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Kunden ohne Mandat oder Berater */}
+            {mandateIssues.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--critical-hsl))]" />
+                  <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
+                    Mandat / Berater
+                  </h3>
+                  <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
+                    {mandateIssues.length}
+                  </span>
+                </div>
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-[hsl(var(--border-subtle))]/40">
+                  <div className="space-y-1">
+                    {(showAllMandate ? mandateIssues : mandateIssues.slice(0, DISPLAY_LIMIT)).map(customer => (
+                      <button
+                        key={customer.id}
+                        onClick={() => navigate(`/kunden/${customer.id}/360`)}
+                        className="w-full flex items-center justify-between p-2 rounded-md hover:bg-[hsl(var(--surface-2))]/40 transition-colors text-left"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] font-medium text-[hsl(var(--text-heading))] truncate">
+                            {customer.first_name} {customer.last_name}
+                          </p>
+                          <p className="text-[9px] text-[hsl(var(--text-muted))] truncate">
+                            {!customer.advisor_id && !customer.primary_advisor_id && <span className="text-[hsl(var(--critical))]">⚠ Kein Berater</span>}
+                            {['invalid', 'expired', 'pending'].includes(customer.mandate_status) && (
+                              <span className={!customer.advisor_id && !customer.primary_advisor_id ? 'ml-1' : ''}>
+                                Mandat: {customer.mandate_status}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-3 h-3 text-[hsl(var(--text-muted))]" />
+                      </button>
+                    ))}
+                  </div>
+                  {mandateIssues.length > DISPLAY_LIMIT && (
+                    <button
+                      onClick={() => setShowAllMandate(!showAllMandate)}
+                      className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
+                    >
+                      {showAllMandate ? 'Weniger anzeigen' : `+${mandateIssues.length - DISPLAY_LIMIT} weitere anzeigen`}
+                    </button>
+                  )}
+                </div>
               </div>
-              <div className="space-y-1">
-                {(showAllMandate ? mandateIssues : mandateIssues.slice(0, DISPLAY_LIMIT)).map(customer => (
-                  <button
-                    key={customer.id}
-                    onClick={() => navigate(`/kunden/${customer.id}/360`)}
-                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-[hsl(var(--surface-2))]/40 transition-colors text-left"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-medium text-[hsl(var(--text-heading))] truncate">
-                        {customer.first_name} {customer.last_name}
-                      </p>
-                      <p className="text-[9px] text-[hsl(var(--text-muted))] truncate">
-                        {!customer.advisor_id && !customer.primary_advisor_id && <span className="text-[hsl(var(--critical))]">⚠ Kein Berater</span>}
-                        {['invalid', 'expired', 'pending'].includes(customer.mandate_status) && (
-                          <span className={!customer.advisor_id && !customer.primary_advisor_id ? 'ml-1' : ''}>
-                            Mandat: {customer.mandate_status}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    <ChevronRight className="w-3 h-3 text-[hsl(var(--text-muted))]" />
-                  </button>
-                ))}
+            )}
+
+            {/* Cross Selling / Household */}
+            {householdCustomers.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
+                  <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
+                    Haushalte
+                  </h3>
+                  <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
+                    {householdCustomers.length}
+                  </span>
+                </div>
+                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-[hsl(var(--border-subtle))]/40">
+                  <div className="space-y-1">
+                    {(showAllHousehold ? householdCustomers : householdCustomers.slice(0, DISPLAY_LIMIT)).map(customer => (
+                      <button
+                        key={customer.id}
+                        onClick={() => navigate(`/kunden/${customer.id}/360`)}
+                        className="w-full flex items-center justify-between p-2 rounded-md hover:bg-[hsl(var(--surface-2))]/40 transition-colors text-left"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] font-medium text-[hsl(var(--text-heading))] truncate">
+                            {customer.first_name} {customer.last_name}
+                          </p>
+                          <p className="text-[9px] text-[hsl(var(--text-muted))] truncate">
+                            Haushalt mit {customers.filter(fm => fm.primary_customer_id === customer.id).length} Mitglied(ern)
+                          </p>
+                        </div>
+                        <ChevronRight className="w-3 h-3 text-[hsl(var(--text-muted))]" />
+                      </button>
+                    ))}
+                  </div>
+                  {householdCustomers.length > DISPLAY_LIMIT && (
+                    <button
+                      onClick={() => setShowAllHousehold(!showAllHousehold)}
+                      className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
+                    >
+                      {showAllHousehold ? 'Weniger anzeigen' : `+${householdCustomers.length - DISPLAY_LIMIT} weitere anzeigen`}
+                    </button>
+                  )}
+                </div>
               </div>
-              {mandateIssues.length > DISPLAY_LIMIT && (
-                <button
-                  onClick={() => setShowAllMandate(!showAllMandate)}
-                  className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
-                >
-                  {showAllMandate ? 'Weniger anzeigen' : `+${mandateIssues.length - DISPLAY_LIMIT} weitere anzeigen`}
-                </button>
-              )}
-            </div>
-          )}
-          
-          {/* Cross Selling / Household */}
-          {householdCustomers.length > 0 && (
-            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-[hsl(var(--border-subtle))]/40">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xs font-semibold text-[hsl(var(--text-heading))] uppercase tracking-wide">Haushalte / Cross Selling</h3>
-                <span className="text-[10px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-2 py-0.5 rounded-full">
-                  {householdCustomers.length}
-                </span>
-              </div>
-              <div className="space-y-1">
-                {(showAllHousehold ? householdCustomers : householdCustomers.slice(0, DISPLAY_LIMIT)).map(customer => (
-                  <button
-                    key={customer.id}
-                    onClick={() => navigate(`/kunden/${customer.id}/360`)}
-                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-[hsl(var(--surface-2))]/40 transition-colors text-left"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-medium text-[hsl(var(--text-heading))] truncate">
-                        {customer.first_name} {customer.last_name}
-                      </p>
-                      <p className="text-[9px] text-[hsl(var(--text-muted))] truncate">
-                        Haushalt mit {customers.filter(fm => fm.primary_customer_id === customer.id).length} Mitglied(ern)
-                      </p>
-                    </div>
-                    <ChevronRight className="w-3 h-3 text-[hsl(var(--text-muted))]" />
-                  </button>
-                ))}
-              </div>
-              {householdCustomers.length > DISPLAY_LIMIT && (
-                <button
-                  onClick={() => setShowAllHousehold(!showAllHousehold)}
-                  className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
-                >
-                  {showAllHousehold ? 'Weniger anzeigen' : `+${householdCustomers.length - DISPLAY_LIMIT} weitere anzeigen`}
-                </button>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
       );
     }
