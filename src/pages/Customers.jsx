@@ -40,14 +40,15 @@ function buildSegments(customers, tasks, contracts) {
   const primary = customers.filter(c => !c.is_family_member);
 
   const defs = {
-    all:      { label: 'Alle Kunden',       filter: () => true },
-    critical: { label: 'Attention Required', filter: c => c.status === 'inactive' || ['invalid','expired'].includes(c.mandate_status) },
-    mandate:  { label: 'Mandat ausstehend',  filter: c => c.mandate_status === 'pending' },
-    tasks:    { label: 'Offene Tasks',       filter: c => (tasksByCustomer[c.id] || 0) > 0 },
-    active:   { label: 'Aktiv',              filter: c => c.status === 'active' },
-    vip:      { label: 'High Value',         filter: c => (c.total_premium || 0) >= 5000 },
-    new:      { label: 'Neuzugänge',         filter: c => new Date(c.created_date) >= thirtyAgo },
-    prospect: { label: 'Interessenten',      filter: c => c.status === 'prospect' },
+    all:        { label: 'Alle Kunden',        filter: () => true },
+    no_advisor: { label: '⚠ Kein Berater',     filter: c => !c.advisor_id && !c.primary_advisor_id },
+    critical:   { label: 'Attention Required', filter: c => c.status === 'inactive' || ['invalid','expired'].includes(c.mandate_status) },
+    mandate:    { label: 'Mandat ausstehend',  filter: c => c.mandate_status === 'pending' },
+    tasks:      { label: 'Offene Tasks',       filter: c => (tasksByCustomer[c.id] || 0) > 0 },
+    active:     { label: 'Aktiv',              filter: c => c.status === 'active' },
+    vip:        { label: 'High Value',         filter: c => (c.total_premium || 0) >= 5000 },
+    new:        { label: 'Neuzugänge',         filter: c => new Date(c.created_date) >= thirtyAgo },
+    prospect:   { label: 'Interessenten',      filter: c => c.status === 'prospect' },
     private:  { label: 'Privatkunden',       filter: c => c.customer_type !== 'business' },
     business: { label: 'Unternehmen',        filter: c => c.customer_type === 'business' },
   };
@@ -177,7 +178,7 @@ function sortCustomers(list, sortBy) {
   });
 }
 
-const NAV_KEYS = ['all','vip','private','business','prospect','tasks','critical','mandate'];
+const NAV_KEYS = ['all','no_advisor','vip','private','business','prospect','tasks','critical','mandate'];
 
 // ── Grouped customer feed ─────────────────────────────────────────────────
 function CustomerFeed({ displayed, customers, segments, matchedFamilyIds, onEdit, onDelete }) {
@@ -445,6 +446,7 @@ export default function Customers() {
             { label: 'Offene Tasks',  value: openTasks,    alert: openTasks > 0,      onClick: () => navigate('/aufgaben') },
             { label: 'Leads offen',   value: leads.length, onClick: () => {} },
             { label: 'Kritisch',      value: criticalCount, alert: criticalCount > 0, red: true, onClick: () => setActiveSegment('critical') },
+            { label: 'Kein Berater', value: segments.no_advisor?.count ?? 0, alert: (segments.no_advisor?.count ?? 0) > 0, red: true, onClick: () => setActiveSegment('no_advisor') },
           ].map((kpi, i, arr) => (
             <button
               key={kpi.label}
@@ -472,7 +474,7 @@ export default function Customers() {
             const seg = segments[key];
             if (!seg) return null;
             const isActive = activeSegment === key;
-            const isCritical = key === 'critical' && seg.count > 0;
+            const isCritical = (key === 'critical' || key === 'no_advisor') && seg.count > 0;
             return (
               <button
                 key={key}

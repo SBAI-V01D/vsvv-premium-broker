@@ -118,6 +118,11 @@ Deno.serve(async (req) => {
       activeCustomers.filter(c => !c.organization_id)
         .map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name}`, issue: 'Kein organization_id (Tenant-Isolation verletzt)' }))
     );
+    addCheck('customers', 'Berater-Zuweisung',
+      true,
+      activeCustomers.filter(c => !c.advisor_id && !c.primary_advisor_id)
+        .map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name}`, issue: 'Kein advisor_id / primary_advisor_id — RLS-Risiko: Kunde kann unsichtbar werden' }))
+    );
 
     // ══════════════════════════════════════════════════════════════════════════
     // MODULE: DOKUMENTE

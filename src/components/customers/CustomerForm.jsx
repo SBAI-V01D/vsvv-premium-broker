@@ -228,6 +228,9 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
      queryFn: () => base44.entities.Advisor.filter({ status: 'active' }),
    })
 
+  const isNewCustomer = !customer?.id
+  const [advisorError, setAdvisorError] = useState('')
+
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
 
   const handlePlzChange = (plz) => {
@@ -239,6 +242,11 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    if (isNewCustomer && !form.advisor_id) {
+      setAdvisorError('Pflichtfeld: Kunden muss ein Berater zugewiesen werden.')
+      return
+    }
+    setAdvisorError('')
     onSave(form)
   }
 
@@ -425,9 +433,9 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
       </div>
 
       <div>
-        <Label>Beratender Berater</Label>
-        <Select value={form.advisor_id || ''} onValueChange={v => set('advisor_id', v === '' ? '' : v)}>
-          <SelectTrigger className="mt-1"><SelectValue placeholder="Berater auswählen..." /></SelectTrigger>
+        <Label>Beratender Berater {isNewCustomer && <span className="text-destructive">*</span>}</Label>
+        <Select value={form.advisor_id || ''} onValueChange={v => { set('advisor_id', v === '' ? '' : v); setAdvisorError('') }}>
+          <SelectTrigger className={`mt-1 ${advisorError ? 'border-destructive ring-1 ring-destructive' : ''}`}><SelectValue placeholder="Berater auswählen..." /></SelectTrigger>
           <SelectContent>
             <SelectItem value={null}>– Kein Berater –</SelectItem>
             {advisors
@@ -447,6 +455,14 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
             }
           </SelectContent>
         </Select>
+        {advisorError && (
+          <p className="text-[11px] text-destructive mt-1 flex items-center gap-1">
+            <span>⚠</span> {advisorError}
+          </p>
+        )}
+        {isNewCustomer && !form.advisor_id && !advisorError && (
+          <p className="text-[10px] text-amber-600 mt-1">Ohne Berater-Zuweisung kann dieser Kunde durch RLS unsichtbar werden.</p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
