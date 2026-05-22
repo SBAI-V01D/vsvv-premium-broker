@@ -238,7 +238,7 @@ export default function Sidebar({ onNavigate }) {
                 {currentUser.full_name || currentUser.email}
               </p>
               <p className="text-[9px] text-[hsl(var(--text-subtle))] font-medium truncate">
-                {roleLabel} · {new Date().toLocaleDateString('de-CH', { day: '2digit', month: '2digit' })}
+                {roleLabel} · {new Date().toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' })}
               </p>
             </div>
           </div>
