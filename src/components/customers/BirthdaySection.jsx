@@ -121,47 +121,47 @@ export default function BirthdaySection({ customers }) {
   };
 
   const renderTimeframeCard = (title, persons, Icon) => (
-    <div className="bg-white/80 backdrop-blur-sm rounded-xl p-5 border border-[hsl(var(--border-subtle))]/40">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-[hsl(var(--primary))/0.1] flex items-center justify-center">
-          <Icon className="w-4 h-4 text-[hsl(var(--primary))]" />
+    <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-[hsl(var(--border-subtle))]/40">
+      <div className="flex items-center gap-1.5 mb-2">
+        <div className="w-6 h-6 rounded-md bg-[hsl(var(--primary))/0.1] flex items-center justify-center">
+          <Icon className="w-3 h-3 text-[hsl(var(--primary))]" />
         </div>
-        <h3 className="text-sm font-semibold text-[hsl(var(--text-heading))]">{title}</h3>
+        <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">{title}</h3>
         {persons.length > 0 && (
-          <span className="ml-auto text-xs font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-2 py-0.5 rounded-full">
+          <span className="ml-auto text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
             {persons.length}
           </span>
         )}
       </div>
 
       {persons.length === 0 ? (
-        <p className="text-xs text-[hsl(var(--text-muted))] py-2">Keine Geburtstage</p>
+        <p className="text-[9px] text-[hsl(var(--text-muted))] py-1.5">Keine Geburtstage</p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-1">
           {persons.slice(0, 5).map(({ customer, age, formattedDate, daysUntil }) => (
             <Link
               key={customer.id}
               to={`/kunden/${customer.id}`}
-              className="flex items-center gap-3 p-2 rounded-lg hover:bg-[hsl(var(--surface-2))]/50 transition-colors group"
+              className="flex items-center gap-2 p-1.5 rounded-md hover:bg-[hsl(var(--surface-2))]/50 transition-colors group"
             >
-              <div className="w-8 h-8 rounded-full bg-[hsl(var(--primary))/0.15] flex items-center justify-center flex-shrink-0">
-                <User className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
+              <div className="w-6 h-6 rounded-full bg-[hsl(var(--primary))/0.15] flex items-center justify-center flex-shrink-0">
+                <User className="w-3 h-3 text-[hsl(var(--primary))]" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-[hsl(var(--text-heading))] truncate group-hover:text-[hsl(var(--primary))]">
+                <p className="text-[11px] font-medium text-[hsl(var(--text-heading))] truncate group-hover:text-[hsl(var(--primary))]">
                   {customer.company_name || `${customer.first_name} ${customer.last_name}`}
                 </p>
-                <p className="text-[10px] text-[hsl(var(--text-muted))]">
-                  {formattedDate} · {age} Jahre
+                <p className="text-[9px] text-[hsl(var(--text-muted))]">
+                  {formattedDate} · {age} J.
                   {daysUntil === 0 && <span className="ml-1 text-[hsl(var(--primary))] font-medium">· HEUTE</span>}
-                  {daysUntil > 0 && daysUntil <= 7 && <span className="ml-1 text-[hsl(var(--warning))]">· in {daysUntil} Tagen</span>}
+                  {daysUntil > 0 && daysUntil <= 7 && <span className="ml-1 text-[hsl(var(--warning))]">· in {daysUntil} T.</span>}
                 </p>
               </div>
             </Link>
           ))}
           {persons.length > 5 && (
-            <p className="text-[10px] text-[hsl(var(--text-muted))] text-center pt-1">
-              +{persons.length - 5} weitere
+            <p className="text-[9px] text-[hsl(var(--text-muted))] text-center pt-0.5">
+              +{persons.length - 5}
             </p>
           )}
         </div>
