@@ -8,46 +8,44 @@
   :root {
     --font-inter: 'Inter', system-ui, sans-serif;
 
-    /* ── Core backgrounds ─────────────────────────────────────────── */
-    /* Unified warm stone/graphite — architectural material (not SaaS white) */
-    --background:        216 18% 96%;      /* warm stone base — matches sidebar material */
-    --foreground:        220 30% 12%;      /* deep slate-navy */
+    /* ── Swiss Financial Blue — Light, Trust, Energy ────────────────── */
+    /* Background: Blue Mist — extremely light, desaturated, calming */
+    --background:        210 40% 97%;      /* #f4f7fb — soft blue mist */
+    --foreground:        215 30% 18%;      /* soft navy text */
 
-    /* ── Surfaces / Cards ─────────────────────────────────────────── */
-    --card:              0 0% 100%;        /* pure white for elevated cards */
-    --card-foreground:   220 30% 12%;
+    /* ── Surfaces / Cards — Translucent Light ─────────────────────── */
+    --card:              0 0% 100%;        /* pure white with translucency */
+    --card-foreground:   215 30% 18%;
     --popover:           0 0% 100%;
-    --popover-foreground: 220 30% 12%;
+    --popover-foreground: 215 30% 18%;
 
-    /* ── Primary — FINMA deep navy ────────────────────────────────── */
-    --primary:           222 62% 34%;      /* private banking navy */
+    /* ── Primary — Trust Navy (softer, warmer) ────────────────────── */
+    --primary:           212 68% 42%;      /* Swiss financial blue */
     --primary-foreground: 0 0% 100%;
 
-    /* ── Design System Tokens ─────────────────────────────────────── */
+    /* ── Design System Tokens — Blue Atmosphere ───────────────────── */
     /* Typography */
-    --text-display:      220 30% 12%;
-    --text-heading:      220 26% 18%;
-    --text-body:         220 18% 28%;
-    --text-muted:        217 13% 48%;
-    --text-subtle:       217 10% 62%;
+    --text-display:      215 30% 18%;
+    --text-heading:      215 26% 22%;
+    --text-body:         215 18% 28%;
+    --text-muted:        212 12% 48%;
+    --text-subtle:       212 10% 58%;
 
-    /* ── Unified Surface System — warm stone/graphite material ────── */
-    /* All surfaces use warm neutrals (stone/zinc) — NOT cool blue-grey */
+    /* ── Surface System — Blue Mist Layers ────────────────────────── */
     --surface-0:         0 0% 100%;        /* card white (elevated) */
-    --surface-1:         216 18% 96%;      /* page base — matches --background */
-    --surface-2:         216 16% 93%;      /* embedded surfaces (sidebar active, hover) */
-    --surface-3:         216 14% 90%;      /* deep inset / tags */
+    --surface-1:         210 40% 97%;      /* page base — matches --background */
+    --surface-2:         210 35% 95%;      /* embedded surfaces (sidebar active, hover) */
+    --surface-3:         210 30% 92%;      /* deep inset / tags */
 
-    /* ── Borders — warm grey (not cool blue) ─────────────────────── */
-    --border-subtle:     216 14% 88%;      /* hairline dividers */
-    --border-default:    216 14% 84%;
-    --border-strong:     216 14% 72%;
+    /* ── Borders — Soft Navy-Grey ─────────────────────────────────── */
+    --border-subtle:     210 25% 90%;      /* hairline dividers */
+    --border-default:    210 25% 84%;
+    --border-strong:     210 25% 72%;
 
-    /* ── Elevation — reduced shadows (Private Banking / FINMA look) ─ */
-    /* Minimal shadows — more layering, less "floating widgets" */
-    --shadow-card:       0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 1px -1px rgb(0 0 0 / 0.02);
-    --shadow-raised:     0 2px 8px -2px rgb(0 0 0 / 0.06), 0 1px 2px -2px rgb(0 0 0 / 0.03);
-    --shadow-overlay:    0 12px 32px -8px rgb(0 0 0 / 0.12), 0 4px 12px -8px rgb(0 0 0 / 0.08);
+    /* ── Elevation — Minimal Shadows (Light & Air) ────────────────── */
+    --shadow-card:       0 1px 2px 0 rgb(50 70 100 / 0.03), 0 1px 1px -1px rgb(50 70 100 / 0.02);
+    --shadow-raised:     0 2px 8px -2px rgb(50 70 100 / 0.05), 0 1px 2px -2px rgb(50 70 100 / 0.03);
+    --shadow-overlay:    0 12px 32px -8px rgb(50 70 100 / 0.08), 0 4px 12px -8px rgb(50 70 100 / 0.05);
 
     /* Semantic */
     --success-hsl:       152 48% 38%;
@@ -57,58 +55,58 @@
 
     --radius: 0.55rem;
 
-    /* ── Sidebar ──────────────────────────────────────────────────── */
-    --sidebar-background:      218 38% 12%;
-    --sidebar-foreground:      214 18% 78%;
-    --sidebar-primary:         216 72% 60%;
+    /* ── Sidebar — Blue Mist (slightly deeper than background) ────── */
+    --sidebar-background:      210 35% 95%;  /* #edf3f8 — subtle material separation */
+    --sidebar-foreground:      215 26% 28%;
+    --sidebar-primary:         212 68% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent:          218 28% 18%;
-    --sidebar-accent-foreground: 214 16% 90%;
-    --sidebar-border:          218 24% 18%;
-    --sidebar-ring:            216 72% 60%;
+    --sidebar-accent:          210 30% 92%;
+    --sidebar-accent-foreground: 215 26% 22%;
+    --sidebar-border:          210 25% 88%;
+    --sidebar-ring:            212 68% 42%;
 
     /* ── Semantic helpers ─────────────────────────────────────────── */
     --success:     152 48% 38%;
     --success-fg:  0 0% 100%;
     --warning:     38 80% 46%;
     --warning-fg:  0 0% 100%;
-    --info:        200 76% 42%;
+    --info:        210 76% 42%;
     --info-fg:     0 0% 100%;
   }
 
   .dark {
-    --background:        222 25% 8%;
-    --foreground:        215 18% 92%;
-    --card:              222 22% 11%;
-    --card-foreground:   215 18% 92%;
-    --popover:           222 22% 11%;
-    --popover-foreground: 215 18% 92%;
-    --primary:           220 70% 56%;
+    --background:        215 30% 10%;
+    --foreground:        210 35% 92%;
+    --card:              215 28% 12%;
+    --card-foreground:   210 35% 92%;
+    --popover:           215 28% 12%;
+    --popover-foreground: 210 35% 92%;
+    --primary:           212 68% 56%;
     --primary-foreground: 0 0% 100%;
-    --secondary:         220 18% 16%;
-    --secondary-foreground: 215 14% 82%;
-    --muted:             220 18% 16%;
-    --muted-foreground:  215 10% 52%;
-    --accent:            220 18% 18%;
-    --accent-foreground: 215 18% 92%;
-    --destructive:       3 55% 40%;
+    --secondary:         215 22% 16%;
+    --secondary-foreground: 210 28% 82%;
+    --muted:             215 22% 16%;
+    --muted-foreground:  210 18% 62%;
+    --accent:            215 22% 18%;
+    --accent-foreground: 210 35% 92%;
+    --destructive:       3 55% 45%;
     --destructive-foreground: 0 0% 100%;
-    --border:            220 18% 20%;
-    --input:             220 18% 20%;
-    --ring:              220 70% 56%;
-    --chart-1:           220 70% 56%;
+    --border:            215 22% 22%;
+    --input:             215 22% 22%;
+    --ring:              212 68% 56%;
+    --chart-1:           212 68% 56%;
     --chart-2:           158 52% 46%;
     --chart-3:           38 82% 54%;
     --chart-4:           264 52% 60%;
     --chart-5:           338 62% 56%;
-    --sidebar-background: 220 32% 7%;
-    --sidebar-foreground: 214 14% 78%;
-    --sidebar-primary:   216 72% 60%;
+    --sidebar-background: 215 28% 10%;
+    --sidebar-foreground: 210 28% 82%;
+    --sidebar-primary:   212 68% 56%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent:    220 24% 13%;
-    --sidebar-accent-foreground: 214 14% 88%;
-    --sidebar-border:    220 22% 15%;
-    --sidebar-ring:      216 72% 60%;
+    --sidebar-accent:    215 22% 14%;
+    --sidebar-accent-foreground: 210 28% 88%;
+    --sidebar-border:    215 22% 18%;
+    --sidebar-ring:      212 68% 56%;
   }
 }
 
@@ -139,11 +137,11 @@
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: hsl(216 14% 82%);
+    background: hsl(210 25% 82%);
     border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(216 12% 68%);
+    background: hsl(210 20% 68%);
   }
 }
 
@@ -223,7 +221,7 @@
 @layer utilities {
   /* ── Table refinements — warm stone hover (not cool grey) ─────── */
   .table-row-hover {
-    @apply hover:bg-[hsl(var(--surface-2))]/50 transition-colors cursor-pointer;
+    @apply hover:bg-[hsl(var(--surface-2))]/60 transition-colors cursor-pointer;
   }
   .table-header {
     @apply bg-[hsl(var(--surface-2))]/60 border-b border-border text-[11px] font-semibold text-muted-foreground uppercase tracking-wide;
