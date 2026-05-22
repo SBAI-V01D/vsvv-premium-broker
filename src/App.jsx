@@ -10,7 +10,7 @@ import ErrorBoundary from '@/components/ErrorBoundary'
 
 import AppLayout from './components/layout/AppLayout'
 import Dashboard from './pages/Dashboard.jsx'
-import Customers from './pages/Customers'
+import CustomerIntelligenceWorkspace from './pages/CustomerIntelligenceWorkspace'
 import CustomerDetail from './pages/CustomerDetail'
 import Customer360 from './pages/Customer360'
 import Contracts from './pages/Contracts'
@@ -98,7 +98,7 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/" element={<Dashboard />} />
-        <Route path="/kunden" element={<Customers />} />
+        <Route path="/kunden" element={<CustomerIntelligenceWorkspace />} />
         <Route path="/kunden/:id" element={<CustomerDetail />} />
         <Route path="/kunden/:customerId/360" element={<Customer360 />} />
         <Route path="/vertraege" element={<Contracts />} />
