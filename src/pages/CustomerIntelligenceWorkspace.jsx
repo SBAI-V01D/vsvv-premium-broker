@@ -340,6 +340,10 @@ export default function CustomerIntelligenceWorkspace() {
       return (
         <div className="p-6 max-w-[1600px] mx-auto">
           <PortfolioDashboard setWorkspaceMode={setWorkspaceMode} />
+          <div className="my-8 divider-strong" />
+          <BirthdayIntelligence />
+          <div className="my-8 divider-strong" />
+          <RenewalRadar />
         </div>
       );
     }
