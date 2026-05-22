@@ -262,14 +262,7 @@ export default function CustomerIntelligenceWorkspace() {
     return primaryCustomers;
   }, [primaryCustomers, workspaceMode, segments, verkaufschancen]);
 
-  // Handle URL view params
-  React.useEffect(() => {
-    if (urlView === 'birthdays') {
-      setWorkspaceMode('operations');
-    } else if (urlView === 'vip') {
-      setWorkspaceMode('private');
-    }
-  }, [urlView]);
+  // Handle URL view params - removed, navigation now via PortfolioDashboard cards
 
   // Search
   const { displayed, matchedFamilyIds } = useMemo(() => {

@@ -68,8 +68,6 @@ const navGroups = [
     label: 'Kunden & Verträge',
     items: [
       { label: 'Portfolio',    icon: Users,    path: '/kunden', color: 'primary' },
-      { label: 'Altersgruppen',  icon: Activity,   path: '/kunden?view=birthdays' },
-      { label: 'Hohe Prämien',   icon: TrendingUp, path: '/kunden?view=vip' },
       { label: 'Verträge',  icon: Shield,   path: '/vertraege' },
       { label: 'Anträge',   icon: FileText, path: '/antraege', color: 'primary' },
       { label: 'Dokumente', icon: FileText, path: '/dokumente' },

@@ -8,7 +8,7 @@
 import React, { useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { AlertTriangle, TrendingUp, CheckSquare, ArrowRight } from 'lucide-react';
+import { AlertTriangle, TrendingUp, CheckSquare, ArrowRight, Gift, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ── Portfolio Section Card ───────────────────────────────────────────────
@@ -75,15 +75,40 @@ export default function PortfolioDashboard({ setWorkspaceMode }) {
   });
 
   // Section 1: Kunden ohne Mandat / Berater
-  const noMandateNoAdvisor = React.useMemo(() => {
+  const noMandateNoAdvisor = useMemo(() => {
     return customers.filter(c => 
       c.mandate_status === 'pending' || 
       (!c.advisor_id && !c.primary_advisor_id)
     );
   }, [customers]);
 
-  // Section 2: Cross-Selling / Household Intelligence
-  const crossSellingHousehold = React.useMemo(() => {
+  // Section 2: Geburtstage (Altersgruppen)
+  const birthdays = useMemo(() => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    return customers
+      .filter(c => c.birthdate && new Date(c.birthdate).getMonth() === currentMonth)
+      .map(c => {
+        const birthDate = new Date(c.birthdate);
+        const age = today.getFullYear() - birthDate.getFullYear() - 
+          (today < new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate()) ? 1 : 0);
+        return {
+          customer: c,
+          birthdate: c.birthdate,
+          age,
+        };
+      });
+  }, [customers]);
+
+  // Section 3: Hohe Prämien (VIP Kunden)
+  const highPremium = useMemo(() => {
+    return customers
+      .filter(c => (c.total_premium || 0) >= 5000)
+      .sort((a, b) => (b.total_premium || 0) - (a.total_premium || 0));
+  }, [customers]);
+
+  // Section 4: Cross-Selling / Household Intelligence
+  const crossSellingHousehold = useMemo(() => {
     return customers.filter(c => {
       const hasFamily = customers.some(fc => fc.primary_customer_id === c.id);
       const hasSingleContract = (c.total_premium || 0) > 0;
@@ -91,42 +116,25 @@ export default function PortfolioDashboard({ setWorkspaceMode }) {
     });
   }, [customers]);
 
-  // Section 3: Offene Aufgaben (customers mit open tasks)
-  const customersWithOpenTasks = React.useMemo(() => {
-    const tasksByCustomer = {};
-    tasks.forEach(t => {
-      if (t.customer_id && (t.status === 'open' || t.status === 'in_progress')) {
-        tasksByCustomer[t.customer_id] = (tasksByCustomer[t.customer_id] || 0) + 1;
-      }
-    });
-    return customers
-      .filter(c => tasksByCustomer[c.id] && tasksByCustomer[c.id] > 0)
-      .map(c => ({
-        customer: c,
-        taskCount: tasksByCustomer[c.id],
-      }));
-  }, [customers, tasks]);
-
   const handleNavigate = (mode) => {
     if (setWorkspaceMode) {
       setWorkspaceMode(mode);
     }
-    // Scroll to top or trigger view change
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <div className="p-6 max-w-[1600px] mx-auto">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-[hsl(var(--primary))] tracking-tight">Portfolio Übersicht</h1>
         <p className="text-sm text-[hsl(var(--text-muted))] mt-1">
-          Kritische Bereiche für sofortige Aktionen
+          Vier kritische Bereiche für sofortige Aktionen
         </p>
       </div>
 
-      {/* Three Core Sections */}
-      <div className="grid gap-6 md:grid-cols-3">
+      {/* Four Core Sections - 2x2 Grid */}
+      <div className="grid gap-6 md:grid-cols-2">
         {/* Section 1: Kunden ohne Mandat / Berater */}
         <PortfolioSectionCard
           icon={AlertTriangle}
@@ -141,9 +149,37 @@ export default function PortfolioDashboard({ setWorkspaceMode }) {
           color="amber"
         />
 
-        {/* Section 2: Cross-Selling / Household Intelligence */}
+        {/* Section 2: Geburtstage (Altersgruppen) */}
+        <PortfolioSectionCard
+          icon={Gift}
+          title="Altersgruppen (Geburtstage)"
+          count={birthdays.length}
+          description="Kunden mit Geburtstag im aktuellen Monat"
+          items={birthdays.slice(0, 5).map(({ customer, birthdate, age }) => ({
+            name: customer.company_name || `${customer.first_name} ${customer.last_name}`,
+            sub: `${birthdate} (${age} Jahre)`,
+          }))}
+          onNavigate={() => handleNavigate('operations')}
+          color="blue"
+        />
+
+        {/* Section 3: Hohe Prämien */}
         <PortfolioSectionCard
           icon={TrendingUp}
+          title="Hohe Prämien"
+          count={highPremium.length}
+          description="Kunden mit Jahresprämie ≥ 5'000 CHF"
+          items={highPremium.slice(0, 5).map(c => ({
+            name: c.company_name || `${c.first_name} ${c.last_name}`,
+            sub: `${(c.total_premium || 0).toLocaleString('de-CH')} CHF/Jahr`,
+          }))}
+          onNavigate={() => handleNavigate('private')}
+          color="violet"
+        />
+
+        {/* Section 4: Cross-Selling / Household */}
+        <PortfolioSectionCard
+          icon={Users}
           title="Cross-Selling / Household"
           count={crossSellingHousehold.length}
           description="Familien-Mitglieder oder Kunden mit Cross-Selling Potenzial"
@@ -154,28 +190,14 @@ export default function PortfolioDashboard({ setWorkspaceMode }) {
           onNavigate={() => handleNavigate('actions')}
           color="blue"
         />
-
-        {/* Section 3: Offene Aufgaben */}
-        <PortfolioSectionCard
-          icon={CheckSquare}
-          title="Offene Aufgaben"
-          count={customersWithOpenTasks.length}
-          description="Kunden mit aktiven, offenen Aufgaben"
-          items={customersWithOpenTasks.slice(0, 5).map(({ customer, taskCount }) => ({
-            name: customer.company_name || `${customer.first_name} ${customer.last_name}`,
-            sub: `${taskCount} Aufgabe${taskCount > 1 ? 'n' : ''}`,
-          }))}
-          onNavigate={() => handleNavigate('tasks')}
-          color="violet"
-        />
       </div>
 
       {/* Quick Stats Footer */}
       <div className="mt-8 p-4 rounded-lg bg-[hsl(var(--surface-2))]/40 border border-[hsl(var(--border-subtle))]/30">
         <div className="flex items-center justify-between text-xs text-[hsl(var(--text-muted))]">
           <span><strong>{customers.length}</strong> Kunden im Portfolio</span>
-          <span><strong>{tasks.filter(t => t.status === 'open').length}</strong> offene Aufgaben</span>
-          <span><strong>{noMandateNoAdvisor.length}</strong> benötigen Aufmerksamkeit</span>
+          <span><strong>{birthdays.length}</strong> Geburtstage diesen Monat</span>
+          <span><strong>{highPremium.length}</strong> VIP-Kunden</span>
         </div>
       </div>
     </div>
