@@ -412,17 +412,14 @@ Deno.serve(async (req) => {
 
     await Promise.all(newIncidents.map(function(t) {
       var sev = t.severity === 'warning' ? 'warning' : 'critical';
-      var recsSummary = t.affected_records && t.affected_records.length > 0
-        ? t.affected_records.map(function(r) { return r.name + (r.detail ? ' (' + r.detail + ')' : ''); }).join(' | ')
-        : null;
       return base44.asServiceRole.entities.EnterpriseIncident.create({
         severity: sev,
         category: t.category,
         title: t.name,
         description: t.details,
         root_cause: t.root_cause || null,
-        technical_details: recsSummary
-          ? t.details + '\n\nBetroffene Datensaetze (' + t.affected_records.length + '):\n' + recsSummary
+        technical_details: t.affected_records && t.affected_records.length > 0
+          ? JSON.stringify({ affected_records: t.affected_records })
           : t.details,
         recommended_action: t.recommended_fix || 'Bitte manuell pruefen und beheben.',
         auto_fix_possible: t.auto_fix_possible || false,
