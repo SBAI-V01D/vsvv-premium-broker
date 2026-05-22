@@ -13,11 +13,14 @@ import ContractsBySparteGroup from '../components/contracts/ContractsBySparteGro
 import CoverageGapsPanel from '../components/contracts/CoverageGapsPanel'
 import CustomerDashboardCompact from '../components/customers/CustomerDashboardCompact'
 import CustomerExecutiveHeader from '../components/customers/CustomerExecutiveHeader'
+import HealthScoreDetail from '../components/customers/HealthScoreDetail'
+import HouseholdIntelligencePanel from '../components/customers/HouseholdIntelligencePanel'
 import { StandardModal, ActionMenu } from '@/components/shared'
 import CustomerForm from '../components/customers/CustomerForm'
 import DocumentsTab from '../components/documents/DocumentsTab'
 import ContractForm from '../components/contracts/ContractForm'
 import StatusChangeDialog from '@/components/status/StatusChangeDialog'
+import { calculateCustomerHealthScore } from '@/lib/customerHealthScore'
 import { FAMILY_ROLE_LABELS, label } from '@/lib/labels'
 import { getSparteLabel } from '@/lib/insuranceSparten'
 import StatusBadge from '@/components/status/StatusBadge'
@@ -254,6 +257,39 @@ export default function CustomerDetail() {
         {/* ── Übersicht ─────────────────────────────────────────────── */}
         {activeSection === 'uebersicht' && (
           <div className="space-y-5">
+            {/* Health Score mit Erklärung */}
+            <div>
+              <h2 className="text-heading font-bold text-slate-800 mb-1">Gesundheitsstatus</h2>
+              <p className="text-body-sm text-slate-500 mb-2">Basierend auf Verträgen, Dokumenten, Tasks und Renewals</p>
+              <div className="relative">
+                {(() => {
+                  const health = calculateCustomerHealthScore(customer, relatedContracts, relatedDocuments, custTasks)
+                  return (
+                    <HealthScoreDetail
+                      state={health.state}
+                      score={health.score}
+                      factors={health.factors}
+                      showDetails
+                    />
+                  )
+                })()}
+              </div>
+            </div>
+
+            {/* Household Intelligence */}
+            {(familyMembers.length > 1 || relatedContracts.length > 0) && (
+              <div>
+                <h2 className="text-heading font-bold text-slate-800 mb-1">Haushalt &amp; Beziehungen</h2>
+                <p className="text-body-sm text-slate-500 mb-2">Beziehungen, gemeinsame Policen und Cross-Selling Potenzial</p>
+                <HouseholdIntelligencePanel
+                  primaryCustomer={primaryCustomer}
+                  familyMembers={familyMembers.filter(m => m.id !== id)}
+                  contracts={allHouseholdContracts}
+                  opportunities={verkaufschancen}
+                />
+              </div>
+            )}
+
             <CustomerDashboardCompact
               customer={customer}
               familyMembers={familyMembers.filter(m => m.id !== id)}

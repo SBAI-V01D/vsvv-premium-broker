@@ -22,6 +22,7 @@ import {
 
 import TodayDashboard from '@/components/dashboard/TodayDashboard'
 import MoneyDashboard from '@/components/dashboard/MoneyDashboard'
+import OpportunityIntelligenceCard from '@/components/opportunities/OpportunityIntelligenceCard'
 
 // ── Operative KPI Tile ────────────────────────────────────────────────────────
 function KpiTile({ label, value, sub, icon: Icon, colorClass, bgClass, borderClass, onClick, urgent }) {
@@ -299,6 +300,34 @@ export default function Dashboard() {
         onTaskClick={handleTaskClick}
         onTaskComplete={handleTaskComplete}
       />
+
+      {/* ── Opportunity Intelligence Feed ───────────────────────────────── */}
+      {openVerkaufschancen.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-heading font-bold text-slate-800">Opportunities im Fokus</h2>
+              <p className="text-body-sm text-slate-500">Priorisiert nach Wahrscheinlichkeit und Dringlichkeit</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {openVerkaufschancen
+              .sort((a, b) => {
+                const probA = a.status === 'kunde_entscheidet' ? 85 : a.status === 'beratung_erfolgt' ? 70 : a.status === 'offerten_erhalten' ? 55 : 35
+                const probB = b.status === 'kunde_entscheidet' ? 85 : b.status === 'beratung_erfolgt' ? 70 : b.status === 'offerten_erhalten' ? 55 : 35
+                return probB - probA
+              })
+              .slice(0, 6)
+              .map(vs => (
+                <OpportunityIntelligenceCard
+                  key={vs.id}
+                  opportunity={vs}
+                  onClick={() => navigate('/verkaufschancen')}
+                />
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Finance & Reporting (collapsible / sekundär) ──────────────────── */}
       <FinanceSection>
