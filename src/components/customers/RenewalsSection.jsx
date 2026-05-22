@@ -98,7 +98,7 @@ export default function RenewalsSection({ contracts, customers, verkaufschancen 
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <h4 className="text-sm font-semibold text-[hsl(var(--text-heading))] truncate">
+              <h4 className="text-xs font-semibold text-[hsl(var(--text-heading))] truncate">
                 {item.customer?.company_name || `${item.customer?.first_name || ''} ${item.customer?.last_name || ''}`}
               </h4>
               {isUrgent && (
