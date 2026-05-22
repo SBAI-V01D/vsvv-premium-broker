@@ -159,7 +159,7 @@ export default function CustomerIntelligenceWorkspace() {
   const [showForm, setShowForm]         = useState(false);
   const [editing, setEditing]           = useState(null);
   const [newCustomerType, setNewCustomerType] = useState('private');
-  const [workspaceMode, setWorkspaceMode] = useState('private');
+  const [workspaceMode, setWorkspaceMode] = useState('operations');
   const [sortBy, setSortBy]               = useState('alpha');
   const [search, setSearch]             = useState('');
   const [showImport, setShowImport]     = useState(false);
