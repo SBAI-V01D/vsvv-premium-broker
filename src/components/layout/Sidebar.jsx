@@ -58,34 +58,34 @@ const navGroups = [
   {
     label: 'Vertrieb',
     items: [
-      { label: 'Leads',           icon: Target,      path: '/leads' },
+      { label: 'Leads',           icon: Target,      path: '/leads', color: 'primary' },
       { label: 'Verkaufschancen', icon: TrendingUp,  path: '/verkaufschancen' },
       { label: 'Vertragsabläufe', icon: RefreshCw,   path: '/vertragsablaeufe' },
-      { label: 'Aufgaben',        icon: CheckSquare, path: '/aufgaben' },
+      { label: 'Aufgaben',        icon: CheckSquare, path: '/aufgaben', color: 'primary' },
     ],
   },
   {
     label: 'Kunden & Verträge',
     items: [
-      { label: 'Kunden',    icon: Users,    path: '/kunden' },
+      { label: 'Kunden',    icon: Users,    path: '/kunden', color: 'primary' },
       { label: 'Verträge',  icon: Shield,   path: '/vertraege' },
       { label: 'Anträge',   icon: FileText, path: '/antraege' },
-      { label: 'Dokumente', icon: FileText, path: '/dokumente' },
+      { label: 'Dokumente', icon: FileText, path: '/dokumente', color: 'primary' },
     ],
   },
   {
     label: 'Administration',
     items: [
-      { label: 'Provisionen',           icon: Wallet,    path: '/provisionen-courtagen' },
+      { label: 'Provisionen',           icon: Wallet,    path: '/provisionen-courtagen', color: 'primary' },
       { label: 'Berater & Partner',     icon: Briefcase, path: '/berater-organisation' },
       { label: 'Team & Zugriffsrechte', icon: Lock,      path: '/admin/team-zugriffsrechte', adminOnly: true },
-      { label: 'System',                icon: Menu,      path: '/admin-logs' },
+      { label: 'System',                icon: Menu,      path: '/admin-logs', color: 'primary' },
     ],
   },
   {
     label: 'Enterprise',
     items: [
-      { label: 'Beratungsdossiers',      icon: BookOpen, path: '/beratungsdossier',               adminOnly: true },
+      { label: 'Beratungsdossiers',      icon: BookOpen, path: '/beratungsdossier',               adminOnly: true, color: 'primary' },
       { label: 'Enterprise Control Center', icon: Shield,   path: '/admin/enterprise-control-center', adminOnly: true },
     ],
   },
@@ -137,7 +137,7 @@ export default function Sidebar({ onNavigate }) {
         {navGroups.map((group) => (
           <div key={group.label} className="mb-0.5">
             {!collapsed ? (
-              <p className="px-4 pt-6 pb-2 text-[9px] font-semibold uppercase tracking-[0.13em] text-[hsl(var(--text-subtle))] select-none">
+              <p className="px-4 pt-6 pb-2 text-[10px] font-bold uppercase tracking-[0.13em] text-black select-none">
                 {group.label}
               </p>
             ) : (
@@ -162,20 +162,26 @@ export default function Sidebar({ onNavigate }) {
                         'relative flex items-center rounded-md transition-all duration-200 group',
                         collapsed ? 'justify-center h-9 w-9 mx-auto' : 'gap-2.5 px-3 py-[9px]',
                         isActive
-                          ? 'bg-[hsl(var(--surface-2))] border border-[hsl(var(--border-subtle))]'
-                          : 'text-[hsl(var(--text-muted))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))]/60 border border-transparent'
+                          ? 'bg-[hsl(var(--primary))] border border-[hsl(var(--primary))]'
+                          : item.color === 'primary'
+                            ? 'bg-[hsl(var(--primary))/0.08] border border-[hsl(var(--border-subtle))]/40 text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))/0.12]'
+                            : 'text-[hsl(var(--text-muted))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))]/60 border border-transparent'
                       )}
                     >
                       {/* Active left indicator */}
                       {isActive && !collapsed && (
-                        <span className="absolute left-0 w-[3px] h-5 rounded-r-full bg-[hsl(var(--primary))]" />
+                        <span className="absolute left-0 w-[3px] h-5 rounded-r-full bg-white" />
                       )}
 
                       <item.icon
                         className={cn(
                           'flex-shrink-0 transition-opacity duration-200',
                           collapsed ? 'w-[17px] h-[17px]' : 'w-[14px] h-[14px]',
-                          isActive ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--text-muted))] opacity-70 group-hover:opacity-100'
+                          isActive
+                            ? 'text-white'
+                            : item.color === 'primary'
+                              ? 'text-[hsl(var(--primary))]'
+                              : 'text-[hsl(var(--text-muted))] opacity-70 group-hover:opacity-100'
                         )}
                         strokeWidth={isActive ? 2.2 : 1.8}
                       />
@@ -183,7 +189,11 @@ export default function Sidebar({ onNavigate }) {
                       {!collapsed && (
                         <span className={cn(
                           'text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em]',
-                          isActive ? 'text-[hsl(var(--text-heading))]' : 'text-[hsl(var(--text-muted))] group-hover:text-[hsl(var(--text-heading))]'
+                          isActive
+                            ? 'text-white font-semibold'
+                            : item.color === 'primary'
+                              ? 'text-[hsl(var(--primary))] font-semibold'
+                              : 'text-[hsl(var(--text-muted))] group-hover:text-[hsl(var(--text-heading))]'
                         )}>
                           {item.label}
                         </span>
@@ -196,7 +206,11 @@ export default function Sidebar({ onNavigate }) {
                           collapsed
                             ? 'absolute top-0.5 right-0.5 min-w-[13px] h-[13px] px-[3px]'
                             : 'min-w-[16px] h-[16px] px-[4px]',
-                          'bg-[hsl(var(--warning))] text-white'
+                          isActive
+                            ? 'bg-white text-[hsl(var(--primary))]'
+                            : item.color === 'primary'
+                              ? 'bg-[hsl(var(--primary))] text-white'
+                              : 'bg-[hsl(var(--warning))] text-white'
                         )}>
                           {badges[item.path]}
                         </span>
@@ -228,9 +242,9 @@ export default function Sidebar({ onNavigate }) {
 
       {/* ── User card — embedded surface with subtle date ───────────────── */}
       {!collapsed && currentUser && (
-        <div className="mx-2 mb-2 px-3 py-2.5 rounded-md bg-[hsl(var(--surface-2))] border border-[hsl(var(--border-subtle))]">
+        <div className="mx-2 mb-2 px-3 py-2.5 rounded-md bg-[hsl(var(--primary))/0.06] border border-[hsl(var(--border-subtle))]/50">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-6 h-6 rounded-full bg-[hsl(var(--primary))/0.1] flex items-center justify-center flex-shrink-0">
+            <div className="w-6 h-6 rounded-full bg-[hsl(var(--primary))/0.15] flex items-center justify-center flex-shrink-0">
               <User className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
             </div>
             <div className="min-w-0 flex-1">
