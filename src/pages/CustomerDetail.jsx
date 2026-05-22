@@ -1,56 +1,47 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useRef } from 'react'
 import html2pdf from 'html2pdf.js'
 import { useAccessControl } from '@/hooks/useAccessControl'
-import { Plus, Edit, Mail, Phone, MapPin, LayoutDashboard, MoreHorizontal, Landmark } from 'lucide-react'
+import { Edit, Users, FileText, Clock, Shield, Bot } from 'lucide-react'
 import AiInsightsPanel from '../components/customers/AiInsightsPanel'
 import ActivityTimeline from '../components/customers/ActivityTimeline'
-import AutoAISummary from '../components/customers/AutoAISummary'
-import FamilyOverviewPanel from '../components/customers/FamilyOverviewPanel'
 import HouseholdContractsCockpit from '../components/customers/HouseholdContractsCockpit'
-import HouseholdSummaryStats from '../components/customers/HouseholdSummaryStats'
 import FamilyMemberCard from '../components/customers/FamilyMemberCard'
-import HouseholdActionStrip from '../components/customers/HouseholdActionStrip'
 import ContractsBySparteGroup from '../components/contracts/ContractsBySparteGroup'
 import CoverageGapsPanel from '../components/contracts/CoverageGapsPanel'
 import CustomerDashboardCompact from '../components/customers/CustomerDashboardCompact'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ActionMenu, StandardModal } from '@/components/shared'
+import CustomerExecutiveHeader from '../components/customers/CustomerExecutiveHeader'
+import { StandardModal, ActionMenu } from '@/components/shared'
 import CustomerForm from '../components/customers/CustomerForm'
 import DocumentsTab from '../components/documents/DocumentsTab'
 import ContractForm from '../components/contracts/ContractForm'
 import StatusChangeDialog from '@/components/status/StatusChangeDialog'
-import EmailLink from '../components/common/EmailLink'
-import { STATUS_LABELS, INSURANCE_TYPE_LABELS, FAMILY_ROLE_LABELS, label } from '@/lib/labels'
+import { FAMILY_ROLE_LABELS, label } from '@/lib/labels'
 import { getSparteLabel } from '@/lib/insuranceSparten'
 import StatusBadge from '@/components/status/StatusBadge'
 import PortalActivationPanel from '@/components/customers/PortalActivationPanel'
 import AddFamilyMemberDialog from '@/components/customers/AddFamilyMemberDialog'
 import AdvisorAssignmentPanel from '@/components/advisors/AdvisorAssignmentPanel'
-import { Download, FileText } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { HouseholdPrintExport } from '@/components/customers/HouseholdPrintExport'
+import { StickyNav, EnterpriseCard, EmptySection, SectionHeader } from '@/components/ui/ds'
+import EmailLink from '@/components/common/EmailLink'
 
 export default function CustomerDetail() {
-   const { id } = useParams()
-   const navigate = useNavigate()
-   const exportRef = useRef(null)
-   const { checkCustomerAccess, isAdmin } = useAccessControl()
-   const [showEdit, setShowEdit] = useState(false)
-   const [editingContract, setEditingContract] = useState(null)
-   const [statusChangingContract, setStatusChangingContract] = useState(null)
-   const [showAddFamilyMember, setShowAddFamilyMember] = useState(false)
-   const [accessChecked, setAccessChecked] = useState(false)
-   const [hasAccess, setHasAccess] = useState(false)
-   const queryClient = useQueryClient()
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const exportRef = useRef(null)
+  const { checkCustomerAccess, isAdmin } = useAccessControl()
+  const [showEdit, setShowEdit] = useState(false)
+  const [editingContract, setEditingContract] = useState(null)
+  const [statusChangingContract, setStatusChangingContract] = useState(null)
+  const [showAddFamilyMember, setShowAddFamilyMember] = useState(false)
+  const [accessChecked, setAccessChecked] = useState(false)
+  const [hasAccess, setHasAccess] = useState(false)
+  const [activeSection, setActiveSection] = useState('uebersicht')
+  const queryClient = useQueryClient()
 
-  // Real-time: Nur betroffenen Kunden invalidieren, nicht alles
   useEffect(() => {
     const unsubscribe = base44.entities.Contract.subscribe((event) => {
       if (event.type === 'create' || event.type === 'update') {
@@ -74,20 +65,17 @@ export default function CustomerDetail() {
     queryFn: () => base44.entities.Advisor.list(),
   })
 
-  // Prüfe Kundenzugriff
   useQuery({
     queryKey: ['customerAccess', id],
     queryFn: async () => {
-      const canAccess = await checkCustomerAccess(id);
-      setHasAccess(canAccess);
-      setAccessChecked(true);
-      if (!canAccess && !isAdmin) {
-        navigate('/kunden');
-      }
-      return canAccess;
+      const canAccess = await checkCustomerAccess(id)
+      setHasAccess(canAccess)
+      setAccessChecked(true)
+      if (!canAccess && !isAdmin) navigate('/kunden')
+      return canAccess
     },
     enabled: !!id,
-  });
+  })
 
   const customer = allCustomers.find(x => x.id === id)
 
@@ -137,20 +125,14 @@ export default function CustomerDetail() {
     enabled: !!id,
   })
 
-  // Echter Hauptkontakt: immer stabil, unabhängig davon wer geöffnet ist
-  const primaryCustomerId = customer?.is_family_member
-    ? customer?.primary_customer_id
-    : customer?.id
-  const primaryCustomer = (Array.isArray(allCustomers) ? allCustomers : []).find(c => c.id === primaryCustomerId) || customer
-
-  // Alle Haushaltsmitglieder: Hauptkontakt + alle seine Familienmitglieder
-  const householdMembers = (Array.isArray(allCustomers) ? allCustomers : []).filter(c =>
+  const primaryCustomerId = customer?.is_family_member ? customer?.primary_customer_id : customer?.id
+  const primaryCustomer = allCustomers.find(c => c.id === primaryCustomerId) || customer
+  const householdMembers = allCustomers.filter(c =>
     c.id === primaryCustomerId || c.primary_customer_id === primaryCustomerId
   )
   const familyMembers = householdMembers
   const householdCustomerIds = householdMembers.map(m => m.id).filter(Boolean)
 
-  // Haushalt-Verträge für PDF-Export (andere Haushaltsmitglieder, lazy)
   const { data: householdContractsExtra = [] } = useQuery({
     queryKey: ['household-contracts', primaryCustomerId],
     queryFn: async () => {
@@ -165,64 +147,31 @@ export default function CustomerDetail() {
     staleTime: 5 * 60 * 1000,
   })
 
+  const allHouseholdContracts = [...relatedContracts, ...householdContractsExtra]
+
   const downloadPDFMutation = useMutation({
     mutationFn: async () => {
-      if (!customer?.id) throw new Error('Kunde nicht geladen');
-      if (!exportRef.current) throw new Error('Export-Container nicht gefunden');
-      
-      // Debug: prüfen ob Inhalt vorhanden ist
-      console.log('PDF Export Container:', {
-        hasRef: !!exportRef.current,
-        innerHTML: exportRef.current?.innerHTML?.length || 0,
-        textContent: exportRef.current?.textContent?.length || 0,
-      });
-
-      const element = exportRef.current;
+      if (!exportRef.current) throw new Error('Export-Container nicht gefunden')
       const opt = {
         margin: 10,
         filename: `Haushaltsübersicht_${customer.last_name}_${new Date().toISOString().split('T')[0]}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2 },
         jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
-      };
-
-      return new Promise((resolve, reject) => {
-        html2pdf().set(opt).from(element).save().then(() => {
-          console.log('PDF erfolgreich erstellt');
-          resolve({ success: true });
-        }).catch(err => {
-          console.error('html2pdf Fehler:', err);
-          reject(err);
-        });
-      });
+      }
+      return html2pdf().set(opt).from(exportRef.current).save()
     },
-    onSuccess: () => {
-      console.log('PDF-Download erfolgreich');
-    },
-    onError: (error) => {
-      console.error('PDF-Generierung fehlgeschlagen:', error);
-      alert(`PDF-Fehler: ${error.message}`);
-    }
   })
-
-  // Haushalt-IDs + alle Haushaltsverträge (relatedContracts = eigene, extra = Familie)
-  const allHouseholdContracts = [...relatedContracts, ...householdContractsExtra]
 
   const updateCustomerMutation = useMutation({
     mutationFn: ({ id: cid, data }) => base44.entities.Customer.update(cid, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setShowEdit(false); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setShowEdit(false) },
   })
 
   const updateContractMutation = useMutation({
     mutationFn: ({ id: cid, data }) => base44.entities.Contract.update(cid, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contracts', id] }); setEditingContract(null); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contracts', id] }); setEditingContract(null) },
   })
-
-  const handleContractSave = (data) => {
-    if (editingContract) {
-      updateContractMutation.mutate({ id: editingContract.id, data })
-    }
-  }
 
   const handleContractStatusChange = async ({ status, statusDef, note, metadata }) => {
     if (!statusChangingContract) return
@@ -243,118 +192,37 @@ export default function CustomerDetail() {
   }
 
   if (!accessChecked && !hasAccess) {
-    return <div className="flex items-center justify-center h-64"><div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div></div>
+    return <div className="flex items-center justify-center h-64"><div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" /></div>
   }
-
   if (!hasAccess) {
     return <div className="flex items-center justify-center h-64"><p className="text-destructive">Kein Zugriff auf diesen Kunden</p></div>
   }
-
   if (!customer) {
-    return <div className="flex items-center justify-center h-64"><p>Laden...</p></div>
+    return <div className="flex items-center justify-center h-64"><div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" /></div>
   }
 
+  const formatDate = (d) => {
+    if (!d) return '–'
+    if (d.startsWith('9999')) return 'Unbegrenzt'
+    return new Date(d).toLocaleDateString('de-CH')
+  }
+
+  const NAV_ITEMS = [
+    { id: 'uebersicht', label: 'Übersicht', icon: Shield },
+    { id: 'vertraege', label: 'Verträge', icon: FileText, count: relatedContracts.length },
+    { id: 'antraege', label: 'Anträge', icon: FileText, count: relatedApplications.length },
+    { id: 'dokumente', label: 'Dokumente', icon: FileText, count: relatedDocuments.length },
+    { id: 'familie', label: 'Familie', icon: Users, count: familyMembers.length > 1 ? familyMembers.length - 1 : 0 },
+    { id: 'betreuung', label: 'Betreuung', icon: Shield },
+    { id: 'timeline', label: 'Timeline', icon: Clock },
+    { id: 'ki-analyse', label: 'KI-Analyse', icon: Bot },
+  ]
+
   return (
-    <div>
-      {/* Back + Header */}
-      <button
-        onClick={() => navigate('/kunden')}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
-      >
-        ← Zurück
-      </button>
-
-      <div className="flex justify-between items-start mb-6">
-        <div className="flex items-center gap-4 flex-1">
-          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl flex-shrink-0">
-            {customer.company_name ? customer.company_name[0] : `${customer.first_name?.[0] || ''}${customer.last_name?.[0] || ''}`}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <h1 className="text-2xl font-bold">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</h1>
-              {customer.customer_number && (
-                <span className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-md font-mono text-sm font-bold">
-                  {customer.customer_number}
-                </span>
-              )}
-            </div>
-            {customer.company_name && (customer.contact_person_firstname || customer.contact_person_lastname) && (
-              <p className="text-sm text-muted-foreground">Kontakt: {customer.contact_person_firstname} {customer.contact_person_lastname}</p>
-            )}
-            <p className="text-sm text-muted-foreground mt-0.5"><EmailLink email={customer.email} /></p>
-          </div>
-        </div>
-        <div className="flex gap-2 flex-shrink-0 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => navigate(`/kunden/${id}/360`)}>
-            <LayoutDashboard className="w-4 h-4 mr-1.5" /> 360° Ansicht
-          </Button>
-          {!customer?.is_family_member && (
-            <Button variant="outline" size="sm" onClick={() => setShowAddFamilyMember(true)}>
-              <Plus className="w-4 h-4 mr-1.5" /> Familienmitglied
-            </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>
-            <Edit className="w-4 h-4 mr-1.5" /> Bearbeiten
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4 space-y-2">
-            {customer.email && (
-              <div className="flex items-center gap-2 text-sm">
-                <Mail className="w-4 h-4 text-muted-foreground" />
-                <EmailLink email={customer.email} />
-              </div>
-            )}
-            {customer.phone && <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-muted-foreground" /> {customer.phone}</div>}
-            {customer.mobile && <div className="flex items-center gap-2 text-sm"><Phone className="w-4 h-4 text-muted-foreground" /> {customer.mobile}</div>}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 space-y-2">
-            {customer.street && <div className="flex items-center gap-2 text-sm"><MapPin className="w-4 h-4 text-muted-foreground" /> {customer.street}, {customer.zip_code} {customer.city}</div>}
-            {customer.canton && <div className="text-sm text-muted-foreground">Kanton {customer.canton}</div>}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 space-y-2">
-            {customer.birthdate && <div className="text-sm"><span className="text-muted-foreground">Geburtsdatum:</span> {new Date(customer.birthdate).toLocaleDateString('de-CH')}</div>}
-            {customer.profession && <div className="text-sm"><span className="text-muted-foreground">Beruf:</span> {customer.profession}</div>}
-            {(() => {
-              // Berater aus Kunde, sonst aus Vertrag, sonst aus Antrag ableiten
-              const advisorId = customer.advisor_id
-                || relatedContracts.find(c => c.advisor_id)?.advisor_id
-                || relatedApplications.find(a => a.advisor_id)?.advisor_id;
-              const advisor = allAdvisors.find(a => a.id === advisorId);
-              return advisor ? (
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Berater:</span> {advisor.firstname} {advisor.lastname}
-                </div>
-              ) : null;
-            })()}
-            <div className="text-sm"><span className="text-muted-foreground">Status:</span> {label(STATUS_LABELS, customer.status)}</div>
-          </CardContent>
-        </Card>
-        {customer.bank_account && (
-          <Card>
-            <CardContent className="p-4 space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <Landmark className="w-4 h-4 text-muted-foreground" />
-                <div>
-                  <div className="text-muted-foreground text-xs">Bank- oder Postkontoverbindung</div>
-                  <div className="font-mono text-sm font-semibold">{customer.bank_account}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* HIDDEN EXPORT CONTAINER – Nur für PDF */}
+    <div className="min-h-screen bg-background -mx-6 -mt-6">
+      {/* Hidden PDF export */}
       <div style={{ display: 'none' }}>
-        <HouseholdPrintExport 
+        <HouseholdPrintExport
           ref={exportRef}
           customer={primaryCustomer}
           familyMembers={householdMembers.filter(m => m.id !== primaryCustomerId)}
@@ -364,133 +232,202 @@ export default function CustomerDetail() {
         />
       </div>
 
-      <Tabs defaultValue="dashboard">
-        <TabsList className="mb-4">
-          <TabsTrigger value="dashboard">📊 Dashboard</TabsTrigger>
-          <TabsTrigger value="betreuung">👥 Betreuung</TabsTrigger>
-          <TabsTrigger value="vertraege">Verträge ({relatedContracts.length})</TabsTrigger>
-          <TabsTrigger value="antraege">Anträge ({relatedApplications.length})</TabsTrigger>
-          <TabsTrigger value="familie">Familie ({familyMembers.length > 1 ? familyMembers.length - 1 : 0})</TabsTrigger>
-          <TabsTrigger value="dokumente">Dokumente ({relatedDocuments.length})</TabsTrigger>
-          <TabsTrigger value="kommunikation">Kommunikation</TabsTrigger>
-          <TabsTrigger value="timeline">📜 Timeline</TabsTrigger>
-          <TabsTrigger value="ki-analyse">🤖 KI-Analyse</TabsTrigger>
-        </TabsList>
+      {/* Executive Header */}
+      <CustomerExecutiveHeader
+        customer={customer}
+        contracts={relatedContracts}
+        tasks={custTasks}
+        documents={relatedDocuments}
+        advisors={allAdvisors}
+        onEdit={() => setShowEdit(true)}
+        onAddFamilyMember={() => setShowAddFamilyMember(true)}
+        onDownloadPDF={() => downloadPDFMutation.mutate()}
+        isDownloading={downloadPDFMutation.isPending}
+      />
 
-        <TabsContent value="dashboard">
-          <div className="space-y-4">
-            {/* Compact Dashboard - Priorisiert & Verdichtet */}
+      {/* Sticky Nav */}
+      <StickyNav items={NAV_ITEMS} active={activeSection} onChange={setActiveSection} />
+
+      {/* Content */}
+      <div className="px-6 py-6 max-w-7xl mx-auto">
+
+        {/* ── Übersicht ─────────────────────────────────────────────── */}
+        {activeSection === 'uebersicht' && (
+          <div className="space-y-5">
             <CustomerDashboardCompact
               customer={customer}
               familyMembers={familyMembers.filter(m => m.id !== id)}
               contracts={relatedContracts}
               tasks={custTasks}
               opportunities={verkaufschancen}
-              onDownloadPDF={() => {
-                if (!customer?.id) {
-                  alert('Bitte warten Sie, bis alle Daten geladen sind.');
-                  return;
-                }
-                downloadPDFMutation.mutate();
-              }}
-              onNewOpportunity={() => {/* TODO: open new opportunity dialog */}}
-              onNewFamilyMember={() => {/* TODO: open add family member dialog */}}
+              onDownloadPDF={() => downloadPDFMutation.mutate()}
+              onNewOpportunity={() => {}}
+              onNewFamilyMember={() => setShowAddFamilyMember(true)}
               isDownloading={downloadPDFMutation.isPending}
             />
-
-            {/* Weitere Details (einklappbar via Tabs) */}
-            <Tabs defaultValue="contracts" className="mt-6">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="contracts">Verträge</TabsTrigger>
-                <TabsTrigger value="family">Familie</TabsTrigger>
-                <TabsTrigger value="cockpit">Cockpit</TabsTrigger>
-                <TabsTrigger value="timeline">Timeline</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="contracts" className="space-y-4">
-                {relatedContracts.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-semibold mb-3">📋 Bestands- & Beratungs-Cockpit</h3>
-                    <div className="mb-4">
-                      <CoverageGapsPanel 
-                        contracts={relatedContracts}
-                        onAddCoverage={(sparte) => {/* TODO: open new opportunity dialog with sparte */}}
-                      />
-                    </div>
-                    <ContractsBySparteGroup 
-                      contracts={relatedContracts}
-                      familyMembers={familyMembers.filter(m => m.id !== id)}
-                      primaryCustomer={customer}
-                      onStartReview={(contract) => {/* TODO: start review workflow */}}
-                      onCreateOpportunity={(contract) => {/* TODO: create opportunity from contract */}}
-                    />
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="family" className="space-y-4">
-                {familyMembers.filter(m => m.id !== id).length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-semibold mb-3">👨‍👩‍👧‍👦 Haushalt ({familyMembers.length} Personen)</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <Card className="p-4 border-l-4 border-l-primary bg-primary/5">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h4 className="font-semibold text-sm">{customer.first_name} {customer.last_name}</h4>
-                            <p className="text-xs text-muted-foreground">Hauptkontakt</p>
-                          </div>
-                          <Badge variant="outline" className="bg-green-100 text-green-700 border-0 text-xs">
-                            ✓ Aktiv
-                          </Badge>
-                        </div>
-                        {customer.birthdate && (
-                          <p className="text-xs text-muted-foreground mb-2">
-                            <strong>Geb.:</strong> {customer.birthdate}
-                          </p>
-                        )}
-                      </Card>
-
-                      {familyMembers.filter(m => m.id !== id).map(member => (
-                        <FamilyMemberCard 
-                          key={member.id}
-                          member={member}
-                          memberContracts={relatedContracts.filter(c => c.customer_id === member.id)}
-                          onEdit={() => {/* TODO: open member detail */}}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="cockpit">
-                <HouseholdContractsCockpit 
+            {relatedContracts.length > 0 && (
+              <div className="space-y-4">
+                <CoverageGapsPanel contracts={relatedContracts} onAddCoverage={() => {}} />
+                <ContractsBySparteGroup
                   contracts={relatedContracts}
                   familyMembers={familyMembers.filter(m => m.id !== id)}
+                  primaryCustomer={customer}
+                  onStartReview={() => {}}
+                  onCreateOpportunity={() => {}}
                 />
-              </TabsContent>
-
-              <TabsContent value="timeline">
-                <ActivityTimeline 
-                  customer={customer}
-                  documents={relatedDocuments}
-                  contracts={relatedContracts}
-                  tasks={custTasks}
-                />
-              </TabsContent>
-            </Tabs>
-
-
+              </div>
+            )}
           </div>
-        </TabsContent>
+        )}
 
-        <TabsContent value="betreuung">
+        {/* ── Verträge ──────────────────────────────────────────────── */}
+        {activeSection === 'vertraege' && (
+          relatedContracts.length === 0 ? (
+            <EnterpriseCard>
+              <EmptySection icon={FileText} title="Keine Verträge" subtitle="Noch keine Verträge für diesen Kunden erfasst." />
+            </EnterpriseCard>
+          ) : (
+            <EnterpriseCard noPad>
+              <div className="hidden md:grid grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-2.5 border-b border-[hsl(var(--border-subtle))] text-label">
+                <div>Versicherter</div><div>Versicherer / Sparte</div><div>Policen-Nr</div>
+                <div>Produkt</div><div>Laufzeit</div><div>Jahresprämie</div><div>Status</div><div className="w-16" />
+              </div>
+              {relatedContracts.map((c, idx) => (
+                <div key={c.id} className={idx > 0 ? 'border-t border-[hsl(var(--border-subtle))]' : ''}>
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3.5 items-center hover:bg-slate-50/70 transition-colors">
+                    <div className="min-w-0">
+                      <p className="text-body-sm font-semibold truncate">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</p>
+                      {customer.ahv_number && <p className="text-caption font-mono mt-0.5">{customer.ahv_number}</p>}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-body-sm font-medium truncate">{c.insurer}</p>
+                      {(c.sparte || c.insurance_type) && <p className="text-caption mt-0.5">{getSparteLabel(c.sparte || c.insurance_type)}</p>}
+                      {c.sparte_data?.franchise && <p className="text-caption mt-0.5">Fr. {c.sparte_data.franchise}</p>}
+                    </div>
+                    <div><p className="text-body-sm">{c.policy_number || '–'}</p></div>
+                    <div><p className="text-body-sm">{c.product || '–'}</p></div>
+                    <div>
+                      {c.start_date && <p className="text-caption text-emerald-600">{formatDate(c.start_date)}</p>}
+                      {c.end_date && <p className="text-caption text-slate-500">{formatDate(c.end_date)}</p>}
+                      {!c.start_date && !c.end_date && <span className="text-caption">–</span>}
+                    </div>
+                    <div>
+                      {c.premium_yearly && <p className="text-body-sm font-semibold">CHF {c.premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}</p>}
+                      {c.premium_monthly && <p className="text-caption">CHF {c.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}/M.</p>}
+                      {!c.premium_yearly && !c.premium_monthly && <span className="text-caption">–</span>}
+                    </div>
+                    <div>
+                      <button onClick={() => setStatusChangingContract(c)} className="hover:opacity-80 transition-opacity">
+                        <StatusBadge
+                          statusDef={statusDefs.find(s => s.key === (c.custom_status || '').toLowerCase().trim()) || statusDefs.find(s => s.key === (c.status || '').toLowerCase().trim())}
+                          label={c.custom_status || c.status}
+                        />
+                      </button>
+                    </div>
+                    <ActionMenu items={[
+                      { label: 'Bearbeiten', icon: Edit, onClick: () => setEditingContract(c) },
+                      { label: 'Status ändern', onClick: () => setStatusChangingContract(c) },
+                    ]} />
+                  </div>
+                </div>
+              ))}
+            </EnterpriseCard>
+          )
+        )}
+
+        {/* ── Anträge ───────────────────────────────────────────────── */}
+        {activeSection === 'antraege' && (
+          relatedApplications.length === 0 ? (
+            <EnterpriseCard>
+              <EmptySection icon={FileText} title="Keine Anträge" subtitle="Noch keine Anträge für diesen Kunden vorhanden." />
+            </EnterpriseCard>
+          ) : (
+            <EnterpriseCard noPad>
+              <div className="hidden md:grid grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-4 py-2.5 border-b border-[hsl(var(--border-subtle))] text-label">
+                <div>Versicherter</div><div>Versicherer / Sparte</div><div>Policen-Nr</div>
+                <div>Produkt</div><div>Laufzeit</div><div>Jahresprämie</div><div>Status</div>
+              </div>
+              {relatedApplications.map((a, idx) => {
+                const premiumYearly = a.estimated_premium_yearly || (a.estimated_premium_monthly ? Math.round(a.estimated_premium_monthly * 12) : null)
+                const statusColors = {
+                  approved: 'bg-emerald-50 text-emerald-700', angenommen: 'bg-emerald-50 text-emerald-700',
+                  in_progress: 'bg-blue-50 text-blue-700', waiting: 'bg-amber-50 text-amber-700',
+                  rejected: 'bg-rose-50 text-rose-600',
+                }
+                const sk = a.custom_status || a.status
+                return (
+                  <div key={a.id} className={idx > 0 ? 'border-t border-[hsl(var(--border-subtle))]' : ''}>
+                    <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-4 py-3.5 items-center hover:bg-slate-50/70 transition-colors">
+                      <div><p className="text-body-sm font-semibold truncate">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</p></div>
+                      <div>
+                        <p className="text-body-sm font-medium truncate">{a.insurer || '–'}</p>
+                        {(a.sparte || a.insurance_type) && <p className="text-caption mt-0.5">{getSparteLabel(a.sparte || a.insurance_type)}</p>}
+                        {a.sparte_data?.franchise && <p className="text-caption mt-0.5">Fr. {a.sparte_data.franchise}</p>}
+                      </div>
+                      <div><p className="text-body-sm">{a.policy_number || '–'}</p></div>
+                      <div><p className="text-body-sm">{a.product || '–'}</p></div>
+                      <div>
+                        {a.contract_start_date && <p className="text-caption text-emerald-600">{formatDate(a.contract_start_date)}</p>}
+                        {a.contract_end_date && <p className="text-caption text-slate-500">{formatDate(a.contract_end_date)}</p>}
+                        {!a.contract_start_date && !a.contract_end_date && <span className="text-caption">–</span>}
+                      </div>
+                      <div>
+                        {premiumYearly ? <p className="text-body-sm font-semibold">CHF {premiumYearly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}</p> : <span className="text-caption">–</span>}
+                        {a.estimated_premium_monthly ? <p className="text-caption">CHF {a.estimated_premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}/M.</p> : null}
+                      </div>
+                      <div>
+                        <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${statusColors[sk] || 'bg-slate-100 text-slate-600'}`}>{sk}</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </EnterpriseCard>
+          )
+        )}
+
+        {/* ── Dokumente ─────────────────────────────────────────────── */}
+        {activeSection === 'dokumente' && (
+          <DocumentsTab
+            customerId={id}
+            customerName={`${customer.first_name} ${customer.last_name}`}
+            contracts={relatedContracts}
+          />
+        )}
+
+        {/* ── Familie ───────────────────────────────────────────────── */}
+        {activeSection === 'familie' && (
+          familyMembers.length <= 1 ? (
+            <EnterpriseCard>
+              <EmptySection icon={Users} title="Keine Familienmitglieder" subtitle="Noch keine Familienmitglieder für diesen Haushalt erfasst." />
+            </EnterpriseCard>
+          ) : (
+            <div className="space-y-5">
+              <SectionHeader title={`Haushalt · ${familyMembers.length} Personen`} />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {familyMembers.filter(m => m.id !== id).map(member => (
+                  <FamilyMemberCard
+                    key={member.id}
+                    member={member}
+                    memberContracts={relatedContracts.filter(c => c.customer_id === member.id)}
+                    onEdit={() => navigate(`/kunden/${member.id}`)}
+                  />
+                ))}
+              </div>
+              <HouseholdContractsCockpit contracts={relatedContracts} familyMembers={familyMembers.filter(m => m.id !== id)} />
+            </div>
+          )
+        )}
+
+        {/* ── Betreuung ─────────────────────────────────────────────── */}
+        {activeSection === 'betreuung' && (
           <div className="space-y-4">
             <AdvisorAssignmentPanel customerId={id} />
           </div>
-        </TabsContent>
+        )}
 
-        <TabsContent value="timeline">
+        {/* ── Timeline ──────────────────────────────────────────────── */}
+        {activeSection === 'timeline' && (
           <ActivityTimeline
             customer={customer}
             contracts={relatedContracts}
@@ -501,294 +438,19 @@ export default function CustomerDetail() {
             verkaufschancen={verkaufschancen}
             limit={50}
           />
-        </TabsContent>
+        )}
 
-        <TabsContent value="vertraege">
-          {relatedContracts.length === 0 ? (
-            <Card><CardContent className="p-6 text-center text-muted-foreground">Keine Verträge vorhanden</CardContent></Card>
-          ) : (
-            <Card>
-              <CardContent className="p-0">
-                <div className="hidden md:grid grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  <div>Kunde</div>
-                  <div>Versicherer / Sparte</div>
-                  <div>Policen-Nr</div>
-                  <div>Produkt / Tarif</div>
-                  <div>Vertragsdaten</div>
-                  <div>Jahresprämie</div>
-                  <div>Status</div>
-                  <div className="w-20"></div>
-                </div>
-                {relatedContracts.map((c, idx) => {
-                  const relatedCustomer = customer
-                  const formatDate = (dateStr) => {
-                    if (!dateStr) return '–'
-                    if (dateStr.startsWith('9999')) return 'Unbegrenzt'
-                    return new Date(dateStr).toLocaleDateString('de-CH')
-                  }
-                  return (
-                    <div key={c.id} className={idx > 0 ? 'border-t border-border' : ''}>
-                      <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors">
-                        {/* Kunde */}
-                        <div className="min-w-0">
-                          <p className="font-semibold text-xs truncate">{relatedCustomer ? (relatedCustomer.company_name || `${relatedCustomer.first_name} ${relatedCustomer.last_name}`) : c.customer_name}</p>
-                          {relatedCustomer?.ahv_number && (
-                            <p className="text-xs font-mono text-muted-foreground mt-0.5">{relatedCustomer.ahv_number}</p>
-                          )}
-                        </div>
-
-                        {/* Versicherer / Sparte */}
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-xs font-medium truncate">{c.insurer}</p>
-                          </div>
-                          {c.sparte || c.insurance_type ? (
-                            <p className="text-xs text-muted-foreground truncate mt-0.5">{getSparteLabel(c.sparte || c.insurance_type)}</p>
-                          ) : null}
-                          {c.sparte_data?.franchise && (
-                            <p className="text-xs text-muted-foreground mt-0.5">Franchise: CHF {c.sparte_data.franchise}</p>
-                          )}
-                          {c.sparte_data?.model && (
-                            <p className="text-xs text-muted-foreground mt-0.5">Modell: {c.sparte_data.model}</p>
-                          )}
-                        </div>
-
-                        {/* Policen-Nr */}
-                        <div className="min-w-0">
-                          {c.policy_number && (
-                            <p className="text-xs font-medium">{c.policy_number}</p>
-                          )}
-                          {!c.policy_number && <span className="text-xs text-muted-foreground">–</span>}
-                        </div>
-
-                        {/* Produkt / Tarif */}
-                        <div className="min-w-0">
-                          {c.product && (
-                            <p className="text-xs font-medium">{c.product}</p>
-                          )}
-                          {!c.product && <span className="text-xs text-muted-foreground">–</span>}
-                        </div>
-
-                        {/* Vertragsdaten */}
-                        <div>
-                          {c.start_date && (
-                            <div className="flex items-center gap-1.5 mb-1">
-                              <span className="text-xs text-green-600 font-medium">{formatDate(c.start_date)}</span>
-                            </div>
-                          )}
-                          {c.end_date && (
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs text-green-600 font-medium">{formatDate(c.end_date)}</span>
-                            </div>
-                          )}
-                          {!c.start_date && !c.end_date && (
-                            <span className="text-xs text-muted-foreground">–</span>
-                          )}
-                        </div>
-
-                        {/* Jahresprämie */}
-                        <div>
-                          {c.premium_yearly ? (
-                            <p className="text-xs font-semibold text-foreground">
-                              CHF {c.premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/J.
-                            </p>
-                          ) : null}
-                          {c.premium_monthly ? (
-                            <p className="text-xs text-muted-foreground">
-                              CHF {c.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/M.
-                            </p>
-                          ) : null}
-                          {!c.premium_yearly && !c.premium_monthly && (
-                            <span className="text-xs text-muted-foreground">–</span>
-                          )}
-                        </div>
-
-                        {/* Status */}
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => setStatusChangingContract(c)} className="hover:opacity-80 transition-opacity">
-                            <StatusBadge
-                              statusDef={statusDefs.find(s => s.key === (c.custom_status || '').toLowerCase().trim()) || statusDefs.find(s => s.key === (c.status || '').toLowerCase().trim())}
-                              label={c.custom_status || label(STATUS_LABELS, c.status)}
-                            />
-                          </button>
-                        </div>
-
-                        {/* Actions */}
-                        <ActionMenu items={[
-                          { label: 'Bearbeiten', icon: Edit, onClick: () => setEditingContract(c) },
-                          { label: 'Status ändern', onClick: () => setStatusChangingContract(c) },
-                        ]} />
-                      </div>
-                    </div>
-                  )
-                })}
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="antraege">
-          {relatedApplications.length === 0 ? (
-            <Card><CardContent className="p-6 text-center text-muted-foreground">Keine Anträge vorhanden</CardContent></Card>
-          ) : (
-            <Card>
-              <CardContent className="p-0">
-                <div className="hidden md:grid grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                  <div>Kunde</div>
-                  <div>Versicherer / Sparte</div>
-                  <div>Policen-Nr</div>
-                  <div>Produkt / Tarif</div>
-                  <div>Vertragsdaten</div>
-                  <div>Jahresprämie</div>
-                  <div>Status</div>
-                </div>
-                {relatedApplications.map((a, idx) => {
-                  const relatedCustomer = customer
-                  const premiumMonthly = a.estimated_premium_monthly
-                  const premiumYearly = a.estimated_premium_yearly || (premiumMonthly ? Math.round(premiumMonthly * 12) : null)
-                  const franchise = a.sparte_data?.franchise
-                  const model = a.sparte_data?.model
-                  const statusKey = a.custom_status || a.status
-                  const statusColors = {
-                    angenommen: 'bg-green-100 text-green-700',
-                    policiert: 'bg-green-100 text-green-700',
-                    approved: 'bg-green-100 text-green-700',
-                    eingereicht: 'bg-blue-100 text-blue-700',
-                    in_bearbeitung: 'bg-blue-100 text-blue-700',
-                    in_pruefung: 'bg-amber-100 text-amber-700',
-                    pruefung_erforderlich: 'bg-amber-100 text-amber-700',
-                    abgelehnt: 'bg-red-100 text-red-700',
-                  }
-                  const formatDate = (d) => d ? new Date(d).toLocaleDateString('de-CH') : '–'
-                  return (
-                    <div key={a.id} className={idx > 0 ? 'border-t border-border' : ''}>
-                      <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors">
-                        {/* Kunde */}
-                        <div className="min-w-0">
-                          <p className="font-semibold text-xs truncate">{relatedCustomer ? (relatedCustomer.company_name || `${relatedCustomer.first_name} ${relatedCustomer.last_name}`) : a.customer_name}</p>
-                        </div>
-                        {/* Versicherer / Sparte */}
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium truncate">{a.insurer || '–'}</p>
-                          {(a.sparte || a.insurance_type) && (
-                            <p className="text-xs text-muted-foreground truncate mt-0.5">{getSparteLabel(a.sparte || a.insurance_type)}</p>
-                          )}
-                          {franchise && <p className="text-xs text-muted-foreground mt-0.5">Franchise: CHF {franchise}</p>}
-                          {model && <p className="text-xs text-muted-foreground mt-0.5">Modell: {model}</p>}
-                        </div>
-                        {/* Policen-Nr */}
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium">{a.policy_number || '–'}</p>
-                        </div>
-                        {/* Produkt */}
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium">{a.product || '–'}</p>
-                        </div>
-                        {/* Vertragsdaten */}
-                        <div>
-                          {a.contract_start_date && <span className="text-xs text-green-600 font-medium block">{formatDate(a.contract_start_date)}</span>}
-                          {a.contract_end_date && <span className="text-xs text-green-600 font-medium block">{formatDate(a.contract_end_date)}</span>}
-                          {!a.contract_start_date && !a.contract_end_date && <span className="text-xs text-muted-foreground">–</span>}
-                        </div>
-                        {/* Jahresprämie */}
-                        <div>
-                          {premiumYearly ? <p className="text-xs font-semibold">CHF {premiumYearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/J.</p> : null}
-                          {premiumMonthly ? <p className="text-xs text-muted-foreground">CHF {premiumMonthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/M.</p> : null}
-                          {!premiumYearly && !premiumMonthly && <span className="text-xs text-muted-foreground">–</span>}
-                        </div>
-                        {/* Status */}
-                        <div>
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[statusKey] || 'bg-muted text-muted-foreground'}`}>
-                            {statusKey}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="familie">
-          {familyMembers.length <= 1 ? (
-            <Card>
-              <CardContent className="p-6 text-center text-muted-foreground">
-                Keine Familienmitglieder vorhanden
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {familyMembers.filter(m => m.id !== id).map(member => (
-                <Card key={member.id}>
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <p className="font-medium">{member.first_name} {member.last_name}</p>
-                        <p className="text-sm text-muted-foreground mt-1"><EmailLink email={member.email} /> • {label(FAMILY_ROLE_LABELS, member.family_role)}</p>
-                        <p className="text-xs text-muted-foreground mt-2">{member.city}, {member.canton}</p>
-                      </div>
-                      <a href={`/kunden/${member.id}`} className="text-primary hover:underline text-sm font-medium">
-                        Öffnen →
-                      </a>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="dokumente">
-          <DocumentsTab
-            customerId={id}
-            customerName={`${customer.first_name} ${customer.last_name}`}
-            contracts={relatedContracts}
-          />
-        </TabsContent>
-
-        <TabsContent value="ki-analyse">
-          <div className="max-w-lg">
+        {/* ── KI-Analyse ────────────────────────────────────────────── */}
+        {activeSection === 'ki-analyse' && (
+          <div className="max-w-2xl">
             <AiInsightsPanel customerId={id} />
           </div>
-        </TabsContent>
+        )}
 
-        <TabsContent value="kommunikation">
-          {messages.length === 0 ? (
-            <Card>
-              <CardContent className="p-6 text-center text-muted-foreground">
-                Keine Kommunikation vorhanden
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {messages.map(msg => (
-                <Card key={msg.id}>
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <p className="font-medium text-sm">{msg.sender_name}</p>
-                      <p className="text-xs text-muted-foreground">{new Date(msg.created_date).toLocaleDateString('de-CH')}</p>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">{msg.content}</p>
-                    {msg.reference_title && (
-                      <p className="text-xs bg-muted p-2 rounded">📎 Bezug: {msg.reference_title}</p>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+      </div>
 
-      <StandardModal
-        open={showEdit}
-        onOpenChange={setShowEdit}
-        title="Kunde bearbeiten"
-        size="lg"
-        hideFooter
-      >
+      {/* ── Modals ────────────────────────────────────────────────── */}
+      <StandardModal open={showEdit} onOpenChange={setShowEdit} title="Kunde bearbeiten" size="lg" hideFooter>
         <div className="space-y-6">
           <CustomerForm
             customer={customer}
@@ -803,36 +465,30 @@ export default function CustomerDetail() {
         </div>
       </StandardModal>
 
-      <StandardModal
-        open={!!editingContract}
-        onOpenChange={(open) => { if (!open) setEditingContract(null) }}
-        title="Vertrag bearbeiten"
-        size="lg"
-        hideFooter
-      >
+      <StandardModal open={!!editingContract} onOpenChange={(open) => { if (!open) setEditingContract(null) }} title="Vertrag bearbeiten" size="lg" hideFooter>
         <ContractForm
           contract={editingContract}
           customers={allCustomers}
-          onSave={handleContractSave}
+          onSave={(data) => updateContractMutation.mutate({ id: editingContract.id, data })}
           onCancel={() => setEditingContract(null)}
           saving={updateContractMutation.isPending}
         />
       </StandardModal>
 
-       <StatusChangeDialog
-          open={!!statusChangingContract}
-          onOpenChange={(open) => { if (!open) setStatusChangingContract(null) }}
-          statusDefinitions={statusDefs}
-          currentStatus={statusChangingContract ? (statusChangingContract.custom_status || statusChangingContract.status || '').toLowerCase().trim() : ''}
-          onSave={handleContractStatusChange}
-          title="Vertragsstatus ändern"
-        />
+      <StatusChangeDialog
+        open={!!statusChangingContract}
+        onOpenChange={(open) => { if (!open) setStatusChangingContract(null) }}
+        statusDefinitions={statusDefs}
+        currentStatus={statusChangingContract ? (statusChangingContract.custom_status || statusChangingContract.status || '').toLowerCase().trim() : ''}
+        onSave={handleContractStatusChange}
+        title="Vertragsstatus ändern"
+      />
 
-        <AddFamilyMemberDialog
-          customer={customer}
-          open={showAddFamilyMember}
-          onOpenChange={setShowAddFamilyMember}
-        />
-       </div>
-       )
-       }
+      <AddFamilyMemberDialog
+        customer={customer}
+        open={showAddFamilyMember}
+        onOpenChange={setShowAddFamilyMember}
+      />
+    </div>
+  )
+}
