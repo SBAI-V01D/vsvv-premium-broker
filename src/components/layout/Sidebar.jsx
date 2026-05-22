@@ -69,14 +69,9 @@ const navGroups = [
     label: 'Kunden',
     items: [
       { label: 'Kundenübersicht', icon: Users,    path: '/kunden', color: 'primary' },
-      { label: 'Privatkunden',    icon: User,     path: '/kunden?view=private', color: 'primary' },
-      { label: 'Unternehmen',     icon: Building2, path: '/kunden?view=business', color: 'primary' },
-      { label: 'Geburtstage',     icon: Gift,     path: '/kunden?view=birthdays', color: 'primary' },
-      { label: 'Vertragsabläufe', icon: RefreshCw, path: '/kunden?view=renewals' },
-      { label: 'Kündigungen',     icon: AlertCircle, path: '/kunden?view=cancellations' },
-      { label: 'Aufgaben',        icon: CheckSquare, path: '/aufgaben' },
-      { label: 'Risiken',         icon: Shield,   path: '/kunden?view=risks' },
-      { label: 'Hohe Prämien',    icon: TrendingUp, path: '/kunden?view=vip' },
+      { label: 'Verträge',        icon: FileText,  path: '/vertraege', color: 'primary' },
+      { label: 'Anträge',         icon: CheckSquare, path: '/antraege', color: 'primary' },
+      { label: 'Dokumente',       icon: BookOpen,   path: '/dokumente', color: 'primary' },
     ],
   },
   {

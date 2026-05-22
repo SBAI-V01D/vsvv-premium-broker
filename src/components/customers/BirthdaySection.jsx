@@ -3,14 +3,7 @@ import { ChevronLeft, ChevronRight, Gift, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
-const AGE_GROUPS = [
-  { label: '<18', min: 0, max: 17 },
-  { label: '18–30', min: 18, max: 30 },
-  { label: '30–40', min: 31, max: 40 },
-  { label: '40–50', min: 41, max: 50 },
-  { label: '50–60', min: 51, max: 60 },
-  { label: '60+', min: 61, max: 150 },
-];
+
 
 const MONTHS_DE = [
   'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
@@ -52,7 +45,6 @@ function getDaysUntilBirthday(birthdate, referenceDate = new Date()) {
 
 export default function BirthdaySection({ customers }) {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
-  const [selectedAgeGroup, setSelectedAgeGroup] = useState(null);
 
   const birthdaysByTimeframe = useMemo(() => {
     const today = new Date();
@@ -113,27 +105,19 @@ export default function BirthdaySection({ customers }) {
         formattedDate: formatDateCH(c.birthdate),
       }));
 
-    if (selectedAgeGroup) {
-      filtered = filtered.filter(p => 
-        p.age >= selectedAgeGroup.min && p.age <= selectedAgeGroup.max
-      );
-    }
-
     return filtered.sort((a, b) => {
       const dateA = new Date(a.birthdate).getDate();
       const dateB = new Date(b.birthdate).getDate();
       return dateA - dateB;
     });
-  }, [customers, currentMonth, selectedAgeGroup]);
+  }, [customers, currentMonth]);
 
   const handlePrevMonth = () => {
     setCurrentMonth(prev => (prev === 0 ? 11 : prev - 1));
-    setSelectedAgeGroup(null);
   };
 
   const handleNextMonth = () => {
     setCurrentMonth(prev => (prev === 11 ? 0 : prev + 1));
-    setSelectedAgeGroup(null);
   };
 
   const renderTimeframeCard = (title, persons, Icon) => (
@@ -227,34 +211,7 @@ export default function BirthdaySection({ customers }) {
           </div>
         </div>
 
-        {/* Age Group Filter */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          <button
-            onClick={() => setSelectedAgeGroup(null)}
-            className={cn(
-              'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
-              selectedAgeGroup === null
-                ? 'bg-[hsl(var(--primary))] text-white'
-                : 'bg-[hsl(var(--surface-2))] text-[hsl(var(--text-muted))] hover:bg-[hsl(var(--surface-2))]/70'
-            )}
-          >
-            Alle
-          </button>
-          {AGE_GROUPS.map(group => (
-            <button
-              key={group.label}
-              onClick={() => setSelectedAgeGroup(group)}
-              className={cn(
-                'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
-                selectedAgeGroup === group
-                  ? 'bg-[hsl(var(--primary))] text-white'
-                  : 'bg-[hsl(var(--surface-2))] text-[hsl(var(--text-muted))] hover:bg-[hsl(var(--surface-2))]/70'
-              )}
-            >
-              {group.label}
-            </button>
-          ))}
-        </div>
+        {/* Age Group Filter removed per user request */}
 
         {/* Birthday List */}
         {birthdaysInSelectedMonth.length === 0 ? (

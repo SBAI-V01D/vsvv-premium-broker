@@ -8,7 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
   Plus, User, Building2, Upload, Download, Users, Search,
-  AlertTriangle, Loader2, XCircle, TrendingUp, Target, Calendar
+  AlertTriangle, Loader2, XCircle, TrendingUp, Target, Calendar, ChevronRight
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -95,14 +95,9 @@ function sortCustomers(list, sortBy) {
 
 // NEW: Broker Intelligence Workspace Modes
 const WORKSPACE_MODES = [
-  { id: 'overview', label: 'Kundenübersicht', icon: Users },
+  { id: 'kundenaktionen', label: 'Kundenaktionen', icon: Users },
   { id: 'private', label: 'Privatkunden', icon: User },
   { id: 'business', label: 'Unternehmen', icon: Building2 },
-  { id: 'birthdays', label: 'Geburtstage', icon: Calendar },
-  { id: 'renewals', label: 'Vertragsabläufe', icon: TrendingUp },
-  { id: 'cancellations', label: 'Kündigungen', icon: AlertTriangle },
-  { id: 'tasks', label: 'Aufgaben', icon: Calendar },
-  { id: 'risks', label: 'Risiken', icon: AlertTriangle },
   { id: 'vip', label: 'Hohe Prämien', icon: TrendingUp },
 ];
 
@@ -244,7 +239,7 @@ export default function CustomerIntelligenceWorkspace() {
   // Sync URL params with workspace mode
   useEffect(() => {
     if (urlView) {
-      if (['private', 'business', 'birthdays', 'renewals', 'cancellations', 'tasks', 'risks', 'vip'].includes(urlView)) {
+      if (['private', 'business', 'vip'].includes(urlView)) {
         setWorkspaceMode(urlView);
       }
     }
@@ -254,23 +249,12 @@ export default function CustomerIntelligenceWorkspace() {
   const modeFiltered = useMemo(() => {
     if (workspaceMode === 'private') return primaryCustomers.filter(c => c.customer_type !== 'business');
     if (workspaceMode === 'business') return primaryCustomers.filter(c => c.customer_type === 'business');
-    if (workspaceMode === 'risks') {
-      return primaryCustomers.filter(c => {
-        const hasRisk = segments.critical?.filter?.(c) || segments.no_advisor?.filter?.(c) || segments.mandate?.filter?.(c);
-        return hasRisk;
-      });
-    }
-    if (workspaceMode === 'tasks') {
-      return primaryCustomers.filter(c => {
-        const hasTasks = segments.tasks?.filter?.(c);
-        return hasTasks;
-      });
-    }
     if (workspaceMode === 'vip') {
       return primaryCustomers.filter(c => (c.total_premium || 0) >= 5000);
     }
+    // 'kundenaktionen' displays all primary customers
     return primaryCustomers;
-  }, [primaryCustomers, workspaceMode, segments]);
+  }, [primaryCustomers, workspaceMode]);
 
   // Search
   const { displayed, matchedFamilyIds } = useMemo(() => {
@@ -338,7 +322,7 @@ export default function CustomerIntelligenceWorkspace() {
   // Update URL when workspace mode changes
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (['overview'].includes(workspaceMode)) {
+    if (workspaceMode === 'kundenaktionen') {
       params.delete('view');
     } else {
       params.set('view', workspaceMode);
@@ -349,23 +333,71 @@ export default function CustomerIntelligenceWorkspace() {
 
   // Render Intelligence Views
   const renderIntelligenceView = () => {
-    if (workspaceMode === 'birthdays') {
-      return <BirthdaySection customers={primaryCustomers} />;
-    }
-    if (workspaceMode === 'renewals') {
-      return <RenewalsSection contracts={contracts} customers={customers} verkaufschancen={verkaufschancen} />;
-    }
-    if (workspaceMode === 'cancellations') {
-      return <CancellationsSection contracts={contracts} customers={customers} />;
-    }
-    if (workspaceMode === 'overview') {
+    if (workspaceMode === 'kundenaktionen') {
       return (
-        <div className="space-y-8">
-          <PortfolioDashboard setWorkspaceMode={setWorkspaceMode} />
+        <div className="space-y-8 p-6 max-w-[1600px] mx-auto">
+          <BirthdaySection customers={primaryCustomers} />
+          <RenewalsSection contracts={contracts} customers={customers} verkaufschancen={verkaufschancen} />
+          <CancellationsSection contracts={contracts} customers={customers} />
+          {/* Kunden ohne Mandat oder Berater */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-5 border border-[hsl(var(--border-subtle))]/40">
+            <h3 className="text-subheading mb-4">Kunden ohne Mandat oder Berater</h3>
+            {primaryCustomers.filter(c => 
+              !c.advisor_id && !c.primary_advisor_id || ['invalid', 'expired', 'pending'].includes(c.mandate_status)
+            ).length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {primaryCustomers.filter(c => 
+                  !c.advisor_id && !c.primary_advisor_id || ['invalid', 'expired', 'pending'].includes(c.mandate_status)
+                ).map(customer => (
+                  <div key={customer.id} className="border border-[hsl(var(--border-subtle))]/50 p-3 rounded-lg hover:bg-[hsl(var(--surface-2))]/40 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-semibold text-[hsl(var(--text-heading))]">{customer.first_name} {customer.last_name}</p>
+                        <p className="text-xs text-[hsl(var(--text-muted))] mt-1">
+                          {!customer.advisor_id && !customer.primary_advisor_id && <span className="text-[hsl(var(--critical))]">⚠ Kein Berater</span>}
+                          {['invalid', 'expired', 'pending'].includes(customer.mandate_status) && (
+                            <span className={!customer.advisor_id && !customer.primary_advisor_id ? 'ml-2' : ''}>
+                              Mandat: {customer.mandate_status}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/kunden/${customer.id}/360`)}>
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-[hsl(var(--text-muted))]">Alle Kunden haben ein Mandat oder einen Berater.</p>
+            )}
+          </div>
+          {/* Cross Selling / Household */}
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-5 border border-[hsl(var(--border-subtle))]/40">
+            <h3 className="text-subheading mb-4">Cross Selling / Haushalt</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {primaryCustomers.filter(c => !c.is_family_member && customers.some(fm => fm.primary_customer_id === c.id)).map(customer => (
+                <div key={customer.id} className="border border-[hsl(var(--border-subtle))]/50 p-3 rounded-lg hover:bg-[hsl(var(--surface-2))]/40 transition-colors">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm font-semibold text-[hsl(var(--text-heading))]">{customer.first_name} {customer.last_name}</p>
+                      <p className="text-xs text-[hsl(var(--text-muted))] mt-1">
+                        Haushalt mit {customers.filter(fm => fm.primary_customer_id === customer.id).length} Mitglied(ern)
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => navigate(`/kunden/${customer.id}/360`)}>
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       );
     }
-    if (workspaceMode === 'risks' || workspaceMode === 'tasks' || workspaceMode === 'vip') {
+    if (workspaceMode === 'vip') {
       return (
         <div className="p-6 max-w-[1600px] mx-auto">
           <OperationsIntelligence />
@@ -375,7 +407,7 @@ export default function CustomerIntelligenceWorkspace() {
     return null;
   };
 
-  const isIntelligenceMode = ['overview', 'birthdays', 'renewals', 'cancellations', 'risks', 'tasks', 'vip'].includes(workspaceMode);
+  const isIntelligenceMode = ['kundenaktionen', 'vip'].includes(workspaceMode);
 
   return (
     <div className="flex flex-col h-full bg-[hsl(var(--surface-1))]">
@@ -386,9 +418,9 @@ export default function CustomerIntelligenceWorkspace() {
           {/* Title */}
           <div className="shrink-0">
             <h1 className="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight">
-              {WORKSPACE_MODES.find(m => m.id === workspaceMode)?.label || 'Kundenübersicht'}
+              Kundenübersicht
             </h1>
-            {!isIntelligenceMode && workspaceMode !== 'birthdays' && workspaceMode !== 'renewals' && workspaceMode !== 'cancellations' && (
+            {(!isIntelligenceMode || (workspaceMode === 'private' || workspaceMode === 'business')) && (
               <p className="text-body-sm text-[hsl(var(--text-muted))] mt-0.5">{displayed.length} Kunden</p>
             )}
           </div>
