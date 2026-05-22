@@ -95,7 +95,7 @@ function sortCustomers(list, sortBy) {
 
 // NEW: Broker Intelligence Workspace Modes
 const WORKSPACE_MODES = [
-  { id: 'kundenaktionen', label: 'Kundenaktionen', icon: Users },
+  { id: 'kundenaktionen', label: 'Kundenübersicht', icon: Users },
   { id: 'private', label: 'Privatkunden', icon: User },
   { id: 'business', label: 'Unternehmen', icon: Building2 },
   { id: 'vip', label: 'Hohe Prämien', icon: TrendingUp },
