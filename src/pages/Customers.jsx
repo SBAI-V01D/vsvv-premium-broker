@@ -20,6 +20,7 @@ import CustomerMergeDialog from '@/components/customers/CustomerMergeDialog';
 import CustomerCard from '@/components/customers/CustomerCard';
 import { searchCustomers, scoreCustomer } from '@/lib/customerSearch';
 import EmptyState, { LoadingTable } from '@/components/shared/EmptyState';
+import { cn } from '@/lib/utils';
 
 // ── Segment builder ────────────────────────────────────────────────────────
 function buildSegments(customers, tasks, contracts, documents) {
@@ -201,21 +202,13 @@ function sortCustomers(list, sortBy) {
   });
 }
 
-const NAV_KEYS = [
-  'all',
-  'active',
-  'new',
-  'vip',
-  'renewal_critical',
-  'no_activity_90',
-  'no_documents',
-  'no_advisor',
-  'mandate',
-  'tasks',
-  'critical',
-  'prospect',
-  'private',
-  'business',
+// Operational Workspace Modes — horizontal, ruhig
+const WORKSPACE_MODES = [
+  { id: 'all', label: 'Portfolio' },
+  { id: 'private', label: 'Privatkunden' },
+  { id: 'business', label: 'Unternehmen' },
+  { id: 'risks', label: 'Risiken' },
+  { id: 'actions', label: 'Handlungen' },
 ];
 
 // ── Grouped customer feed ─────────────────────────────────────────────────
@@ -274,8 +267,8 @@ export default function Customers() {
   const [showForm, setShowForm]         = useState(false);
   const [editing, setEditing]           = useState(null);
   const [newCustomerType, setNewCustomerType] = useState('private');
-  const [activeSegment, setActiveSegment] = useState('all');
-  const [sortBy, setSortBy]             = useState('alpha');
+  const [workspaceMode, setWorkspaceMode] = useState('all');
+  const [sortBy, setSortBy]               = useState('alpha');
   const [search, setSearch]             = useState('');
   const [showImport, setShowImport]     = useState(false);
   const [showMerge, setShowMerge]       = useState(false);
@@ -331,6 +324,12 @@ export default function Customers() {
     staleTime: 60_000,
   });
 
+  const { data: verkaufschancen = [] } = useQuery({
+    queryKey: ['customers_verkaufschancen'],
+    queryFn: () => base44.entities.Verkaufschance.filter({}),
+    staleTime: 60_000,
+  });
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Customer.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setShowForm(false); setEditing(null); },
@@ -347,19 +346,38 @@ export default function Customers() {
   const segments = useMemo(() => buildSegments(customers, tasks, contracts, documents), [customers, tasks, contracts, documents]);
   const primaryCustomers = useMemo(() => customers.filter(c => !c.is_family_member), [customers]);
 
-  const segFiltered = useMemo(() => {
-    const seg = segments[activeSegment];
-    if (!seg?.filter) return primaryCustomers;
-    return primaryCustomers.filter(seg.filter);
-  }, [primaryCustomers, activeSegment, segments]);
+  // Workspace Mode Filtering
+  const modeFiltered = useMemo(() => {
+    if (workspaceMode === 'all') return primaryCustomers;
+    if (workspaceMode === 'private') return primaryCustomers.filter(c => c.customer_type !== 'business');
+    if (workspaceMode === 'business') return primaryCustomers.filter(c => c.customer_type === 'business');
+    if (workspaceMode === 'risks') {
+      // Alle Risikosegmente combined
+      return primaryCustomers.filter(c => {
+        const hasRisk = segments.renewal_critical?.filter?.(c) || segments.no_activity_90?.filter?.(c) || 
+                        segments.no_documents?.filter?.(c) || segments.no_advisor?.filter?.(c) ||
+                        segments.critical?.filter?.(c);
+        return hasRisk;
+      });
+    }
+    if (workspaceMode === 'actions') {
+      // Alle Handlungen: Tasks + Opportunities
+      return primaryCustomers.filter(c => {
+        const hasTasks = segments.tasks?.filter?.(c);
+        const hasOpportunity = verkaufschancen.some(v => v.customer_id === c.id && !['gewonnen','verloren'].includes(v.status));
+        return hasTasks || hasOpportunity;
+      });
+    }
+    return primaryCustomers;
+  }, [primaryCustomers, workspaceMode, segments, verkaufschancen]);
 
   // Search: when query active, search ALL customers (primary + family members)
   const { displayed, matchedFamilyIds } = useMemo(() => {
     const familyMembers = customers.filter(c => c.is_family_member);
     if (!search.trim()) {
-      return { displayed: sortCustomers(segFiltered, sortBy), matchedFamilyIds: new Set() };
+      return { displayed: sortCustomers(modeFiltered, sortBy), matchedFamilyIds: new Set() };
     }
-    // Search across ALL customers (primary + family) so segment filter doesn't hide results
+    // Search across ALL customers (primary + family) so mode filter doesn't hide results
     const allCustomers = [...primaryCustomers, ...familyMembers];
     const directMatches = searchCustomers(allCustomers, search);
     
@@ -396,7 +414,7 @@ export default function Customers() {
       displayed: sortCustomers(searchResults, sortBy),
       matchedFamilyIds: matchedFamilyMemberIds,
     };
-  }, [segFiltered, search, customers, primaryCustomers, sortBy]);
+  }, [modeFiltered, search, customers, primaryCustomers, sortBy]);
 
   const openTasks = tasks.filter(t => t.status === 'open' || t.status === 'in_progress').length;
   const criticalCount = segments.critical?.count ?? 0;
@@ -429,15 +447,35 @@ export default function Customers() {
   return (
     <div className="flex flex-col h-full bg-background">
 
-      {/* ── Page Header — minimal context (no dashboard bar) ─────────────── */}
+      {/* ── Operational Workspace Bar — horizontal, ruhig ───────────────── */}
       <div className="px-6 py-4 border-b border-[hsl(var(--border-subtle))] bg-[hsl(var(--surface-1))] shrink-0">
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-6 flex-wrap">
+          {/* Title */}
           <div className="shrink-0">
             <h1 className="text-[15px] font-semibold text-[hsl(var(--text-heading))] leading-none">Portfolio</h1>
             <p className="text-[10px] text-[hsl(var(--text-muted))] mt-0.5 tracking-wide">{primaryCustomers.length} Kunden</p>
           </div>
 
-          <div className="flex-1 min-w-[240px] max-w-lg">
+          {/* Workspace Modes */}
+          <div className="flex items-center gap-1">
+            {WORKSPACE_MODES.map(mode => (
+              <button
+                key={mode.id}
+                onClick={() => setWorkspaceMode(mode.id)}
+                className={cn(
+                  'px-4 py-2 text-[13px] font-medium rounded-lg transition-all',
+                  workspaceMode === mode.id
+                    ? 'bg-[hsl(var(--primary))] text-white shadow-sm'
+                    : 'text-[hsl(var(--text-muted))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))]'
+                )}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Search */}
+          <div className="flex-1 min-w-[280px] max-w-xl">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--text-subtle))]" />
               <input
@@ -454,6 +492,7 @@ export default function Customers() {
             </div>
           </div>
 
+          {/* Actions */}
           <div className="flex items-center gap-1.5 shrink-0 ml-auto">
             <button onClick={handleExport} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Export">
               <Download className="w-4 h-4" />
@@ -484,46 +523,18 @@ export default function Customers() {
         </div>
       </div>
 
-      {/* ── 3-Column Layout ── */}
+      {/* ── 2-Column Layout — Workspace + Today Focus ─────────────────── */}
       <div className="flex-1 flex overflow-hidden">
 
-        {/* LEFT — Smart Navigation */}
-        <div className="w-48 shrink-0 border-r border-border/40 bg-card overflow-y-auto py-6 px-4 hidden md:flex md:flex-col gap-0.5">
-          {NAV_KEYS.map(key => {
-            const seg = segments[key];
-            if (!seg) return null;
-            const isActive = activeSegment === key;
-            const isCritical = (key === 'critical' || key === 'no_advisor') && seg.count > 0;
-            return (
-              <button
-                key={key}
-                onClick={() => setActiveSegment(key)}
-                className={`flex items-center justify-between gap-2 w-full px-3 py-2 rounded-lg text-left transition-colors ${
-                  isActive ? 'bg-slate-900 text-white' : 'hover:bg-slate-50 text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <span className="text-[12px] font-medium truncate">{seg.label}</span>
-                {seg.count > 0 && (
-                  <span className={`text-[10px] font-bold tabular-nums ${
-                    isActive ? 'text-white/60' :
-                    isCritical ? 'text-red-500' :
-                    key === 'mandate' && seg.count > 0 ? 'text-amber-500' : 'text-slate-400'
-                  }`}>
-                    {seg.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* CENTER — Relationship Feed */}
-        <div className="flex-1 overflow-y-auto bg-slate-50/30">
-          {/* Segment bar */}
-          <div className="sticky top-0 z-10 px-6 py-3 bg-white/90 backdrop-blur-sm border-b border-border/30 flex items-center justify-between">
+        {/* CENTER — Relationship Feed (volle Breite) */}
+        <div className="flex-1 overflow-y-auto bg-[hsl(var(--surface-1))]">
+          {/* Mode Indicator */}
+          <div className="sticky top-0 z-10 px-6 py-3 bg-white/95 backdrop-blur-sm border-b border-[hsl(var(--border-subtle))] flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-[13px] font-semibold text-slate-800">{segments[activeSegment]?.label ?? 'Alle'}</span>
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[13px] font-semibold text-[hsl(var(--text-heading))]">
+                {WORKSPACE_MODES.find(m => m.id === workspaceMode)?.label || 'Portfolio'}
+              </span>
+              <span className="text-[11px] text-[hsl(var(--text-muted))]">
                 {displayed.length} Kunden{search ? ` · "${search}"` : ''}
               </span>
             </div>
@@ -531,23 +542,17 @@ export default function Customers() {
               <select
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value)}
-                className="text-[11px] border border-border/50 rounded-lg px-2 py-1 bg-background text-slate-500 focus:outline-none"
+                className="text-[11px] border border-[hsl(var(--border-subtle))] rounded-lg px-2.5 py-1.5 bg-[hsl(var(--surface-0))] text-[hsl(var(--text-heading))] focus:outline-none"
               >
                 <option value="alpha">A – Z</option>
                 <option value="updated">Zuletzt aktualisiert</option>
                 <option value="premium">Höchste Prämie</option>
                 <option value="new">Neuste zuerst</option>
               </select>
-              <div className="md:hidden">
-                <select value={activeSegment} onChange={e => setActiveSegment(e.target.value)}
-                  className="text-xs border border-border rounded px-2 py-1 bg-background">
-                  {NAV_KEYS.map(k => <option key={k} value={k}>{segments[k]?.label}</option>)}
-                </select>
-              </div>
             </div>
           </div>
 
-          <div className="p-6 space-y-6 max-w-3xl">
+          <div className="p-6 space-y-6 max-w-6xl mx-auto">
             {isLoading ? (
               <LoadingTable rows={8} className="py-12" />
             ) : displayed.length === 0 ? (
@@ -617,8 +622,8 @@ export default function Customers() {
           </div>
         </div>
 
-        {/* RIGHT — Operational Intelligence */}
-        <div className="w-52 shrink-0 border-l border-border/40 bg-card overflow-y-auto py-6 px-5 hidden lg:block">
+        {/* RIGHT — Today Focus (nur Kritisches) */}
+        <div className="w-64 shrink-0 border-l border-[hsl(var(--border-subtle))] bg-[hsl(var(--card))] overflow-y-auto py-6 px-5 hidden xl:block">
           <TodayFocusPanel tasks={tasks} contracts={contracts} />
         </div>
       </div>
@@ -642,7 +647,7 @@ export default function Customers() {
       </Dialog>
 
       <FastImportWizard open={showImport} onOpenChange={setShowImport}
-        onSuccess={() => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setSearch(''); setActiveSegment('all'); }} />
+        onSuccess={() => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setSearch(''); setWorkspaceMode('all'); }} />
       <CustomerMergeDialog open={showMerge} onOpenChange={setShowMerge} />
     </div>
   );
