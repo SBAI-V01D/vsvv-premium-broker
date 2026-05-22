@@ -209,7 +209,7 @@ export default function Applications() {
       <PageHeader
         title="Versicherungsanträge"
         subtitle={`${pendingApps.length} pendente · ${archivedApps.length} archivierte Anträge`}
-        titleClassName="text-[hsl(var(--primary))]"
+        titleClassName="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight"
         actions={
           <Button onClick={() => { setEditing(null); setShowForm(true) }}>
             <Plus className="w-4 h-4 mr-2" /> Neuer Antrag

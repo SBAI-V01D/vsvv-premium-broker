@@ -139,7 +139,7 @@ export default function Tasks() {
       <PageHeader
         title="Aufgaben"
         subtitle={`${filtered.length} Aufgabe${filtered.length !== 1 ? 'n' : ''}`}
-        titleClassName="text-[hsl(var(--primary))]"
+        titleClassName="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight"
         actions={
           <Button size="sm" onClick={openCreate} className="gap-1.5">
             <Plus className="w-3.5 h-3.5" /> Aufgabe erstellen

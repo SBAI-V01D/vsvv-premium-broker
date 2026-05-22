@@ -452,7 +452,7 @@ export default function Vertragsablaeufe() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight flex items-center gap-2.5 text-[hsl(var(--primary))]">
+          <h1 className="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
               <Repeat2 className="w-4 h-4 text-orange-600" />
             </div>

@@ -116,8 +116,8 @@ export default function Verkaufschancen() {
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[hsl(var(--primary))]">Verkaufschancen &amp; Ausschreibungen</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Pipeline · Offertmanagement · Abschluss — strikt getrennt von aktiven Policen</p>
+          <h1 className="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight">Verkaufschancen &amp; Ausschreibungen</h1>
+          <p className="text-body-sm text-muted-foreground mt-0.5">Pipeline · Offertmanagement · Abschluss — strikt getrennt von aktiven Policen</p>
         </div>
         <Button onClick={() => setShowNewForm(true)} className="gap-2 flex-shrink-0">
           <Plus className="w-4 h-4" /> Neue Chance

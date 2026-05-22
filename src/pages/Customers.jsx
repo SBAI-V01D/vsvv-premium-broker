@@ -452,8 +452,8 @@ export default function Customers() {
         <div className="flex items-center gap-6 flex-wrap">
           {/* Title */}
           <div className="shrink-0">
-            <h1 className="text-[15px] font-bold text-[hsl(var(--primary))] leading-none">Portfolio</h1>
-            <p className="text-[10px] text-[hsl(var(--text-muted))] mt-0.5 tracking-wide">{primaryCustomers.length} Kunden</p>
+            <h1 className="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight">Portfolio</h1>
+            <p className="text-body-sm text-[hsl(var(--text-muted))] mt-0.5">{primaryCustomers.length} Kunden</p>
           </div>
 
           {/* Workspace Modes */}
