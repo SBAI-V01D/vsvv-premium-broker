@@ -235,6 +235,19 @@ export default function CustomerIntelligenceWorkspace() {
   const segments = useMemo(() => buildSegments(customers, tasks, contracts, documents), [customers, tasks, contracts, documents]);
   const primaryCustomers = useMemo(() => customers.filter(c => !c.is_family_member), [customers]);
 
+  // Pre-calculate intelligence data for kundenaktionen mode
+  const mandateIssues = useMemo(() => 
+    primaryCustomers.filter(c => 
+      !c.advisor_id && !c.primary_advisor_id || ['invalid', 'expired', 'pending'].includes(c.mandate_status)
+    ),
+    [primaryCustomers]
+  );
+  
+  const householdCustomers = useMemo(() => 
+    primaryCustomers.filter(c => !c.is_family_member && customers.some(fm => fm.primary_customer_id === c.id)),
+    [primaryCustomers, customers]
+  );
+
   // URL params for view mode
   const urlParams = new URLSearchParams(window.location.search);
   const urlView = urlParams.get('view');
@@ -337,15 +350,6 @@ export default function CustomerIntelligenceWorkspace() {
   // Render Intelligence Views
   const renderIntelligenceView = () => {
     if (workspaceMode === 'kundenaktionen') {
-      // Kunden ohne Mandat/Berater (max 5)
-      const mandateIssues = primaryCustomers.filter(c => 
-        !c.advisor_id && !c.primary_advisor_id || ['invalid', 'expired', 'pending'].includes(c.mandate_status)
-      );
-      const displayedMandate = showAllMandate ? mandateIssues : mandateIssues.slice(0, 5);
-      
-      // Cross Selling / Household (max 5)
-      const householdCustomers = primaryCustomers.filter(c => !c.is_family_member && customers.some(fm => fm.primary_customer_id === c.id));
-      const displayedHousehold = showAllHousehold ? householdCustomers : householdCustomers.slice(0, 5);
 
       return (
         <div className="space-y-6 p-6 max-w-[1600px] mx-auto">
