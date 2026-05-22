@@ -193,7 +193,7 @@ export default function BeraterEntscheidPanel({ dossier, entries = [] }) {
           <button
             onClick={() => mutation.mutate(form)}
             disabled={mutation.isPending}
-            className="text-xs font-semibold text-primary border border-primary/30 bg-primary/5 px-3 py-1.5 rounded-lg hover:bg-primary/10 transition-colors disabled:opacity-50"
+            className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 ${isApproved ? 'text-emerald-700 border border-emerald-300 bg-emerald-50 hover:bg-emerald-100' : 'text-primary border border-primary/30 bg-primary/5 hover:bg-primary/10'}`}
           >
             {mutation.isPending ? 'Speichern…' : 'Speichern'}
           </button>
@@ -298,7 +298,7 @@ export default function BeraterEntscheidPanel({ dossier, entries = [] }) {
               checked={form.advisor_approved}
               onChange={e => canApprove && set('advisor_approved')(e.target.checked)}
               disabled={!canApprove}
-              className="w-4 h-4 rounded accent-primary disabled:opacity-50"
+              className={`w-4 h-4 rounded disabled:opacity-50 ${isApproved ? 'accent-emerald-600' : 'accent-primary'}`}
             />
             <span className="text-sm font-semibold">
               Dossier freigeben für PDF-Export
