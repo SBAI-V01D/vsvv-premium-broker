@@ -4,9 +4,11 @@
  */
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertTriangle, Edit, Trash2 } from 'lucide-react';
+import { AlertTriangle, Edit, Trash2, Phone, Mail, FileText, TrendingUp, Upload, User } from 'lucide-react';
 import ActionMenu from '@/components/shared/ActionMenu';
 import { FAMILY_ROLE_LABELS, label } from '@/lib/labels';
+import HealthScoreRing, { calculateHealthScore } from '@/components/customers/HealthScoreRing';
+import { cn } from '@/lib/utils';
 
 function getStatus(c) {
   if (c.status === 'inactive' || ['invalid', 'expired'].includes(c.mandate_status)) return 'critical';
@@ -29,11 +31,20 @@ export default function CustomerCard({
   matchedFamilyIds = new Set(),
   onEdit,
   onDelete,
+  allContracts = [],
+  allTasks = [],
+  allDocuments = [],
 }) {
   const hasFamilyMatch = familyMembers.some(m => matchedFamilyIds.has(m.id));
   const navigate = useNavigate();
   const status = getStatus(customer);
   const isCompany = customer.customer_type === 'business';
+  
+  // Calculate HealthScore
+  const customerContracts = (allContracts || []).filter(c => c.customer_id === customer.id || c.primary_customer_id === customer.id)
+  const customerTasks = (allTasks || []).filter(t => t.customer_id === customer.id)
+  const customerDocs = (allDocuments || []).filter(d => d.customer_id === customer.id || d.primary_customer_id === customer.id)
+  const healthScore = calculateHealthScore(customer, customerContracts, customerTasks, customerDocs)
 
   const displayName = isCompany
     ? (customer.company_name || `${customer.last_name} ${customer.first_name}`)
@@ -47,7 +58,7 @@ export default function CustomerCard({
     }`}>
       <div className="px-6 py-5">
 
-        {/* Top row: avatar + name + status badge + menu */}
+        {/* Top row: avatar + name + status + health score */}
         <div className="flex items-start gap-4">
           <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 font-semibold text-sm tracking-wide bg-slate-100 text-slate-600">
             {initials(customer)}
@@ -55,18 +66,22 @@ export default function CustomerCard({
 
           <div className="flex-1 min-w-0 pt-0.5">
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <Link to={`/kunden/${customer.id}`} className="text-[15px] font-semibold text-slate-900 hover:text-primary leading-tight block">
+              <div className="flex-1 min-w-0">
+                <Link to={`/kunden/${customer.id}`} className="text-[15px] font-semibold text-slate-900 hover:text-primary leading-tight block truncate">
                   {displayName}
                 </Link>
-                <p className="text-[12px] text-slate-400 mt-0.5">
+                <p className="text-[12px] text-slate-400 mt-0.5 truncate">
                   {customer.customer_number && <span className="font-mono mr-2">{customer.customer_number}</span>}
                   {customer.email}
                   {customer.city && <span className="ml-2">· {customer.city}</span>}
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0 mt-0.5">
+              <div className="flex items-center gap-3 shrink-0 mt-0.5">
+                {/* Health Score Ring */}
+                <HealthScoreRing score={healthScore} size="sm" showLabel={false} />
+                
+                {/* Status Badges */}
                 {status === 'critical' && (
                   <span className="text-[10px] font-semibold tracking-wide uppercase text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded">
                     Kritisch
@@ -77,6 +92,7 @@ export default function CustomerCard({
                     Prüfen
                   </span>
                 )}
+                
                 <ActionMenu items={[
                   { label: 'Bearbeiten', icon: Edit, onClick: () => onEdit(customer) },
                   { label: 'Löschen', icon: Trash2, variant: 'destructive', separator: true, onClick: () => onDelete(customer.id) },
@@ -89,7 +105,7 @@ export default function CustomerCard({
         {/* Metrics + actions row */}
         {hasMetrics ? (
           <div className="mt-4 pt-4 border-t border-border/40 flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-5 flex-wrap">
+            <div className="flex items-center gap-5 flex-wrap flex-1">
               {contractCount > 0 && (
                 <div>
                   <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium">Policen</p>
@@ -131,23 +147,34 @@ export default function CustomerCard({
               )}
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <Link to={`/kunden/${customer.id}`} className="text-[12px] font-medium text-primary hover:underline">
-                Profil öffnen →
-              </Link>
-              <span className="text-slate-200">|</span>
-              <button onClick={() => navigate(`/kunden/${customer.id}/360`)}
-                className="text-[12px] font-medium text-slate-400 hover:text-slate-700 transition-colors">
-                360°
-              </button>
-              {familyMembers.length > 0 && (
-                <>
-                  <span className="text-slate-200">|</span>
-                  <span className="text-[12px] text-slate-400">
-                    Haushalt ({familyMembers.length + 1} Personen)
-                  </span>
-                </>
-              )}
+            {/* Quick Actions */}
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-1.5 border-r border-border/40 pr-3">
+                <button className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors" title="Anrufen">
+                  <Phone className="w-4 h-4" />
+                </button>
+                {customer.email && (
+                  <a href={`mailto:${customer.email}`} className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors" title="E-Mail">
+                    <Mail className="w-4 h-4" />
+                  </a>
+                )}
+                <Link to={`/beratungsdossier?customer_id=${customer.id}`} className="p-1.5 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors" title="Dossier">
+                  <FileText className="w-4 h-4" />
+                </Link>
+                <Link to={`/verkaufschancen?customer_id=${customer.id}`} className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Verkaufschance">
+                  <TrendingUp className="w-4 h-4" />
+                </Link>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Link to={`/kunden/${customer.id}`} className="text-[12px] font-medium text-primary hover:underline">
+                  Profil öffnen →
+                </Link>
+                <button onClick={() => navigate(`/kunden/${customer.id}/360`)}
+                  className="text-[12px] font-medium text-slate-400 hover:text-slate-700 transition-colors">
+                  360°
+                </button>
+              </div>
             </div>
           </div>
         ) : (

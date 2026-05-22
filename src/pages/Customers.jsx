@@ -22,9 +22,14 @@ import { searchCustomers, scoreCustomer } from '@/lib/customerSearch';
 import EmptyState, { LoadingTable } from '@/components/shared/EmptyState';
 
 // ── Segment builder ────────────────────────────────────────────────────────
-function buildSegments(customers, tasks, contracts) {
+function buildSegments(customers, tasks, contracts, documents) {
   const thirtyAgo = new Date();
   thirtyAgo.setDate(thirtyAgo.getDate() - 30);
+  const ninetyAgo = new Date();
+  ninetyAgo.setDate(ninetyAgo.getDate() - 90);
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const in90Days = new Date(today); in90Days.setDate(in90Days.getDate() + 90);
 
   const tasksByCustomer = {};
   (tasks || []).forEach(t => {
@@ -38,20 +43,45 @@ function buildSegments(customers, tasks, contracts) {
       contractsByCustomer[c.customer_id] = (contractsByCustomer[c.customer_id] || 0) + 1;
   });
 
+  const docsByCustomer = {};
+  (documents || []).forEach(d => {
+    if (d.customer_id)
+      docsByCustomer[d.customer_id] = (docsByCustomer[d.customer_id] || 0) + 1;
+  });
+
   const primary = customers.filter(c => !c.is_family_member);
 
   const defs = {
-    all:        { label: 'Alle Kunden',        filter: () => true },
-    no_advisor: { label: '⚠ Kein Berater',     filter: c => !c.advisor_id && !c.primary_advisor_id },
-    critical:   { label: 'Attention Required', filter: c => c.status === 'inactive' || ['invalid','expired'].includes(c.mandate_status) },
-    mandate:    { label: 'Mandat ausstehend',  filter: c => c.mandate_status === 'pending' },
-    tasks:      { label: 'Offene Tasks',       filter: c => (tasksByCustomer[c.id] || 0) > 0 },
-    active:     { label: 'Aktiv',              filter: c => c.status === 'active' },
-    vip:        { label: 'High Value',         filter: c => (c.total_premium || 0) >= 5000 },
-    new:        { label: 'Neuzugänge',         filter: c => new Date(c.created_date) >= thirtyAgo },
-    prospect:   { label: 'Interessenten',      filter: c => c.status === 'prospect' },
-    private:  { label: 'Privatkunden',       filter: c => c.customer_type !== 'business' },
-    business: { label: 'Unternehmen',        filter: c => c.customer_type === 'business' },
+    all:              { label: 'Alle Kunden',          filter: () => true },
+    no_advisor:       { label: '⚠ Kein Berater',       filter: c => !c.advisor_id && !c.primary_advisor_id },
+    critical:         { label: 'Attention Required',   filter: c => c.status === 'inactive' || ['invalid','expired'].includes(c.mandate_status) },
+    mandate:          { label: 'Mandat ausstehend',    filter: c => c.mandate_status === 'pending' },
+    tasks:            { label: 'Offene Tasks',         filter: c => (tasksByCustomer[c.id] || 0) > 0 },
+    active:           { label: 'Aktiv',                filter: c => c.status === 'active' },
+    vip:              { label: 'High Value',           filter: c => (c.total_premium || 0) >= 5000 },
+    new:              { label: 'Neuzugänge',           filter: c => new Date(c.created_date) >= thirtyAgo },
+    prospect:         { label: 'Interessenten',        filter: c => c.status === 'prospect' },
+    private:          { label: 'Privatkunden',         filter: c => c.customer_type !== 'business' },
+    business:         { label: 'Unternehmen',          filter: c => c.customer_type === 'business' },
+    
+    // NEW: Operational Intelligence Segments
+    renewal_critical: { label: '🔴 Renewal kritisch',  filter: c => {
+      const custContracts = (contracts || []).filter(cc => cc.customer_id === c.id && cc.status === 'active');
+      return custContracts.some(cc => {
+        if (!cc.cancellation_deadline) return false;
+        const cd = new Date(cc.cancellation_deadline);
+        return cd >= today && cd <= in90Days;
+      });
+    }},
+    no_activity_90:   { label: '🕐 Keine Aktivität 90T', filter: c => new Date(c.updated_date) <= ninetyAgo },
+    no_documents:     { label: '📄 Fehlende Dokumente', filter: c => (docsByCustomer[c.id] || 0) === 0 },
+    high_commission:  { label: '💰 Hohe Provision',     filter: c => (c.total_premium || 0) >= 10000 },
+    household_potential: { label: '👥 Household Potenzial', filter: c => !c.is_family_member && (c.civil_status === 'married' || c.civil_status === 'registered_partnership') },
+    cross_selling:    { label: '🎯 Cross-Selling',      filter: c => {
+      const custContracts = (contracts || []).filter(cc => cc.customer_id === c.id && cc.status === 'active');
+      const sparten = new Set(custContracts.map(cc => cc.sparte));
+      return sparten.size < 2 && custContracts.length >= 1;
+    }},
   };
 
   const segs = {};
@@ -59,7 +89,7 @@ function buildSegments(customers, tasks, contracts) {
     segs[k] = { ...v, count: primary.filter(v.filter).length };
   });
 
-  return { ...segs, tasksByCustomer, contractsByCustomer };
+  return { ...segs, tasksByCustomer, contractsByCustomer, docsByCustomer };
 }
 
 // ── Today Focus Panel ──────────────────────────────────────────────────────
@@ -179,10 +209,25 @@ function sortCustomers(list, sortBy) {
   });
 }
 
-const NAV_KEYS = ['all','no_advisor','vip','private','business','prospect','tasks','critical','mandate'];
+const NAV_KEYS = [
+  'all',
+  'active',
+  'new',
+  'vip',
+  'renewal_critical',
+  'no_activity_90',
+  'no_documents',
+  'no_advisor',
+  'mandate',
+  'tasks',
+  'critical',
+  'prospect',
+  'private',
+  'business',
+];
 
 // ── Grouped customer feed ─────────────────────────────────────────────────
-function CustomerFeed({ displayed, customers, segments, matchedFamilyIds, onEdit, onDelete }) {
+function CustomerFeed({ displayed, customers, segments, matchedFamilyIds, onEdit, onDelete, allContracts, allTasks, allDocuments }) {
   const businesses = displayed.filter(c => c.customer_type === 'business');
   const privates   = displayed.filter(c => c.customer_type !== 'business');
   const showGroups = businesses.length > 0 && privates.length > 0;
@@ -197,6 +242,9 @@ function CustomerFeed({ displayed, customers, segments, matchedFamilyIds, onEdit
       matchedFamilyIds={matchedFamilyIds}
       onEdit={onEdit}
       onDelete={onDelete}
+      allContracts={allContracts}
+      allTasks={allTasks}
+      allDocuments={allDocuments}
     />
   );
 
@@ -285,6 +333,12 @@ export default function Customers() {
     staleTime: 60_000,
   });
 
+  const { data: documents = [] } = useQuery({
+    queryKey: ['customers_documents'],
+    queryFn: () => base44.entities.Document.filter({ archived: false }, '-uploaded_at', 500),
+    staleTime: 60_000,
+  });
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Customer.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setShowForm(false); setEditing(null); },
@@ -298,7 +352,7 @@ export default function Customers() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['customers'] }),
   });
 
-  const segments = useMemo(() => buildSegments(customers, tasks, contracts), [customers, tasks, contracts]);
+  const segments = useMemo(() => buildSegments(customers, tasks, contracts, documents), [customers, tasks, contracts, documents]);
   const primaryCustomers = useMemo(() => customers.filter(c => !c.is_family_member), [customers]);
 
   const segFiltered = useMemo(() => {
@@ -566,6 +620,9 @@ export default function Customers() {
                       matchedFamilyIds={matchedFamilyIds}
                       onEdit={(c) => { setEditing(c); setShowForm(true); }}
                       onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
+                      allContracts={contracts}
+                      allTasks={tasks}
+                      allDocuments={documents}
                     />
                   </div>
                 )}
@@ -585,6 +642,9 @@ export default function Customers() {
                       matchedFamilyIds={matchedFamilyIds}
                       onEdit={(c) => { setEditing(c); setShowForm(true); }}
                       onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
+                      allContracts={contracts}
+                      allTasks={tasks}
+                      allDocuments={documents}
                     />
                   </div>
                 )}
