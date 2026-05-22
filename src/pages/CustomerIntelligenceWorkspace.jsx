@@ -165,6 +165,8 @@ export default function CustomerIntelligenceWorkspace() {
   const [showMerge, setShowMerge]       = useState(false);
   const [showAllMandate, setShowAllMandate] = useState(false);
   const [showAllHousehold, setShowAllHousehold] = useState(false);
+  
+  const DISPLAY_LIMIT = 3;
   const queryClient = useQueryClient();
 
   const { data: currentUser } = useQuery({ queryKey: ['currentUser'], queryFn: () => base44.auth.me() });
@@ -361,7 +363,7 @@ export default function CustomerIntelligenceWorkspace() {
                 </span>
               </div>
               <div className="space-y-1">
-                {displayedMandate.map(customer => (
+                {(showAllMandate ? mandateIssues : mandateIssues.slice(0, DISPLAY_LIMIT)).map(customer => (
                   <button
                     key={customer.id}
                     onClick={() => navigate(`/kunden/${customer.id}/360`)}
@@ -384,12 +386,12 @@ export default function CustomerIntelligenceWorkspace() {
                   </button>
                 ))}
               </div>
-              {mandateIssues.length > 5 && (
+              {mandateIssues.length > DISPLAY_LIMIT && (
                 <button
                   onClick={() => setShowAllMandate(!showAllMandate)}
                   className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
                 >
-                  {showAllMandate ? 'Weniger anzeigen' : `+${mandateIssues.length - 5} weitere anzeigen`}
+                  {showAllMandate ? 'Weniger anzeigen' : `+${mandateIssues.length - DISPLAY_LIMIT} weitere anzeigen`}
                 </button>
               )}
             </div>
@@ -405,7 +407,7 @@ export default function CustomerIntelligenceWorkspace() {
                 </span>
               </div>
               <div className="space-y-1">
-                {displayedHousehold.map(customer => (
+                {(showAllHousehold ? householdCustomers : householdCustomers.slice(0, DISPLAY_LIMIT)).map(customer => (
                   <button
                     key={customer.id}
                     onClick={() => navigate(`/kunden/${customer.id}/360`)}
@@ -423,12 +425,12 @@ export default function CustomerIntelligenceWorkspace() {
                   </button>
                 ))}
               </div>
-              {householdCustomers.length > 5 && (
+              {householdCustomers.length > DISPLAY_LIMIT && (
                 <button
                   onClick={() => setShowAllHousehold(!showAllHousehold)}
                   className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
                 >
-                  {showAllHousehold ? 'Weniger anzeigen' : `+${householdCustomers.length - 5} weitere anzeigen`}
+                  {showAllHousehold ? 'Weniger anzeigen' : `+${householdCustomers.length - DISPLAY_LIMIT} weitere anzeigen`}
                 </button>
               )}
             </div>
