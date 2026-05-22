@@ -1,6 +1,7 @@
 /**
- * Dashboard — Fokussiertes Tages-Cockpit
- * Nur: Was bringt heute Umsatz?
+ * Dashboard — Broker Command Center
+ * Operative Priorität: Leads · Renewals · Opportunities · Tasks · Risks
+ * Finance: sekundär / einklappbar
  */
 import React, { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -13,56 +14,139 @@ import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { ChevronRight } from 'lucide-react'
+import {
+  ChevronRight, ChevronDown, ChevronUp,
+  TrendingUp, Target, RefreshCw, CheckSquare,
+  AlertTriangle, Zap, BarChart2, Building2
+} from 'lucide-react'
 
 import TodayDashboard from '@/components/dashboard/TodayDashboard'
 import MoneyDashboard from '@/components/dashboard/MoneyDashboard'
 
+// ── Operative KPI Tile ────────────────────────────────────────────────────────
+function KpiTile({ label, value, sub, icon: Icon, colorClass, bgClass, borderClass, onClick, urgent }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'group relative flex flex-col gap-1 p-4 rounded-xl border transition-all text-left',
+        'hover:shadow-card-md hover:scale-[1.015] active:scale-[0.99]',
+        bgClass, borderClass
+      )}
+    >
+      {urgent && (
+        <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+      )}
+      <div className="flex items-center gap-2 mb-0.5">
+        <Icon className={cn('w-3.5 h-3.5 shrink-0', colorClass)} />
+        <span className="text-label text-slate-500 truncate">{label}</span>
+      </div>
+      <p className={cn('text-[28px] font-bold leading-none tracking-tight', colorClass)}>{value}</p>
+      {sub && <p className="text-caption text-slate-400 mt-0.5">{sub}</p>}
+    </button>
+  )
+}
+
+// ── Collapsible Finance Section ───────────────────────────────────────────────
+function FinanceSection({ children }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="rounded-xl border border-[hsl(var(--border-subtle))] overflow-hidden bg-card">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/60 transition-colors"
+      >
+        <BarChart2 className="w-4 h-4 text-slate-400 shrink-0" />
+        <span className="text-[13px] font-semibold text-slate-600 flex-1 text-left">Finanzen &amp; Reporting</span>
+        <span className="text-caption text-slate-400 mr-2">Provisionen · Courtagen · Pipeline</span>
+        {open
+          ? <ChevronUp className="w-4 h-4 text-slate-400" />
+          : <ChevronDown className="w-4 h-4 text-slate-400" />}
+      </button>
+      {open && (
+        <div className="border-t border-[hsl(var(--border-subtle))] p-4">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Greeting ──────────────────────────────────────────────────────────────────
+function getGreeting() {
+  const h = new Date().getHours()
+  return h < 12 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend'
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const navigate = useNavigate()
   const [selectedTask, setSelectedTask] = useState(null)
   const [formData, setFormData] = useState({ title: '', status: '', notes: '', due_date: '' })
   const queryClient = useQueryClient()
 
-  // ── Daten laden ───────────────────────────────────────────────────────────
-  const { data: tasks = [] }           = useQuery({ queryKey: ['tasks'],           queryFn: () => base44.entities.Task.filter({ status: ['open', 'in_progress'] }, '-due_date', 100) })
-  const { data: contracts = [] }       = useQuery({ queryKey: ['contracts'],       queryFn: async () => {
-    // Use service role via backend function to bypass RLS
-    const res = await base44.functions.invoke('getAllContractsForDashboard', {})
-    return res.data?.data || res.data || []
-  }})
-  const { data: leads = [] }           = useQuery({ queryKey: ['leads'],           queryFn: async () => {
-    const all = await base44.entities.Lead.list('-lead_score', 100)
-    return all.filter(l => ['new', 'contacted', 'qualified'].includes(l.status))
-  } })
-  const { data: verkaufschancen = [] } = useQuery({ queryKey: ['verkaufschancen'], queryFn: () => base44.entities.Verkaufschance.list('-created_date', 100) })
-
-  // ── Abgeleitete Daten ─────────────────────────────────────────────────────
-  // Tasks bereits server-seitig auf open/in_progress gefiltert
-  const openTasks = tasks
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['tasks'],
+    queryFn: () => base44.entities.Task.filter({ status: ['open', 'in_progress'] }, '-due_date', 100)
+  })
+  const { data: contracts = [] } = useQuery({
+    queryKey: ['contracts'],
+    queryFn: async () => {
+      const res = await base44.functions.invoke('getAllContractsForDashboard', {})
+      return res.data?.data || res.data || []
+    }
+  })
+  const { data: leads = [] } = useQuery({
+    queryKey: ['leads'],
+    queryFn: async () => {
+      const all = await base44.entities.Lead.list('-lead_score', 100)
+      return all.filter(l => ['new', 'contacted', 'qualified'].includes(l.status))
+    }
+  })
+  const { data: verkaufschancen = [] } = useQuery({
+    queryKey: ['verkaufschancen'],
+    queryFn: () => base44.entities.Verkaufschance.list('-created_date', 100)
+  })
 
   const today = new Date()
+  const in30 = new Date(today); in30.setDate(today.getDate() + 30)
   const in360 = new Date(today); in360.setDate(today.getDate() + 360)
 
-  // expiringContracts: aktive Verträge die in den nächsten 360 Tagen ablaufen (bereits server-seitig auf active gefiltert)
+  const openTasks = tasks
+
   const expiringContracts = useMemo(() =>
     contracts.filter(c => {
       if (!c.end_date) return false
       const d = new Date(c.end_date + 'T00:00:00')
       return d <= in360 && !c.end_date.startsWith('9999')
-    }),
-    [contracts]
-  )
+    }), [contracts])
 
-  // leads already filtered server-side to active statuses
+  const renewalIn30 = useMemo(() =>
+    contracts.filter(c => {
+      if (!c.end_date) return false
+      const d = new Date(c.end_date + 'T00:00:00')
+      return d <= in30 && d > today && !c.end_date.startsWith('9999')
+    }), [contracts])
+
   const activeLeads = leads
+  const hotLeads = useMemo(() =>
+    leads.filter(l => l.status === 'qualified' || (l.lead_score || 0) >= 60),
+    [leads])
 
   const openVerkaufschancen = useMemo(() =>
     verkaufschancen.filter(v => !['gewonnen', 'verloren'].includes(v.status)),
-    [verkaufschancen]
-  )
+    [verkaufschancen])
 
-  // ── Task Mutations ────────────────────────────────────────────────────────
+  const overdueCount = openTasks.filter(t => t.due_date && new Date(t.due_date) < today).length
+  const urgentRenewal = renewalIn30.filter(c => {
+    const d = Math.ceil((new Date(c.end_date) - today) / 86400000)
+    return d <= 7
+  }).length
+
+  const urgentCount = overdueCount + urgentRenewal +
+    openVerkaufschancen.filter(v => v.status === 'kunde_entscheidet').length
+
+  // ── Task mutations ────────────────────────────────────────────────────────
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.Task.update(selectedTask.id, {
       status: data.status ?? selectedTask.status,
@@ -80,81 +164,148 @@ export default function Dashboard() {
     setSelectedTask(task)
     setFormData({ title: task.title || '', status: task.status, notes: task.notes || '', due_date: task.due_date || '' })
   }
-
   const handleTaskComplete = async (taskId) => {
     await base44.entities.Task.update(taskId, { status: 'completed', completion_date: new Date().toISOString().split('T')[0] })
     queryClient.invalidateQueries({ queryKey: ['tasks'] })
   }
 
-  const handleSave = () => {
-    if (selectedTask?.id) updateMutation.mutate(formData)
-    setSelectedTask(null)
-  }
-
-  // Begrüssung
-  const greeting = () => {
-    const h = new Date().getHours()
-    return h < 12 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend'
-  }
-
-  const urgentCount =
-    openTasks.filter(t => t.due_date && new Date(t.due_date) <= today).length +
-    openVerkaufschancen.filter(v => v.status === 'kunde_entscheidet').length +
-    expiringContracts.filter(c => {
-      const d = Math.ceil((new Date(c.end_date) - today) / 86400000)
-      return d <= 7
-    }).length
-
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 page-enter">
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-4">
+      {/* ── Command Center Header ──────────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-foreground">{greeting()}</h1>
-          <p className="text-[12px] text-muted-foreground mt-0.5">
-            {new Date().toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long' })}
-            {urgentCount > 0 && (
-              <span className="ml-2 inline-flex items-center gap-1 text-amber-700 font-semibold">
-                · {urgentCount} Aktion{urgentCount > 1 ? 'en' : ''} ausstehend
-              </span>
-            )}
+          <p className="text-label text-slate-400 mb-0.5">
+            {new Date().toLocaleDateString('de-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
+          <h1 className="text-h1 font-bold tracking-tight">{getGreeting()}</h1>
+          {urgentCount > 0 && (
+            <p className="text-body-sm text-amber-700 font-semibold mt-1">
+              {urgentCount} dringende Aktion{urgentCount > 1 ? 'en' : ''} ausstehend
+            </p>
+          )}
         </div>
-
-
+        <div className="flex gap-2 shrink-0 flex-wrap">
+          <button
+            onClick={() => navigate('/leads')}
+            className="inline-flex items-center gap-1.5 text-body-sm font-medium px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors shadow-sm"
+          >
+            <Zap className="w-3.5 h-3.5" /> Neuer Lead
+          </button>
+          <button
+            onClick={() => navigate('/verkaufschancen')}
+            className="inline-flex items-center gap-1.5 text-body-sm font-medium px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-slate-50 transition-colors"
+          >
+            <TrendingUp className="w-3.5 h-3.5" /> Opportunity
+          </button>
+          <button
+            onClick={() => navigate('/kunden')}
+            className="inline-flex items-center gap-1.5 text-body-sm font-medium px-3 py-1.5 rounded-lg border border-border bg-card hover:bg-slate-50 transition-colors"
+          >
+            <Building2 className="w-3.5 h-3.5" /> Neuer Kunde
+          </button>
+        </div>
       </div>
 
+      {/* ── Urgent Alert ──────────────────────────────────────────────────── */}
       {urgentCount > 0 && (
         <button
           onClick={() => document.getElementById('urgent-actions')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-          className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200/80 hover:bg-amber-100/70 transition-colors cursor-pointer"
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-rose-50/80 border border-rose-200/70 hover:bg-rose-50 transition-colors"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0 animate-pulse" />
-          <span className="text-xs font-semibold text-amber-800">{urgentCount} dringende Aktion{urgentCount > 1 ? 'en' : ''} — bitte prüfen</span>
-          <ChevronRight className="w-3.5 h-3.5 text-amber-600 ml-auto" />
+          <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0 animate-pulse" />
+          <span className="text-body-sm font-semibold text-rose-800 flex-1 text-left">
+            {urgentCount} dringende Aktion{urgentCount > 1 ? 'en' : ''} · sofort handeln
+          </span>
+          <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+          <ChevronRight className="w-3.5 h-3.5 text-rose-400 shrink-0" />
         </button>
       )}
 
-      {/* ── Dashboard Content ────────────────────────────────────────────── */}
-      <div className="space-y-5">
-        {/* 💰 MONEY DASHBOARD – Geld & Vertrieb im Fokus */}
-        <MoneyDashboard />
-        
-        {/* Klassisches Tages-Dashboard */}
-        <TodayDashboard
-          openTasks={openTasks}
-          expiringContracts={expiringContracts}
-          contracts={contracts}
-          activeLeads={activeLeads}
-          verkaufschancen={openVerkaufschancen}
-          tasks={tasks}
-          onTaskClick={handleTaskClick}
-          onTaskComplete={handleTaskComplete}
+      {/* ── Operative KPI Row ──────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <KpiTile
+          label="Renewal in 30d"
+          value={renewalIn30.length}
+          sub={urgentRenewal > 0 ? `${urgentRenewal} kritisch` : 'fällig bald'}
+          icon={RefreshCw}
+          colorClass="text-amber-700"
+          bgClass="bg-amber-50/70"
+          borderClass="border-amber-200/60"
+          urgent={urgentRenewal > 0}
+          onClick={() => navigate('/vertragsablaeufe')}
+        />
+        <KpiTile
+          label="Hot Leads"
+          value={hotLeads.length}
+          sub={`${activeLeads.length} total aktiv`}
+          icon={Zap}
+          colorClass="text-violet-700"
+          bgClass="bg-violet-50/60"
+          borderClass="border-violet-200/50"
+          onClick={() => navigate('/leads')}
+        />
+        <KpiTile
+          label="Opportunities"
+          value={openVerkaufschancen.length}
+          sub={`${openVerkaufschancen.filter(v => v.status === 'kunde_entscheidet').length} entscheidungsreif`}
+          icon={Target}
+          colorClass="text-blue-700"
+          bgClass="bg-blue-50/60"
+          borderClass="border-blue-200/50"
+          onClick={() => navigate('/verkaufschancen')}
+        />
+        <KpiTile
+          label="Offene Tasks"
+          value={openTasks.length}
+          sub={overdueCount > 0 ? `${overdueCount} überfällig` : 'alles pünktlich'}
+          icon={CheckSquare}
+          colorClass={overdueCount > 0 ? 'text-rose-700' : 'text-slate-700'}
+          bgClass={overdueCount > 0 ? 'bg-rose-50/60' : 'bg-slate-50/60'}
+          borderClass={overdueCount > 0 ? 'border-rose-200/60' : 'border-slate-200/50'}
+          urgent={overdueCount > 0}
+          onClick={() => navigate('/aufgaben')}
+        />
+        <KpiTile
+          label="Neue Leads"
+          value={activeLeads.filter(l => l.status === 'new').length}
+          sub="noch nicht kontaktiert"
+          icon={Target}
+          colorClass="text-emerald-700"
+          bgClass="bg-emerald-50/60"
+          borderClass="border-emerald-200/50"
+          onClick={() => navigate('/leads')}
+        />
+        <KpiTile
+          label="Vertragsabläufe"
+          value={expiringContracts.length}
+          sub="in 360 Tagen"
+          icon={RefreshCw}
+          colorClass="text-slate-700"
+          bgClass="bg-slate-50/60"
+          borderClass="border-slate-200/50"
+          onClick={() => navigate('/vertragsablaeufe')}
         />
       </div>
 
-      {/* ── Task Edit Dialog ──────────────────────────────────────────────── */}
+      {/* ── Operative Content ─────────────────────────────────────────────── */}
+      <TodayDashboard
+        openTasks={openTasks}
+        expiringContracts={expiringContracts}
+        contracts={contracts}
+        activeLeads={activeLeads}
+        verkaufschancen={openVerkaufschancen}
+        tasks={tasks}
+        onTaskClick={handleTaskClick}
+        onTaskComplete={handleTaskComplete}
+      />
+
+      {/* ── Finance & Reporting (collapsible / sekundär) ──────────────────── */}
+      <FinanceSection>
+        <MoneyDashboard />
+      </FinanceSection>
+
+      {/* ── Task Edit Dialog ───────────────────────────────────────────────── */}
       <Dialog open={!!selectedTask} onOpenChange={(open) => { if (!open) setSelectedTask(null) }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -191,7 +342,7 @@ export default function Dashboard() {
             )}
             <div className="flex gap-2 ml-auto">
               <Button variant="outline" onClick={() => setSelectedTask(null)}>Abbrechen</Button>
-              <Button onClick={handleSave} disabled={updateMutation.isPending}>Speichern</Button>
+              <Button onClick={() => { if (selectedTask?.id) updateMutation.mutate(formData) }} disabled={updateMutation.isPending}>Speichern</Button>
             </div>
           </DialogFooter>
         </DialogContent>
