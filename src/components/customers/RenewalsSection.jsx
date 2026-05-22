@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { RefreshCw, AlertTriangle, TrendingUp, Clock, CheckCircle, Phone, Mail, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -26,6 +26,9 @@ function getDaysUntil(dateString) {
 }
 
 export default function RenewalsSection({ contracts, customers, verkaufschancen }) {
+  const [showAllCritical, setShowAllCritical] = React.useState(false);
+  const [showAllUpcoming, setShowAllUpcoming] = React.useState(false);
+  
   const renewalsData = useMemo(() => {
     const today = new Date();
     
@@ -148,33 +151,13 @@ export default function RenewalsSection({ contracts, customers, verkaufschancen 
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <Link
-            to={`/kunden/${item.customer?.id}`}
-            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md bg-[hsl(var(--primary))/0.1] text-[hsl(var(--primary))] text-[10px] font-medium hover:bg-[hsl(var(--primary))/0.15] transition-colors"
-          >
-            <Phone className="w-2.5 h-2.5" />
-            Kontakt
-          </Link>
-          {!item.verkaufschance && (
-            <Link
-              to={`/verkaufschancen?new=true&contract_id=${item.contract.id}`}
-              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md bg-[hsl(var(--success-hsl))/0.1] text-[hsl(var(--success-hsl))] text-[10px] font-medium hover:bg-[hsl(var(--success-hsl))/0.15] transition-colors"
-            >
-              <Plus className="w-2.5 h-2.5" />
-              Renewal
-            </Link>
-          )}
-          {item.verkaufschance && (
-            <Link
-              to={`/verkaufschancen/${item.verkaufschance.id}`}
-              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md bg-[hsl(var(--surface-2))] text-[hsl(var(--text-heading))] text-[10px] font-medium hover:bg-[hsl(var(--surface-2))]/70 transition-colors"
-            >
-              <CheckCircle className="w-2.5 h-2.5" />
-              Offen
-            </Link>
-          )}
-        </div>
+        <Link
+          to={`/kunden/${item.customer?.id}`}
+          className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-md bg-[hsl(var(--primary))/0.1] text-[hsl(var(--primary))] text-[10px] font-medium hover:bg-[hsl(var(--primary))/0.15] transition-colors"
+        >
+          <Phone className="w-2.5 h-2.5" />
+          Kontakt
+        </Link>
       </div>
     );
   };
@@ -207,9 +190,19 @@ export default function RenewalsSection({ contracts, customers, verkaufschancen 
               Keine kritischen Abläufe
             </p>
           ) : (
-            <div className="space-y-3">
-              {renewalsData.critical.map(item => renderContractCard(item, true))}
-            </div>
+            <>
+              <div className="space-y-3">
+                {(showAllCritical ? renewalsData.critical : renewalsData.critical.slice(0, 5)).map(item => renderContractCard(item, true))}
+              </div>
+              {renewalsData.critical.length > 5 && (
+                <button
+                  onClick={() => setShowAllCritical(!showAllCritical)}
+                  className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
+                >
+                  {showAllCritical ? 'Weniger anzeigen' : `+${renewalsData.critical.length - 5} weitere anzeigen`}
+                </button>
+              )}
+            </>
           )}
         </div>
 
@@ -229,9 +222,19 @@ export default function RenewalsSection({ contracts, customers, verkaufschancen 
               Keine anstehenden Abläufe
             </p>
           ) : (
-            <div className="space-y-3">
-              {renewalsData.upcoming90to365.map(item => renderContractCard(item))}
-            </div>
+            <>
+              <div className="space-y-3">
+                {(showAllUpcoming ? renewalsData.upcoming90to365 : renewalsData.upcoming90to365.slice(0, 5)).map(item => renderContractCard(item))}
+              </div>
+              {renewalsData.upcoming90to365.length > 5 && (
+                <button
+                  onClick={() => setShowAllUpcoming(!showAllUpcoming)}
+                  className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
+                >
+                  {showAllUpcoming ? 'Weniger anzeigen' : `+${renewalsData.upcoming90to365.length - 5} weitere anzeigen`}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
