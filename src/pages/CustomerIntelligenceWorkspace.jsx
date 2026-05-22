@@ -159,7 +159,7 @@ export default function CustomerIntelligenceWorkspace() {
   const [showForm, setShowForm]         = useState(false);
   const [editing, setEditing]           = useState(null);
   const [newCustomerType, setNewCustomerType] = useState('private');
-  const [workspaceMode, setWorkspaceMode] = useState('overview');
+  const [workspaceMode, setWorkspaceMode] = useState('kundenaktionen');
   const [sortBy, setSortBy]               = useState('alpha');
   const [search, setSearch]             = useState('');
   const [showImport, setShowImport]     = useState(false);
@@ -252,7 +252,7 @@ export default function CustomerIntelligenceWorkspace() {
     if (workspaceMode === 'vip') {
       return primaryCustomers.filter(c => (c.total_premium || 0) >= 5000);
     }
-    // 'kundenaktionen' displays all primary customers
+    // 'kundenaktionen' and 'overview' display all primary customers
     return primaryCustomers;
   }, [primaryCustomers, workspaceMode]);
 
@@ -408,7 +408,7 @@ export default function CustomerIntelligenceWorkspace() {
   };
 
   const isIntelligenceMode = ['kundenaktionen', 'vip'].includes(workspaceMode);
-  const isCustomerListMode = ['private', 'business'].includes(workspaceMode);
+  const isCustomerListMode = ['private', 'business', 'overview'].includes(workspaceMode);
 
   return (
     <div className="flex flex-col h-full bg-[hsl(var(--surface-1))]">
