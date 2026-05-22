@@ -116,7 +116,7 @@ export default function Sidebar({ onNavigate }) {
       )}
       style={{ boxShadow: '4px 0 32px 0 rgba(0,0,0,0.08)' }}
     >
-      {/* ── Logo / VSV Management GmbH Button ─────────────────────────── */}
+      {/* ── Logo / VSV Management GmbH ────────────────────────────────── */}
       <div className={cn(
         'flex items-center h-[60px] border-b border-[hsl(var(--border-default))] flex-shrink-0',
         collapsed ? 'justify-center' : 'gap-3 px-4'
@@ -125,13 +125,10 @@ export default function Sidebar({ onNavigate }) {
           <Shield className="w-3.5 h-3.5 text-white" />
         </div>
         {!collapsed && (
-          <button
-            onClick={() => window.location.href = '/'}
-            className="min-w-0 text-left hover:opacity-80 transition-opacity"
-          >
+          <div className="min-w-0">
             <p className="text-[13px] font-bold text-[hsl(var(--primary))] tracking-tight leading-none">VSV Management GmbH</p>
-            <p className="text-[9px] text-[hsl(var(--text-subtle))] font-medium tracking-[0.14em] uppercase mt-0.5">Swiss Premium Broker</p>
-          </button>
+            <p className="text-[8px] text-[hsl(var(--text-subtle))] font-medium tracking-[0.14em] uppercase mt-0.5">Swiss Premium Broker</p>
+          </div>
         )}
       </div>
 
@@ -226,21 +223,36 @@ export default function Sidebar({ onNavigate }) {
         ))}
       </nav>
 
-      {/* ── Portal Link ───────────────────────────────────────────────── */}
-      <div className={cn('px-2 pb-3', collapsed && 'flex justify-center')}>
-        <a
-          href="/portal"
-          target="_blank"
-          rel="noopener noreferrer"
-          title={collapsed ? 'Kundenportal' : undefined}
-          className={cn(
-            'flex items-center gap-2 rounded-md text-[11.5px] font-medium text-[hsl(var(--text-muted))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] border border-transparent hover:border-[hsl(var(--border-subtle))] transition-all duration-200',
-            collapsed ? 'justify-center h-9 w-9 mx-auto' : 'px-3 py-2'
-          )}
-        >
-          <ExternalLink className="w-[12px] h-[12px] flex-shrink-0 opacity-70" />
-          {!collapsed && <span>Kundenportal</span>}
-        </a>
+      {/* ── Kundenportal Section ──────────────────────────────────────── */}
+      <div className="mb-0.5">
+        {!collapsed ? (
+          <p className="px-4 pt-6 pb-2 text-[10px] font-bold uppercase tracking-[0.13em] text-black select-none">
+            Kundenportal
+          </p>
+        ) : (
+          <div className="mx-3 my-3 h-px bg-[hsl(var(--border-subtle))]" />
+        )}
+
+        <div className={cn('space-y-1', collapsed ? 'px-2' : 'px-2')}>
+          <a
+            href="/portal"
+            target="_blank"
+            rel="noopener noreferrer"
+            title={collapsed ? 'Kundenportal' : undefined}
+            className={cn(
+              'relative flex items-center rounded-md transition-all duration-200 group',
+              collapsed ? 'justify-center h-9 w-9 mx-auto' : 'gap-2.5 px-3 py-[9px]',
+              'text-[hsl(var(--text-muted))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))]/60 border border-transparent'
+            )}
+          >
+            <ExternalLink className="w-[14px] h-[14px] flex-shrink-0 text-[hsl(var(--text-muted))] opacity-70 group-hover:opacity-100" strokeWidth={1.8} />
+            {!collapsed && (
+              <span className="text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em] text-[hsl(var(--text-muted))] group-hover:text-[hsl(var(--text-heading))]">
+                Portal öffnen
+              </span>
+            )}
+          </a>
+        </div>
       </div>
 
       {/* ── User card — embedded surface with subtle date ───────────────── */}
