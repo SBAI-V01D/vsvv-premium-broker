@@ -170,48 +170,51 @@ export default function CancellationsSection({ contracts, customers }) {
         </p>
       </div>
 
-      {/* Gekündigte Policen */}
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--critical-hsl))]" />
-          <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
-            Gekündigt
-          </h3>
-          <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
-            {cancellationsData.cancelled.length}
-          </span>
-        </div>
-        {cancellationsData.cancelled.length === 0 ? (
-          <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
-            Keine gekündigten Policen
-          </p>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {cancellationsData.cancelled.map(item => renderContractCard(item))}
+      {/* Combined layout: Cancelled and Deadlines side by side */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Gekündigte Policen */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--critical-hsl))]" />
+            <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
+              Gekündigt
+            </h3>
+            <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
+              {cancellationsData.cancelled.length}
+            </span>
           </div>
-        )}
-      </div>
+          {cancellationsData.cancelled.length === 0 ? (
+            <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
+              Keine gekündigten Policen
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {cancellationsData.cancelled.map(item => renderContractCard(item))}
+            </div>
+          )}
+        </div>
 
-      {/* Kündigungsfristen */}
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <Calendar className="w-3.5 h-3.5 text-[hsl(var(--warning-hsl))]" />
-          <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
-            Fristen
-          </h3>
-          <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
-            {cancellationsData.deadline.length}
-          </span>
-        </div>
-        {cancellationsData.deadline.length === 0 ? (
-          <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
-            Keine anstehenden Fristen
-          </p>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {cancellationsData.deadline.map(item => renderContractCard(item))}
+        {/* Kündigungsfristen */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Calendar className="w-3.5 h-3.5 text-[hsl(var(--warning-hsl))]" />
+            <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
+              Fristen
+            </h3>
+            <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
+              {cancellationsData.deadline.length}
+            </span>
           </div>
-        )}
+          {cancellationsData.deadline.length === 0 ? (
+            <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
+              Keine anstehenden Fristen
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {cancellationsData.deadline.map(item => renderContractCard(item))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

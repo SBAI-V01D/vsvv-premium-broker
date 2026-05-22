@@ -189,48 +189,51 @@ export default function RenewalsSection({ contracts, customers, verkaufschancen 
         </p>
       </div>
 
-      {/* Critical (<90 Tage) */}
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--critical-hsl))]" />
-          <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
-            Kritisch (&lt;90 Tage)
-          </h3>
-          <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
-            {renewalsData.critical.length}
-          </span>
-        </div>
-        {renewalsData.critical.length === 0 ? (
-          <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
-            Keine kritischen Vertragsabläufe
-          </p>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {renewalsData.critical.map(item => renderContractCard(item, true))}
+      {/* Combined layout: Critical and 90-365 side by side */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Critical (<90 Tage) */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--critical-hsl))]" />
+            <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
+              Kritisch (&lt;90 Tage)
+            </h3>
+            <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
+              {renewalsData.critical.length}
+            </span>
           </div>
-        )}
-      </div>
+          {renewalsData.critical.length === 0 ? (
+            <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
+              Keine kritischen Abläufe
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {renewalsData.critical.map(item => renderContractCard(item, true))}
+            </div>
+          )}
+        </div>
 
-      {/* Upcoming 90-365 Tage */}
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <Clock className="w-3.5 h-3.5 text-[hsl(var(--warning-hsl))]" />
-          <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
-            90–365 Tage
-          </h3>
-          <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
-            {renewalsData.upcoming90to365.length}
-          </span>
-        </div>
-        {renewalsData.upcoming90to365.length === 0 ? (
-          <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
-            Keine anstehenden Abläufe
-          </p>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {renewalsData.upcoming90to365.map(item => renderContractCard(item))}
+        {/* Upcoming 90-365 Tage */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="w-3.5 h-3.5 text-[hsl(var(--warning-hsl))]" />
+            <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
+              90–365 Tage
+            </h3>
+            <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
+              {renewalsData.upcoming90to365.length}
+            </span>
           </div>
-        )}
+          {renewalsData.upcoming90to365.length === 0 ? (
+            <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
+              Keine anstehenden Abläufe
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {renewalsData.upcoming90to365.map(item => renderContractCard(item))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
