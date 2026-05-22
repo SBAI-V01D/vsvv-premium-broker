@@ -60,8 +60,8 @@ const navGroups = [
     items: [
       { label: 'Leads',           icon: Target,      path: '/leads', color: 'primary' },
       { label: 'Verkaufschancen', icon: TrendingUp,  path: '/verkaufschancen' },
-      { label: 'Vertragsabläufe', icon: RefreshCw,   path: '/vertragsablaeufe' },
-      { label: 'Aufgaben',        icon: CheckSquare, path: '/aufgaben', color: 'primary' },
+      { label: 'Vertragsabläufe', icon: RefreshCw,   path: '/vertragsablaeufe', color: 'primary' },
+      { label: 'Aufgaben',        icon: CheckSquare, path: '/aufgaben' },
     ],
   },
   {
@@ -69,8 +69,8 @@ const navGroups = [
     items: [
       { label: 'Kunden',    icon: Users,    path: '/kunden', color: 'primary' },
       { label: 'Verträge',  icon: Shield,   path: '/vertraege' },
-      { label: 'Anträge',   icon: FileText, path: '/antraege' },
-      { label: 'Dokumente', icon: FileText, path: '/dokumente', color: 'primary' },
+      { label: 'Anträge',   icon: FileText, path: '/antraege', color: 'primary' },
+      { label: 'Dokumente', icon: FileText, path: '/dokumente' },
     ],
   },
   {
@@ -78,8 +78,8 @@ const navGroups = [
     items: [
       { label: 'Provisionen',           icon: Wallet,    path: '/provisionen-courtagen', color: 'primary' },
       { label: 'Berater & Partner',     icon: Briefcase, path: '/berater-organisation' },
-      { label: 'Team & Zugriffsrechte', icon: Lock,      path: '/admin/team-zugriffsrechte', adminOnly: true },
-      { label: 'System',                icon: Menu,      path: '/admin-logs', color: 'primary' },
+      { label: 'Team & Zugriffsrechte', icon: Lock,      path: '/admin/team-zugriffsrechte', adminOnly: true, color: 'primary' },
+      { label: 'System',                icon: Menu,      path: '/admin-logs' },
     ],
   },
   {
