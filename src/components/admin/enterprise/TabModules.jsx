@@ -2,7 +2,7 @@
  * TabModules — Systemweite Modul-Gesundheitsübersicht
  * Zeigt alle Kernmodule mit Status, KPIs und letzte Integrity-Ergebnisse.
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { CheckCircle2, AlertTriangle, XCircle, Loader2, RefreshCw } from 'lucide-react';
@@ -47,6 +47,8 @@ function ModuleCard({ moduleKey, moduleMeta, summary, issues }) {
 export default function TabModules() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => { runCheck(); }, []);
 
   const runCheck = async () => {
     setLoading(true);
