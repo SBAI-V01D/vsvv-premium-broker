@@ -234,7 +234,7 @@ export default function Documents() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Dokumente ({documents.length})</h1>
-          <p className="text-muted-foreground mt-1">Intelligente Klassifizierung & automatische Antragserfassung</p>
+          <p className="text-muted-foreground mt-1">Intelligente Klassifizierung &amp; automatische Antragserfassung</p>
         </div>
         <div className="flex gap-2">
            {counts.pruefung_erforderlich > 0 && (
@@ -353,7 +353,7 @@ export default function Documents() {
             filtered.map((doc, idx) => (
               <div
                 key={doc.id}
-                className={`grid grid-cols-1 md:grid-cols-[2fr_1.5fr_1fr_1fr_1.2fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/20 transition-colors ${idx > 0 ? 'border-t' : ''}`}
+                className={`grid grid-cols-1 md:grid-cols-[2fr_1.5fr_1fr_1fr_1.2fr_auto] gap-3 px-4 py-2 items-center hover:bg-muted/20 transition-colors ${idx > 0 ? 'border-t' : ''}`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${doc.doc_type === 'antrag' ? 'bg-green-100' : 'bg-slate-100'}`}>
@@ -363,7 +363,7 @@ export default function Documents() {
                     }
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{doc.name}</p>
+                    <p className="text-xs font-medium truncate">{doc.name}</p>
                     {doc.classification_status === 'ausstehend' && doc.doc_type === 'antrag' ? (
                       <p className="text-xs text-amber-600 flex items-center gap-1">
                         <Clock className="w-3 h-3" /> KI-Verarbeitung ausstehend...
@@ -374,7 +374,7 @@ export default function Documents() {
                   </div>
                 </div>
 
-                <div className="text-sm text-muted-foreground truncate">{doc.customer_name || '–'}</div>
+                <div className="text-xs text-muted-foreground truncate">{doc.customer_name || '–'}</div>
 
                 <div><DocumentTypeBadge doc={doc} /></div>
 
@@ -454,7 +454,7 @@ export default function Documents() {
                         handleReclassify(doc, 'antrag')
                         setTimeout(() => setReviewDoc({ ...doc, doc_type: 'antrag' }), 300)
                       }}>
-                        <Zap className="w-4 h-4 mr-2 text-green-600" /> Als ANTRAG markieren & verarbeiten
+                        <Zap className="w-4 h-4 mr-2 text-green-600" /> Als ANTRAG markieren &amp; verarbeiten
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleReclassify(doc, 'anlage')}>
                         <Paperclip className="w-4 h-4 mr-2 text-slate-500" /> Als ANLAGE markieren

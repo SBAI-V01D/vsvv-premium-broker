@@ -333,10 +333,10 @@ export default function Applications() {
               return (
                 <div key={app.id} className={idx > 0 ? 'border-t border-border' : ''}>
                   {/* Main row */}
-                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/30 transition-colors group">
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-1.5 items-center hover:bg-muted/30 transition-colors group">
                     {/* Kunde */}
                     <div className="min-w-0">
-                      <p className="font-semibold text-sm truncate">{app.customer_name || '–'}</p>
+                      <p className="font-semibold text-xs truncate">{app.customer_name || '–'}</p>
                       {(() => {
                         const cust = getCustomer(app.customer_id)
                         const ahv = cust?.ahv_number || app.sparte_data?.ahv_number
@@ -353,7 +353,7 @@ export default function Applications() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <Tag className="w-3 h-3 text-primary flex-shrink-0" />
-                        <p className="text-sm font-medium truncate">{getSparteLabel(app.sparte || app.insurance_type)}</p>
+                        <p className="text-xs font-medium truncate">{getSparteLabel(app.sparte || app.insurance_type)}</p>
                       </div>
                       {app.product && (
                         <p className="text-xs text-muted-foreground truncate mt-0.5">{app.product}</p>
@@ -417,7 +417,7 @@ export default function Applications() {
                       {(app.contract_start_date || app.requested_start_date) && (
                         <div className="flex items-center gap-1.5 mb-1">
                           <Calendar className="w-3 h-3 text-green-600 flex-shrink-0" />
-                          <span className="text-sm text-green-600 font-medium">
+                          <span className="text-xs text-green-600 font-medium">
                             {formatDate(app.contract_start_date || app.requested_start_date)}
                           </span>
                         </div>
@@ -425,30 +425,30 @@ export default function Applications() {
                       {app.contract_end_date && (
                         <div className="flex items-center gap-1.5">
                           <Calendar className="w-3 h-3 text-green-600 flex-shrink-0" />
-                          <span className="text-sm text-green-600 font-medium">
+                          <span className="text-xs text-green-600 font-medium">
                             {formatDate(app.contract_end_date)}
                           </span>
                         </div>
                       )}
                       {!app.contract_start_date && !app.requested_start_date && !app.contract_end_date && (
-                        <span className="text-sm text-muted-foreground">–</span>
+                       <span className="text-xs text-muted-foreground">–</span>
                       )}
                     </div>
 
                     {/* Prämien */}
                     <div>
                       {app.estimated_premium_yearly ? (
-                        <p className="text-sm font-semibold text-foreground">
+                        <p className="text-xs font-semibold text-foreground">
                           CHF {app.estimated_premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/J.
                         </p>
                       ) : null}
                       {app.estimated_premium_monthly ? (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           CHF {app.estimated_premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/M.
                         </p>
                       ) : null}
                       {!app.estimated_premium_yearly && !app.estimated_premium_monthly && (
-                        <span className="text-sm text-muted-foreground">–</span>
+                        <span className="text-xs text-muted-foreground">–</span>
                       )}
                     </div>
 
@@ -480,7 +480,7 @@ export default function Applications() {
                           }}
                           className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-semibold"
                         >
-                          ✓ Annehmen & Vertrag
+                          ✓ Annehmen &amp; Vertrag
                         </button>
                       )}
                       {app.status_changed_at && (
@@ -572,7 +572,7 @@ export default function Applications() {
       <Dialog open={showAuswertung} onOpenChange={setShowAuswertung}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Auswertung nach Sparte & Kundentyp</DialogTitle>
+            <DialogTitle>Auswertung nach Sparte &amp; Kundentyp</DialogTitle>
           </DialogHeader>
           <SparteFilterButtons
             applications={applications}
