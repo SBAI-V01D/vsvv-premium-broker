@@ -10,8 +10,8 @@ import { getSparteLabel } from '@/lib/insuranceSparten'
 import { cn } from '@/lib/utils'
 import {
   Repeat2, CheckCircle2, RefreshCw, AlertTriangle, Clock,
-  TrendingUp, Zap, ChevronRight, Target, Shield, X, CalendarClock,
-  User, ArrowRight, MoreHorizontal
+  TrendingUp, Zap, Target, Shield, X, CalendarClock,
+  User, ArrowRight, ClipboardCheck
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -27,8 +27,16 @@ function analyzeContract(contract) {
   const cancelDays = daysUntil(contract.cancellation_deadline)
   const actions = []
 
+  // Placeholder-Daten (9999): als separate Kategorie behandeln, NICHT als normale Renewals
+  const isPlaceholderEnd    = contract.end_date?.startsWith('9999')
+  const isPlaceholderCancel = contract.cancellation_deadline?.startsWith('9999')
+  if (isPlaceholderEnd || isPlaceholderCancel || contract.requires_review) {
+    actions.push({ type: 'review_required', severity: 'review_required', days: null })
+    return actions
+  }
+
   if (contract.status === 'expired' || (endDays !== null && endDays < 0)) {
-    actions.push({ type: 'expired', label: `Abgelaufen`, severity: 'expired', days: endDays ?? -1 })
+    actions.push({ type: 'expired', label: 'Abgelaufen', severity: 'expired', days: endDays ?? -1 })
   }
   if (cancelDays !== null && cancelDays >= -30 && cancelDays <= 365) {
     const sev = cancelDays <= 0 ? 'expired' : cancelDays <= 30 ? 'critical' : cancelDays <= 60 ? 'urgent' : cancelDays <= 90 ? 'warning' : cancelDays <= 150 ? 'process' : 'early'
@@ -46,21 +54,22 @@ function analyzeContract(contract) {
 
 // ── Design-Tokens ─────────────────────────────────────────────────────────────
 const SEV = {
-  expired:  { badge: 'bg-red-700 text-white',        countText: 'text-red-700',    rowBg: 'hover:bg-red-50/50',   borderL: 'border-l-red-500',    label: 'Abgelaufen',      barColor: 'bg-red-500',    kpiBg: 'bg-red-50', kpiBorder: 'border-red-200', kpiText: 'text-red-700' },
-  critical: { badge: 'bg-red-500 text-white',        countText: 'text-red-600',    rowBg: 'hover:bg-red-50/40',   borderL: 'border-l-red-400',    label: 'Kritisch',        barColor: 'bg-red-400',    kpiBg: 'bg-red-50', kpiBorder: 'border-red-200', kpiText: 'text-red-600' },
-  urgent:   { badge: 'bg-orange-500 text-white',     countText: 'text-orange-600', rowBg: 'hover:bg-orange-50/40',borderL: 'border-l-orange-400', label: 'Dringend',        barColor: 'bg-orange-400', kpiBg: 'bg-orange-50', kpiBorder: 'border-orange-200', kpiText: 'text-orange-600' },
-  warning:  { badge: 'bg-amber-400 text-white',      countText: 'text-amber-700',  rowBg: 'hover:bg-amber-50/40', borderL: 'border-l-amber-400',  label: 'Bald fällig',     barColor: 'bg-amber-400',  kpiBg: 'bg-amber-50', kpiBorder: 'border-amber-200', kpiText: 'text-amber-700' },
-  process:  { badge: 'bg-blue-100 text-blue-700',    countText: 'text-blue-700',   rowBg: 'hover:bg-blue-50/30',  borderL: 'border-l-blue-300',   label: 'Vorbereitung',    barColor: 'bg-blue-300',   kpiBg: 'bg-blue-50', kpiBorder: 'border-blue-200', kpiText: 'text-blue-700' },
-  early:    { badge: 'bg-slate-100 text-slate-600',  countText: 'text-slate-600',  rowBg: 'hover:bg-slate-50/30', borderL: 'border-l-slate-300',  label: 'Früh',            barColor: 'bg-slate-300',  kpiBg: 'bg-slate-50', kpiBorder: 'border-slate-200', kpiText: 'text-slate-600' },
+  expired:         { badge: 'bg-red-700 text-white',       countText: 'text-red-700',    rowBg: 'hover:bg-red-50/50',    borderL: 'border-l-red-500',    label: 'Abgelaufen',           barColor: 'bg-red-500',    kpiBg: 'bg-red-50',    kpiBorder: 'border-red-200',    kpiText: 'text-red-700' },
+  critical:        { badge: 'bg-red-500 text-white',        countText: 'text-red-600',    rowBg: 'hover:bg-red-50/40',    borderL: 'border-l-red-400',    label: 'Kritisch',             barColor: 'bg-red-400',    kpiBg: 'bg-red-50',    kpiBorder: 'border-red-200',    kpiText: 'text-red-600' },
+  urgent:          { badge: 'bg-orange-500 text-white',     countText: 'text-orange-600', rowBg: 'hover:bg-orange-50/40', borderL: 'border-l-orange-400', label: 'Dringend',             barColor: 'bg-orange-400', kpiBg: 'bg-orange-50', kpiBorder: 'border-orange-200', kpiText: 'text-orange-600' },
+  warning:         { badge: 'bg-amber-400 text-white',      countText: 'text-amber-700',  rowBg: 'hover:bg-amber-50/40',  borderL: 'border-l-amber-400',  label: 'Bald fällig',          barColor: 'bg-amber-400',  kpiBg: 'bg-amber-50',  kpiBorder: 'border-amber-200',  kpiText: 'text-amber-700' },
+  process:         { badge: 'bg-blue-100 text-blue-700',    countText: 'text-blue-700',   rowBg: 'hover:bg-blue-50/30',   borderL: 'border-l-blue-300',   label: 'Vorbereitung',         barColor: 'bg-blue-300',   kpiBg: 'bg-blue-50',   kpiBorder: 'border-blue-200',   kpiText: 'text-blue-700' },
+  early:           { badge: 'bg-slate-100 text-slate-600',  countText: 'text-slate-600',  rowBg: 'hover:bg-slate-50/30',  borderL: 'border-l-slate-300',  label: 'Früh',                 barColor: 'bg-slate-300',  kpiBg: 'bg-slate-50',  kpiBorder: 'border-slate-200',  kpiText: 'text-slate-600' },
+  review_required: { badge: 'bg-amber-100 text-amber-800',  countText: 'text-amber-700',  rowBg: 'hover:bg-amber-50/30',  borderL: 'border-l-amber-400',  label: 'Prüfung erforderlich', barColor: 'bg-amber-300',  kpiBg: 'bg-amber-50',  kpiBorder: 'border-amber-200',  kpiText: 'text-amber-700' },
 }
 
 const PROCESS_STATUS = {
-  neu:                       { label: 'Neu',             color: 'text-slate-500' },
-  pruefung_offen:            { label: 'Prüfung offen',   color: 'text-amber-600' },
-  kunde_kontaktieren:        { label: 'Kontaktieren',    color: 'text-blue-600' },
-  verlaengerung_vorbereiten: { label: 'Verlängerung',    color: 'text-violet-600' },
-  beratung_erfolgt:          { label: 'Beraten',         color: 'text-teal-600' },
-  erledigt:                  { label: 'Erledigt',        color: 'text-green-600' },
+  neu:                       { label: 'Neu',           color: 'text-slate-500' },
+  pruefung_offen:            { label: 'Prüfung offen', color: 'text-amber-600' },
+  kunde_kontaktieren:        { label: 'Kontaktieren',  color: 'text-blue-600' },
+  verlaengerung_vorbereiten: { label: 'Verlängerung',  color: 'text-violet-600' },
+  beratung_erfolgt:          { label: 'Beraten',       color: 'text-teal-600' },
+  erledigt:                  { label: 'Erledigt',      color: 'text-green-600' },
 }
 
 // ── Countdown Bar ─────────────────────────────────────────────────────────────
@@ -82,20 +91,15 @@ function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange }) {
   const ablaufAction     = actions.find(a => a.type === 'ablauf' || a.type === 'expired')
   const kuendigungAction = actions.find(a => a.type === 'kuendigung')
   const isExpired = contract.status === 'expired' || (endDays !== null && endDays < 0)
+  const isReview  = topAction.severity === 'review_required'
 
   return (
     <div
-      className={cn(
-        'grid items-center border-b border-border/40 transition-colors cursor-pointer border-l-[3px]',
-        cfg.rowBg, cfg.borderL
-      )}
+      className={cn('grid items-center border-b border-border/40 transition-colors cursor-pointer border-l-[3px]', cfg.rowBg, cfg.borderL)}
       style={{ gridTemplateColumns: '200px 140px 1fr 100px 100px 100px 160px 110px' }}
     >
       {/* Kunde */}
-      <div
-        className="py-2.5 px-3 min-w-0"
-        onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}/360`)}
-      >
+      <div className="py-2.5 px-3 min-w-0" onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}/360`)}>
         <p className="text-[12px] font-semibold truncate hover:text-primary transition-colors leading-tight">{contract.customer_name || '–'}</p>
         <p className="text-[10px] text-muted-foreground truncate">{contract.insurer || '–'} · {getSparteLabel(contract.sparte || contract.insurance_type) || '–'}</p>
       </div>
@@ -110,50 +114,46 @@ function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange }) {
 
       {/* Countdown */}
       <div className="py-2.5 px-3 min-w-0 space-y-1">
-        {/* Ablauf */}
-        {ablaufAction && (
-          <div>
-            <div className="flex items-center justify-between mb-0.5">
-              <span className="text-[10px] text-muted-foreground">Ablauf</span>
-              <span className={cn('text-[11px] font-bold', cfg.countText)}>
-                {isExpired
-                  ? `vor ${Math.abs(endDays ?? 0)}d`
-                  : endDays !== null ? `${endDays}d` : fmtDate(contract.end_date)}
-              </span>
-            </div>
-            {!isExpired && endDays !== null && (
-              <CountdownBar days={endDays} color={cfg.barColor} />
+        {isReview ? (
+          <p className="text-[10px] text-amber-700 font-semibold">⚠ Datum prüfen</p>
+        ) : (
+          <>
+            {ablaufAction && (
+              <div>
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[10px] text-muted-foreground">Ablauf</span>
+                  <span className={cn('text-[11px] font-bold', cfg.countText)}>
+                    {isExpired ? `vor ${Math.abs(endDays ?? 0)}d` : endDays !== null ? `${endDays}d` : fmtDate(contract.end_date)}
+                  </span>
+                </div>
+                {!isExpired && endDays !== null && <CountdownBar days={endDays} color={cfg.barColor} />}
+              </div>
             )}
-          </div>
-        )}
-        {/* Kündigung */}
-        {kuendigungAction && (
-          <div>
-            <div className="flex items-center justify-between mb-0.5">
-              <span className="text-[10px] text-muted-foreground">Kündigung</span>
-              <span className={cn('text-[10px] font-semibold', (cancelDays ?? 1) <= 0 ? 'text-red-600' : 'text-slate-600')}>
-                {(cancelDays ?? 1) <= 0 ? 'Abgelaufen' : `${cancelDays}d`}
-              </span>
-            </div>
-            {(cancelDays ?? 0) > 0 && (
-              <CountdownBar days={cancelDays} color={cfg.barColor} />
+            {kuendigungAction && (
+              <div>
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[10px] text-muted-foreground">Kündigung</span>
+                  <span className={cn('text-[10px] font-semibold', (cancelDays ?? 1) <= 0 ? 'text-red-600' : 'text-slate-600')}>
+                    {(cancelDays ?? 1) <= 0 ? 'Abgelaufen' : `${cancelDays}d`}
+                  </span>
+                </div>
+                {(cancelDays ?? 0) > 0 && <CountdownBar days={cancelDays} color={cfg.barColor} />}
+              </div>
             )}
-          </div>
-        )}
-        {!ablaufAction && !kuendigungAction && (
-          <p className="text-[10px] text-muted-foreground">–</p>
+            {!ablaufAction && !kuendigungAction && <p className="text-[10px] text-muted-foreground">–</p>}
+          </>
         )}
       </div>
 
       {/* Ablaufdatum */}
       <div className="py-2.5 px-2 text-center">
-        <p className="text-[11px] font-medium">{fmtDate(contract.end_date)}</p>
+        <p className="text-[11px] font-medium">{isReview ? '—' : fmtDate(contract.end_date)}</p>
         <p className="text-[9px] text-muted-foreground">Ablauf</p>
       </div>
 
       {/* Kündigungsfrist */}
       <div className="py-2.5 px-2 text-center">
-        <p className="text-[11px] font-medium">{fmtDate(contract.cancellation_deadline)}</p>
+        <p className="text-[11px] font-medium">{isReview ? '—' : fmtDate(contract.cancellation_deadline)}</p>
         <p className="text-[9px] text-muted-foreground">Kündigung bis</p>
       </div>
 
@@ -195,16 +195,12 @@ function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange }) {
   )
 }
 
-// ── KPI Card (klickbar) ───────────────────────────────────────────────────────
+// ── KPI Card ──────────────────────────────────────────────────────────────────
 function KpiCard({ label, sublabel, value, icon: Icon, cfg, active, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={cn(
-        'p-3 rounded-xl border text-left transition-all hover:shadow-sm flex-1 min-w-[100px] relative',
-        cfg.kpiBg, cfg.kpiBorder,
-        active && 'ring-2 ring-primary ring-offset-1'
-      )}
+      className={cn('p-3 rounded-xl border text-left transition-all hover:shadow-sm flex-1 min-w-[100px] relative', cfg.kpiBg, cfg.kpiBorder, active && 'ring-2 ring-primary ring-offset-1')}
     >
       {active && <X className="absolute top-2 right-2 w-3 h-3 text-muted-foreground" />}
       <p className={cn('text-2xl font-black leading-none', cfg.kpiText)}>{value}</p>
@@ -215,7 +211,7 @@ function KpiCard({ label, sublabel, value, icon: Icon, cfg, active, onClick }) {
 }
 
 // ── Section Divider ───────────────────────────────────────────────────────────
-function SectionDivider({ icon: Icon, label, count, cfg }) {
+function SectionDivider({ label, count, cfg }) {
   return (
     <div className={cn('flex items-center gap-2 px-3 py-2 text-[11px] font-semibold', cfg.kpiBg)}>
       <div className={cn('w-1.5 h-1.5 rounded-full', cfg.barColor)} />
@@ -228,10 +224,8 @@ function SectionDivider({ icon: Icon, label, count, cfg }) {
 // ── Table Header ──────────────────────────────────────────────────────────────
 function TableHeader() {
   return (
-    <div
-      className="grid text-[9px] font-bold uppercase tracking-wider text-muted-foreground bg-slate-50/80 border-b border-border"
-      style={{ gridTemplateColumns: '200px 140px 1fr 100px 100px 100px 160px 110px' }}
-    >
+    <div className="grid text-[9px] font-bold uppercase tracking-wider text-muted-foreground bg-slate-50/80 border-b border-border"
+      style={{ gridTemplateColumns: '200px 140px 1fr 100px 100px 100px 160px 110px' }}>
       <div className="py-2.5 px-3">Kunde / Versicherer</div>
       <div className="py-2.5 px-2">Police / Prämie</div>
       <div className="py-2.5 px-3">Countdown</div>
@@ -244,7 +238,7 @@ function TableHeader() {
   )
 }
 
-// ── Tagespension (Heute) ──────────────────────────────────────────────────────
+// ── Today Panel ───────────────────────────────────────────────────────────────
 function TodayPanel({ items }) {
   const today = items.filter(i => {
     const sev = i.topAction?.severity
@@ -271,25 +265,15 @@ function TodayPanel({ items }) {
                 <span className="text-muted-foreground mx-1.5">·</span>
                 <span className="text-muted-foreground">{item.contract.insurer || '–'}</span>
               </div>
-              {endDays !== null && endDays < 0 && (
-                <span className="text-red-600 font-bold">Abgelaufen vor {Math.abs(endDays)}d</span>
-              )}
-              {endDays !== null && endDays >= 0 && endDays <= 30 && (
-                <span className="text-red-600 font-bold">Ablauf in {endDays}d</span>
-              )}
-              {cancelDays !== null && cancelDays <= 30 && cancelDays >= 0 && (
-                <span className="text-red-500">Kündigung in {cancelDays}d</span>
-              )}
-              {fmtCHF(item.contract.premium_yearly) && (
-                <span className="text-emerald-700 font-semibold shrink-0">{fmtCHF(item.contract.premium_yearly)}</span>
-              )}
+              {endDays !== null && endDays < 0 && <span className="text-red-600 font-bold">Abgelaufen vor {Math.abs(endDays)}d</span>}
+              {endDays !== null && endDays >= 0 && endDays <= 30 && <span className="text-red-600 font-bold">Ablauf in {endDays}d</span>}
+              {cancelDays !== null && cancelDays <= 30 && cancelDays >= 0 && <span className="text-red-500">Kündigung in {cancelDays}d</span>}
+              {fmtCHF(item.contract.premium_yearly) && <span className="text-emerald-700 font-semibold shrink-0">{fmtCHF(item.contract.premium_yearly)}</span>}
             </div>
           )
         })}
         {today.length > 5 && (
-          <div className="px-4 py-2 text-[10px] text-red-600 font-semibold">
-            + {today.length - 5} weitere kritische Fälle
-          </div>
+          <div className="px-4 py-2 text-[10px] text-red-600 font-semibold">+ {today.length - 5} weitere kritische Fälle</div>
         )}
       </div>
     </div>
@@ -337,6 +321,8 @@ export default function Vertragsablaeufe() {
         if (c.archived) return false
         if (['cancelled', 'archived'].includes(c.status)) return false
         if (c.process_status === 'erledigt' && filterProcessStatus !== 'erledigt') return false
+        // Verträge mit Platzhalter-Daten IMMER einbeziehen
+        if (c.requires_review || c.end_date?.startsWith('9999') || c.cancellation_deadline?.startsWith('9999')) return true
         if (c.status === 'expired') return true
         const endDays = daysUntil(c.end_date)
         const cancelDays = daysUntil(c.cancellation_deadline)
@@ -350,7 +336,7 @@ export default function Vertragsablaeufe() {
       })
       .filter(item => item.actions.length > 0)
       .sort((a, b) => {
-        const order = { expired: 0, critical: 1, urgent: 2, warning: 3, process: 4, early: 5 }
+        const order = { review_required: 0, expired: 1, critical: 2, urgent: 3, warning: 4, process: 5, early: 6 }
         const ao = order[a.topAction?.severity] ?? 9
         const bo = order[b.topAction?.severity] ?? 9
         if (ao !== bo) return ao - bo
@@ -361,11 +347,12 @@ export default function Vertragsablaeufe() {
   const filtered = useMemo(() => actionableItems.filter(item => {
     if (filterSeverity !== 'all') {
       const sev = item.topAction?.severity
+      if (filterSeverity === 'review_required' && sev !== 'review_required') return false
       if (filterSeverity === 'critical' && !['expired', 'critical'].includes(sev)) return false
-      if (filterSeverity === 'urgent'  && sev !== 'urgent')  return false
-      if (filterSeverity === 'warning' && sev !== 'warning') return false
-      if (filterSeverity === 'process' && sev !== 'process') return false
-      if (filterSeverity === 'early'   && sev !== 'early')   return false
+      if (filterSeverity === 'urgent'   && sev !== 'urgent')   return false
+      if (filterSeverity === 'warning'  && sev !== 'warning')  return false
+      if (filterSeverity === 'process'  && sev !== 'process')  return false
+      if (filterSeverity === 'early'    && sev !== 'early')    return false
     }
     if (filterProcessStatus !== 'all' && item.contract.process_status !== filterProcessStatus) return false
     if (search) {
@@ -377,61 +364,44 @@ export default function Vertragsablaeufe() {
   }), [actionableItems, filterSeverity, filterProcessStatus, search])
 
   const stats = useMemo(() => ({
-    expired:  actionableItems.filter(i => i.topAction?.severity === 'expired').length,
-    critical: actionableItems.filter(i => i.topAction?.severity === 'critical').length,
-    urgent:   actionableItems.filter(i => i.topAction?.severity === 'urgent').length,
-    warning:  actionableItems.filter(i => i.topAction?.severity === 'warning').length,
-    process:  actionableItems.filter(i => i.topAction?.severity === 'process').length,
-    early:    actionableItems.filter(i => i.topAction?.severity === 'early').length,
-    totalPremium: actionableItems.reduce((s, i) => s + (i.contract.premium_yearly || 0), 0),
+    expired:         actionableItems.filter(i => i.topAction?.severity === 'expired').length,
+    critical:        actionableItems.filter(i => i.topAction?.severity === 'critical').length,
+    urgent:          actionableItems.filter(i => i.topAction?.severity === 'urgent').length,
+    warning:         actionableItems.filter(i => i.topAction?.severity === 'warning').length,
+    process:         actionableItems.filter(i => i.topAction?.severity === 'process').length,
+    early:           actionableItems.filter(i => i.topAction?.severity === 'early').length,
+    review_required: actionableItems.filter(i => i.topAction?.severity === 'review_required').length,
+    totalPremium:    actionableItems.filter(i => i.topAction?.severity !== 'review_required').reduce((s, i) => s + (i.contract.premium_yearly || 0), 0),
   }), [actionableItems])
 
   const groups = {
-    expired:  filtered.filter(i => i.topAction?.severity === 'expired'),
-    critical: filtered.filter(i => i.topAction?.severity === 'critical'),
-    urgent:   filtered.filter(i => i.topAction?.severity === 'urgent'),
-    warning:  filtered.filter(i => i.topAction?.severity === 'warning'),
-    process:  filtered.filter(i => i.topAction?.severity === 'process'),
-    early:    filtered.filter(i => i.topAction?.severity === 'early'),
+    expired:         filtered.filter(i => i.topAction?.severity === 'expired'),
+    critical:        filtered.filter(i => i.topAction?.severity === 'critical'),
+    urgent:          filtered.filter(i => i.topAction?.severity === 'urgent'),
+    warning:         filtered.filter(i => i.topAction?.severity === 'warning'),
+    process:         filtered.filter(i => i.topAction?.severity === 'process'),
+    early:           filtered.filter(i => i.topAction?.severity === 'early'),
+    review_required: filtered.filter(i => i.topAction?.severity === 'review_required'),
   }
 
   const handleCreateVs = (contract) => {
-    // Prüfen ob bereits Verkaufschance existiert
-    const existingVs = verkaufschancen?.find(v => 
-      v.linked_contract_id === contract.id && 
-      !['gewonnen', 'verloren'].includes(v.status)
+    const existingVs = verkaufschancen?.find(v =>
+      v.linked_contract_id === contract.id && !['gewonnen', 'verloren'].includes(v.status)
     )
-    
-    if (existingVs) {
-      // Bereits Verkaufschance vorhanden → direkt navigieren
-      navigate(`/verkaufschancen?detail=${existingVs.id}`)
-      return
-    }
+    if (existingVs) { navigate(`/verkaufschancen?detail=${existingVs.id}`); return }
 
-    // Kontext-Informationen anzeigen vor Erstellung
-    const hasOpenTasks = tasks?.some(t => 
-      t.contract_id === contract.id && 
-      t.status !== 'completed'
-    )
+    const hasOpenTasks = tasks?.some(t => t.contract_id === contract.id && t.status !== 'completed')
     const lastContact = contract.renewal_last_activity ? fmtDate(contract.renewal_last_activity) : 'Kein Kontakt'
-    
+
     if (confirm(
-      `Verkaufschance erstellen für:\n` +
-      `${contract.customer_name} · ${contract.insurer}\n\n` +
-      `Kontext:\n` +
-      `• Ablauf: ${fmtDate(contract.end_date)}\n` +
-      `• Kündigung bis: ${fmtDate(contract.cancellation_deadline)}\n` +
-      `• Prozess-Status: ${PROCESS_STATUS[contract.process_status]?.label || contract.process_status}\n` +
-      `• Letzter Kontakt: ${lastContact}\n` +
-      `• Offene Aufgaben: ${hasOpenTasks ? 'Ja' : 'Nein'}\n\n` +
-      `Möchten Sie diese Verkaufschance erstellen?`
+      `Verkaufschance erstellen für:\n${contract.customer_name} · ${contract.insurer}\n\nKontext:\n• Ablauf: ${fmtDate(contract.end_date)}\n• Kündigung bis: ${fmtDate(contract.cancellation_deadline)}\n• Prozess-Status: ${PROCESS_STATUS[contract.process_status]?.label || contract.process_status}\n• Letzter Kontakt: ${lastContact}\n• Offene Aufgaben: ${hasOpenTasks ? 'Ja' : 'Nein'}\n\nMöchten Sie diese Verkaufschance erstellen?`
     )) {
       createVsMutation.mutate({
-        customer_id:     contract.customer_id,
-        customer_name:   contract.customer_name,
+        customer_id: contract.customer_id,
+        customer_name: contract.customer_name,
         organization_id: contract.organization_id,
-        sparte:          contract.sparte || contract.insurance_type,
-        status:          'neu',
+        sparte: contract.sparte || contract.insurance_type,
+        status: 'neu',
         linked_contract_id: contract.id,
         title: `Verlängerung ${contract.insurer} – ${getSparteLabel(contract.sparte || contract.insurance_type) || ''}`,
         estimated_value: contract.premium_yearly || 0,
@@ -446,21 +416,23 @@ export default function Vertragsablaeufe() {
 
   const hasFilters = search || filterSeverity !== 'all' || filterProcessStatus !== 'all'
 
+  const GROUP_LABELS = {
+    expired:         'Bereits abgelaufen — sofort handeln',
+    critical:        'Kritisch — innerhalb 30 Tage',
+    urgent:          'Dringend — 30 bis 60 Tage',
+    warning:         'Bald fällig — 60 bis 90 Tage',
+    process:         'In Vorbereitung — 90 bis 150 Tage',
+    early:           'Früh — 150 bis 180 Tage',
+    review_required: '⚠ Manuelle Datumsprüfung ausstehend — Platzhalter 9999-12-31',
+  }
+
   const renderGroup = (key) => {
     const items = groups[key]
-    if (items.length === 0) return null
+    if (!items || items.length === 0) return null
     const cfg = SEV[key]
-    const labels = {
-      expired:  'Bereits abgelaufen — sofort handeln',
-      critical: 'Kritisch — innerhalb 30 Tage',
-      urgent:   'Dringend — 30 bis 60 Tage',
-      warning:  'Bald fällig — 60 bis 90 Tage',
-      process:  'In Vorbereitung — 90 bis 150 Tage',
-      early:    'Früh — 150 bis 180 Tage',
-    }
     return (
       <div key={key}>
-        <SectionDivider label={labels[key]} count={items.length} cfg={cfg} />
+        <SectionDivider label={GROUP_LABELS[key]} count={items.length} cfg={cfg} />
         {items.map(item => (
           <CockpitRow
             key={item.contract.id}
@@ -502,12 +474,15 @@ export default function Vertragsablaeufe() {
 
       {/* ── KPI Strip ── */}
       <div className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
-        <KpiCard label="Abgelaufen"     sublabel="Sofort handeln"  value={stats.expired}  icon={AlertTriangle} cfg={SEV.expired}  active={filterSeverity === 'critical'} onClick={() => setFilterSeverity(f => f === 'critical' ? 'all' : 'critical')} />
-        <KpiCard label="Kritisch"       sublabel="≤ 30 Tage"       value={stats.critical} icon={Zap}           cfg={SEV.critical} active={filterSeverity === 'critical'} onClick={() => setFilterSeverity(f => f === 'critical' ? 'all' : 'critical')} />
-        <KpiCard label="Dringend"       sublabel="30–60 Tage"      value={stats.urgent}   icon={Clock}         cfg={SEV.urgent}   active={filterSeverity === 'urgent'}   onClick={() => setFilterSeverity(f => f === 'urgent' ? 'all' : 'urgent')} />
-        <KpiCard label="Bald fällig"    sublabel="60–90 Tage"      value={stats.warning}  icon={CalendarClock} cfg={SEV.warning}  active={filterSeverity === 'warning'}  onClick={() => setFilterSeverity(f => f === 'warning' ? 'all' : 'warning')} />
-        <KpiCard label="Vorbereitung"   sublabel="90–150 Tage"     value={stats.process}  icon={TrendingUp}    cfg={SEV.process}  active={filterSeverity === 'process'}  onClick={() => setFilterSeverity(f => f === 'process' ? 'all' : 'process')} />
-        <KpiCard label="Früh"           sublabel="150–180 Tage"    value={stats.early}    icon={CalendarClock} cfg={SEV.early}    active={filterSeverity === 'early'}    onClick={() => setFilterSeverity(f => f === 'early' ? 'all' : 'early')} />
+        <KpiCard label="Abgelaufen"   sublabel="Sofort handeln" value={stats.expired}         icon={AlertTriangle} cfg={SEV.expired}         active={filterSeverity === 'expired'}         onClick={() => setFilterSeverity(f => f === 'expired' ? 'all' : 'expired')} />
+        <KpiCard label="Kritisch"     sublabel="≤ 30 Tage"      value={stats.critical}        icon={Zap}           cfg={SEV.critical}        active={filterSeverity === 'critical'}        onClick={() => setFilterSeverity(f => f === 'critical' ? 'all' : 'critical')} />
+        <KpiCard label="Dringend"     sublabel="30–60 Tage"     value={stats.urgent}          icon={Clock}         cfg={SEV.urgent}          active={filterSeverity === 'urgent'}          onClick={() => setFilterSeverity(f => f === 'urgent' ? 'all' : 'urgent')} />
+        <KpiCard label="Bald fällig"  sublabel="60–90 Tage"     value={stats.warning}         icon={CalendarClock} cfg={SEV.warning}         active={filterSeverity === 'warning'}         onClick={() => setFilterSeverity(f => f === 'warning' ? 'all' : 'warning')} />
+        <KpiCard label="Vorbereitung" sublabel="90–150 Tage"    value={stats.process}         icon={TrendingUp}    cfg={SEV.process}         active={filterSeverity === 'process'}         onClick={() => setFilterSeverity(f => f === 'process' ? 'all' : 'process')} />
+        <KpiCard label="Früh"         sublabel="150–180 Tage"   value={stats.early}           icon={CalendarClock} cfg={SEV.early}           active={filterSeverity === 'early'}           onClick={() => setFilterSeverity(f => f === 'early' ? 'all' : 'early')} />
+        {stats.review_required > 0 && (
+          <KpiCard label="Datumsprüfung" sublabel="Platzhalter gesetzt" value={stats.review_required} icon={ClipboardCheck} cfg={SEV.review_required} active={filterSeverity === 'review_required'} onClick={() => setFilterSeverity(f => f === 'review_required' ? 'all' : 'review_required')} />
+        )}
         {stats.totalPremium > 0 && (
           <div className="flex-1 min-w-[150px] p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-left">
             <TrendingUp className="w-3.5 h-3.5 text-emerald-600 mb-1" />
@@ -524,17 +499,13 @@ export default function Vertragsablaeufe() {
       {/* ── Filter Bar ── */}
       <div className="flex gap-2 flex-wrap items-center">
         <div className="relative">
-          <Input
-            placeholder="Kunde, Versicherer, Police..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-[220px] h-8 text-xs pl-3"
-          />
+          <Input placeholder="Kunde, Versicherer, Police..." value={search} onChange={e => setSearch(e.target.value)} className="w-[220px] h-8 text-xs pl-3" />
         </div>
         <Select value={filterSeverity} onValueChange={setFilterSeverity}>
-          <SelectTrigger className="w-44 h-8 text-xs"><SelectValue placeholder="Dringlichkeit" /></SelectTrigger>
+          <SelectTrigger className="w-48 h-8 text-xs"><SelectValue placeholder="Dringlichkeit" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Alle Dringlichkeiten</SelectItem>
+            <SelectItem value="review_required">⚠ Datumsprüfung ausstehend</SelectItem>
             <SelectItem value="critical">Kritisch / Abgelaufen</SelectItem>
             <SelectItem value="urgent">Dringend (30–60d)</SelectItem>
             <SelectItem value="warning">Bald fällig (60–90d)</SelectItem>
@@ -578,7 +549,7 @@ export default function Vertragsablaeufe() {
         <div className="rounded-xl border border-border overflow-hidden bg-card shadow-xs overflow-x-auto">
           <TableHeader />
           <div>
-            {['expired', 'critical', 'urgent', 'warning', 'process', 'early'].map(renderGroup)}
+            {['review_required', 'expired', 'critical', 'urgent', 'warning', 'process', 'early'].map(renderGroup)}
           </div>
         </div>
       )}

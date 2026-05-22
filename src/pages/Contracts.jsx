@@ -2,7 +2,8 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Edit, Trash2, FileText, Calendar, Building2, Tag, Download, Upload, User } from 'lucide-react'
+import { Plus, Edit, Trash2, FileText, Calendar, Building2, Tag, Download, Upload, User, AlertTriangle } from 'lucide-react'
+import DateQualityBadge from '@/components/contracts/DateQualityBadge'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -24,6 +25,7 @@ export default function Contracts() {
   const [showImport, setShowImport] = useState(false)
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
+  const [filterReviewOnly, setFilterReviewOnly] = useState(false)
   const [statusChanging, setStatusChanging] = useState(null)
   const [expandedDocs, setExpandedDocs] = useState(null)
   const [importFile, setImportFile] = useState(null)
@@ -60,20 +62,12 @@ export default function Contracts() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Contract.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contracts'] })
-      setShowForm(false)
-      setEditing(null)
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contracts'] }); setShowForm(false); setEditing(null) },
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Contract.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contracts'] })
-      setShowForm(false)
-      setEditing(null)
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contracts'] }); setShowForm(false); setEditing(null) },
   })
 
   const deleteMutation = useMutation({
@@ -84,16 +78,15 @@ export default function Contracts() {
   const getCustomer = (id) => customers.find(c => c.id === id)
 
   const filtered = contracts.filter(c => {
+    if (filterReviewOnly && !c.requires_review) return false
     if (!search.trim()) return true
-    
     const customer = getCustomer(c.customer_id)
     const customerFullName = customer ? `${customer.first_name} ${customer.last_name}` : ''
     const customerCompanyName = customer?.company_name || ''
-    
-    // Include contract.customer_name as fallback if customer_id broken
     const searchStr = `${c.customer_name} ${customerFullName} ${customerCompanyName} ${c.insurer} ${c.policy_number} ${c.product || ''}`.toLowerCase()
     return searchStr.includes(search.toLowerCase())
   })
+
   const getContractDocuments = (contractId) => documents.filter(d => d.linked_contract_id === contractId)
 
   const handleSave = (data) => {
@@ -135,34 +128,18 @@ export default function Contracts() {
 
   const handleImport = async () => {
     if (!importFile) return
-    
     setImportProgress('Datei wird hochgeladen...')
     try {
-      // Upload file first
       const formData = new FormData()
       formData.append('file', importFile)
-      const uploadRes = await fetch('https://api.base44.com/upload', {
-        method: 'POST',
-        body: formData,
-      })
+      const uploadRes = await fetch('https://api.base44.com/upload', { method: 'POST', body: formData })
       const { file_url } = await uploadRes.json()
-
-      // Call import function
-      const result = await base44.functions.invoke('importEntityData', {
-        entity_name: 'Contract',
-        file_url
-      })
-
+      const result = await base44.functions.invoke('importEntityData', { entity_name: 'Contract', file_url })
       setImportProgress(`✓ ${result.data.successful} Verträge importiert`)
-      if (result.data.failed > 0) {
-        setImportProgress(prev => `${prev} (${result.data.failed} Fehler)`)
-      }
-      
+      if (result.data.failed > 0) setImportProgress(prev => `${prev} (${result.data.failed} Fehler)`)
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['contracts'] })
-        setShowImport(false)
-        setImportFile(null)
-        setImportProgress(null)
+        setShowImport(false); setImportFile(null); setImportProgress(null)
       }, 2000)
     } catch (error) {
       setImportProgress(`✗ Fehler: ${error.message}`)
@@ -173,15 +150,10 @@ export default function Contracts() {
     if (filtered.length === 0) return
     const headers = ['ID', 'Kunde', 'Sparte', 'Versicherer', 'Produkt', 'Jahresprämie', 'Gültig ab', 'Gültig bis', 'Status']
     const rows = filtered.map(c => [
-      c.id,
-      c.customer_name,
-      getSparteLabel(c.sparte || c.insurance_type) || '',
-      c.insurer,
-      c.product || '',
-      c.premium_yearly || '',
+      c.id, c.customer_name, getSparteLabel(c.sparte || c.insurance_type) || '',
+      c.insurer, c.product || '', c.premium_yearly || '',
       c.start_date ? new Date(c.start_date).toLocaleDateString('de-CH') : '',
-      c.end_date ? new Date(c.end_date).toLocaleDateString('de-CH') : '',
-      c.status
+      c.end_date ? new Date(c.end_date).toLocaleDateString('de-CH') : '', c.status
     ])
     const csv = [headers, ...rows].map(r => r.map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -190,6 +162,8 @@ export default function Contracts() {
     link.download = `vertraege_export_${new Date().toISOString().slice(0, 10)}.csv`
     link.click()
   }
+
+  const reviewCount = contracts.filter(c => c.requires_review).length
 
   return (
     <div>
@@ -214,11 +188,24 @@ export default function Contracts() {
         }
       />
 
-      <FilterBar
-        search={search}
-        onSearchChange={setSearch}
-        placeholder="Suche (Kunde, Versicherer, Police...)"
-      />
+      <FilterBar search={search} onSearchChange={setSearch} placeholder="Suche (Kunde, Versicherer, Police...)" />
+
+      {reviewCount > 0 && (
+        <div className="px-0 mb-3">
+          <button
+            onClick={() => setFilterReviewOnly(f => !f)}
+            className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+              filterReviewOnly
+                ? 'bg-amber-500 text-white border-amber-500'
+                : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100'
+            }`}
+          >
+            <AlertTriangle className="w-3.5 h-3.5" />
+            Datumsprüfung ausstehend ({reviewCount})
+            {filterReviewOnly && ' — Filter aktiv'}
+          </button>
+        </div>
+      )}
 
       <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
         <div className="p-0">
@@ -241,7 +228,6 @@ export default function Contracts() {
           ) : (
             filtered.map((contract, idx) => {
               const docsOpen = expandedDocs === contract.id
-              const contractDocs = getContractDocuments(contract.id)
               const customer = getCustomer(contract.customer_id)
               return (
                 <div key={contract.id} className={idx > 0 ? 'border-t border-border' : ''}>
@@ -249,16 +235,11 @@ export default function Contracts() {
                     {/* Kunde */}
                     <div className="min-w-0">
                       <p className="font-semibold text-xs truncate">
-                        {contract.customer_name ||
-                          (customer ? `${customer.first_name} ${customer.last_name}` : '–')}
+                        {contract.customer_name || (customer ? `${customer.first_name} ${customer.last_name}` : '–')}
                       </p>
-                      {(() => {
-                        const cust = getCustomer(contract.customer_id)
-                        const ahv = cust?.ahv_number
-                        return ahv ? (
-                          <p className="text-xs font-mono text-muted-foreground mt-0.5">{ahv}</p>
-                        ) : null
-                      })()}
+                      {customer?.ahv_number && (
+                        <p className="text-xs font-mono text-muted-foreground mt-0.5">{customer.ahv_number}</p>
+                      )}
                     </div>
 
                     {/* Sparte / Versicherer */}
@@ -345,25 +326,32 @@ export default function Contracts() {
                       <button onClick={() => setStatusChanging(contract)} className="hover:opacity-80 transition-opacity mb-1">
                         <StatusBadge statusDef={getStatusDef(contract)} label={getStatusDef(contract)?.label || contract.status} />
                       </button>
+                      {contract.requires_review && (
+                        <DateQualityBadge
+                          dateQualityStatus={contract.date_quality_status}
+                          requiresReview={contract.requires_review}
+                          variant="compact"
+                        />
+                      )}
                     </div>
 
                     {/* Actions */}
                     <div className="flex items-center gap-1">
-                     <Button
-                       variant="ghost"
-                       size="icon"
-                       className="h-7 w-7 text-muted-foreground"
-                       onClick={() => setExpandedDocs(docsOpen ? null : contract.id)}
-                       title="Dokumente"
-                     >
-                       <FileText className="w-4 h-4" />
-                     </Button>
-                     <ActionMenu items={[
-                       ...(contract.customer_id ? [{ label: 'Kunde öffnen', icon: User, onClick: () => navigate(`/kunden/${contract.customer_id}`) }] : []),
-                       { label: 'Status ändern', onClick: () => setStatusChanging(contract) },
-                       { label: 'Bearbeiten', icon: Edit, onClick: () => { setEditing(contract); setShowForm(true) } },
-                       { label: 'Löschen', icon: Trash2, variant: 'destructive', separator: true, onClick: () => { if (confirm('Vertrag wirklich löschen?')) deleteMutation.mutate(contract.id) } },
-                     ]} />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground"
+                        onClick={() => setExpandedDocs(docsOpen ? null : contract.id)}
+                        title="Dokumente"
+                      >
+                        <FileText className="w-4 h-4" />
+                      </Button>
+                      <ActionMenu items={[
+                        ...(contract.customer_id ? [{ label: 'Kunde öffnen', icon: User, onClick: () => navigate(`/kunden/${contract.customer_id}`) }] : []),
+                        { label: 'Status ändern', onClick: () => setStatusChanging(contract) },
+                        { label: 'Bearbeiten', icon: Edit, onClick: () => { setEditing(contract); setShowForm(true) } },
+                        { label: 'Löschen', icon: Trash2, variant: 'destructive', separator: true, onClick: () => { if (confirm('Vertrag wirklich löschen?')) deleteMutation.mutate(contract.id) } },
+                      ]} />
                     </div>
                   </div>
 
@@ -429,41 +417,22 @@ export default function Contracts() {
                 className="mt-2 w-full p-2 border rounded"
               />
             </div>
-            
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <p className="text-sm font-semibold text-green-900 mb-2">📋 Erforderliche Spalten:</p>
               <div className="grid grid-cols-2 gap-2 text-xs text-green-800">
-                <div>
-                  <span className="font-mono bg-green-100 px-2 py-1 rounded">customer_id</span>
-                  <p className="text-green-700 mt-1">Kunden-ID (erforderlich)</p>
-                </div>
-                <div>
-                  <span className="font-mono bg-green-100 px-2 py-1 rounded">insurer</span>
-                  <p className="text-green-700 mt-1">Versicherer (erforderlich)</p>
-                </div>
-                <div>
-                  <span className="font-mono bg-green-100 px-2 py-1 rounded">insurance_type</span>
-                  <p className="text-green-700 mt-1">Versicherungsart (erforderlich)</p>
-                </div>
-                <div>
-                  <span className="font-mono bg-green-100 px-2 py-1 rounded">organization_id</span>
-                  <p className="text-green-700 mt-1">Org-ID (erforderlich)</p>
-                </div>
+                <div><span className="font-mono bg-green-100 px-2 py-1 rounded">customer_id</span><p className="text-green-700 mt-1">Kunden-ID (erforderlich)</p></div>
+                <div><span className="font-mono bg-green-100 px-2 py-1 rounded">insurer</span><p className="text-green-700 mt-1">Versicherer (erforderlich)</p></div>
+                <div><span className="font-mono bg-green-100 px-2 py-1 rounded">insurance_type</span><p className="text-green-700 mt-1">Versicherungsart (erforderlich)</p></div>
+                <div><span className="font-mono bg-green-100 px-2 py-1 rounded">organization_id</span><p className="text-green-700 mt-1">Org-ID (erforderlich)</p></div>
               </div>
               <p className="text-xs text-green-700 mt-3 font-medium">Optional: policy_number, product, premium_yearly, premium_monthly, start_date, end_date, status</p>
             </div>
             {importProgress && (
-              <div className="p-3 bg-muted rounded text-sm text-center">
-                {importProgress}
-              </div>
+              <div className="p-3 bg-muted rounded text-sm text-center">{importProgress}</div>
             )}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => { setShowImport(false); setImportFile(null); setImportProgress(null); }}>
-                Abbrechen
-              </Button>
-              <Button onClick={handleImport} disabled={!importFile || !!importProgress}>
-                Importieren
-              </Button>
+              <Button variant="outline" onClick={() => { setShowImport(false); setImportFile(null); setImportProgress(null); }}>Abbrechen</Button>
+              <Button onClick={handleImport} disabled={!importFile || !!importProgress}>Importieren</Button>
             </div>
           </div>
         </DialogContent>

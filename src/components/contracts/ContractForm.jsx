@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { DialogFooter } from '@/components/ui/dialog'
 import { ALL_SPARTEN, getFieldsForSparte, FRANCHISE_OPTIONS } from '@/lib/insuranceSparten'
+import { AlertTriangle } from 'lucide-react'
 
 const grouped = ALL_SPARTEN.reduce((acc, s) => {
   if (!acc[s.group]) acc[s.group] = []
@@ -16,7 +17,6 @@ const grouped = ALL_SPARTEN.reduce((acc, s) => {
 export default function ContractForm({ contract, customers = [], onSave, onCancel, saving }) {
   const [form, setForm] = useState(() => {
     if (contract) {
-      // Normalize all null values to '' to prevent React controlled/uncontrolled input errors
       const normalized = {}
       for (const [k, v] of Object.entries(contract)) {
         normalized[k] = v === null || v === undefined ? '' : v
@@ -50,18 +50,32 @@ export default function ContractForm({ contract, customers = [], onSave, onCance
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
   const setSparte = (v) => setForm(prev => ({ ...prev, sparte: v, insurance_type: v, sparte_data: {} }))
   const setSparteData = (k, v) => setForm(prev => ({ ...prev, sparte_data: { ...prev.sparte_data, [k]: v } }))
-  
+
   const sparteFields = getFieldsForSparte(form.sparte)
   const franchiseOptions = FRANCHISE_OPTIONS[form.sparte_data?.age_group] || FRANCHISE_OPTIONS.default
-
-  // Gruppiere Kunden (Hauptkunden mit ihren Familienmitgliedern)
   const primaryCustomers = customers.filter(c => !c.is_family_member)
+
+  const missingEndDate = !form.end_date || form.end_date === ''
+  const missingCancelDate = !form.cancellation_deadline || form.cancellation_deadline === ''
 
   const handleSubmit = (e) => {
     e.preventDefault()
     const customer = customers.find(c => c.id === form.customer_id)
-    // organization_id: prefer from customer lookup, fallback to existing form value (important for edit!)
     const organization_id = customer?.organization_id || form.organization_id || ''
+
+    // Placeholder-Logik: fehlende Daten → 9999-12-31 setzen + requires_review markieren
+    let end_date = form.end_date || ''
+    let cancellation_deadline = form.cancellation_deadline || ''
+    let requires_review = false
+    let date_quality_status = 'verified'
+
+    if (!end_date || !cancellation_deadline) {
+      if (!end_date) end_date = '9999-12-31'
+      if (!cancellation_deadline) cancellation_deadline = '9999-12-31'
+      requires_review = true
+      date_quality_status = 'placeholder'
+    }
+
     onSave({
       customer_id: form.customer_id,
       customer_name: customer ? `${customer.first_name} ${customer.last_name}` : (form.customer_name || ''),
@@ -78,8 +92,10 @@ export default function ContractForm({ contract, customers = [], onSave, onCance
       premium_monthly: form.premium_monthly ? Number(form.premium_monthly) : undefined,
       premium_yearly: form.premium_yearly ? Number(form.premium_yearly) : undefined,
       start_date: form.start_date || '',
-      end_date: form.end_date || '',
-      cancellation_deadline: form.cancellation_deadline || '',
+      end_date,
+      cancellation_deadline,
+      requires_review,
+      date_quality_status,
       status: form.status || 'active',
       custom_status: form.custom_status,
       commission_rate: form.commission_rate ? Number(form.commission_rate) : undefined,
@@ -95,9 +111,7 @@ export default function ContractForm({ contract, customers = [], onSave, onCance
           <SelectTrigger className="mt-1"><SelectValue placeholder="Kunde auswählen" /></SelectTrigger>
           <SelectContent>
             {primaryCustomers.map(primary => {
-              const isMember = customers.some(c => c.primary_customer_id === primary.id)
               const familyMembers = customers.filter(c => c.primary_customer_id === primary.id)
-
               return (
                 <div key={primary.id}>
                   <SelectItem value={primary.id}>
@@ -145,20 +159,14 @@ export default function ContractForm({ contract, customers = [], onSave, onCance
               <div key={field.key}>
                 <Label>{field.label}</Label>
                 {field.type === 'franchise' ? (
-                  <Select
-                    value={form.sparte_data?.[field.key] || ''}
-                    onValueChange={v => setSparteData(field.key, v)}
-                  >
+                  <Select value={form.sparte_data?.[field.key] || ''} onValueChange={v => setSparteData(field.key, v)}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder="Franchise wählen" /></SelectTrigger>
                     <SelectContent>
                       {franchiseOptions.map(o => <SelectItem key={o} value={o}>CHF {o}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 ) : field.type === 'select' ? (
-                  <Select
-                    value={form.sparte_data?.[field.key] || ''}
-                    onValueChange={v => setSparteData(field.key, v)}
-                  >
+                  <Select value={form.sparte_data?.[field.key] || ''} onValueChange={v => setSparteData(field.key, v)}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {field.options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
@@ -208,12 +216,32 @@ export default function ContractForm({ contract, customers = [], onSave, onCance
         <div>
           <Label>Vertragsende</Label>
           <Input type="date" value={form.end_date} onChange={e => set('end_date', e.target.value)} className="mt-1" />
+          {missingEndDate && (
+            <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1">
+              <AlertTriangle className="w-2.5 h-2.5" /> Leer → Platzhalter 9999-12-31
+            </p>
+          )}
         </div>
         <div>
           <Label>Kündigungsfrist</Label>
           <Input type="date" value={form.cancellation_deadline} onChange={e => set('cancellation_deadline', e.target.value)} className="mt-1" />
+          {missingCancelDate && (
+            <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1">
+              <AlertTriangle className="w-2.5 h-2.5" /> Leer → Platzhalter wird gesetzt
+            </p>
+          )}
         </div>
       </div>
+
+      {(missingEndDate || missingCancelDate) && (
+        <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+          <span>
+            Fehlende Daten werden als <strong>Platzhalter (9999-12-31)</strong> gespeichert.
+            Der Vertrag wird als <strong>«Datumsprüfung ausstehend»</strong> markiert und im Renewal-Center separat angezeigt.
+          </span>
+        </div>
+      )}
 
       <div>
         <Label>Provisionsquote (%)</Label>

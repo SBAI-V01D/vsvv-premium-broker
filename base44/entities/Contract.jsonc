@@ -336,9 +336,25 @@
       ],
       "default": "assigned_brokers_only"
     },
+    "requires_review": {
+      "type": "boolean",
+      "default": false,
+      "description": "Manuelle Datumspr\u00fcfung ausstehend \u2014 gesetzt wenn end_date oder cancellation_deadline als Platzhalter (9999-12-31) eingetragen wurde"
+    },
+    "date_quality_status": {
+      "type": "string",
+      "enum": [
+        "verified",
+        "estimated",
+        "placeholder",
+        "missing"
+      ],
+      "default": "verified",
+      "description": "Qualit\u00e4t der Vertragsdaten: verified=gepr\u00fcft, estimated=gesch\u00e4tzt, placeholder=technischer Platzhalter (9999), missing=fehlt"
+    },
     "change_history": {
       "type": "array",
-      "description": "Audit-Trail aller kritischen Vertragsmutationen (Enterprise Governance)",
+      "description": "Audit-Trail aller kritischen Vertragsmutationen",
       "items": {
         "type": "object",
         "properties": {
@@ -352,8 +368,7 @@
             "type": "string"
           },
           "action": {
-            "type": "string",
-            "description": "field_changed | status_changed | archived | renewed | cancelled | upsell_stage_changed"
+            "type": "string"
           },
           "changed_fields": {
             "type": "string"
