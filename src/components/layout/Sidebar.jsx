@@ -137,7 +137,7 @@ export default function Sidebar({ onNavigate }) {
         {navGroups.map((group) => (
           <div key={group.label} className="mb-0.5">
             {!collapsed ? (
-              <p className="px-4 pt-6 pb-2 text-[10px] font-bold uppercase tracking-[0.13em] text-black select-none">
+              <p className="px-4 pt-6 pb-2 text-xs font-bold uppercase tracking-wide text-black select-none">
                 {group.label}
               </p>
             ) : (
@@ -226,7 +226,7 @@ export default function Sidebar({ onNavigate }) {
       {/* ── Kundenportal Section ──────────────────────────────────────── */}
       <div className="mb-0.5">
         {!collapsed ? (
-          <p className="px-4 pt-6 pb-2 text-[10px] font-bold uppercase tracking-[0.13em] text-black select-none">
+          <p className="px-4 pt-6 pb-2 text-xs font-bold uppercase tracking-wide text-black select-none">
             Kundenportal
           </p>
         ) : (
