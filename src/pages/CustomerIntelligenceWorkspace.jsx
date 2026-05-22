@@ -408,6 +408,7 @@ export default function CustomerIntelligenceWorkspace() {
   };
 
   const isIntelligenceMode = ['kundenaktionen', 'vip'].includes(workspaceMode);
+  const isCustomerListMode = ['private', 'business'].includes(workspaceMode);
 
   return (
     <div className="flex flex-col h-full bg-[hsl(var(--surface-1))]">
@@ -438,7 +439,7 @@ export default function CustomerIntelligenceWorkspace() {
           </div>
 
           {/* Search (only for customer list modes) */}
-          {!isIntelligenceMode && workspaceMode !== 'birthdays' && workspaceMode !== 'renewals' && workspaceMode !== 'cancellations' && (
+          {isCustomerListMode && (
             <>
               <div className="flex-1 min-w-[280px] max-w-xl">
                 <div className="relative">
@@ -494,7 +495,7 @@ export default function CustomerIntelligenceWorkspace() {
       <div className="flex-1 overflow-y-auto">
         {isIntelligenceMode ? (
           renderIntelligenceView()
-        ) : (
+        ) : isCustomerListMode ? (
           <div className="p-6 max-w-6xl mx-auto">
             {isLoading ? (
               <LoadingTable rows={8} className="py-12" />
@@ -529,7 +530,7 @@ export default function CustomerIntelligenceWorkspace() {
               />
             )}
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* ── Dialogs ── */}
