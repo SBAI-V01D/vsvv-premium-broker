@@ -7,8 +7,7 @@
 
 export { default as PageHeader }    from './PageHeader'
 export { default as FilterBar }     from './FilterBar'
-export { default as EmptyState }    from './EmptyState'
-export { default as LoadingState }  from './LoadingState'
+export { default as EmptyState, LoadingState, LoadingTable, LoadingCard, LoadingKPI } from './EmptyState'
 export { default as KpiCard }       from './KpiCard'
 export { default as ActionMenu }    from './ActionMenu'
 export { default as StandardTable } from './StandardTable'

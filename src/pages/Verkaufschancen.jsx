@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils'
 import { isWithinInterval, addDays, parseISO, isToday, isBefore } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { format } from 'date-fns'
+import EmptyState from '@/components/shared/EmptyState'
 
 const COMMISSION_RATE = 0.05 // 5% default estimated courtage
 
@@ -115,7 +116,7 @@ export default function Verkaufschancen() {
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Verkaufschancen & Ausschreibungen</h1>
+          <h1 className="text-2xl font-bold">Verkaufschancen &amp; Ausschreibungen</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Pipeline · Offertmanagement · Abschluss — strikt getrennt von aktiven Policen</p>
         </div>
         <Button onClick={() => setShowNewForm(true)} className="gap-2 flex-shrink-0">
@@ -240,13 +241,17 @@ export default function Verkaufschancen() {
             </div>
 
             {filtered.length === 0 ? (
-              <div className="py-16 text-center text-muted-foreground">
-                <Target className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">Keine Verkaufschancen gefunden</p>
-                <Button size="sm" variant="outline" className="mt-3" onClick={() => setShowNewForm(true)}>
-                  <Plus className="w-3.5 h-3.5 mr-1" /> Erste Chance erfassen
-                </Button>
-              </div>
+              <EmptyState
+                type="opportunities"
+                title="Keine Verkaufschancen"
+                description="Erfassen Sie Ihre erste Opportunity, um zu starten."
+                action={
+                  <Button size="sm" variant="outline" onClick={() => setShowNewForm(true)}>
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Neue Chance
+                  </Button>
+                }
+                size="lg"
+              />
             ) : filtered.map((v, idx) => {
               const gesellschaften = v.gesellschaften || []
               const offerten = gesellschaften.filter(g => g.praemie_yearly).length

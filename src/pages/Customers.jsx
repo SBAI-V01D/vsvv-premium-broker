@@ -19,6 +19,7 @@ import FastImportWizard from '@/components/customers/FastImportWizard';
 import CustomerMergeDialog from '@/components/customers/CustomerMergeDialog';
 import CustomerCard from '@/components/customers/CustomerCard';
 import { searchCustomers, scoreCustomer } from '@/lib/customerSearch';
+import EmptyState, { LoadingTable } from '@/components/shared/EmptyState';
 
 // ── Segment builder ────────────────────────────────────────────────────────
 function buildSegments(customers, tasks, contracts) {
@@ -530,14 +531,24 @@ export default function Customers() {
 
           <div className="p-6 space-y-6 max-w-3xl">
             {isLoading ? (
-              <div className="flex items-center gap-2 text-sm text-slate-400 py-20 justify-center">
-                <Loader2 className="w-4 h-4 animate-spin" /> Lade Portfolio…
-              </div>
+              <LoadingTable rows={8} className="py-12" />
             ) : displayed.length === 0 ? (
-              <div className="py-20 text-center">
-                <p className="text-sm font-medium text-slate-500">Keine Kunden in diesem Segment</p>
-                <p className="text-[12px] text-slate-400 mt-1">{search ? 'Suchbegriff anpassen.' : 'Dieses Segment ist leer.'}</p>
-              </div>
+              <EmptyState
+                type={search ? 'empty' : 'customers'}
+                title={search ? 'Keine Ergebnisse' : 'Keine Kunden'}
+                description={search ? 'Passen Sie den Suchbegriff an oder ändern Sie das Filter.' : 'Fügen Sie Ihren ersten Kunden hinzu, um zu starten.'}
+                action={
+                  !search && (
+                    <button
+                      onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}
+                      className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
+                    >
+                      <Plus className="w-4 h-4" /> Kunde hinzufügen
+                    </button>
+                  )
+                }
+                size="lg"
+              />
             ) : (
               <>
                 {/* Privatkunden Gruppe */}

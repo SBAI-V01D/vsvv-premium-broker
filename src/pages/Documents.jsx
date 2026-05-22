@@ -15,6 +15,7 @@ import DocumentReviewPanel from '@/components/documents/DocumentReviewPanel'
 import SmartDocumentUpload from '@/components/documents/SmartDocumentUpload'
 import SmartDocumentReview from '@/components/documents/SmartDocumentReview'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import EmptyState, { LoadingTable } from '@/components/shared/EmptyState'
 
 const TABS = [
   { key: 'all', label: 'Alle' },
@@ -346,9 +347,14 @@ export default function Documents() {
           </div>
 
           {isLoading ? (
-            <div className="py-12 text-center text-muted-foreground">Lädt...</div>
+            <LoadingTable rows={8} className="py-12" />
           ) : filtered.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground">Keine Dokumente gefunden</div>
+            <EmptyState
+              type="documents"
+              title="Keine Dokumente"
+              description={search ? 'Suchbegriff anpassen.' : 'Laden Sie Ihr erstes Dokument hoch, um zu starten.'}
+              size="lg"
+            />
           ) : (
             filtered.map((doc, idx) => (
               <div

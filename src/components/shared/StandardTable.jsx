@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import LoadingState from './LoadingState'
-import EmptyState from './EmptyState'
+import EmptyState, { LoadingTable } from './EmptyState'
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -57,7 +56,7 @@ export default function StandardTable({
     ? data.slice((page - 1) * pageSize, page * pageSize)
     : data
 
-  if (isLoading) return <LoadingState rows={6} />
+  if (isLoading) return <LoadingTable rows={6} />
 
   if (data.length === 0) {
     return (
