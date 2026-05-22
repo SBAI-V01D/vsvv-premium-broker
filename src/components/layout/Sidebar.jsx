@@ -125,7 +125,7 @@ export default function Sidebar({ onNavigate }) {
           <Shield className="w-3.5 h-3.5 text-white" />
         </div>
         {!collapsed && (
-          <div className="min-w-0">
+          <div className="min-w-0 text-center">
             <p className="text-[13px] font-bold text-[hsl(var(--primary))] tracking-tight leading-none">VSV Management GmbH</p>
             <p className="text-[8px] text-[hsl(var(--text-subtle))] font-medium tracking-[0.14em] uppercase mt-0.5">Swiss Premium Broker</p>
           </div>
