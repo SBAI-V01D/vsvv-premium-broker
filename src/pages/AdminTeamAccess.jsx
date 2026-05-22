@@ -41,7 +41,7 @@ export default function AdminTeamAccess() {
     <div className="space-y-6">
       {/* Header */}
       <div className="border-b pb-4">
-        <h1 className="text-4xl font-bold mb-2">Team & Zugriffsrechte</h1>
+        <h1 className="text-4xl font-bold mb-2 text-[hsl(var(--primary))]">Team & Zugriffsrechte</h1>
         <p className="text-muted-foreground">
           Zentrale Verwaltung von Benutzern, Rollen und Zugriffsverwaltung
         </p>

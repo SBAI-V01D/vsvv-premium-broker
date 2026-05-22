@@ -124,6 +124,7 @@ export default function Leads() {
     <div className="space-y-6">
       <PageHeader
         title="Lead Pipeline"
+        titleClassName="text-[hsl(var(--primary))]"
         subtitle="Nur echte Akquisitions-Leads – aktive Kunden werden automatisch ausgeblendet"
         actions={
           <>

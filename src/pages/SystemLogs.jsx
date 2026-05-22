@@ -124,7 +124,7 @@ export default function SystemLogs() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">System-Logs</h1>
+          <h1 className="text-3xl font-bold text-[hsl(var(--primary))]">System-Logs</h1>
           <p className="text-muted-foreground mt-1">Fehler, Warnungen & Automation-Queue</p>
         </div>
         <div className="flex gap-2">

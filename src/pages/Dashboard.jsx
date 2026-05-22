@@ -176,7 +176,7 @@ export default function Dashboard() {
       {/* ── Page Context — minimal (no hero greeting) ─────────────────────── */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-h2 font-bold text-[hsl(var(--text-heading))] tracking-tight">Cockpit</h1>
+          <h1 className="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight">Cockpit</h1>
           <p className="text-body-sm text-[hsl(var(--text-muted))] mt-0.5">
             {openTasks.length} offene Aufgaben · {hotLeads.length} heiße Leads
           </p>

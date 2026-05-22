@@ -184,7 +184,7 @@ export default function BeratungOrganisation() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2"><Building2 className="w-7 h-7 text-primary" /> Berater & Organisation</h1>
+          <h1 className="text-3xl font-bold flex items-center gap-2 text-[hsl(var(--primary))]"><Building2 className="w-7 h-7 text-primary" /> Berater & Organisation</h1>
           <p className="text-muted-foreground mt-1">{orgs.length} Organisationen · {advisors.length} Berater</p>
         </div>
         <div className="flex gap-2">

@@ -36,7 +36,7 @@ export default function AdvisoryDossier() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-semibold text-foreground">Beratungsdossiers</h1>
+            <h1 className="text-2xl font-semibold text-[hsl(var(--primary))]">Beratungsdossiers</h1>
             <span className="text-xs font-medium bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
               ✓ Validiert
             </span>

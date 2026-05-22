@@ -338,8 +338,8 @@ export default function CommissionsAndCourtage() {
       {/* Header */}
       <div className="flex justify-between items-center flex-wrap gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-foreground tracking-tight">
-            Provisionen & Courtagen
+          <h1 className="text-xl font-semibold text-[hsl(var(--primary))] tracking-tight">
+            Provisionen &amp; Courtagen
             {!loadingEntries && <span className="text-muted-foreground text-sm font-normal ml-2">· {activeEntries.length} Einträge</span>}
           </h1>
           <p className="text-muted-foreground mt-0.5 text-xs">
@@ -739,7 +739,7 @@ export default function CommissionsAndCourtage() {
       {/* Settings */}
       <Dialog open={showSettings} onOpenChange={(open) => setShowSettings(open)}>
         <DialogContent className="max-w-xl">
-          <DialogHeader><DialogTitle>Einstellungen – Courtagen & Provisionen</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Einstellungen &ndash; Courtagen &amp; Provisionen</DialogTitle></DialogHeader>
           <div className="space-y-3 text-sm max-h-[60vh] overflow-y-auto pr-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1">
               <p className="font-bold text-blue-800 flex items-center gap-1.5">Courtage-Formel</p>

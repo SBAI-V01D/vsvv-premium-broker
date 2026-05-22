@@ -53,7 +53,7 @@ export default function AdminEnterpriseControlCenter() {
             <Shield className="w-5 h-5 text-primary" />
           </div>
           <div>
-           <h1 className="text-lg font-bold text-foreground tracking-tight">Enterprise Control Center</h1>
+           <h1 className="text-lg font-bold text-[hsl(var(--primary))] tracking-tight">Enterprise Control Center</h1>
            <p className="text-xs text-muted-foreground">Governance · Compliance · Audit · Security · Performance</p>
           </div>
           <div className="ml-auto flex items-center gap-1.5 bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold px-3 py-1.5 rounded-full">
