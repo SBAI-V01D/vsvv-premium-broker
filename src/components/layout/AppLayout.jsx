@@ -29,12 +29,8 @@ export default function AppLayout() {
 
       {/* Main content — offset by sidebar width */}
       <div className="flex-1 flex flex-col min-w-0 lg:ml-[224px]">
-        {/* Desktop topbar */}
-        <div className="hidden lg:flex items-center justify-end gap-4 px-6 h-[50px] border-b border-border/70 bg-card/95 backdrop-blur-sm sticky top-0 z-30">
-          <span className="text-[11px] text-muted-foreground/60 font-medium tabular-nums">
-            {new Date().toLocaleDateString('de-CH', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
-          </span>
-        </div>
+        {/* Desktop topbar — eliminated for architectural silence */}
+        {/* Date/time moved to User card in Sidebar (bottom) */}
 
         {/* Mobile topbar */}
         <div className="lg:hidden flex items-center gap-3 px-4 h-14 border-b border-border bg-card sticky top-0 z-30">

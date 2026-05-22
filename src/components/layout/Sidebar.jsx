@@ -226,9 +226,9 @@ export default function Sidebar({ onNavigate }) {
         </a>
       </div>
 
-      {/* ── User card ─────────────────────────────────────────────────── */}
+      {/* ── User card — embedded surface with subtle date ───────────────── */}
       {!collapsed && currentUser && (
-        <div className="mx-2 mb-3 px-3 py-2.5 rounded-md bg-[hsl(var(--surface-2))] border border-[hsl(var(--border-subtle))]">
+        <div className="mx-2 mb-2 px-3 py-2.5 rounded-md bg-[hsl(var(--surface-2))] border border-[hsl(var(--border-subtle))]">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-6 h-6 rounded-full bg-[hsl(var(--primary))/0.1] flex items-center justify-center flex-shrink-0">
               <User className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
@@ -237,7 +237,9 @@ export default function Sidebar({ onNavigate }) {
               <p className="text-[11.5px] font-semibold text-[hsl(var(--text-heading))] truncate leading-tight">
                 {currentUser.full_name || currentUser.email}
               </p>
-              <p className="text-[9.5px] text-[hsl(var(--text-muted))] font-medium">{roleLabel}</p>
+              <p className="text-[9px] text-[hsl(var(--text-subtle))] font-medium truncate">
+                {roleLabel} · {new Date().toLocaleDateString('de-CH', { day: '2digit', month: '2digit' })}
+              </p>
             </div>
           </div>
         </div>

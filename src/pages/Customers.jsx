@@ -114,15 +114,7 @@ function TodayFocusPanel({ tasks, contracts }) {
   const allOpen = (tasks || []).filter(t => t.status === 'open' || t.status === 'in_progress');
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-[11px] uppercase tracking-widest font-semibold text-slate-400">
-          {new Date().toLocaleDateString('de-CH', { weekday: 'long' })}
-        </p>
-        <p className="text-sm font-semibold text-slate-800 mt-0.5">
-          {new Date().toLocaleDateString('de-CH', { day: 'numeric', month: 'long' })}
-        </p>
-      </div>
+    <div className="space-y-5">
 
       <div className="space-y-3">
         {[
@@ -437,86 +429,58 @@ export default function Customers() {
   return (
     <div className="flex flex-col h-full bg-background">
 
-      {/* ── Executive Header ── */}
-      <div className="px-8 py-5 border-b border-border/50 bg-card shrink-0">
-        <div className="flex items-center gap-6 flex-wrap">
+      {/* ── Page Header — minimal context (no dashboard bar) ─────────────── */}
+      <div className="px-6 py-4 border-b border-[hsl(var(--border-subtle))] bg-[hsl(var(--surface-1))] shrink-0">
+        <div className="flex items-center gap-4 flex-wrap">
           <div className="shrink-0">
-            <h1 className="text-[15px] font-semibold text-slate-900 leading-none">Portfolio</h1>
-            <p className="text-[11px] text-slate-400 mt-0.5 tracking-wide">{primaryCustomers.length} Kunden</p>
+            <h1 className="text-[15px] font-semibold text-[hsl(var(--text-heading))] leading-none">Portfolio</h1>
+            <p className="text-[10px] text-[hsl(var(--text-muted))] mt-0.5 tracking-wide">{primaryCustomers.length} Kunden</p>
           </div>
 
           <div className="flex-1 min-w-[240px] max-w-lg">
             <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--text-subtle))]" />
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Name, E-Mail, Kundennummer, Familienmitglied…"
-                className="w-full pl-10 pr-9 py-2 text-[13px] border border-border/60 rounded-xl bg-background text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/40 transition-all"
+                placeholder="Name, E-Mail, Kundennummer…"
+                className="w-full pl-9 pr-8 py-1.5 text-[13px] border border-[hsl(var(--border-subtle))] rounded-lg bg-[hsl(var(--surface-0))] text-[hsl(var(--text-heading))] placeholder:text-[hsl(var(--text-subtle))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))/0.3] focus:border-[hsl(var(--primary))/0.4] transition-all"
               />
               {search && (
-                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
+                <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))]">
                   <XCircle className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-1 shrink-0 ml-auto">
-            <button onClick={handleExport} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors" title="Export">
+          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+            <button onClick={handleExport} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Export">
               <Download className="w-4 h-4" />
             </button>
-            <button onClick={() => setShowMerge(true)} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors" title="Zusammenführen">
+            <button onClick={() => setShowMerge(true)} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Zusammenführen">
               <Users className="w-4 h-4" />
             </button>
-            <button onClick={() => setShowImport(true)} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors" title="Import">
+            <button onClick={() => setShowImport(true)} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Import">
               <Upload className="w-4 h-4" />
             </button>
-            <div className="w-px h-5 bg-border mx-1" />
+            <div className="w-px h-4 bg-[hsl(var(--border-subtle))] mx-0.5" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="sm" className="rounded-xl">
+                <Button size="sm" className="rounded-md h-8 text-[12.5px]">
                   <Plus className="w-3.5 h-3.5 mr-1.5" /> Neuer Kunde
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}>
-                  <User className="w-4 h-4 mr-2 text-slate-400" /> Privatkunde
+                  <User className="w-4 h-4 mr-2 text-[hsl(var(--text-muted))]" /> Privatkunde
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}>
-                  <Building2 className="w-4 h-4 mr-2 text-slate-400" /> Firmenkunde
+                  <Building2 className="w-4 h-4 mr-2 text-[hsl(var(--text-muted))]" /> Firmenkunde
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </div>
-
-        {/* KPI Strip — monochrome */}
-        <div className="mt-5 flex items-stretch gap-8 overflow-x-auto scrollbar-none">
-          {[
-            { label: 'Aktive Kunden', value: segments.active?.count ?? 0, onClick: () => setActiveSegment('active') },
-            { label: 'Neuzugänge',    value: segments.new?.count ?? 0,    onClick: () => setActiveSegment('new') },
-            { label: 'Policen',       value: contracts.length,             onClick: () => {} },
-            { label: 'Jahresprämien', value: `CHF ${Math.round(totalPremium / 1000)}k`, onClick: () => {} },
-            { label: 'Offene Tasks',  value: openTasks,    alert: openTasks > 0,      onClick: () => navigate('/aufgaben') },
-            { label: 'Leads offen',   value: leads.length, onClick: () => {} },
-            { label: 'Kritisch',      value: criticalCount, alert: criticalCount > 0, red: true, onClick: () => setActiveSegment('critical') },
-            { label: 'Kein Berater', value: segments.no_advisor?.count ?? 0, alert: (segments.no_advisor?.count ?? 0) > 0, red: true, onClick: () => setActiveSegment('no_advisor') },
-          ].map((kpi, i, arr) => (
-            <button
-              key={kpi.label}
-              onClick={kpi.onClick}
-              className={`shrink-0 text-left hover:opacity-70 transition-opacity ${i < arr.length - 1 ? 'pr-8 border-r border-border/40' : ''}`}
-            >
-              <p className="text-[10px] uppercase tracking-widest font-medium text-slate-400">{kpi.label}</p>
-              <p className={`text-2xl font-black mt-0.5 tabular-nums leading-none ${
-                kpi.red && kpi.alert ? 'text-red-600' :
-                kpi.alert ? 'text-amber-600' : 'text-slate-800'
-              }`}>
-                {kpi.value}
-              </p>
-            </button>
-          ))}
         </div>
       </div>
 
