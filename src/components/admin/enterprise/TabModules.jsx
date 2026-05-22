@@ -48,8 +48,6 @@ export default function TabModules() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => { runCheck(); }, []);
-
   const runCheck = async () => {
     setLoading(true);
     try {
@@ -59,6 +57,8 @@ export default function TabModules() {
       setLoading(false);
     }
   };
+
+  useEffect(() => { runCheck(); }, []);
 
   const { data: systemLogs = [] } = useQuery({
     queryKey: ['modules_integrity_logs'],
