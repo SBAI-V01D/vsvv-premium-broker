@@ -89,7 +89,7 @@ export default function FinanceDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">💰 Finanz-Dashboard</h1>
+        <h1 className="text-3xl font-bold mb-2 text-[hsl(var(--primary))]">💰 Finanz-Dashboard</h1>
         <p className="text-muted-foreground">Provisionsverwaltung, Buchhaltung & Performance</p>
       </div>
 

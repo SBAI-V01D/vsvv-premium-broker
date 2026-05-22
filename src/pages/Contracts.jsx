@@ -170,6 +170,7 @@ export default function Contracts() {
       <PageHeader
         title={`Verträge (${filtered.length})`}
         subtitle={`${contracts.length} Verträge insgesamt`}
+        titleClassName="text-[hsl(var(--primary))]"
         actions={
           <>
             <Button variant="outline" size="sm" onClick={handleExport}>

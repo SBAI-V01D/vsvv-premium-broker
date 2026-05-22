@@ -7,11 +7,11 @@ import React from 'react'
  *  - subtitle: string (optional)
  *  - actions: ReactNode (Buttons oben rechts)
  */
-export default function PageHeader({ title, subtitle, actions }) {
+export default function PageHeader({ title, subtitle, actions, titleClassName }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
+        <h1 className={`text-xl font-semibold tracking-tight ${titleClassName || 'text-foreground'}`}>{title}</h1>
         {subtitle && (
           <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
         )}

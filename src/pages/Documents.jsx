@@ -234,7 +234,7 @@ export default function Documents() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Dokumente ({documents.length})</h1>
+          <h1 className="text-3xl font-bold text-[hsl(var(--primary))]">Dokumente ({documents.length})</h1>
           <p className="text-muted-foreground mt-1">Intelligente Klassifizierung &amp; automatische Antragserfassung</p>
         </div>
         <div className="flex gap-2">
