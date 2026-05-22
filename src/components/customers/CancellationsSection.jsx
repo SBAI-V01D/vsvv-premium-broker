@@ -24,6 +24,8 @@ export default function CancellationsSection({ contracts, customers }) {
   const [showAllCancelled, setShowAllCancelled] = React.useState(false);
   const [showAllDeadlines, setShowAllDeadlines] = React.useState(false);
   
+  const DISPLAY_LIMIT = 3;
+  
   const cancellationsData = useMemo(() => {
     const result = {
       open: [],
@@ -181,14 +183,14 @@ export default function CancellationsSection({ contracts, customers }) {
           ) : (
             <>
               <div className="space-y-3">
-                {(showAllCancelled ? cancellationsData.cancelled : cancellationsData.cancelled.slice(0, 5)).map(item => renderContractCard(item))}
+                {(showAllCancelled ? cancellationsData.cancelled : cancellationsData.cancelled.slice(0, DISPLAY_LIMIT)).map(item => renderContractCard(item))}
               </div>
-              {cancellationsData.cancelled.length > 5 && (
+              {cancellationsData.cancelled.length > DISPLAY_LIMIT && (
                 <button
                   onClick={() => setShowAllCancelled(!showAllCancelled)}
                   className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
                 >
-                  {showAllCancelled ? 'Weniger anzeigen' : `+${cancellationsData.cancelled.length - 5} weitere anzeigen`}
+                  {showAllCancelled ? 'Weniger anzeigen' : `+${cancellationsData.cancelled.length - DISPLAY_LIMIT} weitere anzeigen`}
                 </button>
               )}
             </>
@@ -213,14 +215,14 @@ export default function CancellationsSection({ contracts, customers }) {
           ) : (
             <>
               <div className="space-y-3">
-                {(showAllDeadlines ? cancellationsData.deadline : cancellationsData.deadline.slice(0, 5)).map(item => renderContractCard(item))}
+                {(showAllDeadlines ? cancellationsData.deadline : cancellationsData.deadline.slice(0, DISPLAY_LIMIT)).map(item => renderContractCard(item))}
               </div>
-              {cancellationsData.deadline.length > 5 && (
+              {cancellationsData.deadline.length > DISPLAY_LIMIT && (
                 <button
                   onClick={() => setShowAllDeadlines(!showAllDeadlines)}
                   className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
                 >
-                  {showAllDeadlines ? 'Weniger anzeigen' : `+${cancellationsData.deadline.length - 5} weitere anzeigen`}
+                  {showAllDeadlines ? 'Weniger anzeigen' : `+${cancellationsData.deadline.length - DISPLAY_LIMIT} weitere anzeigen`}
                 </button>
               )}
             </>

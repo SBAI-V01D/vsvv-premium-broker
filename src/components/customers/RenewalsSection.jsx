@@ -29,6 +29,8 @@ export default function RenewalsSection({ contracts, customers, verkaufschancen 
   const [showAllCritical, setShowAllCritical] = React.useState(false);
   const [showAllUpcoming, setShowAllUpcoming] = React.useState(false);
   
+  const DISPLAY_LIMIT = 3;
+  
   const renewalsData = useMemo(() => {
     const today = new Date();
     
@@ -189,14 +191,14 @@ export default function RenewalsSection({ contracts, customers, verkaufschancen 
           ) : (
             <>
               <div className="space-y-3">
-                {(showAllCritical ? renewalsData.critical : renewalsData.critical.slice(0, 5)).map(item => renderContractCard(item, true))}
+                {(showAllCritical ? renewalsData.critical : renewalsData.critical.slice(0, DISPLAY_LIMIT)).map(item => renderContractCard(item, true))}
               </div>
-              {renewalsData.critical.length > 5 && (
+              {renewalsData.critical.length > DISPLAY_LIMIT && (
                 <button
                   onClick={() => setShowAllCritical(!showAllCritical)}
                   className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
                 >
-                  {showAllCritical ? 'Weniger anzeigen' : `+${renewalsData.critical.length - 5} weitere anzeigen`}
+                  {showAllCritical ? 'Weniger anzeigen' : `+${renewalsData.critical.length - DISPLAY_LIMIT} weitere anzeigen`}
                 </button>
               )}
             </>
@@ -221,14 +223,14 @@ export default function RenewalsSection({ contracts, customers, verkaufschancen 
           ) : (
             <>
               <div className="space-y-3">
-                {(showAllUpcoming ? renewalsData.upcoming90to365 : renewalsData.upcoming90to365.slice(0, 5)).map(item => renderContractCard(item))}
+                {(showAllUpcoming ? renewalsData.upcoming90to365 : renewalsData.upcoming90to365.slice(0, DISPLAY_LIMIT)).map(item => renderContractCard(item))}
               </div>
-              {renewalsData.upcoming90to365.length > 5 && (
+              {renewalsData.upcoming90to365.length > DISPLAY_LIMIT && (
                 <button
                   onClick={() => setShowAllUpcoming(!showAllUpcoming)}
                   className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
                 >
-                  {showAllUpcoming ? 'Weniger anzeigen' : `+${renewalsData.upcoming90to365.length - 5} weitere anzeigen`}
+                  {showAllUpcoming ? 'Weniger anzeigen' : `+${renewalsData.upcoming90to365.length - DISPLAY_LIMIT} weitere anzeigen`}
                 </button>
               )}
             </>
