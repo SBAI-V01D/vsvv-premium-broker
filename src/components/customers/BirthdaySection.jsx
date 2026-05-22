@@ -174,9 +174,9 @@ export default function BirthdaySection({ customers }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-[hsl(var(--text-heading))]">Geburtstage</h2>
-          <p className="text-xs text-[hsl(var(--text-muted))] mt-0.5">
-            Operative Übersicht nach Zeitrahmen und Altersgruppen
+          <h2 className="text-sm font-bold text-[hsl(var(--primary))]">Geburtstage</h2>
+          <p className="text-[9px] text-[hsl(var(--text-muted))] mt-0.5">
+            Operative Übersicht
           </p>
         </div>
       </div>

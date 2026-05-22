@@ -164,7 +164,7 @@ export default function CancellationsSection({ contracts, customers }) {
     <div className="space-y-4">
       {/* Header */}
       <div>
-        <h2 className="text-sm font-bold text-[hsl(var(--text-heading))]">Kündigungen</h2>
+        <h2 className="text-sm font-bold text-[hsl(var(--primary))]">Kündigungen</h2>
         <p className="text-[9px] text-[hsl(var(--text-muted))] mt-0.5">
           Operative Übersicht
         </p>
