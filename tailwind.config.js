@@ -78,6 +78,15 @@ module.exports = {
       },
       fontSize: {
         '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
+        'display': ['2rem',   { lineHeight: '1.15', letterSpacing: '-0.025em', fontWeight: '700' }],
+        'h1':      ['1.75rem', { lineHeight: '1.2',  letterSpacing: '-0.022em', fontWeight: '700' }],
+        'h2':      ['1.375rem',{ lineHeight: '1.3',  letterSpacing: '-0.018em', fontWeight: '600' }],
+        'h3':      ['1.125rem',{ lineHeight: '1.4',  letterSpacing: '-0.014em', fontWeight: '600' }],
+        'body-lg': ['0.9375rem',{ lineHeight: '1.6' }],
+        'body':    ['0.875rem', { lineHeight: '1.55' }],
+        'body-sm': ['0.8125rem',{ lineHeight: '1.5' }],
+        'caption': ['0.6875rem',{ lineHeight: '1.45', letterSpacing: '0.01em' }],
+        'label':   ['0.6875rem',{ lineHeight: '1', letterSpacing: '0.06em', fontWeight: '600' }],
       },
       keyframes: {
         'accordion-down': {
