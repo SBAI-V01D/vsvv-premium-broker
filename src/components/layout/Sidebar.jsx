@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
   ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink,
-  Target, User, Briefcase, TrendingUp, RefreshCw, Lock, Menu, BookOpen
+  Target, User, Briefcase, TrendingUp, RefreshCw, Lock, Menu, BookOpen, Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -86,6 +86,7 @@ const navGroups = [
     label: 'Enterprise',
     items: [
       { label: 'Beratungsdossiers',      icon: BookOpen, path: '/beratungsdossier',               adminOnly: true, color: 'primary' },
+      { label: 'Enterprise Audit Monitor', icon: Activity, path: '/admin-logs',                     adminOnly: true },
       { label: 'Enterprise Control Center', icon: Shield,   path: '/admin/enterprise-control-center', adminOnly: true },
     ],
   },
