@@ -98,7 +98,6 @@ const WORKSPACE_MODES = [
   { id: 'kundenaktionen', label: 'Kundenübersicht', icon: Users },
   { id: 'private', label: 'Privatkunden', icon: User },
   { id: 'business', label: 'Unternehmen', icon: Building2 },
-  { id: 'vip', label: 'Hohe Prämien', icon: TrendingUp },
 ];
 
 // ── Grouped customer feed ─────────────────────────────────────────────────
@@ -164,6 +163,8 @@ export default function CustomerIntelligenceWorkspace() {
   const [search, setSearch]             = useState('');
   const [showImport, setShowImport]     = useState(false);
   const [showMerge, setShowMerge]       = useState(false);
+  const [showAllMandate, setShowAllMandate] = useState(false);
+  const [showAllHousehold, setShowAllHousehold] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: currentUser } = useQuery({ queryKey: ['currentUser'], queryFn: () => base44.auth.me() });
@@ -334,66 +335,104 @@ export default function CustomerIntelligenceWorkspace() {
   // Render Intelligence Views
   const renderIntelligenceView = () => {
     if (workspaceMode === 'kundenaktionen') {
+      // Kunden ohne Mandat/Berater (max 5)
+      const mandateIssues = primaryCustomers.filter(c => 
+        !c.advisor_id && !c.primary_advisor_id || ['invalid', 'expired', 'pending'].includes(c.mandate_status)
+      );
+      const displayedMandate = showAllMandate ? mandateIssues : mandateIssues.slice(0, 5);
+      
+      // Cross Selling / Household (max 5)
+      const householdCustomers = primaryCustomers.filter(c => !c.is_family_member && customers.some(fm => fm.primary_customer_id === c.id));
+      const displayedHousehold = showAllHousehold ? householdCustomers : householdCustomers.slice(0, 5);
+
       return (
-        <div className="space-y-8 p-6 max-w-[1600px] mx-auto">
+        <div className="space-y-6 p-6 max-w-[1600px] mx-auto">
           <BirthdaySection customers={primaryCustomers} />
           <RenewalsSection contracts={contracts} customers={customers} verkaufschancen={verkaufschancen} />
           <CancellationsSection contracts={contracts} customers={customers} />
+          
           {/* Kunden ohne Mandat oder Berater */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-5 border border-[hsl(var(--border-subtle))]/40">
-            <h3 className="text-subheading mb-4">Kunden ohne Mandat oder Berater</h3>
-            {primaryCustomers.filter(c => 
-              !c.advisor_id && !c.primary_advisor_id || ['invalid', 'expired', 'pending'].includes(c.mandate_status)
-            ).length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {primaryCustomers.filter(c => 
-                  !c.advisor_id && !c.primary_advisor_id || ['invalid', 'expired', 'pending'].includes(c.mandate_status)
-                ).map(customer => (
-                  <div key={customer.id} className="border border-[hsl(var(--border-subtle))]/50 p-3 rounded-lg hover:bg-[hsl(var(--surface-2))]/40 transition-colors">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-sm font-semibold text-[hsl(var(--text-heading))]">{customer.first_name} {customer.last_name}</p>
-                        <p className="text-xs text-[hsl(var(--text-muted))] mt-1">
-                          {!customer.advisor_id && !customer.primary_advisor_id && <span className="text-[hsl(var(--critical))]">⚠ Kein Berater</span>}
-                          {['invalid', 'expired', 'pending'].includes(customer.mandate_status) && (
-                            <span className={!customer.advisor_id && !customer.primary_advisor_id ? 'ml-2' : ''}>
-                              Mandat: {customer.mandate_status}
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <Button variant="ghost" size="sm" onClick={() => navigate(`/kunden/${customer.id}/360`)}>
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
+          {mandateIssues.length > 0 && (
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-[hsl(var(--border-subtle))]/40">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-semibold text-[hsl(var(--text-heading))] uppercase tracking-wide">Kunden ohne Mandat oder Berater</h3>
+                <span className="text-[10px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-2 py-0.5 rounded-full">
+                  {mandateIssues.length}
+                </span>
+              </div>
+              <div className="space-y-1">
+                {displayedMandate.map(customer => (
+                  <button
+                    key={customer.id}
+                    onClick={() => navigate(`/kunden/${customer.id}/360`)}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-[hsl(var(--surface-2))]/40 transition-colors text-left"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-medium text-[hsl(var(--text-heading))] truncate">
+                        {customer.first_name} {customer.last_name}
+                      </p>
+                      <p className="text-[9px] text-[hsl(var(--text-muted))] truncate">
+                        {!customer.advisor_id && !customer.primary_advisor_id && <span className="text-[hsl(var(--critical))]">⚠ Kein Berater</span>}
+                        {['invalid', 'expired', 'pending'].includes(customer.mandate_status) && (
+                          <span className={!customer.advisor_id && !customer.primary_advisor_id ? 'ml-1' : ''}>
+                            Mandat: {customer.mandate_status}
+                          </span>
+                        )}
+                      </p>
                     </div>
-                  </div>
+                    <ChevronRight className="w-3 h-3 text-[hsl(var(--text-muted))]" />
+                  </button>
                 ))}
               </div>
-            ) : (
-              <p className="text-xs text-[hsl(var(--text-muted))]">Alle Kunden haben ein Mandat oder einen Berater.</p>
-            )}
-          </div>
+              {mandateIssues.length > 5 && (
+                <button
+                  onClick={() => setShowAllMandate(!showAllMandate)}
+                  className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
+                >
+                  {showAllMandate ? 'Weniger anzeigen' : `+${mandateIssues.length - 5} weitere anzeigen`}
+                </button>
+              )}
+            </div>
+          )}
+          
           {/* Cross Selling / Household */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-5 border border-[hsl(var(--border-subtle))]/40">
-            <h3 className="text-subheading mb-4">Cross Selling / Haushalt</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {primaryCustomers.filter(c => !c.is_family_member && customers.some(fm => fm.primary_customer_id === c.id)).map(customer => (
-                <div key={customer.id} className="border border-[hsl(var(--border-subtle))]/50 p-3 rounded-lg hover:bg-[hsl(var(--surface-2))]/40 transition-colors">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-sm font-semibold text-[hsl(var(--text-heading))]">{customer.first_name} {customer.last_name}</p>
-                      <p className="text-xs text-[hsl(var(--text-muted))] mt-1">
+          {householdCustomers.length > 0 && (
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-[hsl(var(--border-subtle))]/40">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-semibold text-[hsl(var(--text-heading))] uppercase tracking-wide">Haushalte / Cross Selling</h3>
+                <span className="text-[10px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-2 py-0.5 rounded-full">
+                  {householdCustomers.length}
+                </span>
+              </div>
+              <div className="space-y-1">
+                {displayedHousehold.map(customer => (
+                  <button
+                    key={customer.id}
+                    onClick={() => navigate(`/kunden/${customer.id}/360`)}
+                    className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-[hsl(var(--surface-2))]/40 transition-colors text-left"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-medium text-[hsl(var(--text-heading))] truncate">
+                        {customer.first_name} {customer.last_name}
+                      </p>
+                      <p className="text-[9px] text-[hsl(var(--text-muted))] truncate">
                         Haushalt mit {customers.filter(fm => fm.primary_customer_id === customer.id).length} Mitglied(ern)
                       </p>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/kunden/${customer.id}/360`)}>
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                    <ChevronRight className="w-3 h-3 text-[hsl(var(--text-muted))]" />
+                  </button>
+                ))}
+              </div>
+              {householdCustomers.length > 5 && (
+                <button
+                  onClick={() => setShowAllHousehold(!showAllHousehold)}
+                  className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
+                >
+                  {showAllHousehold ? 'Weniger anzeigen' : `+${householdCustomers.length - 5} weitere anzeigen`}
+                </button>
+              )}
             </div>
-          </div>
+          )}
         </div>
       );
     }

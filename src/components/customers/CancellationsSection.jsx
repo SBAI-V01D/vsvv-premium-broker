@@ -161,32 +161,32 @@ export default function CancellationsSection({ contracts, customers }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div>
-        <h2 className="text-lg font-bold text-[hsl(var(--text-heading))]">Kündigungen</h2>
-        <p className="text-xs text-[hsl(var(--text-muted))] mt-0.5">
-          Operative Übersicht offener Kündigungen und gefährdeter Verträge
+        <h2 className="text-sm font-bold text-[hsl(var(--text-heading))]">Kündigungen</h2>
+        <p className="text-[9px] text-[hsl(var(--text-muted))] mt-0.5">
+          Operative Übersicht
         </p>
       </div>
 
       {/* Gekündigte Policen */}
       <div>
-        <div className="flex items-center gap-2 mb-3">
-          <AlertTriangle className="w-4 h-4 text-[hsl(var(--critical-hsl))]" />
-          <h3 className="text-sm font-semibold text-[hsl(var(--text-heading))]">
-            Gekündigte Policen
+        <div className="flex items-center gap-2 mb-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--critical-hsl))]" />
+          <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
+            Gekündigt
           </h3>
-          <span className="text-xs font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-2 py-0.5 rounded-full">
+          <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
             {cancellationsData.cancelled.length}
           </span>
         </div>
         {cancellationsData.cancelled.length === 0 ? (
-          <p className="text-xs text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-4">
+          <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
             Keine gekündigten Policen
           </p>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {cancellationsData.cancelled.map(item => renderContractCard(item))}
           </div>
         )}
@@ -194,44 +194,22 @@ export default function CancellationsSection({ contracts, customers }) {
 
       {/* Kündigungsfristen */}
       <div>
-        <div className="flex items-center gap-2 mb-3">
-          <Calendar className="w-4 h-4 text-[hsl(var(--warning-hsl))]" />
-          <h3 className="text-sm font-semibold text-[hsl(var(--text-heading))]">
-            Anstehende Kündigungsfristen
+        <div className="flex items-center gap-2 mb-2">
+          <Calendar className="w-3.5 h-3.5 text-[hsl(var(--warning-hsl))]" />
+          <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
+            Fristen
           </h3>
-          <span className="text-xs font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-2 py-0.5 rounded-full">
+          <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
             {cancellationsData.deadline.length}
           </span>
         </div>
         {cancellationsData.deadline.length === 0 ? (
-          <p className="text-xs text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-4">
+          <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
             Keine anstehenden Fristen
           </p>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {cancellationsData.deadline.map(item => renderContractCard(item))}
-          </div>
-        )}
-      </div>
-
-      {/* Gefährdete Kunden */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingDown className="w-4 h-4 text-[hsl(var(--warning-hsl))]" />
-          <h3 className="text-sm font-semibold text-[hsl(var(--text-heading))]">
-            Gefährdete Kunden (Storno-Risiko)
-          </h3>
-          <span className="text-xs font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-2 py-0.5 rounded-full">
-            {cancellationsData.atRisk.length}
-          </span>
-        </div>
-        {cancellationsData.atRisk.length === 0 ? (
-          <p className="text-xs text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-4">
-            Keine gefährdeten Kunden
-          </p>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {cancellationsData.atRisk.map(item => renderContractCard(item, true))}
           </div>
         )}
       </div>

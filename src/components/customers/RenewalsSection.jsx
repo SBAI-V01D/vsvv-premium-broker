@@ -31,10 +31,7 @@ export default function RenewalsSection({ contracts, customers, verkaufschancen 
     
     const result = {
       critical: [],
-      upcoming30to90: [],
-      highPremium: [],
-      noOffer: [],
-      open: [],
+      upcoming90to365: [],
     };
 
     contracts.forEach(contract => {
@@ -58,32 +55,16 @@ export default function RenewalsSection({ contracts, customers, verkaufschancen 
         formattedCancelDate: formatDateCH(contract.cancellation_deadline),
       };
 
-      // Kritisch (<30 Tage)
-      if ((endDays !== null && endDays >= 0 && endDays <= 30) || 
-          (cancelDays !== null && cancelDays >= 0 && cancelDays <= 30)) {
+      // Kritisch (<90 Tage)
+      if ((endDays !== null && endDays >= 0 && endDays <= 90) || 
+          (cancelDays !== null && cancelDays >= 0 && cancelDays <= 90)) {
         result.critical.push(item);
       }
       
-      // 30-90 Tage
-      if ((endDays !== null && endDays > 30 && endDays <= 90) || 
-          (cancelDays !== null && cancelDays > 30 && cancelDays <= 90)) {
-        result.upcoming30to90.push(item);
-      }
-      
-      // Hohe Prämie (>10'000 CHF)
-      if (premium >= 10000) {
-        result.highPremium.push(item);
-      }
-      
-      // Ohne Folgeangebot
-      if (!vs && ((endDays !== null && endDays >= 0 && endDays <= 180) || 
-                  (cancelDays !== null && cancelDays >= 0 && cancelDays <= 180))) {
-        result.noOffer.push(item);
-      }
-      
-      // Renewal offen
-      if (contract.renewal_status === 'none' || contract.renewal_status === 'notified') {
-        result.open.push(item);
+      // 90-365 Tage
+      if ((endDays !== null && endDays > 90 && endDays <= 365) || 
+          (cancelDays !== null && cancelDays > 90 && cancelDays <= 365)) {
+        result.upcoming90to365.push(item);
       }
     });
 
@@ -199,77 +180,55 @@ export default function RenewalsSection({ contracts, customers, verkaufschancen 
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div>
-        <h2 className="text-lg font-bold text-[hsl(var(--text-heading))]">Vertragsabläufe</h2>
-        <p className="text-xs text-[hsl(var(--text-muted))] mt-0.5">
-          Operative Übersicht anstehender Vertragsverlängerungen
+        <h2 className="text-sm font-bold text-[hsl(var(--text-heading))]">Vertragsabläufe</h2>
+        <p className="text-[9px] text-[hsl(var(--text-muted))] mt-0.5">
+          Fristen bis 365 Tage
         </p>
       </div>
 
-      {/* Critical (<30 Tage) */}
+      {/* Critical (<90 Tage) */}
       <div>
-        <div className="flex items-center gap-2 mb-3">
-          <AlertTriangle className="w-4 h-4 text-[hsl(var(--critical-hsl))]" />
-          <h3 className="text-sm font-semibold text-[hsl(var(--text-heading))]">
-            Kritisch (&lt;30 Tage)
+        <div className="flex items-center gap-2 mb-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--critical-hsl))]" />
+          <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
+            Kritisch (&lt;90 Tage)
           </h3>
-          <span className="text-xs font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-2 py-0.5 rounded-full">
+          <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
             {renewalsData.critical.length}
           </span>
         </div>
         {renewalsData.critical.length === 0 ? (
-          <p className="text-xs text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-4">
+          <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
             Keine kritischen Vertragsabläufe
           </p>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {renewalsData.critical.map(item => renderContractCard(item, true))}
           </div>
         )}
       </div>
 
-      {/* Upcoming 30-90 Tage */}
+      {/* Upcoming 90-365 Tage */}
       <div>
-        <div className="flex items-center gap-2 mb-3">
-          <Clock className="w-4 h-4 text-[hsl(var(--warning-hsl))]" />
-          <h3 className="text-sm font-semibold text-[hsl(var(--text-heading))]">
-            30–90 Tage
+        <div className="flex items-center gap-2 mb-2">
+          <Clock className="w-3.5 h-3.5 text-[hsl(var(--warning-hsl))]" />
+          <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
+            90–365 Tage
           </h3>
-          <span className="text-xs font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-2 py-0.5 rounded-full">
-            {renewalsData.upcoming30to90.length}
+          <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
+            {renewalsData.upcoming90to365.length}
           </span>
         </div>
-        {renewalsData.upcoming30to90.length === 0 ? (
-          <p className="text-xs text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-4">
+        {renewalsData.upcoming90to365.length === 0 ? (
+          <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
             Keine anstehenden Abläufe
           </p>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {renewalsData.upcoming30to90.map(item => renderContractCard(item))}
-          </div>
-        )}
-      </div>
-
-      {/* High Premium */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp className="w-4 h-4 text-[hsl(var(--primary))]" />
-          <h3 className="text-sm font-semibold text-[hsl(var(--text-heading))]">
-            Hohe Jahresprämie (&gt;10'000 CHF)
-          </h3>
-          <span className="text-xs font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-2 py-0.5 rounded-full">
-            {renewalsData.highPremium.length}
-          </span>
-        </div>
-        {renewalsData.highPremium.length === 0 ? (
-          <p className="text-xs text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-4">
-            Keine High-Premium-Verträge
-          </p>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {renewalsData.highPremium.map(item => renderContractCard(item))}
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {renewalsData.upcoming90to365.map(item => renderContractCard(item))}
           </div>
         )}
       </div>
