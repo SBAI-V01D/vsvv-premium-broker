@@ -244,12 +244,12 @@ export default function Sidebar({ onNavigate }) {
             className={cn(
               'relative flex items-center rounded-md transition-all duration-200 group',
               collapsed ? 'justify-center h-9 w-9 mx-auto' : 'gap-2.5 px-3 py-[9px]',
-              'text-[hsl(var(--text-muted))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))]/60 border border-transparent'
+              'bg-[hsl(var(--primary))/0.08] border border-[hsl(var(--border-subtle))]/40 text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))/0.12]'
             )}
           >
-            <ExternalLink className="w-[14px] h-[14px] flex-shrink-0 text-[hsl(var(--text-muted))] opacity-70 group-hover:opacity-100" strokeWidth={1.8} />
+            <ExternalLink className="w-[14px] h-[14px] flex-shrink-0 text-[hsl(var(--primary))]" strokeWidth={1.8} />
             {!collapsed && (
-              <span className="text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em] text-[hsl(var(--text-muted))] group-hover:text-[hsl(var(--text-heading))]">
+              <span className="text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em] text-[hsl(var(--primary))] font-semibold">
                 Portal öffnen
               </span>
             )}
