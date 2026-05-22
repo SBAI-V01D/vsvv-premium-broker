@@ -2,7 +2,7 @@
  * CustomerIntelligenceWorkspace — Broker Intelligence / Operations Workspace
  * Ultimate restructuring: Operations · Risks · Tasks · Actions
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import BirthdayIntelligence from '@/components/intelligence/BirthdayIntelligence';
 import RenewalRadar from '@/components/intelligence/RenewalRadar';
 import OperationsIntelligence from '@/components/intelligence/OperationsIntelligence';
+import PortfolioDashboard from '@/components/intelligence/PortfolioDashboard';
 
 // ── Segment builder ────────────────────────────────────────────────────────
 function buildSegments(customers, tasks, contracts, documents) {
@@ -231,6 +232,10 @@ export default function CustomerIntelligenceWorkspace() {
   const segments = useMemo(() => buildSegments(customers, tasks, contracts, documents), [customers, tasks, contracts, documents]);
   const primaryCustomers = useMemo(() => customers.filter(c => !c.is_family_member), [customers]);
 
+  // URL params for view mode
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlView = urlParams.get('view');
+
   // Workspace Mode Filtering
   const modeFiltered = useMemo(() => {
     if (workspaceMode === 'private') return primaryCustomers.filter(c => c.customer_type !== 'business');
@@ -256,6 +261,15 @@ export default function CustomerIntelligenceWorkspace() {
     }
     return primaryCustomers;
   }, [primaryCustomers, workspaceMode, segments, verkaufschancen]);
+
+  // Handle URL view params
+  React.useEffect(() => {
+    if (urlView === 'birthdays') {
+      setWorkspaceMode('operations');
+    } else if (urlView === 'vip') {
+      setWorkspaceMode('private');
+    }
+  }, [urlView]);
 
   // Search
   const { displayed, matchedFamilyIds } = useMemo(() => {
@@ -325,9 +339,7 @@ export default function CustomerIntelligenceWorkspace() {
     if (workspaceMode === 'operations') {
       return (
         <div className="p-6 max-w-[1600px] mx-auto">
-          <BirthdayIntelligence />
-          <div className="my-8 divider-strong" />
-          <RenewalRadar />
+          <PortfolioDashboard setWorkspaceMode={setWorkspaceMode} />
         </div>
       );
     }
