@@ -95,7 +95,6 @@ function sortCustomers(list, sortBy) {
 const WORKSPACE_MODES = [
   { id: 'private', label: 'Privatkunden', icon: User },
   { id: 'business', label: 'Unternehmen', icon: Building2 },
-  { id: 'operations', label: 'Operations', icon: TrendingUp },
   { id: 'risks', label: 'Risiken', icon: AlertTriangle },
   { id: 'tasks', label: 'Aufgaben', icon: Calendar },
   { id: 'actions', label: 'Handlungen', icon: Target },
