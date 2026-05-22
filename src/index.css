@@ -9,11 +9,12 @@
     --font-inter: 'Inter', system-ui, sans-serif;
 
     /* ── Core backgrounds ─────────────────────────────────────────── */
-    --background:        216 24% 94%;      /* refined banking white */
+    /* Unified warm stone/graphite — architectural material (not SaaS white) */
+    --background:        216 18% 96%;      /* warm stone base — matches sidebar material */
     --foreground:        220 30% 12%;      /* deep slate-navy */
 
     /* ── Surfaces / Cards ─────────────────────────────────────────── */
-    --card:              0 0% 100%;
+    --card:              0 0% 100%;        /* pure white for elevated cards */
     --card-foreground:   220 30% 12%;
     --popover:           0 0% 100%;
     --popover-foreground: 220 30% 12%;
@@ -30,21 +31,23 @@
     --text-muted:        217 13% 48%;
     --text-subtle:       217 10% 62%;
 
-    /* Surfaces */
-    --surface-0:         0 0% 100%;        /* card white */
-    --surface-1:         216 20% 97%;      /* page bg tint */
-    --surface-2:         216 18% 93%;      /* section bg */
-    --surface-3:         216 16% 88%;      /* inset / tag bg */
+    /* ── Unified Surface System — warm stone/graphite material ────── */
+    /* All surfaces use warm neutrals (stone/zinc) — NOT cool blue-grey */
+    --surface-0:         0 0% 100%;        /* card white (elevated) */
+    --surface-1:         216 18% 96%;      /* page base — matches --background */
+    --surface-2:         216 16% 93%;      /* embedded surfaces (sidebar active, hover) */
+    --surface-3:         216 14% 90%;      /* deep inset / tags */
 
-    /* Borders */
-    --border-subtle:     216 16% 90%;      /* hairline dividers */
-    --border-default:    216 16% 85%;
-    --border-strong:     216 16% 74%;
+    /* ── Borders — warm grey (not cool blue) ─────────────────────── */
+    --border-subtle:     216 14% 88%;      /* hairline dividers */
+    --border-default:    216 14% 84%;
+    --border-strong:     216 14% 72%;
 
-    /* Elevation */
-    --shadow-card:       0 1px 3px 0 rgb(15 30 60 / 0.06), 0 1px 2px -1px rgb(15 30 60 / 0.04);
-    --shadow-raised:     0 4px 12px -2px rgb(15 30 60 / 0.08), 0 2px 4px -2px rgb(15 30 60 / 0.04);
-    --shadow-overlay:    0 20px 48px -8px rgb(15 30 60 / 0.18), 0 8px 16px -8px rgb(15 30 60 / 0.10);
+    /* ── Elevation — reduced shadows (Private Banking / FINMA look) ─ */
+    /* Minimal shadows — more layering, less "floating widgets" */
+    --shadow-card:       0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 1px -1px rgb(0 0 0 / 0.02);
+    --shadow-raised:     0 2px 8px -2px rgb(0 0 0 / 0.06), 0 1px 2px -2px rgb(0 0 0 / 0.03);
+    --shadow-overlay:    0 12px 32px -8px rgb(0 0 0 / 0.12), 0 4px 12px -8px rgb(0 0 0 / 0.08);
 
     /* Semantic */
     --success-hsl:       152 48% 38%;
@@ -193,7 +196,7 @@
 
 /* ── Surface / card helpers ─────────────────────────────────── */
 @layer utilities {
-  /* Core surfaces */
+  /* ── Core surfaces — unified material system ───────────────────── */
   .surface-0 { @apply bg-white border border-[hsl(var(--border-subtle))] rounded-xl; }
   .surface       { @apply bg-white border border-border rounded-xl; box-shadow: var(--shadow-card); }
   .surface-sm    { @apply bg-white border border-border rounded-lg; box-shadow: var(--shadow-card); }
@@ -201,7 +204,7 @@
   .surface-inset { @apply bg-[hsl(var(--surface-2))] border border-[hsl(var(--border-subtle))] rounded-lg; }
   .surface-muted { @apply bg-[hsl(var(--surface-1))] rounded-lg; }
 
-  /* Enterprise card pattern */
+  /* ── Enterprise card pattern — minimal shadow, material focus ─── */
   .card-enterprise {
     @apply bg-white rounded-xl border border-[hsl(var(--border-subtle))] transition-shadow;
     box-shadow: var(--shadow-card);
@@ -218,11 +221,12 @@
 
 /* ── Table refinements ──────────────────────────────────────── */
 @layer utilities {
+  /* ── Table refinements — warm stone hover (not cool grey) ─────── */
   .table-row-hover {
-    @apply hover:bg-slate-50/80 transition-colors cursor-pointer;
+    @apply hover:bg-[hsl(var(--surface-2))]/50 transition-colors cursor-pointer;
   }
   .table-header {
-    @apply bg-slate-50/60 border-b border-border text-[11px] font-semibold text-muted-foreground uppercase tracking-wide;
+    @apply bg-[hsl(var(--surface-2))]/60 border-b border-border text-[11px] font-semibold text-muted-foreground uppercase tracking-wide;
   }
 }
 
