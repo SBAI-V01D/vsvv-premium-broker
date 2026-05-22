@@ -52,7 +52,7 @@ const navGroups = [
   {
     label: 'Cockpit',
     items: [
-      { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
+      { label: 'Dashboard', icon: LayoutDashboard, path: '/', color: 'primary' },
     ],
   },
   {
@@ -116,7 +116,7 @@ export default function Sidebar({ onNavigate }) {
       )}
       style={{ boxShadow: '4px 0 32px 0 rgba(0,0,0,0.08)' }}
     >
-      {/* ── Logo ─────────────────────────────────────────────────────── */}
+      {/* ── Logo / VSV Management GmbH Button ─────────────────────────── */}
       <div className={cn(
         'flex items-center h-[60px] border-b border-[hsl(var(--border-default))] flex-shrink-0',
         collapsed ? 'justify-center' : 'gap-3 px-4'
@@ -125,10 +125,13 @@ export default function Sidebar({ onNavigate }) {
           <Shield className="w-3.5 h-3.5 text-white" />
         </div>
         {!collapsed && (
-          <div className="min-w-0">
-            <p className="text-[13px] font-bold text-[hsl(var(--text-heading))] tracking-tight leading-none">Swiss Premium Broker</p>
-            <p className="text-[9px] text-[hsl(var(--text-subtle))] font-medium tracking-[0.14em] uppercase mt-0.5">Insurance Platform</p>
-          </div>
+          <button
+            onClick={() => window.location.href = '/'}
+            className="min-w-0 text-left hover:opacity-80 transition-opacity"
+          >
+            <p className="text-[13px] font-bold text-[hsl(var(--primary))] tracking-tight leading-none">VSV Management GmbH</p>
+            <p className="text-[9px] text-[hsl(var(--text-subtle))] font-medium tracking-[0.14em] uppercase mt-0.5">Swiss Premium Broker</p>
+          </button>
         )}
       </div>
 
