@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Input } from '@/components/ui/input'
@@ -7,8 +7,10 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { DialogFooter } from '@/components/ui/dialog'
+import { AlertTriangle } from 'lucide-react'
 import { lookupPostalCode, isValidPostalCode, fixOcrPostalCode } from '@/lib/swissPostalCodes'
 import PostalCodeInput from '@/components/common/PostalCodeInput'
+import DuplicateWarning from '@/components/customers/DuplicateWarning'
 
 const CANTONS = ["AG","AI","AR","BE","BL","BS","FR","GE","GL","GR","JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG","TI","UR","VD","VS","ZG","ZH"]
 const FAMILY_ROLES = {
@@ -230,6 +232,67 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
 
   const isNewCustomer = !customer?.id
   const [advisorError, setAdvisorError] = useState('')
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false)
+  const [forceCreate, setForceCreate] = useState(false)
+
+  // ── Live Duplicate Detection ──────────────────────────────────────────────
+  const normalize = (s) => (s || '').toLowerCase().replace(/\s+/g, '').trim()
+  const normalizePhone = (s) => (s || '').replace(/[^\d]/g, '')
+
+  const { duplicates, householdHints } = useMemo(() => {
+    if (!isNewCustomer || !primaryCustomers?.length) return { duplicates: [], householdHints: [] }
+    const fn = normalize(form.first_name)
+    const ln = normalize(form.last_name)
+    const email = normalize(form.email)
+    const phone = normalizePhone(form.phone)
+    const mobile = normalizePhone(form.mobile)
+    if (!fn && !ln && !email) return { duplicates: [], householdHints: [] }
+
+    const dupes = []
+    const household = []
+
+    for (const c of primaryCustomers) {
+      if (c.id === customer?.id) continue
+      if (c.archived) continue
+      const reasons = []
+
+      // Email match
+      if (email && email.length > 3 && normalize(c.email) === email) reasons.push('E-Mail')
+
+      // Name match (both first AND last)
+      const cFn = normalize(c.first_name)
+      const cLn = normalize(c.last_name)
+      if (fn.length >= 2 && ln.length >= 2 && cFn === fn && cLn === ln) reasons.push('Name')
+
+      // Phone match
+      const cPhone = normalizePhone(c.phone)
+      const cMobile = normalizePhone(c.mobile)
+      if (phone.length >= 8 && (cPhone === phone || cMobile === phone)) reasons.push('Telefon')
+      if (mobile.length >= 8 && (cPhone === mobile || cMobile === mobile)) reasons.push('Mobile')
+
+      // AHV match
+      if (form.ahv_number && form.ahv_number.length > 5 && c.ahv_number === form.ahv_number) reasons.push('AHV-Nr.')
+
+      if (reasons.length > 0) {
+        // Household hint: same last name but no strong match
+        const isHousehold = reasons.length === 0 ||
+          (reasons.length === 1 && reasons[0] === 'Name' && cLn === ln && cFn !== fn)
+        if (isHousehold) {
+          household.push({ customer: c, reasons })
+        } else {
+          dupes.push({ customer: c, reasons, advisorName: null })
+        }
+      } else if (
+        // Same last name + same city/street = household hint
+        ln.length >= 2 && cLn === ln &&
+        (normalize(c.city) === normalize(form.city) || normalize(c.street) === normalize(form.street))
+        && normalize(c.city) && normalize(form.city)
+      ) {
+        household.push({ customer: c, reasons: ['Nachname + Ort'] })
+      }
+    }
+    return { duplicates: dupes, householdHints: household }
+  }, [form.first_name, form.last_name, form.email, form.phone, form.mobile, form.ahv_number, form.city, form.street, primaryCustomers, isNewCustomer])
 
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }))
 
@@ -247,6 +310,10 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
       return
     }
     setAdvisorError('')
+    if (isNewCustomer && !forceCreate && (duplicates.length > 0)) {
+      setShowDuplicateWarning(true)
+      return
+    }
     onSave(form)
   }
 
@@ -431,6 +498,22 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
           </Select>
         </div>
       </div>
+
+      {showDuplicateWarning && (
+        <DuplicateWarning
+          duplicates={duplicates}
+          householdHints={householdHints}
+          onForceCreate={() => { setForceCreate(true); setShowDuplicateWarning(false); onSave(form) }}
+          onDismiss={() => setShowDuplicateWarning(false)}
+        />
+      )}
+
+      {!showDuplicateWarning && duplicates.length > 0 && form.first_name && form.last_name && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+          <span>{duplicates.length} mögliche Dublette{duplicates.length > 1 ? 'n' : ''} gefunden — wird beim Speichern angezeigt.</span>
+        </div>
+      )}
 
       <div>
         <Label>Beratender Berater {isNewCustomer && <span className="text-destructive">*</span>}</Label>
