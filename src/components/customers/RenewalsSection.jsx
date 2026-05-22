@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { RefreshCw, AlertTriangle, TrendingUp, Clock, CheckCircle, Phone, Mail, Plus } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const MONTHS_DE = [
@@ -88,7 +88,11 @@ export default function RenewalsSection({ contracts, customers, verkaufschancen 
     const isUrgent = urgency !== null && urgency <= 30;
     
     return (
-      <div key={item.contract.id} className="bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-[hsl(var(--border-subtle))]/40 hover:border-[hsl(var(--border-default))]/60 transition-all">
+      <Link
+        key={item.contract.id}
+        to={`/kunden/${item.customer?.id}`}
+        className="block bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-[hsl(var(--border-subtle))]/40 hover:border-[hsl(var(--border-default))]/60 hover:shadow-md transition-all"
+      >
         <div className="flex items-start gap-2 mb-2">
           <div className={cn(
             "w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0",
@@ -151,14 +155,7 @@ export default function RenewalsSection({ contracts, customers, verkaufschancen 
           </div>
         </div>
 
-        <Link
-          to={`/kunden/${item.customer?.id}`}
-          className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-md bg-[hsl(var(--primary))/0.1] text-[hsl(var(--primary))] text-[10px] font-medium hover:bg-[hsl(var(--primary))/0.15] transition-colors"
-        >
-          <Phone className="w-2.5 h-2.5" />
-          Kontakt
-        </Link>
-      </div>
+      </Link>
     );
   };
 

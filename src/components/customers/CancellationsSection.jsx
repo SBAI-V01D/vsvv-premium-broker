@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertTriangle, Shield, TrendingDown, Calendar, Phone, Mail, FileText } from 'lucide-react';
+import { AlertTriangle, Shield, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 function formatDateCH(dateString) {
@@ -21,6 +21,9 @@ function getDaysUntil(dateString) {
 }
 
 export default function CancellationsSection({ contracts, customers }) {
+  const [showAllCancelled, setShowAllCancelled] = React.useState(false);
+  const [showAllDeadlines, setShowAllDeadlines] = React.useState(false);
+  
   const cancellationsData = useMemo(() => {
     const result = {
       open: [],
@@ -79,7 +82,11 @@ export default function CancellationsSection({ contracts, customers }) {
     const isMediumRisk = item.premium >= 5000;
     
     return (
-      <div key={item.contract.id} className="bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-[hsl(var(--border-subtle))]/40 hover:border-[hsl(var(--border-default))]/60 transition-all">
+      <Link
+        key={item.contract.id}
+        to={`/kunden/${item.customer?.id}`}
+        className="block bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-[hsl(var(--border-subtle))]/40 hover:border-[hsl(var(--border-default))]/60 hover:shadow-md transition-all"
+      >
         <div className="flex items-start gap-2 mb-2">
           <div className={cn(
             "w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0",
@@ -140,23 +147,7 @@ export default function CancellationsSection({ contracts, customers }) {
           </div>
         )}
 
-        <div className="flex items-center gap-1.5">
-          <Link
-            to={`/kunden/${item.customer?.id}`}
-            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 py-1.5 rounded-md bg-[hsl(var(--primary))/0.1] text-[hsl(var(--primary))] text-[10px] font-medium hover:bg-[hsl(var(--primary))/0.15] transition-colors"
-          >
-            <Phone className="w-2.5 h-2.5" />
-            Kontakt
-          </Link>
-          <Link
-            to={`/kunden/${item.customer?.id}?tab=contracts`}
-            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-md bg-[hsl(var(--surface-2))] text-[hsl(var(--text-heading))] text-[10px] font-medium hover:bg-[hsl(var(--surface-2))]/70 transition-colors"
-          >
-            <FileText className="w-2.5 h-2.5" />
-            Details
-          </Link>
-        </div>
-      </div>
+      </Link>
     );
   };
 
@@ -188,9 +179,19 @@ export default function CancellationsSection({ contracts, customers }) {
               Keine gekündigten Policen
             </p>
           ) : (
-            <div className="space-y-3">
-              {cancellationsData.cancelled.map(item => renderContractCard(item))}
-            </div>
+            <>
+              <div className="space-y-3">
+                {(showAllCancelled ? cancellationsData.cancelled : cancellationsData.cancelled.slice(0, 5)).map(item => renderContractCard(item))}
+              </div>
+              {cancellationsData.cancelled.length > 5 && (
+                <button
+                  onClick={() => setShowAllCancelled(!showAllCancelled)}
+                  className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
+                >
+                  {showAllCancelled ? 'Weniger anzeigen' : `+${cancellationsData.cancelled.length - 5} weitere anzeigen`}
+                </button>
+              )}
+            </>
           )}
         </div>
 
@@ -210,9 +211,19 @@ export default function CancellationsSection({ contracts, customers }) {
               Keine anstehenden Fristen
             </p>
           ) : (
-            <div className="space-y-3">
-              {cancellationsData.deadline.map(item => renderContractCard(item))}
-            </div>
+            <>
+              <div className="space-y-3">
+                {(showAllDeadlines ? cancellationsData.deadline : cancellationsData.deadline.slice(0, 5)).map(item => renderContractCard(item))}
+              </div>
+              {cancellationsData.deadline.length > 5 && (
+                <button
+                  onClick={() => setShowAllDeadlines(!showAllDeadlines)}
+                  className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
+                >
+                  {showAllDeadlines ? 'Weniger anzeigen' : `+${cancellationsData.deadline.length - 5} weitere anzeigen`}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
