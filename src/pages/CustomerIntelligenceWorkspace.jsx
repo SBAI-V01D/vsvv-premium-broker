@@ -23,10 +23,11 @@ import EmptyState, { LoadingTable } from '@/components/shared/EmptyState';
 import { cn } from '@/lib/utils';
 
 // Intelligence Components
-import BirthdayIntelligence from '@/components/intelligence/BirthdayIntelligence';
-import RenewalRadar from '@/components/intelligence/RenewalRadar';
 import OperationsIntelligence from '@/components/intelligence/OperationsIntelligence';
 import PortfolioDashboard from '@/components/intelligence/PortfolioDashboard';
+import BirthdaySection from '@/components/customers/BirthdaySection';
+import RenewalsSection from '@/components/customers/RenewalsSection';
+import CancellationsSection from '@/components/customers/CancellationsSection';
 
 // ── Segment builder ────────────────────────────────────────────────────────
 function buildSegments(customers, tasks, contracts, documents) {
@@ -94,11 +95,15 @@ function sortCustomers(list, sortBy) {
 
 // NEW: Broker Intelligence Workspace Modes
 const WORKSPACE_MODES = [
+  { id: 'overview', label: 'Kundenübersicht', icon: Users },
   { id: 'private', label: 'Privatkunden', icon: User },
   { id: 'business', label: 'Unternehmen', icon: Building2 },
-  { id: 'risks', label: 'Risiken', icon: AlertTriangle },
+  { id: 'birthdays', label: 'Geburtstage', icon: Calendar },
+  { id: 'renewals', label: 'Vertragsabläufe', icon: TrendingUp },
+  { id: 'cancellations', label: 'Kündigungen', icon: AlertTriangle },
   { id: 'tasks', label: 'Aufgaben', icon: Calendar },
-  { id: 'actions', label: 'Handlungen', icon: Target },
+  { id: 'risks', label: 'Risiken', icon: AlertTriangle },
+  { id: 'vip', label: 'Hohe Prämien', icon: TrendingUp },
 ];
 
 // ── Grouped customer feed ─────────────────────────────────────────────────
@@ -159,7 +164,7 @@ export default function CustomerIntelligenceWorkspace() {
   const [showForm, setShowForm]         = useState(false);
   const [editing, setEditing]           = useState(null);
   const [newCustomerType, setNewCustomerType] = useState('private');
-  const [workspaceMode, setWorkspaceMode] = useState('operations');
+  const [workspaceMode, setWorkspaceMode] = useState('overview');
   const [sortBy, setSortBy]               = useState('alpha');
   const [search, setSearch]             = useState('');
   const [showImport, setShowImport]     = useState(false);
@@ -236,6 +241,15 @@ export default function CustomerIntelligenceWorkspace() {
   const urlParams = new URLSearchParams(window.location.search);
   const urlView = urlParams.get('view');
 
+  // Sync URL params with workspace mode
+  useEffect(() => {
+    if (urlView) {
+      if (['private', 'business', 'birthdays', 'renewals', 'cancellations', 'tasks', 'risks', 'vip'].includes(urlView)) {
+        setWorkspaceMode(urlView);
+      }
+    }
+  }, [urlView]);
+
   // Workspace Mode Filtering
   const modeFiltered = useMemo(() => {
     if (workspaceMode === 'private') return primaryCustomers.filter(c => c.customer_type !== 'business');
@@ -252,17 +266,11 @@ export default function CustomerIntelligenceWorkspace() {
         return hasTasks;
       });
     }
-    if (workspaceMode === 'actions') {
-      return primaryCustomers.filter(c => {
-        const hasTasks = segments.tasks?.filter?.(c);
-        const hasOpportunity = verkaufschancen.some(v => v.customer_id === c.id && !['gewonnen','verloren'].includes(v.status));
-        return hasTasks || hasOpportunity;
-      });
+    if (workspaceMode === 'vip') {
+      return primaryCustomers.filter(c => (c.total_premium || 0) >= 5000);
     }
     return primaryCustomers;
-  }, [primaryCustomers, workspaceMode, segments, verkaufschancen]);
-
-  // Handle URL view params - removed, navigation now via PortfolioDashboard cards
+  }, [primaryCustomers, workspaceMode, segments]);
 
   // Search
   const { displayed, matchedFamilyIds } = useMemo(() => {
@@ -323,24 +331,41 @@ export default function CustomerIntelligenceWorkspace() {
     const csv = [headers, ...rows].map(r => r.map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-    a.download = `portfolio_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `kunden_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
   };
 
+  // Update URL when workspace mode changes
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (['overview'].includes(workspaceMode)) {
+      params.delete('view');
+    } else {
+      params.set('view', workspaceMode);
+    }
+    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+    window.history.replaceState({}, '', newUrl);
+  }, [workspaceMode]);
+
   // Render Intelligence Views
   const renderIntelligenceView = () => {
-    if (workspaceMode === 'operations') {
+    if (workspaceMode === 'birthdays') {
+      return <BirthdaySection customers={primaryCustomers} />;
+    }
+    if (workspaceMode === 'renewals') {
+      return <RenewalsSection contracts={contracts} customers={customers} verkaufschancen={verkaufschancen} />;
+    }
+    if (workspaceMode === 'cancellations') {
+      return <CancellationsSection contracts={contracts} customers={customers} />;
+    }
+    if (workspaceMode === 'overview') {
       return (
-        <div className="p-6 max-w-[1600px] mx-auto">
+        <div className="space-y-8">
           <PortfolioDashboard setWorkspaceMode={setWorkspaceMode} />
-          <div className="my-8 divider-strong" />
-          <BirthdayIntelligence />
-          <div className="my-8 divider-strong" />
-          <RenewalRadar />
         </div>
       );
     }
-    if (workspaceMode === 'risks' || workspaceMode === 'tasks' || workspaceMode === 'actions') {
+    if (workspaceMode === 'risks' || workspaceMode === 'tasks' || workspaceMode === 'vip') {
       return (
         <div className="p-6 max-w-[1600px] mx-auto">
           <OperationsIntelligence />
@@ -350,7 +375,7 @@ export default function CustomerIntelligenceWorkspace() {
     return null;
   };
 
-  const isIntelligenceMode = ['operations', 'risks', 'tasks', 'actions'].includes(workspaceMode);
+  const isIntelligenceMode = ['overview', 'birthdays', 'renewals', 'cancellations', 'risks', 'tasks', 'vip'].includes(workspaceMode);
 
   return (
     <div className="flex flex-col h-full bg-[hsl(var(--surface-1))]">
@@ -361,15 +386,15 @@ export default function CustomerIntelligenceWorkspace() {
           {/* Title */}
           <div className="shrink-0">
             <h1 className="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight">
-              {WORKSPACE_MODES.find(m => m.id === workspaceMode)?.label || 'Portfolio'}
+              {WORKSPACE_MODES.find(m => m.id === workspaceMode)?.label || 'Kundenübersicht'}
             </h1>
-            {!isIntelligenceMode && (
-              <p className="text-body-sm text-[hsl(var(--text-muted))] mt-0.5">{primaryCustomers.length} Kunden</p>
+            {!isIntelligenceMode && workspaceMode !== 'birthdays' && workspaceMode !== 'renewals' && workspaceMode !== 'cancellations' && (
+              <p className="text-body-sm text-[hsl(var(--text-muted))] mt-0.5">{displayed.length} Kunden</p>
             )}
           </div>
 
-          {/* Workspace Modes */}
-          <div className="flex items-center gap-1">
+          {/* Workspace Modes - Horizontal Scroll */}
+          <div className="flex items-center gap-1 overflow-x-auto pb-1">
             {WORKSPACE_MODES.map(mode => {
               const Icon = mode.icon;
               return (
@@ -377,68 +402,68 @@ export default function CustomerIntelligenceWorkspace() {
                   key={mode.id}
                   onClick={() => setWorkspaceMode(mode.id)}
                   className={cn(
-                    'flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-lg transition-all',
+                    'flex items-center gap-2 px-3 py-2 text-[12.5px] font-medium rounded-lg transition-all whitespace-nowrap',
                     workspaceMode === mode.id
                       ? 'bg-[hsl(var(--primary))] text-white shadow-sm'
                       : 'text-[hsl(var(--text-muted))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))]'
                   )}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-3.5 h-3.5" />
                   {mode.label}
                 </button>
               );
             })}
           </div>
 
-          {/* Search (only for non-intelligence modes) */}
-          {!isIntelligenceMode && (
-            <div className="flex-1 min-w-[280px] max-w-xl">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--text-subtle))]" />
-                <input
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Name, E-Mail, Kundennummer…"
-                  className="w-full pl-9 pr-8 py-1.5 text-[13px] border border-[hsl(var(--border-subtle))] rounded-lg bg-[hsl(var(--surface-0))] text-[hsl(var(--text-heading))] placeholder:text-[hsl(var(--text-subtle))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))/0.3] focus:border-[hsl(var(--primary))/0.4] transition-all"
-                />
-                {search && (
-                  <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))]">
-                    <XCircle className="w-3.5 h-3.5" />
-                  </button>
-                )}
+          {/* Search (only for customer list modes) */}
+          {!isIntelligenceMode && workspaceMode !== 'birthdays' && workspaceMode !== 'renewals' && workspaceMode !== 'cancellations' && (
+            <>
+              <div className="flex-1 min-w-[280px] max-w-xl">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--text-subtle))]" />
+                  <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Name, E-Mail, Kundennummer…"
+                    className="w-full pl-9 pr-8 py-1.5 text-[13px] border border-[hsl(var(--border-subtle))] rounded-lg bg-[hsl(var(--surface-0))] text-[hsl(var(--text-heading))] placeholder:text-[hsl(var(--text-subtle))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))/0.3] focus:border-[hsl(var(--primary))/0.4] transition-all"
+                  />
+                  {search && (
+                    <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))]">
+                      <XCircle className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
 
-          {/* Actions (only for non-intelligence modes) */}
-          {!isIntelligenceMode && (
-            <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-              <button onClick={handleExport} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Export">
-                <Download className="w-4 h-4" />
-              </button>
-              <button onClick={() => setShowMerge(true)} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Zusammenführen">
-                <Users className="w-4 h-4" />
-              </button>
-              <button onClick={() => setShowImport(true)} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Import">
-                <Upload className="w-4 h-4" />
-              </button>
-              <div className="w-px h-4 bg-[hsl(var(--border-subtle))] mx-0.5" />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" className="rounded-md h-8 text-[12.5px]">
-                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Neuer Kunde
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}>
-                    <User className="w-4 h-4 mr-2 text-[hsl(var(--text-muted))]" /> Privatkunde
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}>
-                    <Building2 className="w-4 h-4 mr-2 text-[hsl(var(--text-muted))]" /> Firmenkunde
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+              {/* Actions */}
+              <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                <button onClick={handleExport} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Export">
+                  <Download className="w-4 h-4" />
+                </button>
+                <button onClick={() => setShowMerge(true)} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Zusammenführen">
+                  <Users className="w-4 h-4" />
+                </button>
+                <button onClick={() => setShowImport(true)} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Import">
+                  <Upload className="w-4 h-4" />
+                </button>
+                <div className="w-px h-4 bg-[hsl(var(--border-subtle))] mx-0.5" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" className="rounded-md h-8 text-[12.5px]">
+                      <Plus className="w-3.5 h-3.5 mr-1.5" /> Neuer Kunde
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}>
+                      <User className="w-4 h-4 mr-2 text-[hsl(var(--text-muted))]" /> Privatkunde
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}>
+                      <Building2 className="w-4 h-4 mr-2 text-[hsl(var(--text-muted))]" /> Firmenkunde
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </>
           )}
         </div>
       </div>

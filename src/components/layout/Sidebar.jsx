@@ -3,7 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
   ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink,
-  Target, User, Briefcase, TrendingUp, RefreshCw, Lock, Menu, BookOpen, Activity
+  Target, User, Briefcase, TrendingUp, RefreshCw, Lock, Menu, BookOpen, Activity,
+  Building2, Gift, AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -65,12 +66,17 @@ const navGroups = [
     ],
   },
   {
-    label: 'Kunden & Verträge',
+    label: 'Kunden',
     items: [
-      { label: 'Portfolio',    icon: Users,    path: '/kunden', color: 'primary' },
-      { label: 'Verträge',  icon: Shield,   path: '/vertraege' },
-      { label: 'Anträge',   icon: FileText, path: '/antraege', color: 'primary' },
-      { label: 'Dokumente', icon: FileText, path: '/dokumente' },
+      { label: 'Kundenübersicht', icon: Users,    path: '/kunden', color: 'primary' },
+      { label: 'Privatkunden',    icon: User,     path: '/kunden?view=private', color: 'primary' },
+      { label: 'Unternehmen',     icon: Building2, path: '/kunden?view=business', color: 'primary' },
+      { label: 'Geburtstage',     icon: Gift,     path: '/kunden?view=birthdays', color: 'primary' },
+      { label: 'Vertragsabläufe', icon: RefreshCw, path: '/kunden?view=renewals' },
+      { label: 'Kündigungen',     icon: AlertCircle, path: '/kunden?view=cancellations' },
+      { label: 'Aufgaben',        icon: CheckSquare, path: '/aufgaben' },
+      { label: 'Risiken',         icon: Shield,   path: '/kunden?view=risks' },
+      { label: 'Hohe Prämien',    icon: TrendingUp, path: '/kunden?view=vip' },
     ],
   },
   {
