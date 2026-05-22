@@ -31,7 +31,10 @@ export default function Dashboard() {
     const res = await base44.functions.invoke('getAllContractsForDashboard', {})
     return res.data?.data || res.data || []
   }})
-  const { data: leads = [] }           = useQuery({ queryKey: ['leads'],           queryFn: () => base44.entities.Lead.filter({ status: ['new', 'contacted', 'qualified'] }, '-lead_score', 50) })
+  const { data: leads = [] }           = useQuery({ queryKey: ['leads'],           queryFn: async () => {
+    const all = await base44.entities.Lead.list('-lead_score', 100)
+    return all.filter(l => ['new', 'contacted', 'qualified'].includes(l.status))
+  } })
   const { data: verkaufschancen = [] } = useQuery({ queryKey: ['verkaufschancen'], queryFn: () => base44.entities.Verkaufschance.list('-created_date', 100) })
 
   // ── Abgeleitete Daten ─────────────────────────────────────────────────────

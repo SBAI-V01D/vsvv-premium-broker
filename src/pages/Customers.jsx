@@ -3,6 +3,7 @@
  * Premium Financial Platform: monochrome · whitespace · typography-first
  */
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
@@ -61,6 +62,7 @@ function buildSegments(customers, tasks, contracts) {
 
 // ── Today Focus Panel ──────────────────────────────────────────────────────
 function TodayFocusPanel({ tasks, contracts }) {
+  const navigate = useNavigate();
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
   const in14 = new Date(today); in14.setDate(in14.getDate() + 14);
@@ -125,10 +127,14 @@ function TodayFocusPanel({ tasks, contracts }) {
           <p className="text-[9px] uppercase tracking-widest font-bold text-amber-500 mb-2">Heute fällig</p>
           <div className="space-y-1.5">
             {dueToday.slice(0, 4).map(t => (
-              <div key={t.id} className="border-l-2 border-amber-300 pl-3 py-1">
+              <button
+                key={t.id}
+                onClick={() => navigate('/aufgaben')}
+                className="w-full text-left border-l-2 border-amber-300 pl-3 py-1 hover:bg-amber-50/60 rounded-r transition-colors"
+              >
                 <p className="text-[11px] font-semibold text-slate-700 truncate">{t.title}</p>
                 {t.customer_name && <p className="text-[10px] text-slate-400">{t.customer_name}</p>}
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -222,6 +228,7 @@ function CustomerFeed({ displayed, customers, segments, matchedFamilyIds, onEdit
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function Customers() {
+  const navigate = useNavigate();
   const [showForm, setShowForm]         = useState(false);
   const [editing, setEditing]           = useState(null);
   const [newCustomerType, setNewCustomerType] = useState('private');
@@ -435,7 +442,7 @@ export default function Customers() {
             { label: 'Neuzugänge',    value: segments.new?.count ?? 0,    onClick: () => setActiveSegment('new') },
             { label: 'Policen',       value: contracts.length,             onClick: () => {} },
             { label: 'Jahresprämien', value: `CHF ${Math.round(totalPremium / 1000)}k`, onClick: () => {} },
-            { label: 'Offene Tasks',  value: openTasks,    alert: openTasks > 0,      onClick: () => setActiveSegment('tasks') },
+            { label: 'Offene Tasks',  value: openTasks,    alert: openTasks > 0,      onClick: () => navigate('/aufgaben') },
             { label: 'Leads offen',   value: leads.length, onClick: () => {} },
             { label: 'Kritisch',      value: criticalCount, alert: criticalCount > 0, red: true, onClick: () => setActiveSegment('critical') },
           ].map((kpi, i, arr) => (
