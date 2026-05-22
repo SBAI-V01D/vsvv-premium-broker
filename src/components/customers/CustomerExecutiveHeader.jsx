@@ -161,28 +161,28 @@ export default function CustomerExecutiveHeader({
           </div>
         </div>
 
-        {/* KPI strip */}
-        <div className="hidden lg:flex items-center gap-8 px-6 py-3 bg-slate-50 rounded-xl border border-[hsl(var(--border-subtle))]">
+        {/* KPI strip — reduced visual weight */}
+        <div className="hidden lg:flex items-center gap-6 px-5 py-2.5 bg-[hsl(var(--surface-2))] rounded-xl border border-[hsl(var(--border-subtle))]">
           <KpiPill
             label="Policen"
             value={activeContracts.length}
             sub={`/${contracts.length}`}
           />
-          <div className="w-px h-8 bg-slate-200" />
+          <div className="w-px h-7 bg-[hsl(var(--border-default))]" />
           <KpiPill
             label="Jahresprämie"
             value={totalPremium > 0 ? `CHF ${Math.round(totalPremium).toLocaleString('de-CH')}` : '–'}
           />
-          <div className="w-px h-8 bg-slate-200" />
+          <div className="w-px h-7 bg-[hsl(var(--border-default))]" />
           <KpiPill
-            label="Offene Tasks"
+            label="Tasks"
             value={openTasks}
             warn={openTasks > 2}
           />
-          <div className="w-px h-8 bg-slate-200" />
+          <div className="w-px h-7 bg-[hsl(var(--border-default))]" />
           <KpiPill
-            label="Renewal Risiko"
-            value={expiringCount > 0 ? `${expiringCount} Ablauf` : '—'}
+            label="Renewal"
+            value={expiringCount > 0 ? `${expiringCount}` : '—'}
             warn={expiringCount > 0}
           />
         </div>
@@ -200,19 +200,19 @@ export default function CustomerExecutiveHeader({
               <QuickAction icon={UserPlus} label="Familie" onClick={onAddFamilyMember} />
             )}
             <QuickAction icon={LayoutDashboard} label="360°" onClick={() => navigate(`/kunden/${customer.id}/360`)} />
-            <QuickAction icon={Download} label={isDownloading ? '...' : 'PDF'} onClick={onDownloadPDF} disabled={isDownloading} />
+            <QuickAction icon={Download} label={isDownloading ? '...' : 'Export'} onClick={onDownloadPDF} disabled={isDownloading} variant="primary" />
           </div>
         </div>
       </div>
 
       {/* Mobile KPIs */}
-      <div className="lg:hidden flex items-center gap-6 px-6 pb-4 overflow-x-auto scrollbar-none">
+      <div className="lg:hidden flex items-center gap-4 px-6 pb-4 overflow-x-auto scrollbar-none">
         <KpiPill label="Policen" value={activeContracts.length} sub={`/${contracts.length}`} />
-        <div className="w-px h-6 bg-slate-200 shrink-0" />
+        <div className="w-px h-5 bg-[hsl(var(--border-default))]" shrink-0 />
         <KpiPill label="Prämie" value={totalPremium > 0 ? `CHF ${Math.round(totalPremium / 1000)}k` : '–'} />
-        <div className="w-px h-6 bg-slate-200 shrink-0" />
+        <div className="w-px h-5 bg-[hsl(var(--border-default))]" shrink-0 />
         <KpiPill label="Tasks" value={openTasks} warn={openTasks > 2} />
-        <div className="w-px h-6 bg-slate-200 shrink-0" />
+        <div className="w-px h-5 bg-[hsl(var(--border-default))]" shrink-0 />
         <KpiPill label="Renewal" value={expiringCount > 0 ? expiringCount : '—'} warn={expiringCount > 0} />
       </div>
     </div>

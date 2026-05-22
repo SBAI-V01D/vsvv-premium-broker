@@ -16,7 +16,7 @@ export function EnterpriseCard({ children, className, onClick, noPad = false, fl
     <div
       onClick={onClick}
       className={cn(
-        'bg-white rounded-xl border border-[hsl(var(--border-subtle))] transition-all duration-150',
+        'bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border-subtle))] transition-all duration-150',
         flat
           ? 'shadow-none'
           : 'shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-raised)] hover:border-[hsl(var(--border-default))]',
@@ -35,10 +35,10 @@ export function EnterpriseCard({ children, className, onClick, noPad = false, fl
 // ─────────────────────────────────────────────────────────────────────────────
 export function SectionHeader({ title, subtitle, action, className }) {
   return (
-    <div className={cn('flex items-start justify-between gap-4 mb-5', className)}>
-      <div>
-        <h2 className="text-subheading">{title}</h2>
-        {subtitle && <p className="text-caption mt-0.5">{subtitle}</p>}
+    <div className={cn('flex items-start justify-between gap-4 mb-6', className)}>
+      <div className="space-y-0.5">
+        <h2 className="text-heading font-bold text-[hsl(var(--text-heading))] tracking-tight">{title}</h2>
+        {subtitle && <p className="text-body-sm text-[hsl(var(--text-muted))]">{subtitle}</p>}
       </div>
       {action && <div className="shrink-0">{action}</div>}
     </div>
@@ -122,25 +122,25 @@ export function SemanticBadge({ variant = 'neutral', children, icon: Icon, class
 // ─────────────────────────────────────────────────────────────────────────────
 export function StickyNav({ items, active, onChange }) {
   return (
-    <nav className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-[hsl(var(--border-subtle))] px-6">
+    <nav className="sticky top-0 z-20 bg-white/98 backdrop-blur-sm border-b border-[hsl(var(--border-subtle))] px-6 shadow-[0_1px_0_0_hsl(var(--border-subtle))]">
       <div className="flex gap-0 overflow-x-auto scrollbar-none">
         {items.map(item => (
           <button
             key={item.id}
             onClick={() => onChange(item.id)}
             className={cn(
-              'flex items-center gap-1.5 px-4 py-3.5 text-[13px] font-medium whitespace-nowrap border-b-2 transition-all',
+              'flex items-center gap-1.5 px-4 py-3.5 text-[13px] font-medium whitespace-nowrap border-b-2 transition-all duration-150',
               active === item.id
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                ? 'border-[hsl(var(--primary))] text-[hsl(var(--primary))]'
+                : 'border-transparent text-[hsl(var(--text-muted))] hover:text-[hsl(var(--text-heading))] hover:border-[hsl(var(--border-default))]'
             )}
           >
-            {item.icon && <item.icon className="w-3.5 h-3.5" />}
+            {item.icon && <item.icon className="w-3.5 h-3.5 shrink-0 opacity-80" />}
             {item.label}
             {item.count != null && item.count > 0 && (
               <span className={cn(
-                'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
-                active === item.id ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-500'
+                'text-[10px] font-bold px-1.5 py-0.5 rounded-full transition-colors',
+                active === item.id ? 'bg-[hsl(var(--primary))/0.12] text-[hsl(var(--primary))]' : 'bg-[hsl(var(--surface-2))] text-[hsl(var(--text-muted))]'
               )}>
                 {item.count}
               </span>

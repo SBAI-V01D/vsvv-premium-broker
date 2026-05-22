@@ -76,17 +76,17 @@ function TimelineEntry({ event, isLast }) {
 
   return (
     <div className="flex gap-4 group">
-      {/* Connector line */}
+      {/* Connector line — reduced opacity for editorial feel */}
       <div className="flex flex-col items-center shrink-0 w-9">
         <div className={cn(
-          'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ring-2 transition-all duration-150 group-hover:scale-110',
+          'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ring-2 transition-all duration-200 group-hover:scale-105',
           cfg.bg, cfg.ring, cfg.text
         )}>
-          <Icon className="w-4 h-4" />
+          <Icon className="w-4 h-4 opacity-90" />
         </div>
         {!isLast && (
           <div className="w-px flex-1 mt-1.5 min-h-[20px]"
-            style={{ background: 'linear-gradient(to bottom, hsl(var(--border-default)), transparent)' }} />
+            style={{ background: 'linear-gradient(to bottom, hsl(var(--border-subtle)), transparent)' }} />
         )}
       </div>
 
@@ -97,19 +97,19 @@ function TimelineEntry({ event, isLast }) {
       )}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap mb-0.5">
-              <span className={cn('text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded', cfg.badge)}>
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className={cn('text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded', cfg.badge)}>
                 {cfg.label}
               </span>
             </div>
-            <p className="text-body-sm font-semibold leading-snug">{event.title}</p>
+            <p className="text-body-sm font-semibold text-[hsl(var(--text-heading))] leading-snug">{event.title}</p>
             {event.subtitle && (
-              <p className="text-caption mt-0.5 line-clamp-2">{event.subtitle}</p>
+              <p className="text-body-sm text-[hsl(var(--text-muted))] mt-0.5 line-clamp-2">{event.subtitle}</p>
             )}
           </div>
           <div className="shrink-0 text-right">
-            <p className="text-[11px] font-medium text-slate-500 whitespace-nowrap">{formatRelative(event.date)}</p>
-            <p className="text-[10px] text-slate-400 whitespace-nowrap">{formatTime(event.date)}</p>
+            <p className="text-[11px] font-medium text-[hsl(var(--text-muted))] whitespace-nowrap">{formatRelative(event.date)}</p>
+            <p className="text-[10px] text-[hsl(var(--text-subtle))] whitespace-nowrap">{formatTime(event.date)}</p>
           </div>
         </div>
       </div>
@@ -120,11 +120,11 @@ function TimelineEntry({ event, isLast }) {
 // ─── DateGroupHeader ──────────────────────────────────────────────────────────
 function DateGroupHeader({ label, count }) {
   return (
-    <div className="flex items-center gap-3 py-1 mb-2 mt-6 first:mt-0">
-      <div className="flex items-center gap-1.5">
-        <Calendar className="w-3.5 h-3.5 text-slate-400" />
-        <span className="text-label text-slate-500">{label}</span>
-        <span className="text-[10px] text-slate-400">({count})</span>
+    <div className="flex items-center gap-3 py-1.5 mb-3 mt-8 first:mt-0">
+      <div className="flex items-center gap-2">
+        <Calendar className="w-3.5 h-3.5 text-[hsl(var(--text-muted))]" />
+        <span className="text-label text-[hsl(var(--text-muted))]">{label}</span>
+        <span className="text-[10px] text-[hsl(var(--text-subtle))]">({count})</span>
       </div>
       <div className="flex-1 h-px bg-[hsl(var(--border-subtle))]" />
     </div>
@@ -291,9 +291,9 @@ export default function ActivityTimeline({
 
   return (
     <div className="space-y-0">
-      {/* Filter Bar */}
-      <div className="flex items-center gap-2 mb-5 flex-wrap">
-        <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+      {/* Filter Bar — reduced visual weight */}
+      <div className="flex items-center gap-2 mb-6 flex-wrap">
+        <Filter className="w-3.5 h-3.5 text-[hsl(var(--text-muted))] shrink-0" />
         {FILTER_GROUPS.map(g => {
           const count = g.types
             ? allEvents.filter(e => g.types.includes(e.type)).length
@@ -305,14 +305,14 @@ export default function ActivityTimeline({
               className={cn(
                 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all',
                 activeFilter === g.id
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  ? 'bg-[hsl(var(--primary))] text-white shadow-sm'
+                  : 'bg-[hsl(var(--surface-2))] text-[hsl(var(--text-muted))] hover:bg-[hsl(var(--surface-3))] hover:text-[hsl(var(--text-heading))]'
               )}
             >
               {g.label}
               <span className={cn(
                 'text-[10px] font-bold',
-                activeFilter === g.id ? 'text-white/70' : 'text-slate-400'
+                activeFilter === g.id ? 'text-white/70' : 'text-[hsl(var(--text-subtle))]'
               )}>
                 {count}
               </span>

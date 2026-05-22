@@ -43,45 +43,45 @@ export default function HouseholdIntelligencePanel({ primaryCustomer, familyMemb
   if (!hasProperty) crossSellOpportunities.push('Haftpflicht/Hausrat')
 
   return (
-    <div className="space-y-4">
-      {/* Haushalts-KPIs */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="p-3 rounded-lg bg-gradient-to-br from-blue-50 to-blue-50/50 border border-blue-200/60">
-          <div className="flex items-center gap-1.5 mb-1">
-            <Users className="w-3.5 h-3.5 text-blue-600" />
-            <span className="text-[10px] font-semibold text-blue-700 uppercase">Haushalt</span>
+    <div className="space-y-5">
+      {/* Haushalts-KPIs — reduced visual weight */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="p-3.5 rounded-lg bg-[hsl(var(--surface-2))] border border-[hsl(var(--border-subtle))]">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Users className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
+            <span className="text-[9px] font-semibold uppercase tracking-widest text-[hsl(var(--text-muted))]">Haushalt</span>
           </div>
-          <p className="text-xl font-bold text-blue-800">{familyMembers.length + 1}</p>
-          <p className="text-[9px] text-blue-600">Personen</p>
+          <p className="text-xl font-bold text-[hsl(var(--text-heading))]">{familyMembers.length + 1}</p>
+          <p className="text-[9px] text-[hsl(var(--text-muted))]">Personen</p>
         </div>
-        <div className="p-3 rounded-lg bg-gradient-to-br from-emerald-50 to-emerald-50/50 border border-emerald-200/60">
-          <div className="flex items-center gap-1.5 mb-1">
-            <Shield className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="text-[10px] font-semibold text-emerald-700 uppercase">Versichert</span>
+        <div className="p-3.5 rounded-lg bg-[hsl(var(--surface-2))] border border-[hsl(var(--border-subtle))]">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Shield className="w-3.5 h-3.5 text-[hsl(var(--success))]" />
+            <span className="text-[9px] font-semibold uppercase tracking-widest text-[hsl(var(--text-muted))]">Versichert</span>
           </div>
-          <p className="text-lg font-bold text-emerald-800">{activeContracts.length}</p>
-          <p className="text-[9px] text-emerald-600">Verträge</p>
+          <p className="text-lg font-bold text-[hsl(var(--text-heading))">{activeContracts.length}</p>
+          <p className="text-[9px] text-[hsl(var(--text-muted))]">Verträge</p>
         </div>
-        <div className="p-3 rounded-lg bg-gradient-to-br from-violet-50 to-violet-50/50 border border-violet-200/60">
-          <div className="flex items-center gap-1.5 mb-1">
-            <TrendingUp className="w-3.5 h-3.5 text-violet-600" />
-            <span className="text-[10px] font-semibold text-violet-700 uppercase">Prämie/Jahr</span>
+        <div className="p-3.5 rounded-lg bg-[hsl(var(--surface-2))] border border-[hsl(var(--border-subtle))]">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <TrendingUp className="w-3.5 h-3.5 text-[hsl(var(--info))]" />
+            <span className="text-[9px] font-semibold uppercase tracking-widest text-[hsl(var(--text-muted))]">Prämie/Jahr</span>
           </div>
-          <p className="text-lg font-bold text-violet-800">CHF {(totalPremium / 1000).toFixed(1)}k</p>
-          <p className="text-[9px] text-violet-600">{insurers.size} Gesellschaften</p>
+          <p className="text-lg font-bold text-[hsl(var(--text-heading))]">CHF {(totalPremium / 1000).toFixed(1)}k</p>
+          <p className="text-[9px] text-[hsl(var(--text-muted))]}">{insurers.size} Gesellschaften</p>
         </div>
       </div>
 
       {/* Cross-Selling Potenzial */}
       {crossSellOpportunities.length > 0 && (
-        <div className="p-3 rounded-lg bg-amber-50/60 border border-amber-200/70">
+        <div className="p-3.5 rounded-lg bg-[hsl(var(--warning))/0.08] border border-[hsl(var(--warning))/0.2]">
           <div className="flex items-center gap-1.5 mb-2">
-            <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
-            <span className="text-[10px] font-semibold text-amber-800 uppercase">Cross-Selling</span>
+            <AlertCircle className="w-3.5 h-3.5 text-[hsl(var(--warning))]" />
+            <span className="text-[9px] font-semibold uppercase tracking-widest text-[hsl(var(--text-muted))]">Cross-Selling</span>
           </div>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
             {crossSellOpportunities.map((opp, idx) => (
-              <Badge key={idx} className="text-[10px] bg-amber-100 text-amber-800 border-amber-300/60">
+              <Badge key={idx} variant="outline" className="text-[10px] bg-[hsl(var(--warning))/0.1] text-[hsl(var(--warning))] border-[hsl(var(--warning))/0.3]">
                 {opp}
               </Badge>
             ))}
@@ -89,9 +89,9 @@ export default function HouseholdIntelligencePanel({ primaryCustomer, familyMemb
         </div>
       )}
 
-      {/* Familienmitglieder mit Details */}
-      <div className="space-y-2">
-        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">
+      {/* Familienmitglieder mit Details — increased whitespace */}
+      <div className="space-y-3">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-[hsl(var(--text-muted))]">
           Haushaltsmitglieder ({familyMembers.length})
         </p>
         {familyMembers.map(member => {
@@ -102,21 +102,21 @@ export default function HouseholdIntelligencePanel({ primaryCustomer, familyMemb
           return (
             <div
               key={member.id}
-              className="group p-3.5 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 transition-all"
+              className="group p-4 rounded-lg border border-[hsl(var(--border-subtle))] hover:border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-2))]/40 transition-all"
             >
-              <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="flex items-start justify-between gap-3 mb-2.5">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="font-semibold text-sm text-slate-800">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-semibold text-body-sm text-[hsl(var(--text-heading))]">
                       {member.first_name} {member.last_name}
                     </p>
                     <Badge
                       variant="outline"
                       className={cn(
                         'text-[9px] px-1.5 py-0.5',
-                        member.family_role === 'spouse' ? 'bg-pink-50 text-pink-700 border-pink-200' :
-                        member.family_role === 'child' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                        'bg-slate-50 text-slate-700 border-slate-200'
+                        member.family_role === 'spouse' ? 'bg-[hsl(var(--primary))/0.08] text-[hsl(var(--primary))] border-[hsl(var(--primary))/0.2]' :
+                        member.family_role === 'child' ? 'bg-[hsl(var(--info))/0.08] text-[hsl(var(--info))] border-[hsl(var(--info))/0.2]' :
+                        'bg-[hsl(var(--surface-3))] text-[hsl(var(--text-muted))] border-[hsl(var(--border-subtle))]'
                       )}
                     >
                       {member.family_role === 'spouse' ? 'Ehepartner' :
@@ -125,31 +125,31 @@ export default function HouseholdIntelligencePanel({ primaryCustomer, familyMemb
                     </Badge>
                   </div>
                   {member.birthdate && (
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-body-sm text-[hsl(var(--text-muted))]">
                       Geb. {new Date(member.birthdate).toLocaleDateString('de-CH')}
                       {member.age && <span className="ml-1.5">· {member.age} Jahre</span>}
                     </p>
                   )}
                 </div>
                 {memberPremium > 0 && (
-                  <div className="text-right">
-                    <p className="text-xs font-bold text-slate-700">CHF {(memberPremium / 1000).toFixed(1)}k</p>
-                    <p className="text-[9px] text-slate-500">Jahr</p>
+                  <div className="text-right shrink-0">
+                    <p className="text-body-sm font-bold text-[hsl(var(--text-heading))]">CHF {(memberPremium / 1000).toFixed(1)}k</p>
+                    <p className="text-[10px] text-[hsl(var(--text-muted))]">Jahr</p>
                   </div>
                 )}
               </div>
 
               {memberActive.length > 0 && (
-                <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-                  <FileText className="w-3 h-3 text-slate-400 shrink-0" />
-                  <div className="flex-1 flex flex-wrap gap-1">
+                <div className="flex items-center gap-2 pt-2.5 border-t border-[hsl(var(--border-subtle))]">
+                  <FileText className="w-3 h-3 text-[hsl(var(--text-muted))] shrink-0" />
+                  <div className="flex-1 flex flex-wrap gap-1.5">
                     {memberActive.slice(0, 5).map(c => (
-                      <Badge key={c.id} variant="secondary" className="text-[9px] bg-slate-100 text-slate-700 border-slate-200">
+                      <Badge key={c.id} variant="outline" className="text-[10px] bg-[hsl(var(--surface-2))] text-[hsl(var(--text-heading))] border-[hsl(var(--border-subtle))]">
                         {c.insurer}
                       </Badge>
                     ))}
                     {memberActive.length > 5 && (
-                      <Badge variant="secondary" className="text-[9px] bg-slate-100 text-slate-700 border-slate-200">
+                      <Badge variant="outline" className="text-[10px] bg-[hsl(var(--surface-2))] text-[hsl(var(--text-heading))] border-[hsl(var(--border-subtle))]">
                         +{memberActive.length - 5}
                       </Badge>
                     )}
@@ -162,10 +162,10 @@ export default function HouseholdIntelligencePanel({ primaryCustomer, familyMemb
       </div>
 
       {/* Zusammenfassung */}
-      <div className="pt-3 border-t border-slate-200">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-slate-600 font-medium">Gesamtprämie Haushalt</span>
-          <span className="text-sm font-bold text-slate-800">CHF {totalPremium.toLocaleString('de-CH')}</span>
+      <div className="pt-4 border-t border-[hsl(var(--border-subtle))]">
+        <div className="flex items-center justify-between">
+          <span className="text-body-sm font-medium text-[hsl(var(--text-heading))]">Gesamtprämie Haushalt</span>
+          <span className="text-heading font-bold text-[hsl(var(--text-heading))]">CHF {totalPremium.toLocaleString('de-CH')}</span>
         </div>
       </div>
     </div>

@@ -251,16 +251,18 @@ export default function CustomerDetail() {
       {/* Sticky Nav */}
       <StickyNav items={NAV_ITEMS} active={activeSection} onChange={setActiveSection} />
 
-      {/* Content */}
-      <div className="px-6 py-6 max-w-7xl mx-auto">
+      {/* Content — increased vertical rhythm */}
+      <div className="px-6 py-8 max-w-7xl mx-auto space-y-8">
 
         {/* ── Übersicht ─────────────────────────────────────────────── */}
         {activeSection === 'uebersicht' && (
-          <div className="space-y-5">
-            {/* Health Score mit Erklärung */}
-            <div>
-              <h2 className="text-heading font-bold text-slate-800 mb-1">Gesundheitsstatus</h2>
-              <p className="text-body-sm text-slate-500 mb-2">Basierend auf Verträgen, Dokumenten, Tasks und Renewals</p>
+          <div className="space-y-8">
+            {/* Health Score — organisch eingebettet */}
+            <div className="space-y-3">
+              <SectionHeader
+                title="Gesundheitsstatus"
+                subtitle="Basierend auf Verträgen, Dokumenten, Tasks und Renewals"
+              />
               <div className="relative">
                 {(() => {
                   const health = calculateCustomerHealthScore(customer, relatedContracts, relatedDocuments, custTasks)
@@ -278,9 +280,11 @@ export default function CustomerDetail() {
 
             {/* Household Intelligence */}
             {(familyMembers.length > 1 || relatedContracts.length > 0) && (
-              <div>
-                <h2 className="text-heading font-bold text-slate-800 mb-1">Haushalt &amp; Beziehungen</h2>
-                <p className="text-body-sm text-slate-500 mb-2">Beziehungen, gemeinsame Policen und Cross-Selling Potenzial</p>
+              <div className="space-y-3">
+                <SectionHeader
+                  title="Haushalt & Beziehungen"
+                  subtitle="Beziehungen, gemeinsame Policen und Cross-Selling Potenzial"
+                />
                 <HouseholdIntelligencePanel
                   primaryCustomer={primaryCustomer}
                   familyMembers={familyMembers.filter(m => m.id !== id)}
@@ -302,7 +306,7 @@ export default function CustomerDetail() {
               isDownloading={downloadPDFMutation.isPending}
             />
             {relatedContracts.length > 0 && (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <CoverageGapsPanel contracts={relatedContracts} onAddCoverage={() => {}} />
                 <ContractsBySparteGroup
                   contracts={relatedContracts}
@@ -324,13 +328,13 @@ export default function CustomerDetail() {
             </EnterpriseCard>
           ) : (
             <EnterpriseCard noPad>
-              <div className="hidden md:grid grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-2.5 border-b border-[hsl(var(--border-subtle))] text-label">
+              <div className="hidden md:grid grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-5 py-3 border-b border-[hsl(var(--border-subtle))] text-label">
                 <div>Versicherter</div><div>Versicherer / Sparte</div><div>Policen-Nr</div>
                 <div>Produkt</div><div>Laufzeit</div><div>Jahresprämie</div><div>Status</div><div className="w-16" />
               </div>
               {relatedContracts.map((c, idx) => (
                 <div key={c.id} className={idx > 0 ? 'border-t border-[hsl(var(--border-subtle))]' : ''}>
-                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-3.5 items-center hover:bg-slate-50/70 transition-colors">
+                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-5 py-4 items-center hover:bg-[hsl(var(--surface-2))]/40 transition-colors">
                     <div className="min-w-0">
                       <p className="text-body-sm font-semibold truncate">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</p>
                       {customer.ahv_number && <p className="text-caption font-mono mt-0.5">{customer.ahv_number}</p>}
@@ -379,7 +383,7 @@ export default function CustomerDetail() {
             </EnterpriseCard>
           ) : (
             <EnterpriseCard noPad>
-              <div className="hidden md:grid grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-4 py-2.5 border-b border-[hsl(var(--border-subtle))] text-label">
+              <div className="hidden md:grid grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-5 py-3 border-b border-[hsl(var(--border-subtle))] text-label">
                 <div>Versicherter</div><div>Versicherer / Sparte</div><div>Policen-Nr</div>
                 <div>Produkt</div><div>Laufzeit</div><div>Jahresprämie</div><div>Status</div>
               </div>
@@ -393,7 +397,7 @@ export default function CustomerDetail() {
                 const sk = a.custom_status || a.status
                 return (
                   <div key={a.id} className={idx > 0 ? 'border-t border-[hsl(var(--border-subtle))]' : ''}>
-                    <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-4 py-3.5 items-center hover:bg-slate-50/70 transition-colors">
+                    <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-5 py-4 items-center hover:bg-[hsl(var(--surface-2))]/40 transition-colors">
                       <div><p className="text-body-sm font-semibold truncate">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</p></div>
                       <div>
                         <p className="text-body-sm font-medium truncate">{a.insurer || '–'}</p>
@@ -438,9 +442,9 @@ export default function CustomerDetail() {
               <EmptySection icon={Users} title="Keine Familienmitglieder" subtitle="Noch keine Familienmitglieder für diesen Haushalt erfasst." />
             </EnterpriseCard>
           ) : (
-            <div className="space-y-5">
+            <div className="space-y-6">
               <SectionHeader title={`Haushalt · ${familyMembers.length} Personen`} />
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {familyMembers.filter(m => m.id !== id).map(member => (
                   <FamilyMemberCard
                     key={member.id}
@@ -457,28 +461,30 @@ export default function CustomerDetail() {
 
         {/* ── Betreuung ─────────────────────────────────────────────── */}
         {activeSection === 'betreuung' && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <AdvisorAssignmentPanel customerId={id} />
           </div>
         )}
 
         {/* ── Timeline ──────────────────────────────────────────────── */}
         {activeSection === 'timeline' && (
-          <ActivityTimeline
-            customer={customer}
-            contracts={relatedContracts}
-            applications={relatedApplications}
-            documents={relatedDocuments}
-            tasks={custTasks}
-            messages={[]}
-            verkaufschancen={verkaufschancen}
-            limit={50}
-          />
+          <div className="max-w-3xl">
+            <ActivityTimeline
+              customer={customer}
+              contracts={relatedContracts}
+              applications={relatedApplications}
+              documents={relatedDocuments}
+              tasks={custTasks}
+              messages={[]}
+              verkaufschancen={verkaufschancen}
+              limit={50}
+            />
+          </div>
         )}
 
         {/* ── KI-Analyse ────────────────────────────────────────────── */}
         {activeSection === 'ki-analyse' && (
-          <div className="max-w-2xl">
+          <div className="max-w-3xl">
             <AiInsightsPanel customerId={id} />
           </div>
         )}
