@@ -676,7 +676,7 @@ export default function KiAnalyseVerbesserungen() {
 
               {/* Messergebnisse */}
               <div className="space-y-3">
-                <h4 className="text-sm font-bold text-slate-700 sticky top-16 bg-white py-2 z-10">Messergebnisse</h4>
+                <h4 className="text-sm font-bold text-slate-700">Messergebnisse</h4>
                 
                 {autoMeasureResult.measurements && Object.keys(autoMeasureResult.measurements).length > 0 ? (
                   <div className="space-y-2">
@@ -803,7 +803,7 @@ export default function KiAnalyseVerbesserungen() {
               {/* Optimierungsvorschläge */}
               {autoMeasureResult.optimization_suggestions && autoMeasureResult.optimization_suggestions.length > 0 && (
                 <div className="space-y-3 pt-2">
-                  <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2 sticky top-32 bg-white py-2 z-10">
+                  <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-violet-600" />
                     Optimierungsvorschläge
                   </h4>
