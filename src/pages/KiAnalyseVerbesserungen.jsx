@@ -178,36 +178,33 @@ export default function KiAnalyseVerbesserungen() {
     <div className="min-h-full bg-[hsl(var(--surface-1))]">
       {/* Header */}
       <div className="bg-white border-b border-[hsl(var(--border-subtle))]/60 px-6 py-5">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center shadow-sm">
-              <Brain className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-[hsl(var(--text-heading))]">KI Analyse & Verbesserungen</h1>
-              <p className="text-xs text-[hsl(var(--text-muted))]">Probleme erkennen · Lösungen umsetzen · Impact messen</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center shadow-sm">
+            <Brain className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-[hsl(var(--text-heading))]">KI Analyse & Verbesserungen</h1>
+            <p className="text-xs text-[hsl(var(--text-muted))]">Probleme erkennen · Lösungen umsetzen · Impact messen</p>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="px-6 py-4 border-b border-[hsl(var(--border-subtle))]/40 bg-white/50">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
-            <TabsTrigger value="analyse" className="text-sm font-semibold">
-              <Brain className="w-4 h-4 mr-2" />
-              Analyse
-            </TabsTrigger>
-            <TabsTrigger value="verbesserungen" className="text-sm font-semibold">
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Verbesserungen
-            </TabsTrigger>
-          </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+          <TabsTrigger value="analyse" className="text-sm font-semibold">
+            <Brain className="w-4 h-4 mr-2" />
+            Analyse
+          </TabsTrigger>
+          <TabsTrigger value="verbesserungen" className="text-sm font-semibold">
+            <TrendingUp className="w-4 h-4 mr-2" />
+            Verbesserungen
+          </TabsTrigger>
+        </TabsList>
 
-          {/* TAB 1: ANALYSE */}
-          <TabsContent value="analyse" className="mt-6">
-            <div className="max-w-5xl mx-auto space-y-6">
+        {/* TAB 1: ANALYSE */}
+        <TabsContent value="analyse" className="mt-0">
+          <div className="space-y-6">
               {/* Level Selection */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {REVIEW_LEVELS.map(lv => {
@@ -325,9 +322,9 @@ export default function KiAnalyseVerbesserungen() {
             </div>
           </TabsContent>
 
-          {/* TAB 2: VERBESSERUNGEN */}
-          <TabsContent value="verbesserungen" className="mt-6">
-            <div className="max-w-7xl mx-auto space-y-6">
+        {/* TAB 2: VERBESSERUNGEN */}
+        <TabsContent value="verbesserungen" className="mt-0">
+          <div className="space-y-6">
               {/* Stats */}
               <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
                 <StatCard label="Total" value={stats.total} color="text-slate-700" bg="bg-slate-50" />
@@ -433,10 +430,9 @@ export default function KiAnalyseVerbesserungen() {
                   )}
                 </div>
               )}
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Reject Dialog */}
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
