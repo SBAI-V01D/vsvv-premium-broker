@@ -360,121 +360,6 @@ export default function CustomerIntelligenceWorkspace() {
 
 
   const renderIntelligenceView = () => {
-    if (workspaceMode === 'kundenaktionen') {
-      // Filter mandate issues by search
-      const filteredMandateIssues = search.trim()
-        ? mandateIssues.filter(c => {
-            const query = search.toLowerCase();
-            const name = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
-            const email = (c.email || '').toLowerCase();
-            const number = (c.customer_number || '').toLowerCase();
-            return name.includes(query) || email.includes(query) || number.includes(query);
-          })
-        : mandateIssues;
-
-      return (
-        <div className="space-y-6 p-6 max-w-[1600px] mx-auto">
-          {/* Search bar for kundenaktionen mode */}
-          <div className="flex items-center gap-4 mb-4">
-            <div className="flex-1 max-w-xl">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--text-subtle))]" />
-                <input
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Kunden suchen (Name, E-Mail, Kundennummer)…"
-                  className="w-full pl-9 pr-8 py-1.5 text-[13px] border border-[hsl(var(--border-subtle))] rounded-lg bg-[hsl(var(--surface-0))] text-[hsl(var(--text-heading))] placeholder:text-[hsl(var(--text-subtle))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))/0.3] focus:border-[hsl(var(--primary))/0.4] transition-all"
-                />
-                {search && (
-                  <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))]">
-                    <XCircle className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <NewCustomersSection searchQuery={search} />
-          <div className="h-px bg-[hsl(var(--primary))]/20 my-2" />
-          <RenewalsSection contracts={contracts} customers={customers} verkaufschancen={verkaufschancen} />
-          <div className="h-px bg-[hsl(var(--primary))]/20 my-2" />
-          <CancellationsSection contracts={contracts} customers={customers} />
-
-          {/* Combined layout: Haushalt first, then Mandat/Berater */}
-          <div className="h-px bg-[hsl(var(--primary))]/20 my-2" />
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Haushalte */}
-            <div>
-              <HouseholdIntelligenceSection
-                householdCustomers={householdCustomers}
-                customers={customers}
-                contracts={contracts}
-              />
-            </div>
-
-            {/* Kunden ohne Mandat oder Berater */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--critical-hsl))]" />
-                <h3 className="text-sm font-bold text-[hsl(var(--primary))]">Mandat / Berater</h3>
-                <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
-                  {filteredMandateIssues.length} Kunden
-                </span>
-              </div>
-              {filteredMandateIssues.length === 0 ? (
-                search ? (
-                  <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
-                    Keine Mandat-Probleme für diese Suche gefunden
-                  </p>
-                ) : (
-                  <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
-                    Keine offenen Mandat- oder Beraterzuweisungen
-                  </p>
-                )
-              ) : (
-                <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-[hsl(var(--border-subtle))]/40">
-                  <div className="space-y-1">
-                    {(showAllMandate ? filteredMandateIssues : filteredMandateIssues.slice(0, DISPLAY_LIMIT)).map(customer => (
-                      <button
-                        key={customer.id}
-                        onClick={() => navigate(`/kunden/${customer.id}/360`)}
-                        className="w-full flex items-center justify-between p-2 rounded-md hover:bg-[hsl(var(--surface-2))]/40 transition-colors text-left"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[11px] font-medium text-[hsl(var(--text-heading))] truncate">
-                            {customer.first_name} {customer.last_name}
-                          </p>
-                          <p className="text-[9px] text-[hsl(var(--text-muted))] truncate">
-                            {!customer.advisor_id && !customer.primary_advisor_id && (
-                              <span>⚠ Kein Berater</span>
-                            )}
-                            {['expired', 'pending', 'invalid'].includes(customer.mandate_status) && (
-                              <span className={!customer.advisor_id && !customer.primary_advisor_id ? 'ml-1' : ''}>
-                                Mandat: {customer.mandate_status}
-                              </span>
-                            )}
-                          </p>
-                        </div>
-                        <ChevronRight className="w-3 h-3 text-[hsl(var(--text-muted))]" />
-                      </button>
-                    ))}
-                  </div>
-                  {filteredMandateIssues.length > DISPLAY_LIMIT && (
-                    <button
-                      onClick={() => setShowAllMandate(!showAllMandate)}
-                      className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]/80"
-                    >
-                      {showAllMandate ? 'Weniger anzeigen' : `Alle ${filteredMandateIssues.length} Kunden anzeigen`}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      );
-    }
-    
     if (workspaceMode === 'birthdays') {
       const today = new Date();
       const currentMonth = today.getMonth();
@@ -502,10 +387,122 @@ export default function CustomerIntelligenceWorkspace() {
       );
     }
     
-    return null;
+    // Default: kundenaktionen
+    // Filter mandate issues by search
+    const filteredMandateIssues = search.trim()
+      ? mandateIssues.filter(c => {
+          const query = search.toLowerCase();
+          const name = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
+          const email = (c.email || '').toLowerCase();
+          const number = (c.customer_number || '').toLowerCase();
+          return name.includes(query) || email.includes(query) || number.includes(query);
+        })
+      : mandateIssues;
+
+    return (
+      <div className="space-y-6 p-6 max-w-[1600px] mx-auto">
+        {/* Search bar for kundenaktionen mode */}
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex-1 max-w-xl">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--text-subtle))]" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Kunden suchen (Name, E-Mail, Kundennummer)…"
+                className="w-full pl-9 pr-8 py-1.5 text-[13px] border border-[hsl(var(--border-subtle))] rounded-lg bg-[hsl(var(--surface-0))] text-[hsl(var(--text-heading))] placeholder:text-[hsl(var(--text-subtle))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))/0.3] focus:border-[hsl(var(--primary))/0.4] transition-all"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))]">
+                  <XCircle className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <NewCustomersSection searchQuery={search} />
+        <div className="h-px bg-[hsl(var(--primary))]/20 my-2" />
+        <RenewalsSection contracts={contracts} customers={customers} verkaufschancen={verkaufschancen} />
+        <div className="h-px bg-[hsl(var(--primary))]/20 my-2" />
+        <CancellationsSection contracts={contracts} customers={customers} />
+
+        {/* Combined layout: Haushalt first, then Mandat/Berater */}
+        <div className="h-px bg-[hsl(var(--primary))]/20 my-2" />
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Haushalte */}
+          <div>
+            <HouseholdIntelligenceSection
+              householdCustomers={householdCustomers}
+              customers={customers}
+              contracts={contracts}
+            />
+          </div>
+
+          {/* Kunden ohne Mandat oder Berater */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--critical-hsl))]" />
+              <h3 className="text-sm font-bold text-[hsl(var(--primary))]">Mandat / Berater</h3>
+              <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
+                {filteredMandateIssues.length} Kunden
+              </span>
+            </div>
+            {filteredMandateIssues.length === 0 ? (
+              search ? (
+                <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
+                  Keine Mandat-Probleme für diese Suche gefunden
+                </p>
+              ) : (
+                <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
+                  Keine offenen Mandat- oder Beraterzuweisungen
+                </p>
+              )
+            ) : (
+              <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-[hsl(var(--border-subtle))]/40">
+                <div className="space-y-1">
+                  {(showAllMandate ? filteredMandateIssues : filteredMandateIssues.slice(0, DISPLAY_LIMIT)).map(customer => (
+                    <button
+                      key={customer.id}
+                      onClick={() => navigate(`/kunden/${customer.id}/360`)}
+                      className="w-full flex items-center justify-between p-2 rounded-md hover:bg-[hsl(var(--surface-2))]/40 transition-colors text-left"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-medium text-[hsl(var(--text-heading))] truncate">
+                          {customer.first_name} {customer.last_name}
+                        </p>
+                        <p className="text-[9px] text-[hsl(var(--text-muted))] truncate">
+                          {!customer.advisor_id && !customer.primary_advisor_id && (
+                            <span>⚠ Kein Berater</span>
+                          )}
+                          {['expired', 'pending', 'invalid'].includes(customer.mandate_status) && (
+                            <span className={!customer.advisor_id && !customer.primary_advisor_id ? 'ml-1' : ''}>
+                              Mandat: {customer.mandate_status}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-3 h-3 text-[hsl(var(--text-muted))]" />
+                    </button>
+                  ))}
+                </div>
+                {filteredMandateIssues.length > DISPLAY_LIMIT && (
+                  <button
+                    onClick={() => setShowAllMandate(!showAllMandate)}
+                    className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]/80"
+                  >
+                    {showAllMandate ? 'Weniger anzeigen' : `Alle ${filteredMandateIssues.length} Kunden anzeigen`}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
-  const isIntelligenceMode = ['kundenaktionen', 'vip', 'birthdays'].includes(workspaceMode);
+  const isIntelligenceMode = !['private', 'business'].includes(workspaceMode);
   const isCustomerListMode = ['private', 'business'].includes(workspaceMode);
 
   return (
