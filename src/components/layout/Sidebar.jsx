@@ -53,31 +53,10 @@ const navGroups = [
   {
     label: 'Cockpit',
     items: [
-      { label: 'Dashboard', icon: LayoutDashboard, path: '/', color: 'primary' },
-    ],
-  },
-  {
-    label: 'Kunden',
-    items: [
-      { label: 'Kundenübersicht',   icon: Users,      path: '/kunden',           color: 'primary' },
-      { label: 'Beratungsdossiers', icon: BookOpen,   path: '/beratungsdossier', adminOnly: true, color: 'primary' },
-      { label: 'Aufgaben',          icon: CheckSquare,path: '/aufgaben',          color: 'primary' },
-    ],
-  },
-  {
-    label: 'Administration',
-    items: [
-      { label: 'Verträge',  icon: FileText,   path: '/vertraege', color: 'primary' },
-      { label: 'Anträge',   icon: CheckSquare,path: '/antraege',  color: 'primary' },
-      { label: 'Dokumente', icon: BookOpen,   path: '/dokumente', color: 'primary' },
-    ],
-  },
-  {
-    label: 'Vertrieb',
-    items: [
-      { label: 'Leads',           icon: Target,    path: '/leads',            color: 'primary' },
-      { label: 'Verkaufschancen', icon: TrendingUp,path: '/verkaufschancen',  color: 'primary' },
-      { label: 'Vertragsabläufe', icon: RefreshCw, path: '/vertragsablaeufe', color: 'primary' },
+      { label: 'Dashboard',       icon: LayoutDashboard, path: '/',                 color: 'primary' },
+      { label: 'Vertragsabläufe', icon: RefreshCw,       path: '/vertragsablaeufe', color: 'primary' },
+      { label: 'Leads',           icon: Target,          path: '/leads',            color: 'primary' },
+      { label: 'Verkaufschancen', icon: TrendingUp,       path: '/verkaufschancen',  color: 'primary' },
     ],
   },
   {
