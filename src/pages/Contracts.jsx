@@ -288,6 +288,12 @@ export default function Contracts() {
 
                     {/* Vertragsdaten */}
                     <div>
+                      {contract.acceptance_date && (
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Calendar className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                          <span className="text-xs text-blue-600 font-medium">Annahme: {formatDate(contract.acceptance_date)}</span>
+                        </div>
+                      )}
                       {contract.start_date && (
                         <div className="flex items-center gap-1.5 mb-1">
                           <Calendar className="w-3 h-3 text-green-600 flex-shrink-0" />
@@ -300,7 +306,7 @@ export default function Contracts() {
                           <span className="text-xs text-green-600 font-medium">{formatDate(contract.end_date)}</span>
                         </div>
                       )}
-                      {!contract.start_date && !contract.end_date && (
+                      {!contract.acceptance_date && !contract.start_date && !contract.end_date && (
                         <span className="text-xs text-muted-foreground">–</span>
                       )}
                     </div>

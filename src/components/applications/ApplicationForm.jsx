@@ -78,6 +78,7 @@ export default function ApplicationForm({ application, customers = [], brokers =
         policy_number: application.policy_number || '',
         contract_start_date: application.contract_start_date || '',
         contract_end_date: application.contract_end_date || '',
+        acceptance_date: application.acceptance_date || '',
         commission_estimate: application.commission_estimate || '',
         assigned_broker: application.assigned_broker || '',
         notes: application.notes || '',
@@ -97,6 +98,7 @@ export default function ApplicationForm({ application, customers = [], brokers =
       policy_number: '',
       contract_start_date: '',
       contract_end_date: '',
+      acceptance_date: '',
       commission_estimate: '',
       assigned_broker: '',
       notes: '',
@@ -208,6 +210,7 @@ export default function ApplicationForm({ application, customers = [], brokers =
       policy_number: form.policy_number || '',
       contract_start_date: form.contract_start_date || '',
       contract_end_date: form.contract_end_date || '',
+      acceptance_date: form.acceptance_date || '',
       assigned_broker: form.assigned_broker || '',
       notes: form.notes || '',
     })
@@ -451,7 +454,10 @@ export default function ApplicationForm({ application, customers = [], brokers =
             <Label>Policennummer</Label>
             <Input value={form.policy_number} onChange={e => set('policy_number', e.target.value)} className="mt-1" placeholder="z.B. POL-2024-001" />
           </div>
-          <div />
+          <div>
+            <Label>Annahmedatum</Label>
+            <Input type="date" value={form.acceptance_date} onChange={e => set('acceptance_date', e.target.value)} className="mt-1" />
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>

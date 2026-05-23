@@ -45,9 +45,11 @@ Deno.serve(async (req) => {
     }
 
     // 3. Status auf "angenommen" setzen → triggert onApplicationUpdate
+    const acceptanceDate = app.acceptance_date || new Date().toISOString().split('T')[0];
     await base44.entities.Application.update(application_id, {
       custom_status: 'angenommen',
       status_changed_at: new Date().toISOString(),
+      acceptance_date: acceptanceDate,
     });
 
     console.log(`[acceptApplicationAndCreateContract] Status gesetzt, warte auf Contract-Erstellung...`);
@@ -108,6 +110,7 @@ Deno.serve(async (req) => {
         premium_monthly: app.estimated_premium_monthly,
         start_date: app.contract_start_date || app.requested_start_date,
         end_date: app.contract_end_date,
+        acceptance_date: acceptanceDate,
         status: 'active',
         custom_status: 'aktiv',
         source_application_id: application_id,

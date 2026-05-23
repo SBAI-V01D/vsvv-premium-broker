@@ -71,6 +71,11 @@
       "type": "string",
       "format": "date"
     },
+    "acceptance_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Annahmedatum \u2013 Datum der Vertragsannahme"
+    },
     "renewal_date": {
       "type": "string",
       "format": "date"
@@ -339,7 +344,7 @@
     "requires_review": {
       "type": "boolean",
       "default": false,
-      "description": "Manuelle Datumspr\u00fcfung ausstehend \u2014 gesetzt wenn end_date oder cancellation_deadline als Platzhalter (9999-12-31) eingetragen wurde"
+      "description": "Manuelle Datumspr\u00fcfung ausstehend"
     },
     "date_quality_status": {
       "type": "string",
@@ -349,8 +354,7 @@
         "placeholder",
         "missing"
       ],
-      "default": "verified",
-      "description": "Qualit\u00e4t der Vertragsdaten: verified=gepr\u00fcft, estimated=gesch\u00e4tzt, placeholder=technischer Platzhalter (9999), missing=fehlt"
+      "default": "verified"
     },
     "change_history": {
       "type": "array",
