@@ -93,13 +93,26 @@ export default function KiAnalyseVerbesserungen() {
 
   // Approve/Reject/Implement
   const approveMutation = useMutation({
-    mutationFn: async (improvementId) => {
+    mutationFn: async (improvement) => {
       const user = await base44.auth.me();
-      return await base44.entities.EnterpriseImprovement.update(improvementId, {
+      
+      // Update status to approved
+      await base44.entities.EnterpriseImprovement.update(improvement.id, {
         status: 'approved',
         approved_by: user.full_name || user.email,
         approved_at: new Date().toISOString(),
       });
+      
+      // Auto-implement simple improvements (performance, design, ai_quality)
+      const autoImplementAreas = ['performance', 'design', 'ai_quality'];
+      if (autoImplementAreas.includes(improvement.area)) {
+        await base44.entities.EnterpriseImprovement.update(improvement.id, {
+          status: 'implemented',
+          implemented_at: new Date().toISOString(),
+        });
+      }
+      
+      return { success: true, autoImplemented: autoImplementAreas.includes(improvement.area) };
     },
     onSuccess: () => refetchImprovements(),
   });
@@ -333,7 +346,7 @@ export default function KiAnalyseVerbesserungen() {
                     <ImprovementCard
                       key={imp.id}
                       improvement={imp}
-                      onApprove={() => approveMutation.mutate(imp.id)}
+                      onApprove={() => approveMutation.mutate(imp)}
                       onReject={() => { setSelectedImprovement(imp); setShowRejectDialog(true); }}
                       onImplement={() => implementMutation.mutate(imp.id)}
                     />
@@ -464,7 +477,7 @@ function ImprovementCard({ improvement, onApprove, onReject, onImplement }) {
             {improvement.status === 'proposed' && (
               <>
                 <Button size="sm" onClick={onApprove} className="bg-emerald-600">
-                  <ThumbsUp className="w-3.5 h-3.5 mr-1.5" /> Genehmigen
+                  <ThumbsUp className="w-3.5 h-3.5 mr-1.5" /> {['performance', 'design', 'ai_quality'].includes(improvement.area) ? 'Genehmigen & Umsetzen' : 'Genehmigen'}
                 </Button>
                 <Button size="sm" variant="outline" onClick={onReject} className="text-rose-600 border-rose-200">
                   <ThumbsDown className="w-3.5 h-3.5 mr-1.5" /> Ablehnen
