@@ -625,7 +625,7 @@ export default function CustomerIntelligenceWorkspace() {
               </div>
             </div>
 
-            <div className="p-6 space-y-6 max-w-6xl mx-auto">
+            <div className="p-0">
               {/* Keep-mounted: Beide Listen immer im DOM, nur Visibility wechseln */}
               {isLoading ? (
                 <LoadingTable rows={8} className="py-12" />
@@ -634,22 +634,24 @@ export default function CustomerIntelligenceWorkspace() {
                   {/* Private Customers — always mounted, only visibility changes */}
                   <div hidden={!showPrivate}>
                     {displayed.filter(c => c.customer_type !== 'business').length === 0 ? (
-                      <EmptyState
-                        type={search ? 'empty' : 'customers'}
-                        title={search ? 'Keine Ergebnisse' : 'Keine Privatkunden'}
-                        description={search ? 'Passen Sie den Suchbegriff an oder ändern Sie das Filter.' : 'Fügen Sie Ihren ersten Privatkunden hinzu, um zu starten.'}
-                        action={
-                          !search && (
-                            <button
-                              onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}
-                              className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
-                            >
-                              <Plus className="w-4 h-4" /> Privatkunde hinzufügen
-                            </button>
-                          )
-                        }
-                        size="lg"
-                      />
+                      <div className="p-6">
+                        <EmptyState
+                          type={search ? 'empty' : 'customers'}
+                          title={search ? 'Keine Ergebnisse' : 'Keine Privatkunden'}
+                          description={search ? 'Passen Sie den Suchbegriff an oder ändern Sie das Filter.' : 'Fügen Sie Ihren ersten Privatkunden hinzu, um zu starten.'}
+                          action={
+                            !search && (
+                              <button
+                                onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}
+                                className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
+                              >
+                                <Plus className="w-4 h-4" /> Privatkunde hinzufügen
+                              </button>
+                            )
+                          }
+                          size="lg"
+                        />
+                      </div>
                     ) : (
                       <div className="border-t-2 border-[hsl(var(--primary))] bg-white">
                         <div className="flex items-center gap-2 px-4 py-3 bg-[hsl(var(--surface-1))] border-b border-[hsl(var(--border-subtle))]">
@@ -678,22 +680,24 @@ export default function CustomerIntelligenceWorkspace() {
                   {/* Business Customers — always mounted, only visibility changes */}
                   <div hidden={!showBusiness}>
                     {displayed.filter(c => c.customer_type === 'business').length === 0 ? (
-                      <EmptyState
-                        type={search ? 'empty' : 'customers'}
-                        title={search ? 'Keine Ergebnisse' : 'Keine Firmenkunden'}
-                        description={search ? 'Passen Sie den Suchbegriff an oder ändern Sie das Filter.' : 'Fügen Sie Ihren ersten Firmenkunden hinzu, um zu starten.'}
-                        action={
-                          !search && (
-                            <button
-                              onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}
-                              className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
-                            >
-                              <Plus className="w-4 h-4" /> Firmenkunde hinzufügen
-                            </button>
-                          )
-                        }
-                        size="lg"
-                      />
+                      <div className="p-6">
+                        <EmptyState
+                          type={search ? 'empty' : 'customers'}
+                          title={search ? 'Keine Ergebnisse' : 'Keine Firmenkunden'}
+                          description={search ? 'Passen Sie den Suchbegriff an oder ändern Sie das Filter.' : 'Fügen Sie Ihren ersten Firmenkunden hinzu, um zu starten.'}
+                          action={
+                            !search && (
+                              <button
+                                onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}
+                                className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
+                              >
+                                <Plus className="w-4 h-4" /> Firmenkunde hinzufügen
+                              </button>
+                            )
+                          }
+                          size="lg"
+                        />
+                      </div>
                     ) : (
                       <div className="border-t-2 border-[hsl(var(--primary))] bg-white">
                         <div className="flex items-center gap-2 px-4 py-3 bg-[hsl(var(--surface-1))] border-b border-[hsl(var(--border-subtle))]">
