@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Brain, TrendingUp, CheckCircle2, Clock, Zap, Activity,
   ThumbsUp, ThumbsDown, BarChart2, RefreshCw, Loader2,
-  ChevronDown, ChevronUp, Archive, Inbox
+  ChevronDown, ChevronUp, Archive, Inbox, Target, Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -65,6 +65,7 @@ export default function KiAnalyseVerbesserungen() {
   const [improvementToVerify, setImprovementToVerify] = useState(null);
   const [verifyData, setVerifyData] = useState({ actualValue: '', notes: '' });
   const [improvementsTab, setImprovementsTab] = useState('active'); // 'active' | 'archived'
+  const [showAutoMeasure, setShowAutoMeasure] = useState(false);
 
   // Analyse
   const [reviewResult, setReviewResult] = useState(null);
@@ -182,6 +183,48 @@ export default function KiAnalyseVerbesserungen() {
       toast.success('Impact erfolgreich verifiziert!', {
         duration: 3000,
         icon: '✅',
+      });
+    },
+  });
+
+  // Automatische Impact-Messung
+  const autoMeasureMutation = useMutation({
+    mutationFn: async (improvementId) => {
+      const res = await base44.functions.invoke('measureImprovementImpact', { improvement_id: improvementId });
+      return res.data;
+    },
+    onSuccess: (data) => {
+      refetchImprovements();
+      if (data.learned_from_success && data.new_suggestions?.length > 0) {
+        toast.success(`Impact gemessen! ${data.new_suggestions.length} neue Vorschläge generiert`, {
+          duration: 5000,
+          icon: '🎯',
+        });
+      } else if (data.success) {
+        toast.success('Impact automatisch gemessen & verifiziert!', {
+          duration: 3000,
+          icon: '✅',
+        });
+      } else {
+        toast.info('Impact gemessen, aber Ziel nicht erreicht', {
+          duration: 4000,
+          icon: '📊',
+        });
+      }
+    },
+  });
+
+  // Lernende KI: Neue Vorschläge generieren
+  const learnMutation = useMutation({
+    mutationFn: async () => {
+      const res = await base44.functions.invoke('learnAndGenerateImprovements', { mode: 'all', limit: 5 });
+      return res.data;
+    },
+    onSuccess: (data) => {
+      refetchImprovements();
+      toast.success(`${data.new_improvements?.length || 0} neue Vorschläge aus ${data.analysis_summary?.total_learned_from || 0} erfolgreichen Verbesserungen gelernt`, {
+        duration: 5000,
+        icon: '🧠',
       });
     },
   });
@@ -397,30 +440,57 @@ export default function KiAnalyseVerbesserungen() {
               </div>
 
               {/* Generate Button */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <Brain className="w-4 h-4 text-violet-600" />
-                    KI-Verbesserungsvorschläge generieren
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Basierend auf dem letzten Enterprise Audit
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button
-                    onClick={() => generateMutation.mutate({})}
-                    disabled={generateMutation.isPending}
-                    className="h-10 px-6 bg-gradient-to-r from-violet-600 to-blue-600"
-                  >
-                    {generateMutation.isPending ? (
-                      <><Clock className="w-4 h-4 mr-2 animate-spin" />KI analysiert...</>
-                    ) : (
-                      <><Zap className="w-4 h-4 mr-2" />Vorschläge generieren</>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
+              <div className="grid md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                      <Brain className="w-4 h-4 text-violet-600" />
+                      KI-Verbesserungsvorschläge generieren
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Basierend auf dem letzten Enterprise Audit
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      onClick={() => generateMutation.mutate({})}
+                      disabled={generateMutation.isPending}
+                      className="h-10 px-6 bg-gradient-to-r from-violet-600 to-blue-600"
+                    >
+                      {generateMutation.isPending ? (
+                        <><Clock className="w-4 h-4 mr-2 animate-spin" />KI analysiert...</>
+                      ) : (
+                        <><Zap className="w-4 h-4 mr-2" />Vorschläge generieren</>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-600" />
+                      Lernende KI
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Aus erfolgreichen Verbesserungen lernen
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      onClick={() => learnMutation.mutate()}
+                      disabled={learnMutation.isPending}
+                      className="h-10 px-6 bg-gradient-to-r from-emerald-600 to-teal-600"
+                    >
+                      {learnMutation.isPending ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Lernt...</>
+                      ) : (
+                        <><Brain className="w-4 h-4 mr-2" />Neue Vorschläge lernen</>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* Improvements List */}
               {tabSource.length > 0 ? (
@@ -436,6 +506,8 @@ export default function KiAnalyseVerbesserungen() {
                       onReject={() => { setSelectedImprovement(imp); setShowRejectDialog(true); }}
                       onImplement={() => implementMutation.mutate(imp.id)}
                       onVerify={() => handleVerify(imp)}
+                      onAutoMeasure={(id) => autoMeasureMutation.mutate(id)}
+                      autoMeasurePending={autoMeasureMutation.isPending}
                     />
                   ))}
                 </div>
@@ -580,7 +652,7 @@ function StatCard({ label, value, color, bg }) {
   );
 }
 
-function ImprovementCard({ improvement, onApprove, onReject, onImplement, onVerify }) {
+function ImprovementCard({ improvement, onApprove, onReject, onImplement, onVerify, onAutoMeasure, autoMeasurePending }) {
   const [expanded, setExpanded] = useState(false);
   const AreaIcon = AREA_ICONS[improvement.area] || Activity;
 
@@ -671,9 +743,23 @@ function ImprovementCard({ improvement, onApprove, onReject, onImplement, onVeri
                 </Button>
               )}
               {needsVerification && (
-                <Button size="sm" onClick={onVerify} className="bg-emerald-600">
-                  <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Impact messen & verifizieren
-                </Button>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={onVerify} className="bg-emerald-600">
+                    <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Manuell verifizieren
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={() => onAutoMeasure(improvement.id)}
+                    disabled={autoMeasurePending}
+                    className="bg-violet-600"
+                  >
+                    {autoMeasurePending ? (
+                      <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Missst...</>
+                    ) : (
+                      <><Target className="w-3.5 h-3.5 mr-1.5" /> Auto-Messung</>
+                    )}
+                  </Button>
+                </div>
               )}
             </div>
           )}
