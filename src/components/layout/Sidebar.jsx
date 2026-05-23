@@ -3,8 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
   ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink,
-  Target, User, Briefcase, TrendingUp, RefreshCw, Lock, Menu, BookOpen, Activity,
-  Building2, Gift, AlertCircle, Brain, BarChart2
+  Target, User, Briefcase, TrendingUp, Lock, Menu, BookOpen, Activity,
+  Building2, AlertCircle, Brain, BarChart2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -61,11 +61,7 @@ const navGroups = [
     label: 'Kunden',
     items: [
       { label: 'Kundenübersicht',  icon: Users,      path: '/kunden',           color: 'primary' },
-      { label: 'Neukunden',        icon: Users,      path: '/neukunden',        color: 'primary' },
-      { label: 'Geburtstage',      icon: Gift,       path: '/kunden?view=birthday', color: 'primary' },
-      { label: 'Vertragsabläufe',  icon: RefreshCw,  path: '/vertragsablaeufe', color: 'primary' },
       { label: 'Verkaufschancen',  icon: TrendingUp, path: '/verkaufschancen',  color: 'primary' },
-      { label: 'Aufgaben',         icon: CheckSquare, path: '/aufgaben',        color: 'primary' },
       { label: 'Beratungsdossiers',icon: BookOpen,   path: '/beratungsdossier', color: 'primary' },
     ],
   },
