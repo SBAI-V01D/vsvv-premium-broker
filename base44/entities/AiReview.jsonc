@@ -1,0 +1,71 @@
+{
+  "name": "AiReview",
+  "type": "object",
+  "properties": {
+    "level": {
+      "type": "string",
+      "enum": [
+        "quick",
+        "operational",
+        "enterprise"
+      ],
+      "description": "Review-Level"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "in_progress"
+      ],
+      "default": "completed",
+      "description": "Review-Status"
+    },
+    "findings": {
+      "type": "array",
+      "description": "AI Findings JSON",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "finding_count": {
+      "type": "number",
+      "description": "Anzahl Findings"
+    },
+    "critical_count": {
+      "type": "number",
+      "description": "Kritische Findings"
+    },
+    "warning_count": {
+      "type": "number",
+      "description": "Warnungen"
+    },
+    "opportunity_count": {
+      "type": "number",
+      "description": "Potenziale"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Review-Zeitpunkt"
+    },
+    "reviewed_by": {
+      "type": "string",
+      "description": "Review-Durchgef\u00fchrt von"
+    },
+    "previous_review_id": {
+      "type": "string",
+      "description": "Vorg\u00e4nger-Review ID"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notizen"
+    }
+  },
+  "required": [
+    "level",
+    "findings",
+    "reviewed_at",
+    "reviewed_by"
+  ]
+}

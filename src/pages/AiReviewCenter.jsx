@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import {
@@ -250,6 +250,28 @@ export default function AiReviewCenter() {
   const [error, setError]                 = useState(null);
   const [filterArea, setFilterArea]       = useState('all');
   const [filterSev, setFilterSev]         = useState('all');
+
+  // ── Persistentes Review laden ────────────────────────────────────────────
+  useEffect(() => {
+    const loadLastReview = async () => {
+      try {
+        const reviews = await base44.entities.AiReview.list('-reviewed_at', 1);
+        if (reviews.length > 0) {
+          const lastReview = reviews[0];
+          setResult({
+            findings: lastReview.findings,
+            level: lastReview.level,
+            reviewed_at: lastReview.reviewed_at,
+            reviewed_by: lastReview.reviewed_by,
+            review_id: lastReview.id,
+          });
+        }
+      } catch (e) {
+        console.error('Failed to load last review:', e);
+      }
+    };
+    loadLastReview();
+  }, []);
 
   const runReview = async () => {
     setLoading(true); setError(null); setResult(null);

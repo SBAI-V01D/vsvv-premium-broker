@@ -498,7 +498,22 @@ ANTWORTE ALS JSON:
       },
     });
 
-    return Response.json(result);
+    // ── Review persistent speichern ─────────────────────────────────────────
+    const previousReview = await base44.entities.AiReview.list('-reviewed_at', 1);
+    const reviewRecord = await base44.entities.AiReview.create({
+      level: result.level,
+      status: 'completed',
+      findings: result.findings,
+      finding_count: result.findings.length,
+      critical_count: result.findings.filter(f => f.severity === 'critical').length,
+      warning_count: result.findings.filter(f => f.severity === 'warning').length,
+      opportunity_count: result.findings.filter(f => f.severity === 'opportunity').length,
+      reviewed_at: result.reviewed_at,
+      reviewed_by: result.reviewed_by,
+      previous_review_id: previousReview[0]?.id || null,
+    });
+
+    return Response.json({ ...result, review_id: reviewRecord.id });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
