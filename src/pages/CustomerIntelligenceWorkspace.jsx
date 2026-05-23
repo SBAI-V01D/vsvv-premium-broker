@@ -28,6 +28,7 @@ import PortfolioDashboard from '@/components/intelligence/PortfolioDashboard';
 import BirthdaySection from '@/components/customers/BirthdaySection';
 import RenewalsSection from '@/components/customers/RenewalsSection';
 import CancellationsSection from '@/components/customers/CancellationsSection';
+import HouseholdIntelligenceSection from '@/components/customers/HouseholdIntelligenceSection';
 
 // ── Segment builder ────────────────────────────────────────────────────────
 function buildSegments(customers, tasks, contracts, documents) {
@@ -164,8 +165,7 @@ export default function CustomerIntelligenceWorkspace() {
   const [showImport, setShowImport]     = useState(false);
   const [showMerge, setShowMerge]       = useState(false);
   const [showAllMandate, setShowAllMandate] = useState(false);
-  const [showAllHousehold, setShowAllHousehold] = useState(false);
-  
+
   const DISPLAY_LIMIT = 3;
   const queryClient = useQueryClient();
 
@@ -251,8 +251,7 @@ export default function CustomerIntelligenceWorkspace() {
   const segments = useMemo(() => buildSegments(customers, tasks, contracts, documents), [customers, tasks, contracts, documents]);
   const primaryCustomers = useMemo(() => customers.filter(c => !c.is_family_member), [customers]);
 
-  // Pre-calculate intelligence data for kundenaktionen mode
-  const mandateIssues = useMemo(() => 
+  const mandateIssues = useMemo(() =>
     primaryCustomers.filter(c =>
       c.status !== 'inactive' && (
         (!c.advisor_id && !c.primary_advisor_id) ||
@@ -261,8 +260,8 @@ export default function CustomerIntelligenceWorkspace() {
     ),
     [primaryCustomers]
   );
-  
-  const householdCustomers = useMemo(() => 
+
+  const householdCustomers = useMemo(() =>
     primaryCustomers.filter(c => !c.is_family_member && customers.some(fm => fm.primary_customer_id === c.id)),
     [primaryCustomers, customers]
   );
@@ -271,7 +270,6 @@ export default function CustomerIntelligenceWorkspace() {
   const urlParams = new URLSearchParams(window.location.search);
   const urlView = urlParams.get('view');
 
-  // Sync URL params with workspace mode
   useEffect(() => {
     if (urlView) {
       if (['private', 'business', 'vip'].includes(urlView)) {
@@ -280,18 +278,13 @@ export default function CustomerIntelligenceWorkspace() {
     }
   }, [urlView]);
 
-  // Workspace Mode Filtering
   const modeFiltered = useMemo(() => {
     if (workspaceMode === 'private') return primaryCustomers.filter(c => c.customer_type !== 'business');
     if (workspaceMode === 'business') return primaryCustomers.filter(c => c.customer_type === 'business');
-    if (workspaceMode === 'vip') {
-      return primaryCustomers.filter(c => (c.total_premium || 0) >= 5000);
-    }
-    // 'kundenaktionen' and 'overview' display all primary customers
+    if (workspaceMode === 'vip') return primaryCustomers.filter(c => (c.total_premium || 0) >= 5000);
     return primaryCustomers;
   }, [primaryCustomers, workspaceMode]);
 
-  // Search
   const { displayed, matchedFamilyIds } = useMemo(() => {
     const familyMembers = customers.filter(c => c.is_family_member);
     if (!search.trim()) {
@@ -299,21 +292,19 @@ export default function CustomerIntelligenceWorkspace() {
     }
     const allCustomers = [...primaryCustomers, ...familyMembers];
     const directMatches = searchCustomers(allCustomers, search);
-    
+
     const primaryMatches = directMatches.filter(c => !c.is_family_member);
     const matchedFamily = directMatches.filter(m => m.is_family_member);
     const matchedFamilyMemberIds = new Set(matchedFamily.map(m => m.id));
-    
+
     const parentIds = new Set(matchedFamily.map(m => m.primary_customer_id).filter(Boolean));
     const familyParents = primaryCustomers.filter(c => parentIds.has(c.id));
-    
+
     const combinedMap = new Map();
     [...primaryMatches, ...familyParents].forEach(c => {
-      if (!combinedMap.has(c.id)) {
-        combinedMap.set(c.id, c);
-      }
+      if (!combinedMap.has(c.id)) combinedMap.set(c.id, c);
     });
-    
+
     const searchResults = Array.from(combinedMap.values());
     if (search.trim()) {
       const tokens = search.trim().split(/\s+/);
@@ -323,7 +314,7 @@ export default function CustomerIntelligenceWorkspace() {
         matchedFamilyIds: matchedFamilyMemberIds,
       };
     }
-    
+
     return {
       displayed: sortCustomers(searchResults, sortBy),
       matchedFamilyIds: matchedFamilyMemberIds,
@@ -354,7 +345,6 @@ export default function CustomerIntelligenceWorkspace() {
     a.click();
   };
 
-  // Update URL when workspace mode changes
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (workspaceMode === 'kundenaktionen') {
@@ -366,84 +356,33 @@ export default function CustomerIntelligenceWorkspace() {
     window.history.replaceState({}, '', newUrl);
   }, [workspaceMode]);
 
-  // Render Intelligence Views
   const renderIntelligenceView = () => {
     if (workspaceMode === 'kundenaktionen') {
-
       return (
         <div className="space-y-6 p-6 max-w-[1600px] mx-auto">
           <BirthdaySection customers={primaryCustomers} />
           <RenewalsSection contracts={contracts} customers={customers} verkaufschancen={verkaufschancen} />
           <CancellationsSection contracts={contracts} customers={customers} />
-          
+
           {/* Combined layout: Mandate/Advisor issues and Household side by side */}
           <div className="grid gap-4 md:grid-cols-2">
             {/* Kunden ohne Mandat oder Berater */}
             <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--critical-hsl))]" />
-                  <h3 className="text-sm font-bold text-[hsl(var(--primary))]">Mandat / Berater</h3>
-                  <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
-                    {mandateIssues.length}
-                  </span>
-                </div>
-                {mandateIssues.length === 0 ? (
-                  <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
-                    Keine offenen Mandat- oder Beraterzuweisungen
-                  </p>
-                ) : (
-                  <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-[hsl(var(--border-subtle))]/40">
-                    <div className="space-y-1">
-                      {(showAllMandate ? mandateIssues : mandateIssues.slice(0, DISPLAY_LIMIT)).map(customer => (
-                        <button
-                          key={customer.id}
-                          onClick={() => navigate(`/kunden/${customer.id}/360`)}
-                          className="w-full flex items-center justify-between p-2 rounded-md hover:bg-[hsl(var(--surface-2))]/40 transition-colors text-left"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[11px] font-medium text-[hsl(var(--text-heading))] truncate">
-                              {customer.first_name} {customer.last_name}
-                            </p>
-                            <p className="text-[9px] text-[hsl(var(--text-muted))] truncate">
-                              {!customer.advisor_id && !customer.primary_advisor_id && <span className="text-[hsl(var(--critical))])">⚠ Kein Berater</span>}
-                              {['expired', 'pending'].includes(customer.mandate_status) && (
-                                <span className={!customer.advisor_id && !customer.primary_advisor_id ? 'ml-1' : ''}>
-                                  Mandat: {customer.mandate_status}
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                          <ChevronRight className="w-3 h-3 text-[hsl(var(--text-muted))]" />
-                        </button>
-                      ))}
-                    </div>
-                    {mandateIssues.length > DISPLAY_LIMIT && (
-                      <button
-                        onClick={() => setShowAllMandate(!showAllMandate)}
-                        className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
-                      >
-                        {showAllMandate ? 'Weniger anzeigen' : `+${mandateIssues.length - DISPLAY_LIMIT} weitere anzeigen`}
-                      </button>
-                    )}
-                  </div>
-                )}
-            </div>
-
-            {/* Cross Selling / Household */}
-            {householdCustomers.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Users className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
-                  <h3 className="text-sm font-bold text-[hsl(var(--primary))]">
-                    Haushalte
-                  </h3>
-                  <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
-                    {householdCustomers.length}
-                  </span>
-                </div>
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--critical-hsl))]" />
+                <h3 className="text-sm font-bold text-[hsl(var(--primary))]">Mandat / Berater</h3>
+                <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
+                  {mandateIssues.length}
+                </span>
+              </div>
+              {mandateIssues.length === 0 ? (
+                <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
+                  Keine offenen Mandat- oder Beraterzuweisungen
+                </p>
+              ) : (
                 <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-[hsl(var(--border-subtle))]/40">
                   <div className="space-y-1">
-                    {(showAllHousehold ? householdCustomers : householdCustomers.slice(0, DISPLAY_LIMIT)).map(customer => (
+                    {(showAllMandate ? mandateIssues : mandateIssues.slice(0, DISPLAY_LIMIT)).map(customer => (
                       <button
                         key={customer.id}
                         onClick={() => navigate(`/kunden/${customer.id}/360`)}
@@ -454,24 +393,40 @@ export default function CustomerIntelligenceWorkspace() {
                             {customer.first_name} {customer.last_name}
                           </p>
                           <p className="text-[9px] text-[hsl(var(--text-muted))] truncate">
-                            Haushalt mit {customers.filter(fm => fm.primary_customer_id === customer.id).length} Mitglied(ern)
+                            {!customer.advisor_id && !customer.primary_advisor_id && (
+                              <span>⚠ Kein Berater</span>
+                            )}
+                            {['expired', 'pending'].includes(customer.mandate_status) && (
+                              <span className={!customer.advisor_id && !customer.primary_advisor_id ? 'ml-1' : ''}>
+                                Mandat: {customer.mandate_status}
+                              </span>
+                            )}
                           </p>
                         </div>
                         <ChevronRight className="w-3 h-3 text-[hsl(var(--text-muted))]" />
                       </button>
                     ))}
                   </div>
-                  {householdCustomers.length > DISPLAY_LIMIT && (
+                  {mandateIssues.length > DISPLAY_LIMIT && (
                     <button
-                      onClick={() => setShowAllHousehold(!showAllHousehold)}
-                      className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
+                      onClick={() => setShowAllMandate(!showAllMandate)}
+                      className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]/80"
                     >
-                      {showAllHousehold ? 'Weniger anzeigen' : `+${householdCustomers.length - DISPLAY_LIMIT} weitere anzeigen`}
+                      {showAllMandate ? 'Weniger anzeigen' : `+${mandateIssues.length - DISPLAY_LIMIT} weitere anzeigen`}
                     </button>
                   )}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+
+            {/* Haushalte */}
+            <div>
+              <HouseholdIntelligenceSection
+                householdCustomers={householdCustomers}
+                customers={customers}
+                contracts={contracts}
+              />
+            </div>
           </div>
         </div>
       );
@@ -492,10 +447,9 @@ export default function CustomerIntelligenceWorkspace() {
   return (
     <div className="flex flex-col h-full bg-[hsl(var(--surface-1))]">
 
-      {/* ── Operational Workspace Bar — horizontal, ruhig ───────────────── */}
+      {/* ── Operational Workspace Bar ───────────────── */}
       <div className="px-6 py-4 border-b border-[hsl(var(--border-subtle))] bg-white shrink-0">
         <div className="flex items-center gap-6 flex-wrap">
-          {/* Workspace Modes - Horizontal Scroll */}
           <div className="flex items-center gap-1 overflow-x-auto pb-1">
             {WORKSPACE_MODES.map(mode => {
               const Icon = mode.icon;
@@ -517,7 +471,6 @@ export default function CustomerIntelligenceWorkspace() {
             })}
           </div>
 
-          {/* Search (only for customer list modes) */}
           {isCustomerListMode && (
             <>
               <div className="flex-1 min-w-[280px] max-w-xl">
@@ -537,7 +490,6 @@ export default function CustomerIntelligenceWorkspace() {
                 </div>
               </div>
 
-              {/* Actions */}
               <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                 <button onClick={handleExport} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Export">
                   <Download className="w-4 h-4" />
