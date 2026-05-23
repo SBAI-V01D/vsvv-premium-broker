@@ -16,7 +16,7 @@ import {
   ArrowLeft, Phone, Mail, MapPin, Plus, FileText, TrendingUp,
   CheckCircle2, Clock, AlertCircle, Download, ChevronRight,
   RefreshCw, Target, Building2, CalendarClock, Star, Trophy,
-  Zap, Shield
+  Zap, Shield, Pencil
 } from 'lucide-react'
 import VerkaufschanceStatusBadge from '@/components/verkaufschance/VerkaufschanceStatusBadge'
 import VerkaufschanceForm from '@/components/verkaufschance/VerkaufschanceForm'
@@ -173,6 +173,9 @@ export default function Customer360() {
                 <Mail className="w-3.5 h-3.5 text-blue-700" />
               </a>
             )}
+            <Button size="sm" variant="outline" onClick={() => navigate(`/kunden/${customerId}`)} className="gap-1 h-8 px-3 text-xs">
+              <Pencil className="w-3.5 h-3.5" /> Bearbeiten
+            </Button>
             <Button size="sm" onClick={() => setShowVsForm(true)} className="gap-1 h-8 px-3 text-xs">
               <Plus className="w-3.5 h-3.5" /> Chance
             </Button>
