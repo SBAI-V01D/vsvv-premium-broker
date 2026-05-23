@@ -253,7 +253,7 @@ export default function CustomerIntelligenceWorkspace() {
 
   const mandateIssues = useMemo(() =>
     customers.filter(c =>
-      c.status !== 'inactive' && !c.archived && (
+      !c.archived && (
         (!c.advisor_id && !c.primary_advisor_id && (!c.assigned_advisors || c.assigned_advisors.length === 0)) ||
         ['expired', 'pending', 'invalid'].includes(c.mandate_status)
       )
