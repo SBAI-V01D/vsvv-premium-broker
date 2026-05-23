@@ -671,10 +671,7 @@ function ImprovementCard({ improvement, onApprove, onReject, onImplement, onVeri
                 </Button>
               )}
               {needsVerification && (
-                <Button size="sm" onClick={() => {
-                  setImprovementToVerify(improvement);
-                  setShowVerifyDialog(true);
-                }} className="bg-emerald-600">
+                <Button size="sm" onClick={onVerify} className="bg-emerald-600">
                   <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Impact messen & verifizieren
                 </Button>
               )}
