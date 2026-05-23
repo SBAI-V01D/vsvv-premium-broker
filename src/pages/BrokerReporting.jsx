@@ -7,10 +7,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import * as XLSX from 'xlsx';
 import {
   Download, Filter, Table2, ChevronRight, ChevronDown, Plus, X,
   BookOpen, Star, FileSpreadsheet, Eye, Loader2, AlertTriangle,
-  Users, FileText, CheckSquare, Wallet, Target, FolderOpen, BarChart2
+  Users, FileText, CheckSquare, Wallet, Target, FolderOpen, BarChart2, Printer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -242,6 +243,96 @@ function exportCSV(rows, fields, entityDef, filename) {
   a.click();
 }
 
+// ── Excel Export (.xlsx, Schweizer Formate) ────────────────────────────────
+function exportExcel(rows, fields, entityDef, filename) {
+  const fieldDefs = entityDef.fields.filter(f => fields.includes(f.id));
+  const header = fieldDefs.map(f => f.label);
+  const data = rows.map(row =>
+    fieldDefs.map(f => {
+      let v = row[f.id];
+      if (f.type === 'date') {
+        if (!v) return '';
+        try {
+          const d = new Date(v);
+          return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+        } catch { return v; }
+      }
+      else if (f.type === 'chf') {
+        return v != null ? Number(v) : null;
+      }
+      else if (typeof v === 'boolean') return v ? 'Ja' : 'Nein';
+      else if (typeof v === 'number') return v;
+      else return v || '';
+    })
+  );
+  const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
+  const colWidths = fieldDefs.map(f => ({ wch: Math.max(f.label.length, 12) }));
+  ws['!cols'] = colWidths;
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Daten');
+  XLSX.writeFile(wb, filename);
+}
+
+// ── PDF Export (Browser Print) ─────────────────────────────────────────────
+function exportPDF(rows, fields, entityDef, filename) {
+  const printWindow = window.open('', '_blank');
+  const fieldDefs = entityDef.fields.filter(f => fields.includes(f.id));
+  
+  const tableRows = rows.map(row =>
+    `<tr>
+      ${fieldDefs.map(f => {
+        let v = row[f.id];
+        if (f.type === 'date') v = fmtDate(v);
+        else if (f.type === 'chf') v = fmtCHF(v);
+        else v = fmtVal(v);
+        return `<td>${v || '—'}</td>`;
+      }).join('')}
+    </tr>`
+  ).join('');
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>${entityDef.label} - ${filename}</title>
+      <style>
+        @media print {
+          @page { margin: 1.5cm; size: A4 landscape; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+        body { font-family: Arial, sans-serif; margin: 2cm; }
+        h1 { color: #1e3a5f; margin-bottom: 0.5cm; }
+        .meta { font-size: 11px; color: #666; margin-bottom: 1cm; }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        th { background: #f1f5f9; padding: 8px 6px; text-align: left; font-weight: 600; border-bottom: 2px solid #cbd5e1; }
+        td { padding: 6px; border-bottom: 1px solid #e2e8f0; }
+        tr:nth-child(even) { background: #f8fafc; }
+      </style>
+    </head>
+    <body>
+      <h1>${entityDef.label}</h1>
+      <div class="meta">
+        Export: ${new Date().toLocaleString('de-CH')} | Datensätze: ${rows.length} | Felder: ${fieldDefs.length}
+      </div>
+      <table>
+        <thead>
+          <tr>
+            ${fieldDefs.map(f => `<th>${f.label}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+      <script>window.onload = () => { window.print(); }</script>
+    </body>
+    </html>
+  `;
+  
+  printWindow.document.write(html);
+  printWindow.document.close();
+}
+
 // ── Step indicator ──────────────────────────────────────────────────────────
 function Steps({ current }) {
   const steps = ['Entität', 'Filter', 'Felder', 'Vorschau & Export'];
@@ -356,6 +447,48 @@ export default function BrokerReporting() {
       const fields = selectedFields.length > 0 ? selectedFields : entityDef.fields.map(f => f.id);
       const date = new Date().toLocaleDateString('de-CH').replace(/\./g, '-');
       exportCSV(rows, fields, entityDef, `${entityDef.label}_${date}.csv`);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const runExportExcel = async () => {
+    if (!entityDef) return;
+    setLoadingPreview(true);
+    try {
+      let rows = await entityDef.fetch();
+      rows = rows.filter(row => {
+        const results = filters
+          .filter(f => f.field && f.value)
+          .map(f => applyFilter(row, f));
+        if (results.length === 0) return true;
+        return logic === 'AND' ? results.every(Boolean) : results.some(Boolean);
+      });
+      if (postFilterFn) rows = postFilterFn(rows);
+      const fields = selectedFields.length > 0 ? selectedFields : entityDef.fields.map(f => f.id);
+      const date = new Date().toLocaleDateString('de-CH').replace(/\./g, '-');
+      exportExcel(rows, fields, entityDef, `${entityDef.label}_${date}.xlsx`);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const runExportPDF = async () => {
+    if (!entityDef) return;
+    setLoadingPreview(true);
+    try {
+      let rows = await entityDef.fetch();
+      rows = rows.filter(row => {
+        const results = filters
+          .filter(f => f.field && f.value)
+          .map(f => applyFilter(row, f));
+        if (results.length === 0) return true;
+        return logic === 'AND' ? results.every(Boolean) : results.some(Boolean);
+      });
+      if (postFilterFn) rows = postFilterFn(rows);
+      const fields = selectedFields.length > 0 ? selectedFields : entityDef.fields.map(f => f.id);
+      const date = new Date().toLocaleDateString('de-CH').replace(/\./g, '-');
+      exportPDF(rows, fields, entityDef, `${entityDef.label}_${date}`);
     } finally {
       setLoadingPreview(false);
     }
@@ -655,12 +788,22 @@ export default function BrokerReporting() {
                 <Button onClick={runExport} disabled={loadingPreview || totalCount === 0}
                   className="gap-2 bg-emerald-600 hover:bg-emerald-700 border-0">
                   {loadingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
-                  Als CSV exportieren {totalCount != null && `(${totalCount} Zeilen)`}
+                  CSV {totalCount != null && `(${totalCount} Zeilen)`}
                 </Button>
-                <p className="text-[11px] text-slate-400">
-                  Semikolon-getrennt · UTF-8 · DD.MM.YYYY · Excel-kompatibel (CH)
-                </p>
+                <Button onClick={runExportExcel} disabled={loadingPreview || totalCount === 0}
+                  className="gap-2 bg-blue-600 hover:bg-blue-700 border-0">
+                  {loadingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+                  Excel {totalCount != null && `(${totalCount} Zeilen)`}
+                </Button>
+                <Button onClick={runExportPDF} disabled={loadingPreview || totalCount === 0}
+                  variant="outline" className="gap-2">
+                  {loadingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                  PDF
+                </Button>
               </div>
+              <p className="text-[11px] text-slate-400 mt-2">
+                CSV: Semikolon · UTF-8 | Excel: .xlsx mit Formatierung | PDF: A4 quer, druckoptimiert
+              </p>
             </div>
 
             {/* Edit steps */}
