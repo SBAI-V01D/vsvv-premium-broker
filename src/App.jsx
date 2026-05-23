@@ -7,6 +7,7 @@ import PageNotFound from './lib/PageNotFound'
 import { AuthProvider, useAuth } from '@/lib/AuthContext'
 import UserNotRegisteredError from '@/components/UserNotRegisteredError'
 import ErrorBoundary from '@/components/ErrorBoundary'
+import ScrollToTop from './lib/ScrollToTop'
 
 import AppLayout from './components/layout/AppLayout'
 import Dashboard from './pages/Dashboard.jsx'
@@ -152,6 +153,7 @@ function App() {
       <AuthProvider>
         <QueryClientProvider client={queryClientInstance}>
           <Router>
+            <ScrollToTop />
             <Routes>
               <Route path="*" element={<AuthenticatedApp />} />
             </Routes>
