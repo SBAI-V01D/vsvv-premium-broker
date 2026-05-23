@@ -83,12 +83,7 @@ const navGroups = [
       { label: 'Provisionen',           icon: Wallet,    path: '/provisionen-courtagen',     color: 'primary' },
     ],
   },
-  {
-    label: 'Administration',
-    items: [
-      { label: 'System', icon: Menu, path: '/admin-logs', color: 'primary' },
-    ],
-  },
+
   {
     label: 'Enterprise',
     items: [
