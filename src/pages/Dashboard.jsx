@@ -15,17 +15,16 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import {
-  ChevronRight, ChevronDown, ChevronUp,
-  TrendingUp, Target, RefreshCw, CheckSquare,
+  ChevronDown, ChevronUp,
+  TrendingUp, Target, RefreshCw,
   AlertTriangle, Zap, BarChart2, Building2
 } from 'lucide-react'
 
 import TodayDashboard from '@/components/dashboard/TodayDashboard'
-import AiInsightsPanel from '@/components/intelligence/AiInsightsPanel'
 import MoneyDashboard from '@/components/dashboard/MoneyDashboard'
-import OpportunityIntelligenceCard from '@/components/opportunities/OpportunityIntelligenceCard'
+import AiInsightsPanel from '@/components/intelligence/AiInsightsPanel'
 
-// ── Operative KPI Tile ────────────────────────────────────────────────────────
+// Operative KPI Tile
 function KpiTile({ label, value, sub, icon: Icon, colorClass, bgClass, borderClass, onClick, urgent }) {
   return (
     <button
@@ -49,7 +48,7 @@ function KpiTile({ label, value, sub, icon: Icon, colorClass, bgClass, borderCla
   )
 }
 
-// ── Collapsible Finance Section ───────────────────────────────────────────────
+// Collapsible Finance Section
 function FinanceSection({ children }) {
   const [open, setOpen] = useState(false)
   return (
@@ -74,13 +73,7 @@ function FinanceSection({ children }) {
   )
 }
 
-// ── Greeting ──────────────────────────────────────────────────────────────────
-function getGreeting() {
-  const h = new Date().getHours()
-  return h < 12 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend'
-}
-
-// ── Main ──────────────────────────────────────────────────────────────────────
+// Main
 export default function Dashboard() {
   const navigate = useNavigate()
   const [selectedTask, setSelectedTask] = useState(null)
@@ -139,16 +132,12 @@ export default function Dashboard() {
     verkaufschancen.filter(v => !['gewonnen', 'verloren'].includes(v.status)),
     [verkaufschancen])
 
-  const overdueCount = openTasks.filter(t => t.due_date && new Date(t.due_date) < today).length
   const urgentRenewal = renewalIn30.filter(c => {
     const d = Math.ceil((new Date(c.end_date) - today) / 86400000)
     return d <= 7
   }).length
 
-  const urgentCount = overdueCount + urgentRenewal +
-    openVerkaufschancen.filter(v => v.status === 'kunde_entscheidet').length
-
-  // ── Task mutations ────────────────────────────────────────────────────────
+  // Task mutations
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.Task.update(selectedTask.id, {
       status: data.status ?? selectedTask.status,
@@ -174,7 +163,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 page-enter">
 
-      {/* ── Page Context — minimal (no hero greeting) ─────────────────────── */}
+      {/* Page header */}
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight">Cockpit</h1>
@@ -192,22 +181,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Urgent Alert — only if critical ───────────────────────────────── */}
-      {urgentCount > 0 && (
-        <button
-          onClick={() => document.getElementById('urgent-actions')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg bg-[hsl(var(--destructive))/0.08] border border-[hsl(var(--destructive))/0.2] hover:bg-[hsl(var(--destructive))/0.12] transition-colors"
-        >
-          <span className="w-2 h-2 rounded-full bg-[hsl(var(--destructive))] shrink-0 animate-pulse" />
-          <span className="text-body-sm font-semibold text-[hsl(var(--destructive))] flex-1 text-left">
-            {urgentCount} dringende Aktion{urgentCount > 1 ? 'en' : ''}
-          </span>
-          <ChevronRight className="w-3.5 h-3.5 text-[hsl(var(--destructive))]/0.6 shrink-0" />
-        </button>
-      )}
-
-      {/* ── Operative KPI Row — monochrome, reduced visual noise ─────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      {/* KPI Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <KpiTile
           label="30d Renewal"
           value={renewalIn30.length}
@@ -240,17 +215,6 @@ export default function Dashboard() {
           onClick={() => navigate('/verkaufschancen')}
         />
         <KpiTile
-          label="Tasks"
-          value={openTasks.length}
-          sub={overdueCount > 0 ? `${overdueCount} spät` : 'ok'}
-          icon={CheckSquare}
-          colorClass={overdueCount > 0 ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--text-heading))]'}
-          bgClass={overdueCount > 0 ? 'bg-[hsl(var(--destructive))/0.08]' : 'bg-[hsl(var(--surface-0))]'}
-          borderClass="border-[hsl(var(--border-subtle))]"
-          urgent={overdueCount > 0}
-          onClick={() => navigate('/aufgaben')}
-        />
-        <KpiTile
           label="Neu"
           value={activeLeads.filter(l => l.status === 'new').length}
           sub="unbearbeitet"
@@ -272,7 +236,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* ── Operative Content — reduced visual weight ────────────────────── */}
+      {/* Operative Content */}
       <TodayDashboard
         openTasks={openTasks}
         expiringContracts={expiringContracts}
@@ -284,15 +248,15 @@ export default function Dashboard() {
         onTaskComplete={handleTaskComplete}
       />
 
-      {/* ── AI Intelligence Panel — advisory, read-only ─────────────────── */}
+      {/* AI Intelligence Panel */}
       <AiInsightsPanel />
 
-      {/* ── Finance & Reporting (kollabierbar / sekundär) ───────────────── */}
+      {/* Finance & Reporting */}
       <FinanceSection>
         <MoneyDashboard />
       </FinanceSection>
 
-      {/* ── Task Edit Dialog ───────────────────────────────────────────────── */}
+      {/* Task Edit Dialog */}
       <Dialog open={!!selectedTask} onOpenChange={(open) => { if (!open) setSelectedTask(null) }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
