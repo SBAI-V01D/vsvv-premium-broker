@@ -61,6 +61,7 @@ const navGroups = [
     label: 'Kunden',
     items: [
       { label: 'Kundenübersicht',  icon: Users,      path: '/kunden',           color: 'primary' },
+      { label: 'Neukunden',        icon: Users,      path: '/neukunden',        color: 'primary' },
       { label: 'Aufgaben',         icon: CheckSquare,  path: '/aufgaben',         color: 'primary' },
       { label: 'Vertragsabläufe',  icon: RefreshCw,    path: '/vertragsablaeufe', color: 'primary' },
       { label: 'Verkaufschancen',  icon: TrendingUp,   path: '/verkaufschancen',  color: 'primary' },

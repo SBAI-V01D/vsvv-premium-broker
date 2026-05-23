@@ -14,6 +14,7 @@ import Dashboard from './pages/Dashboard.jsx'
 import CustomerIntelligenceWorkspace from './pages/CustomerIntelligenceWorkspace'
 import CustomerDetail from './pages/CustomerDetail'
 import Customer360 from './pages/Customer360'
+import NewCustomers from './pages/NewCustomers'
 import Contracts from './pages/Contracts'
 import Applications from './pages/Applications'
 import Tasks from './pages/Tasks.jsx'
@@ -102,6 +103,7 @@ const AuthenticatedApp = () => {
       <Route element={<AppLayout />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/kunden" element={<CustomerIntelligenceWorkspace />} />
+        <Route path="/neukunden" element={<NewCustomers />} />
         <Route path="/kunden/:id" element={<CustomerDetail />} />
         <Route path="/kunden/:customerId/360" element={<Customer360 />} />
         <Route path="/vertraege" element={<Contracts />} />
