@@ -66,6 +66,7 @@ export default function KiAnalyseVerbesserungen() {
   const [verifyData, setVerifyData] = useState({ actualValue: '', notes: '' });
   const [improvementsTab, setImprovementsTab] = useState('active'); // 'active' | 'archived'
   const [showAutoMeasure, setShowAutoMeasure] = useState(false);
+  const [measuringId, setMeasuringId] = useState(null);
 
   // Analyse
   const [reviewResult, setReviewResult] = useState(null);
@@ -190,8 +191,13 @@ export default function KiAnalyseVerbesserungen() {
   // Automatische Impact-Messung
   const autoMeasureMutation = useMutation({
     mutationFn: async (improvementId) => {
-      const res = await base44.functions.invoke('measureImprovementImpact', { improvement_id: improvementId });
-      return res.data;
+      setMeasuringId(improvementId);
+      try {
+        const res = await base44.functions.invoke('measureImprovementImpact', { improvement_id: improvementId });
+        return res.data;
+      } finally {
+        setMeasuringId(null);
+      }
     },
     onSuccess: (data) => {
       refetchImprovements();
@@ -507,7 +513,7 @@ export default function KiAnalyseVerbesserungen() {
                       onImplement={() => implementMutation.mutate(imp.id)}
                       onVerify={() => handleVerify(imp)}
                       onAutoMeasure={(id) => autoMeasureMutation.mutate(id)}
-                      autoMeasurePending={autoMeasureMutation.isPending}
+                      autoMeasurePending={measuringId === imp.id}
                     />
                   ))}
                 </div>
