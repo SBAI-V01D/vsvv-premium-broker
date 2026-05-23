@@ -212,7 +212,7 @@ export default function CustomerIntelligenceWorkspace() {
 
   const { data: contracts = [] } = useQuery({
     queryKey: ['customers_contracts'],
-    queryFn: () => base44.entities.Contract.filter({ status: 'active', archived: false }, '-created_date', 500),
+    queryFn: () => base44.entities.Contract.filter({ archived: false }, '-created_date', 500),
     enabled: !isLoading,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -400,17 +400,8 @@ export default function CustomerIntelligenceWorkspace() {
           <RenewalsSection contracts={contracts} customers={customers} verkaufschancen={verkaufschancen} />
           <CancellationsSection contracts={contracts} customers={customers} />
 
-          {/* Combined layout: Haushalt first, then Mandate/Advisor issues */}
+          {/* Combined layout: Mandat/Berater first, then Haushalt */}
           <div className="grid gap-4 md:grid-cols-2">
-            {/* Haushalte */}
-            <div>
-              <HouseholdIntelligenceSection
-                householdCustomers={householdCustomers}
-                customers={customers}
-                contracts={contracts}
-              />
-            </div>
-
             {/* Kunden ohne Mandat oder Berater */}
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -468,6 +459,15 @@ export default function CustomerIntelligenceWorkspace() {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Haushalte */}
+            <div>
+              <HouseholdIntelligenceSection
+                householdCustomers={householdCustomers}
+                customers={customers}
+                contracts={contracts}
+              />
             </div>
           </div>
         </div>
