@@ -646,15 +646,15 @@ export default function KiAnalyseVerbesserungen() {
 
       {/* Auto-Measure Result Dialog */}
       <Dialog open={showResultDialog} onOpenChange={setShowResultDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="sticky top-0 bg-white z-10 pb-2">
             <DialogTitle className="flex items-center gap-2">
               <Target className="w-5 h-5 text-violet-600" />
               Automatische Impact-Messung
             </DialogTitle>
           </DialogHeader>
           {autoMeasureResult && (
-            <div className="space-y-4">
+            <div className="space-y-4 pb-4">
               {/* Header Status */}
               <div className={cn('p-4 rounded-xl border-2', autoMeasureResult.success ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200')}>
                 <div className="flex items-center gap-3 mb-2">
@@ -676,7 +676,7 @@ export default function KiAnalyseVerbesserungen() {
 
               {/* Messergebnisse */}
               <div className="space-y-3">
-                <h4 className="text-sm font-bold text-slate-700">Messergebnisse</h4>
+                <h4 className="text-sm font-bold text-slate-700 sticky top-16 bg-white py-2 z-10">Messergebnisse</h4>
                 
                 {autoMeasureResult.measurements && Object.keys(autoMeasureResult.measurements).length > 0 ? (
                   <div className="space-y-2">
@@ -802,8 +802,8 @@ export default function KiAnalyseVerbesserungen() {
 
               {/* Optimierungsvorschläge */}
               {autoMeasureResult.optimization_suggestions && autoMeasureResult.optimization_suggestions.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                <div className="space-y-3 pt-2">
+                  <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2 sticky top-32 bg-white py-2 z-10">
                     <Sparkles className="w-4 h-4 text-violet-600" />
                     Optimierungsvorschläge
                   </h4>
@@ -901,7 +901,7 @@ export default function KiAnalyseVerbesserungen() {
                 </div>
               )}
 
-              <div className="flex justify-end pt-2">
+              <div className="flex justify-end pt-4 sticky bottom-0 bg-white py-3 border-t z-10">
                 <Button onClick={() => setShowResultDialog(false)} className="bg-slate-800">
                   Schliessen
                 </Button>
