@@ -113,7 +113,7 @@ export default function Sidebar({ onNavigate }) {
         // Enterprise stone/graphite — warm neutral surface (architectural material, not SaaS)
         'bg-[#f7f7f6]',
         'border-r border-[hsl(var(--border-subtle))]',
-        collapsed ? 'w-[60px]' : 'w-[224px]'
+        collapsed ? 'w-[60px]' : 'w-[262px]'
       )}
       style={{ boxShadow: '4px 0 32px 0 rgba(0,0,0,0.08)' }}
     >
