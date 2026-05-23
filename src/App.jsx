@@ -41,10 +41,9 @@ import Vertragsablaeufe from './pages/Vertragsablaeufe'
 import AdminTeamAccess from './pages/AdminTeamAccess'
 import AdvisoryDossier from './pages/AdvisoryDossier'
 import AdminEnterpriseControlCenter from './pages/AdminEnterpriseControlCenter'
-import AiReviewCenter from './pages/AiReviewCenter'
+import KiAnalyseVerbesserungen from './pages/KiAnalyseVerbesserungen'
 import BrokerReporting from './pages/BrokerReporting'
 import EnterpriseAudit from './pages/EnterpriseAudit'
-import EnterpriseImprovements from './pages/EnterpriseImprovements'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -135,10 +134,9 @@ const AuthenticatedApp = () => {
         {/* AdvisoryDossierEngine — Phase 1 — Admin-Only */}
         <Route path="/beratungsdossier" element={<AdvisoryDossier />} />
         <Route path="/admin/enterprise-control-center" element={<AdminEnterpriseControlCenter />} />
-        <Route path="/ai-review" element={<AiReviewCenter />} />
+        <Route path="/ai-review" element={<KiAnalyseVerbesserungen />} />
         <Route path="/reporting" element={<BrokerReporting />} />
         <Route path="/admin/enterprise-audit" element={<EnterpriseAudit />} />
-        <Route path="/admin/enterprise-improvements" element={<EnterpriseImprovements />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

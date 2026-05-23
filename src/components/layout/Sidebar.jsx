@@ -84,10 +84,8 @@ const navGroups = [
   {
     label: 'Enterprise',
     items: [
-      { label: 'Enterprise Audit Monitor',  icon: Activity, path: '/admin-logs',                      adminOnly: true, color: 'primary' },
-      { label: 'Enterprise Control Center', icon: Shield,   path: '/admin/enterprise-control-center', adminOnly: true, color: 'primary' },
-      { label: 'AI Review Center',          icon: Brain,    path: '/ai-review',                       adminOnly: true, color: 'primary' },
-      { label: 'Enterprise Improvements',   icon: TrendingUp, path: '/admin/enterprise-improvements', adminOnly: true, color: 'primary' },
+      { label: 'Enterprise Überwachung',    icon: Shield,      path: '/admin/enterprise-control-center', adminOnly: true, color: 'primary' },
+      { label: 'KI Analyse & Verbesserungen', icon: Brain,    path: '/ai-review',                       adminOnly: true, color: 'primary' },
     ],
   },
 ];
