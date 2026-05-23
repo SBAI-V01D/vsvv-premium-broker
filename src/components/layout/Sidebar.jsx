@@ -59,29 +59,34 @@ const navGroups = [
   {
     label: 'Kunden',
     items: [
-      { label: 'Kundenübersicht', icon: Users,    path: '/kunden', color: 'primary' },
-      { label: 'Beratungsdossiers', icon: BookOpen, path: '/beratungsdossier', adminOnly: true, color: 'primary' },
-      { label: 'Verträge',        icon: FileText,  path: '/vertraege', color: 'primary' },
-      { label: 'Anträge',         icon: CheckSquare, path: '/antraege', color: 'primary' },
-      { label: 'Dokumente',       icon: BookOpen,   path: '/dokumente', color: 'primary' },
+      { label: 'Kundenübersicht',   icon: Users,      path: '/kunden',             color: 'primary' },
+      { label: 'Beratungsdossiers', icon: BookOpen,   path: '/beratungsdossier',   adminOnly: true, color: 'primary' },
+      { label: 'Aufgaben',          icon: CheckSquare,path: '/aufgaben',            color: 'primary' },
+      { label: 'Verträge',          icon: FileText,   path: '/vertraege',          color: 'primary' },
+      { label: 'Anträge',           icon: CheckSquare,path: '/antraege',           color: 'primary' },
+      { label: 'Dokumente',         icon: BookOpen,   path: '/dokumente',          color: 'primary' },
     ],
   },
   {
     label: 'Vertrieb',
     items: [
-      { label: 'Leads',           icon: Target,      path: '/leads', color: 'primary' },
-      { label: 'Verkaufschancen', icon: TrendingUp,  path: '/verkaufschancen', color: 'primary' },
-      { label: 'Vertragsabläufe', icon: RefreshCw,   path: '/vertragsablaeufe', color: 'primary' },
-      { label: 'Aufgaben',        icon: CheckSquare, path: '/aufgaben', color: 'primary' },
+      { label: 'Leads',           icon: Target,    path: '/leads',            color: 'primary' },
+      { label: 'Verkaufschancen', icon: TrendingUp,path: '/verkaufschancen',  color: 'primary' },
+      { label: 'Vertragsabläufe', icon: RefreshCw, path: '/vertragsablaeufe', color: 'primary' },
+    ],
+  },
+  {
+    label: 'Finanzen und Personal',
+    items: [
+      { label: 'Berater & Partner',     icon: Briefcase, path: '/berater-organisation',      color: 'primary' },
+      { label: 'Team & Zugriffsrechte', icon: Lock,      path: '/admin/team-zugriffsrechte', adminOnly: true, color: 'primary' },
+      { label: 'Provisionen',           icon: Wallet,    path: '/provisionen-courtagen',     color: 'primary' },
     ],
   },
   {
     label: 'Administration',
     items: [
-      { label: 'Provisionen',           icon: Wallet,    path: '/provisionen-courtagen', color: 'primary' },
-      { label: 'Berater & Partner',     icon: Briefcase, path: '/berater-organisation', color: 'primary' },
-      { label: 'Team & Zugriffsrechte', icon: Lock,      path: '/admin/team-zugriffsrechte', adminOnly: true, color: 'primary' },
-      { label: 'System',                icon: Menu,      path: '/admin-logs', color: 'primary' },
+      { label: 'System', icon: Menu, path: '/admin-logs', color: 'primary' },
     ],
   },
   {
