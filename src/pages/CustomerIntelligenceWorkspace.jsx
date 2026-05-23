@@ -285,18 +285,38 @@ export default function CustomerIntelligenceWorkspace() {
     }
   }, [urlView]);
 
+  // Harte Trennung: Private und Business werden komplett getrennt verarbeitet
+  const privateCustomers = useMemo(() => 
+    primaryCustomers.filter(c => c.customer_type !== 'business'), 
+    [primaryCustomers]
+  );
+  
+  const businessCustomers = useMemo(() => 
+    primaryCustomers.filter(c => c.customer_type === 'business'), 
+    [primaryCustomers]
+  );
+
   const modeFiltered = useMemo(() => {
-    if (workspaceMode === 'private') return primaryCustomers.filter(c => c.customer_type !== 'business');
-    if (workspaceMode === 'business') return primaryCustomers.filter(c => c.customer_type === 'business');
+    if (workspaceMode === 'private') return privateCustomers;
+    if (workspaceMode === 'business') return businessCustomers;
     return primaryCustomers;
-  }, [primaryCustomers, workspaceMode]);
+  }, [privateCustomers, businessCustomers, primaryCustomers, workspaceMode]);
 
   const { displayed, matchedFamilyIds } = useMemo(() => {
-    const familyMembers = customers.filter(c => c.is_family_member);
+    // Im filtered Mode: Nur Familienmitglieder des gefilterten Typs berücksichtigen
+    const relevantFamilyMembers = workspaceMode === 'private' || workspaceMode === 'business'
+      ? customers.filter(c => c.is_family_member && (
+          workspaceMode === 'private' ? 
+            customers.find(p => p.id === c.primary_customer_id && p.customer_type !== 'business') :
+            customers.find(p => p.id === c.primary_customer_id && p.customer_type === 'business')
+        ))
+      : customers.filter(c => c.is_family_member);
+
     if (!search.trim()) {
       return { displayed: sortCustomers(modeFiltered, sortBy), matchedFamilyIds: new Set() };
     }
-    const allCustomers = [...modeFiltered, ...familyMembers];
+
+    const allCustomers = [...modeFiltered, ...relevantFamilyMembers];
     const directMatches = searchCustomers(allCustomers, search);
 
     const primaryMatches = directMatches.filter(c => !c.is_family_member);
@@ -318,7 +338,7 @@ export default function CustomerIntelligenceWorkspace() {
       displayed: withScores.sort((a, b) => b.score - a.score).map(({ customer }) => customer),
       matchedFamilyIds: matchedFamilyMemberIds,
     };
-  }, [modeFiltered, search, customers, sortBy]);
+  }, [modeFiltered, search, customers, sortBy, workspaceMode]);
 
   const filteredMandateIssues = useMemo(() => {
     if (!intelligenceSearch.trim()) return mandateIssues;
