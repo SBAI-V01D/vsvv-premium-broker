@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 // ── Review Config ───────────────────────────────────────────────────────────
 const REVIEW_LEVELS = [
@@ -51,7 +52,7 @@ const AREA_ICONS = {
   workflow: TrendingUp,
 };
 
-const ARCHIVED_STATUSES = ['implemented', 'verified', 'rejected'];
+const ARCHIVED_STATUSES = ['verified', 'rejected']; // implemented bleibt aktiv bis verifiziert
 
 // ── Main Page ───────────────────────────────────────────────────────────────
 export default function KiAnalyseVerbesserungen() {
@@ -60,6 +61,9 @@ export default function KiAnalyseVerbesserungen() {
   const [selectedImprovement, setSelectedImprovement] = useState(null);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [showVerifyDialog, setShowVerifyDialog] = useState(false);
+  const [improvementToVerify, setImprovementToVerify] = useState(null);
+  const [verifyData, setVerifyData] = useState({ actualValue: '', notes: '' });
   const [improvementsTab, setImprovementsTab] = useState('active'); // 'active' | 'archived'
 
   // Analyse
@@ -164,6 +168,24 @@ export default function KiAnalyseVerbesserungen() {
     onSuccess: () => refetchImprovements(),
   });
 
+  const verifyMutation = useMutation({
+    mutationFn: async ({ improvementId, actualImpact }) => {
+      const user = await base44.auth.me();
+      return await base44.entities.EnterpriseImprovement.update(improvementId, {
+        status: 'verified',
+        verified_at: new Date().toISOString(),
+        actual_impact: actualImpact,
+      });
+    },
+    onSuccess: () => {
+      refetchImprovements();
+      toast.success('Impact erfolgreich verifiziert!', {
+        duration: 3000,
+        icon: '✅',
+      });
+    },
+  });
+
   const stats = {
     total: improvements.length,
     proposed: improvements.filter(i => i.status === 'proposed').length,
@@ -172,6 +194,12 @@ export default function KiAnalyseVerbesserungen() {
     critical: improvements.filter(i => i.priority === 'critical').length,
     active: activeImprovements.length,
     archived: archivedImprovements.length,
+  };
+
+  // Handler für Verifizieren
+  const handleVerify = (improvement) => {
+    setImprovementToVerify(improvement);
+    setShowVerifyDialog(true);
   };
 
   return (
@@ -407,6 +435,7 @@ export default function KiAnalyseVerbesserungen() {
                       onApprove={() => approveMutation.mutate(imp)}
                       onReject={() => { setSelectedImprovement(imp); setShowRejectDialog(true); }}
                       onImplement={() => implementMutation.mutate(imp.id)}
+                      onVerify={() => handleVerify(imp)}
                     />
                   ))}
                 </div>
@@ -457,6 +486,87 @@ export default function KiAnalyseVerbesserungen() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Verify Dialog */}
+      <Dialog open={showVerifyDialog} onOpenChange={setShowVerifyDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Impact verifizieren</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {improvementToVerify && (
+              <>
+                <div className="p-3 bg-slate-50 rounded-lg">
+                  <p className="text-xs font-semibold text-slate-700 mb-1">{improvementToVerify.title}</p>
+                  <p className="text-xs text-slate-600">
+                    Ziel: <span className="font-medium">{improvementToVerify.success_metrics?.metric}</span> von{' '}
+                    <span className="font-medium">{improvementToVerify.success_metrics?.before_ms}</span> auf{' '}
+                    <span className="font-medium">{improvementToVerify.success_metrics?.target_ms}</span>
+                  </p>
+                </div>
+
+                <div>
+                  <Label>Gemessener Wert (tatsächlich erreicht)</Label>
+                  <input
+                    type="number"
+                    value={verifyData.actualValue}
+                    onChange={(e) => setVerifyData(prev => ({ ...prev, actualValue: e.target.value }))}
+                    placeholder={improvementToVerify.success_metrics?.target_ms?.toString()}
+                    className="w-full mt-1 p-2 text-sm border rounded-lg"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Messmethode: {improvementToVerify.success_metrics?.how_to_measure || 'N/A'}
+                  </p>
+                </div>
+
+                <div>
+                  <Label>Notizen zur Messung (optional)</Label>
+                  <textarea
+                    value={verifyData.notes}
+                    onChange={(e) => setVerifyData(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Wie wurde gemessen? Wann? Besondere Beobachtungen?"
+                    className="w-full min-h-[80px] mt-1 p-2 text-sm border rounded-lg"
+                  />
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => {
+                    setShowVerifyDialog(false);
+                    setVerifyData({ actualValue: '', notes: '' });
+                  }}>Abbrechen</Button>
+                  <Button
+                    onClick={() => {
+                      const actualValue = parseFloat(verifyData.actualValue);
+                      if (isNaN(actualValue)) {
+                        toast.error('Bitte einen gültigen Messwert eingeben');
+                        return;
+                      }
+                      const before = improvementToVerify.success_metrics?.before_ms || 0;
+                      const improvement = ((actualValue - before) / before) * 100;
+                      verifyMutation.mutate({
+                        improvementId: improvementToVerify.id,
+                        actualImpact: {
+                          performance_improvement_actual_percent: actualValue > before ? improvement : -improvement,
+                          measured_at: new Date().toISOString(),
+                          verified_by: 'VSV Management GmbH',
+                          notes: verifyData.notes,
+                          actual_value: actualValue,
+                        },
+                      });
+                      setShowVerifyDialog(false);
+                      setVerifyData({ actualValue: '', notes: '' });
+                    }}
+                    disabled={!verifyData.actualValue}
+                    className="bg-emerald-600"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Verifizieren
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -470,7 +580,7 @@ function StatCard({ label, value, color, bg }) {
   );
 }
 
-function ImprovementCard({ improvement, onApprove, onReject, onImplement }) {
+function ImprovementCard({ improvement, onApprove, onReject, onImplement, onVerify }) {
   const [expanded, setExpanded] = useState(false);
   const AreaIcon = AREA_ICONS[improvement.area] || Activity;
 
@@ -479,8 +589,10 @@ function ImprovementCard({ improvement, onApprove, onReject, onImplement }) {
     implemented: 'Implementiert', verified: 'Verifiziert', rejected: 'Abgelehnt',
   };
 
-  // Hide action buttons for archived statuses
+  // Hide action buttons for archived statuses (verified, rejected)
   const isArchived = ARCHIVED_STATUSES.includes(improvement.status);
+  // implemented Vorschläge brauchen Verifizieren-Button
+  const needsVerification = improvement.status === 'implemented';
 
   return (
     <Card className={cn('border hover:shadow-sm', improvement.priority === 'critical' ? 'border-rose-200' : 'border-[hsl(var(--border-subtle))]/40')}>
@@ -556,6 +668,14 @@ function ImprovementCard({ improvement, onApprove, onReject, onImplement }) {
               {improvement.status === 'approved' && (
                 <Button size="sm" onClick={onImplement} className="bg-violet-600">
                   <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Als implementiert markieren
+                </Button>
+              )}
+              {needsVerification && (
+                <Button size="sm" onClick={() => {
+                  setImprovementToVerify(improvement);
+                  setShowVerifyDialog(true);
+                }} className="bg-emerald-600">
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Impact messen & verifizieren
                 </Button>
               )}
             </div>
