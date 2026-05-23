@@ -191,13 +191,13 @@ export default function KiAnalyseVerbesserungen() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
-          <TabsTrigger value="analyse" className="text-sm font-semibold">
-            <Brain className="w-4 h-4 mr-2" />
+        <TabsList className="grid w-full max-w-lg mx-auto grid-cols-2 gap-3">
+          <TabsTrigger value="analyse" className="text-base font-semibold h-12">
+            <Brain className="w-5 h-5 mr-2" />
             Analyse
           </TabsTrigger>
-          <TabsTrigger value="verbesserungen" className="text-sm font-semibold">
-            <TrendingUp className="w-4 h-4 mr-2" />
+          <TabsTrigger value="verbesserungen" className="text-base font-semibold h-12">
+            <TrendingUp className="w-5 h-5 mr-2" />
             Verbesserungen
           </TabsTrigger>
         </TabsList>
