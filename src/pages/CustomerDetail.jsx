@@ -168,12 +168,26 @@ export default function CustomerDetail() {
 
   const updateCustomerMutation = useMutation({
     mutationFn: ({ id: cid, data }) => base44.entities.Customer.update(cid, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setShowEdit(false) },
+    onSuccess: (_, { data }) => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['customer', id] })
+      setShowEdit(false)
+      const customerType = data?.customer_type || customer?.customer_type
+      if (customerType === 'business') {
+        navigate('/kunden?filter=business', { replace: true })
+      } else {
+        navigate('/kunden?filter=private', { replace: true })
+      }
+    },
   })
 
   const updateContractMutation = useMutation({
     mutationFn: ({ id: cid, data }) => base44.entities.Contract.update(cid, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contracts', id] }); setEditingContract(null) },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts', id] })
+      queryClient.invalidateQueries({ queryKey: ['household-contracts', id] })
+      setEditingContract(null)
+    },
   })
 
   const handleContractStatusChange = async ({ status, statusDef, note, metadata }) => {
