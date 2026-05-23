@@ -665,65 +665,69 @@ export default function KiAnalyseVerbesserungen() {
               </div>
 
               {/* Messergebnisse */}
-              {autoMeasureResult.measurements && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-bold text-slate-700">Messergebnisse</h4>
-                  
-                  {autoMeasureResult.measurements.performance && (
-                    <div className="p-3 bg-slate-50 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-slate-600">Performance</span>
-                        <Badge className={autoMeasureResult.measurements.performance.success ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}>
-                          {autoMeasureResult.measurements.performance.success ? '✓ Ziel erreicht' : '⚠ Ziel verfehlt'}
-                        </Badge>
+              <div className="space-y-3">
+                <h4 className="text-sm font-bold text-slate-700">Messergebnisse</h4>
+                
+                {autoMeasureResult.measurements ? (
+                  <>
+                    {autoMeasureResult.measurements.performance && (
+                      <div className="p-3 bg-slate-50 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-slate-600">Performance</span>
+                          <Badge className={autoMeasureResult.measurements.performance.success ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}>
+                            {autoMeasureResult.measurements.performance.success ? '✓ Ziel erreicht' : '⚠ Ziel verfehlt'}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div>
+                            <p className="text-[10px] text-slate-500">Vorher</p>
+                            <p className="text-sm font-bold text-slate-700">{autoMeasureResult.measurements.performance.before_ms} ms</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-500">Nachher</p>
+                            <p className="text-sm font-bold text-slate-700">{autoMeasureResult.measurements.performance.after_ms} ms</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-500">Verbesserung</p>
+                            <p className={cn('text-sm font-bold', autoMeasureResult.measurements.performance.improvement_percent >= 0 ? 'text-emerald-600' : 'text-amber-600')}>
+                              {autoMeasureResult.measurements.performance.improvement_percent > 0 ? '+' : ''}{autoMeasureResult.measurements.performance.improvement_percent.toFixed(1)}%
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div>
-                          <p className="text-[10px] text-slate-500">Vorher</p>
-                          <p className="text-sm font-bold text-slate-700">{autoMeasureResult.measurements.performance.before_ms} ms</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-slate-500">Nachher</p>
-                          <p className="text-sm font-bold text-slate-700">{autoMeasureResult.measurements.performance.after_ms} ms</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-slate-500">Verbesserung</p>
-                          <p className={cn('text-sm font-bold', autoMeasureResult.measurements.performance.improvement_percent >= 0 ? 'text-emerald-600' : 'text-amber-600')}>
-                            {autoMeasureResult.measurements.performance.improvement_percent > 0 ? '+' : ''}{autoMeasureResult.measurements.performance.improvement_percent.toFixed(1)}%
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                    )}
 
-                  {autoMeasureResult.measurements.data_quality && (
-                    <div className="p-3 bg-slate-50 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-slate-600">Datenqualität</span>
-                        <span className="text-xs font-bold text-slate-700">{autoMeasureResult.measurements.data_quality.completeness_score}% vollständig</span>
+                    {autoMeasureResult.measurements.data_quality && (
+                      <div className="p-3 bg-slate-50 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-slate-600">Datenqualität</span>
+                          <span className="text-xs font-bold text-slate-700">{autoMeasureResult.measurements.data_quality.completeness_score}% vollständig</span>
+                        </div>
+                        <div className="w-full bg-slate-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all"
+                            style={{ width: `${autoMeasureResult.measurements.data_quality.completeness_score}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all"
-                          style={{ width: `${autoMeasureResult.measurements.data_quality.completeness_score}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
+                    )}
 
-                  {autoMeasureResult.measurements.process_efficiency && (
-                    <div className="p-3 bg-slate-50 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-slate-600">Prozess-Effizienz</span>
-                        <span className="text-xs font-bold text-slate-700">{autoMeasureResult.measurements.process_efficiency.avg_completion_days} Tage (Ø)</span>
+                    {autoMeasureResult.measurements.process_efficiency && (
+                      <div className="p-3 bg-slate-50 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-slate-600">Prozess-Effizienz</span>
+                          <span className="text-xs font-bold text-slate-700">{autoMeasureResult.measurements.process_efficiency.avg_completion_days} Tage (Ø)</span>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          {autoMeasureResult.measurements.process_efficiency.completed_tasks} von {autoMeasureResult.measurements.process_efficiency.total_tasks} Tasks erledigt
+                        </p>
                       </div>
-                      <p className="text-xs text-slate-500">
-                        {autoMeasureResult.measurements.process_efficiency.completed_tasks} von {autoMeasureResult.measurements.process_efficiency.total_tasks} Tasks erledigt
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-600">Keine detaillierten Messdaten verfügbar</p>
+                )}
+              </div>
 
               {/* Optimierungsvorschläge */}
               {autoMeasureResult.optimization_suggestions && autoMeasureResult.optimization_suggestions.length > 0 && (
