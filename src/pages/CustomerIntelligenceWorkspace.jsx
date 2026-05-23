@@ -253,8 +253,11 @@ export default function CustomerIntelligenceWorkspace() {
 
   // Pre-calculate intelligence data for kundenaktionen mode
   const mandateIssues = useMemo(() => 
-    primaryCustomers.filter(c => 
-      !c.advisor_id && !c.primary_advisor_id || ['invalid', 'expired', 'pending'].includes(c.mandate_status)
+    primaryCustomers.filter(c =>
+      c.status !== 'inactive' && (
+        (!c.advisor_id && !c.primary_advisor_id) ||
+        ['expired', 'pending'].includes(c.mandate_status)
+      )
     ),
     [primaryCustomers]
   );
