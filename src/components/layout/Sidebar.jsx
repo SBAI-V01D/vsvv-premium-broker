@@ -60,6 +60,22 @@ const navGroups = [
     ],
   },
   {
+    label: 'Kunden',
+    items: [
+      { label: 'Kundenübersicht',  icon: Users,      path: '/kunden',           color: 'primary' },
+      { label: 'Beratungsdossiers',icon: BookOpen,   path: '/beratungsdossier', color: 'primary' },
+      { label: 'Aufgaben',         icon: CheckSquare,path: '/aufgaben',         color: 'primary' },
+    ],
+  },
+  {
+    label: 'Administration',
+    items: [
+      { label: 'Verträge',  icon: FileText,   path: '/vertraege', color: 'primary' },
+      { label: 'Anträge',   icon: FileText,   path: '/antraege',  color: 'primary' },
+      { label: 'Dokumente', icon: FileText,   path: '/dokumente', color: 'primary' },
+    ],
+  },
+  {
     label: 'Finanzen und Personal',
     items: [
       { label: 'Berater & Partner',     icon: Briefcase, path: '/berater-organisation',      color: 'primary' },
@@ -67,12 +83,10 @@ const navGroups = [
       { label: 'Provisionen',           icon: Wallet,    path: '/provisionen-courtagen',     color: 'primary' },
     ],
   },
-
   {
     label: 'Enterprise',
     items: [
-
-      { label: 'Enterprise Audit Monitor', icon: Activity, path: '/admin-logs',                     adminOnly: true, color: 'primary' },
+      { label: 'Enterprise Audit Monitor',  icon: Activity, path: '/admin-logs',                      adminOnly: true, color: 'primary' },
       { label: 'Enterprise Control Center', icon: Shield,   path: '/admin/enterprise-control-center', adminOnly: true, color: 'primary' },
       { label: 'AI Review Center',          icon: Brain,    path: '/ai-review',                       adminOnly: true, color: 'primary' },
     ],
