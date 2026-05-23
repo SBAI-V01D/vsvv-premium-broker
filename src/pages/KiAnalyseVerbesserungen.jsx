@@ -51,6 +51,8 @@ const AREA_ICONS = {
   workflow: TrendingUp,
 };
 
+const ARCHIVED_STATUSES = ['implemented', 'verified', 'rejected'];
+
 // ── Main Page ───────────────────────────────────────────────────────────────
 export default function KiAnalyseVerbesserungen() {
   const [activeTab, setActiveTab] = useState('analyse');
@@ -71,7 +73,6 @@ export default function KiAnalyseVerbesserungen() {
   });
 
   // Tab split: active (proposed, approved, in_progress) vs archived (implemented, verified, rejected)
-  const ARCHIVED_STATUSES = ['implemented', 'verified', 'rejected'];
   const activeImprovements = improvements.filter(i => !ARCHIVED_STATUSES.includes(i.status));
   const archivedImprovements = improvements.filter(i => ARCHIVED_STATUSES.includes(i.status));
   const tabSource = improvementsTab === 'active' ? activeImprovements : archivedImprovements;
@@ -483,7 +484,6 @@ function ImprovementCard({ improvement, onApprove, onReject, onImplement }) {
   };
 
   // Hide action buttons for archived statuses
-  const ARCHIVED_STATUSES = ['implemented', 'verified', 'rejected'];
   const isArchived = ARCHIVED_STATUSES.includes(improvement.status);
 
   return (
