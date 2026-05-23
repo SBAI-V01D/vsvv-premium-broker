@@ -69,10 +69,17 @@ export default function KiAnalyseVerbesserungen() {
   const [measuringId, setMeasuringId] = useState(null);
   const [autoMeasureResult, setAutoMeasureResult] = useState(null);
   const [showResultDialog, setShowResultDialog] = useState(false);
+  const [measuredImprovement, setMeasuredImprovement] = useState(null);
+  const [user, setUser] = useState(null);
 
   // Analyse
   const [reviewResult, setReviewResult] = useState(null);
   const [reviewLoading, setReviewLoading] = useState(false);
+
+  // User laden
+  React.useEffect(() => {
+    base44.auth.me().then(setUser).catch(() => {});
+  }, []);
 
   // Verbesserungen
   const { data: improvements = [], refetch: refetchImprovements } = useQuery({
@@ -194,6 +201,9 @@ export default function KiAnalyseVerbesserungen() {
   const autoMeasureMutation = useMutation({
     mutationFn: async (improvementId) => {
       setMeasuringId(improvementId);
+      // Improvement laden für Area-Info
+      const imp = await base44.entities.EnterpriseImprovement.get(improvementId);
+      setMeasuredImprovement(imp);
       try {
         const res = await base44.functions.invoke('measureImprovementImpact', { improvement_id: improvementId });
         return res.data;
@@ -800,13 +810,68 @@ export default function KiAnalyseVerbesserungen() {
                   <div className="space-y-2">
                     {autoMeasureResult.optimization_suggestions.map((suggestion, idx) => (
                       <div key={idx} className="p-3 bg-violet-50 border border-violet-200 rounded-lg">
-                        <p className="text-xs font-semibold text-violet-700 mb-1">{suggestion.title}</p>
-                        <p className="text-xs text-violet-800">{suggestion.description}</p>
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <p className="text-xs font-semibold text-violet-700">{suggestion.title}</p>
+                          <Badge className="text-[9px] bg-violet-600 text-white">{suggestion.effort_level}</Badge>
+                        </div>
+                        <p className="text-xs text-violet-800 mb-2">{suggestion.description}</p>
+                        {suggestion.implementation_steps && (
+                          <div className="mb-2">
+                            <p className="text-[10px] font-semibold text-violet-600 mb-1">Schritte:</p>
+                            <ol className="space-y-0.5">
+                              {suggestion.implementation_steps.map((step, i) => (
+                                <li key={i} className="text-[10px] text-violet-700 flex items-start gap-1">
+                                  <span className="text-[8px] font-bold text-violet-500 mt-0.5">{i + 1}.</span>
+                                  {step}
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
                         {suggestion.expected_improvement && (
-                          <p className="text-[10px] text-violet-600 mt-1">
+                          <p className="text-[10px] text-violet-600 font-semibold">
                             Erwartete Verbesserung: {suggestion.expected_improvement}
                           </p>
                         )}
+                        <div className="mt-2 pt-2 border-t border-violet-200">
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              // Create new improvement from suggestion
+                              const newImprovement = {
+                                audit_id: 'auto-generated-from-measurement',
+                                title: suggestion.title,
+                                priority: suggestion.effort_level === 'high' ? 'high' : 'medium',
+                                area: measuredImprovement?.area === 'relationship_integrity' ? 'relationship_integrity' : 'workflow',
+                                current_state: suggestion.description,
+                                target_state: suggestion.expected_improvement,
+                                ki_recommendation: suggestion.description,
+                                implementation_steps: suggestion.implementation_steps,
+                                estimated_impact: {
+                                  effort_level: suggestion.effort_level,
+                                  estimated_hours: suggestion.effort_level === 'low' ? 2 : suggestion.effort_level === 'medium' ? 8 : 20,
+                                },
+                                success_metrics: {
+                                  metric: suggestion.target_metric || 'Qualitätsmetrik',
+                                  before_ms: autoMeasureResult.measurements[suggestion.target_metric + '_percent'] || 0,
+                                  target_ms: suggestion.target_value || 80,
+                                  how_to_measure: 'Automatische Messung durch KI-System',
+                                },
+                                status: 'proposed',
+                                proposed_by: user?.email || 'system',
+                                proposed_at: new Date().toISOString(),
+                              };
+                              // Save to database
+                              base44.entities.EnterpriseImprovement.create(newImprovement).then(() => {
+                                refetchImprovements();
+                                toast.success('Verbesserungsvorschlag erstellt!', { duration: 2000 });
+                              });
+                            }}
+                            className="h-8 text-xs bg-violet-600 hover:bg-violet-700"
+                          >
+                            <ThumbsUp className="w-3 h-3 mr-1" /> Als Verbesserung übernehmen
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>

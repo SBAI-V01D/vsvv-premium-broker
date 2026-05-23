@@ -177,6 +177,7 @@ Deno.serve(async (req) => {
 
     // ── LERNENDE KI: Neue Vorschläge ableiten ────────────────────────────────
     let newSuggestions = [];
+    let optimizationSuggestions = [];
     
     if (success) {
       // Erfolgreiche Verbesserung → KI kann ähnliche Vorschläge generieren
@@ -216,6 +217,88 @@ Generiere 2-3 ähnliche Verbesserungsvorschläge für andere Bereiche des System
 
       newSuggestions = learnResult.new_suggestions || [];
     }
+    
+    // ── OPTIMIERUNGSVORSCHLÄGE bei schlechten Metriken ───────────────────────
+    const optimizationPrompts = [];
+    
+    if (measurements.advisor_coverage_percent !== undefined && measurements.advisor_coverage_percent < 80) {
+      optimizationPrompts.push({
+        metric: 'advisor_coverage',
+        value: measurements.advisor_coverage_percent,
+        target: 80,
+        issue: `Nur ${measurements.advisor_coverage_percent}% der Kunden haben einen zugewiesenen Berater`
+      });
+    }
+    
+    if (measurements.mandate_valid_percent !== undefined && measurements.mandate_valid_percent < 80) {
+      optimizationPrompts.push({
+        metric: 'mandate_valid',
+        value: measurements.mandate_valid_percent,
+        target: 80,
+        issue: `Nur ${measurements.mandate_valid_percent}% der Kunden haben ein gültiges Mandat`
+      });
+    }
+    
+    if (measurements.email_coverage_percent !== undefined && measurements.email_coverage_percent < 95) {
+      optimizationPrompts.push({
+        metric: 'email_coverage',
+        value: measurements.email_coverage_percent,
+        target: 95,
+        issue: `Nur ${measurements.email_coverage_percent}% der Kunden haben eine hinterlegte E-Mail`
+      });
+    }
+    
+    if (measurements.task_completion_rate_percent !== undefined && measurements.task_completion_rate_percent < 70) {
+      optimizationPrompts.push({
+        metric: 'task_completion',
+        value: measurements.task_completion_rate_percent,
+        target: 70,
+        issue: `Nur ${measurements.task_completion_rate_percent}% der Tasks sind erledigt`
+      });
+    }
+    
+    if (optimizationPrompts.length > 0) {
+      const optimizationPrompt = `Folgende kritische Metriken wurden gemessen:
+      
+${JSON.stringify(optimizationPrompts, null, 2)}
+
+Generiere konkrete, umsetzbare Lösungsvorschläge für JEDES identifizierte Problem. Jeder Vorschlag soll enthalten:
+1. Einen klaren Titel
+2. Eine kurze Beschreibung des Problems
+3. 3-5 konkrete Implementationsschritte
+4. Erwartete Verbesserung (quantifiziert)
+5. Geschätzter Aufwand (low/medium/high)`;
+
+      const optimizationResult = await base44.integrations.Core.InvokeLLM({
+        prompt: optimizationPrompt,
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            optimization_suggestions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string' },
+                  description: { type: 'string' },
+                  implementation_steps: {
+                    type: 'array',
+                    items: { type: 'string' }
+                  },
+                  expected_improvement: { type: 'string' },
+                  effort_level: { type: 'string', enum: ['low', 'medium', 'high'] },
+                  target_metric: { type: 'string' },
+                  target_value: { type: 'number' },
+                },
+                required: ['title', 'description', 'implementation_steps', 'expected_improvement', 'effort_level'],
+              },
+            },
+          },
+        },
+      });
+
+      optimizationSuggestions = optimizationResult.optimization_suggestions || [];
+    }
 
     return Response.json({
       improvement_id: improvement_id,
@@ -228,6 +311,8 @@ Generiere 2-3 ähnliche Verbesserungsvorschläge für andere Bereiche des System
       status_updated: success ? 'verified' : 'implemented',
       new_suggestions: newSuggestions,
       learned_from_success: newSuggestions.length > 0,
+      optimization_suggestions: optimizationSuggestions,
+      has_optimization_potential: optimizationSuggestions.length > 0,
     });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
