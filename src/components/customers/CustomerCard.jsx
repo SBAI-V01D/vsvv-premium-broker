@@ -53,7 +53,7 @@ export default function CustomerCard({
   const hasMetrics = contractCount > 0 || customer.total_premium > 0 || taskCount > 0 || familyMembers.length > 0 || status !== 'active';
 
   return (
-    <div className={`bg-card rounded-2xl transition-all hover:shadow-card-md ${
+    <div className={`bg-card rounded-2xl transition-all hover:shadow-card-md mb-6 ${
       status === 'critical' ? 'border border-red-200 shadow-sm' : 'border border-border/60 shadow-xs'
     }`}>
       <div className="px-6 py-5">
