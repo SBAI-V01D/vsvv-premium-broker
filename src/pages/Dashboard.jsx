@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 
 import TodayDashboard from '@/components/dashboard/TodayDashboard'
+import AiInsightsPanel from '@/components/intelligence/AiInsightsPanel'
 import MoneyDashboard from '@/components/dashboard/MoneyDashboard'
 import OpportunityIntelligenceCard from '@/components/opportunities/OpportunityIntelligenceCard'
 
@@ -282,6 +283,9 @@ export default function Dashboard() {
         onTaskClick={handleTaskClick}
         onTaskComplete={handleTaskComplete}
       />
+
+      {/* ── AI Intelligence Panel — advisory, read-only ─────────────────── */}
+      <AiInsightsPanel />
 
       {/* ── Finance & Reporting (kollabierbar / sekundär) ───────────────── */}
       <FinanceSection>
