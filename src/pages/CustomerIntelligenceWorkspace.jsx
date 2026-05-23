@@ -281,8 +281,6 @@ export default function CustomerIntelligenceWorkspace() {
   const modeFiltered = useMemo(() => {
     if (workspaceMode === 'private') return primaryCustomers.filter(c => c.customer_type !== 'business');
     if (workspaceMode === 'business') return primaryCustomers.filter(c => c.customer_type === 'business');
-    if (workspaceMode === 'vip') return primaryCustomers.filter(c => (c.total_premium || 0) >= 5000);
-    if (workspaceMode === 'birthdays') return primaryCustomers;
     return primaryCustomers;
   }, [primaryCustomers, workspaceMode]);
 
@@ -291,7 +289,7 @@ export default function CustomerIntelligenceWorkspace() {
     if (!search.trim()) {
       return { displayed: sortCustomers(modeFiltered, sortBy), matchedFamilyIds: new Set() };
     }
-    const allCustomers = [...primaryCustomers, ...familyMembers];
+    const allCustomers = [...modeFiltered, ...familyMembers];
     const directMatches = searchCustomers(allCustomers, search);
 
     const primaryMatches = directMatches.filter(c => !c.is_family_member);
@@ -299,7 +297,7 @@ export default function CustomerIntelligenceWorkspace() {
     const matchedFamilyMemberIds = new Set(matchedFamily.map(m => m.id));
 
     const parentIds = new Set(matchedFamily.map(m => m.primary_customer_id).filter(Boolean));
-    const familyParents = primaryCustomers.filter(c => parentIds.has(c.id));
+    const familyParents = modeFiltered.filter(c => parentIds.has(c.id));
 
     const combinedMap = new Map();
     [...primaryMatches, ...familyParents].forEach(c => {
@@ -307,20 +305,13 @@ export default function CustomerIntelligenceWorkspace() {
     });
 
     const searchResults = Array.from(combinedMap.values());
-    if (search.trim()) {
-      const tokens = search.trim().split(/\s+/);
-      const withScores = searchResults.map(c => ({ customer: c, score: scoreCustomer(c, tokens) }));
-      return {
-        displayed: withScores.sort((a, b) => b.score - a.score).map(({ customer }) => customer),
-        matchedFamilyIds: matchedFamilyMemberIds,
-      };
-    }
-
+    const tokens = search.trim().split(/\s+/);
+    const withScores = searchResults.map(c => ({ customer: c, score: scoreCustomer(c, tokens) }));
     return {
-      displayed: sortCustomers(searchResults, sortBy),
+      displayed: withScores.sort((a, b) => b.score - a.score).map(({ customer }) => customer),
       matchedFamilyIds: matchedFamilyMemberIds,
     };
-  }, [modeFiltered, search, customers, primaryCustomers, sortBy]);
+  }, [modeFiltered, search, customers, sortBy]);
 
   const handleSave = async (data) => {
     if (editing) { updateMutation.mutate({ id: editing.id, data }); return; }
