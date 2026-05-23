@@ -360,34 +360,6 @@ export default function CustomerIntelligenceWorkspace() {
 
 
   const renderIntelligenceView = () => {
-    if (workspaceMode === 'birthdays') {
-      const today = new Date();
-      const currentMonth = today.getMonth();
-      const birthdayCustomers = primaryCustomers.filter(c => {
-        if (!c.birthdate) return false;
-        const birthDate = new Date(c.birthdate);
-        return birthDate.getMonth() === currentMonth;
-      }).sort((a, b) => {
-        const dateA = new Date(a.birthdate).getDate();
-        const dateB = new Date(b.birthdate).getDate();
-        return dateA - dateB;
-      });
-      return (
-        <div className="p-6 max-w-[1600px] mx-auto">
-          <BirthdaySection customers={birthdayCustomers} />
-        </div>
-      );
-    }
-    
-    if (workspaceMode === 'vip') {
-      return (
-        <div className="p-6 max-w-[1600px] mx-auto">
-          <OperationsIntelligence />
-        </div>
-      );
-    }
-    
-    // Default: kundenaktionen
     // Filter mandate issues by search
     const filteredMandateIssues = search.trim()
       ? mandateIssues.filter(c => {
@@ -502,7 +474,7 @@ export default function CustomerIntelligenceWorkspace() {
     );
   };
 
-  const isIntelligenceMode = !['private', 'business'].includes(workspaceMode);
+  const isIntelligenceMode = workspaceMode === 'kundenaktionen';
   const isCustomerListMode = ['private', 'business'].includes(workspaceMode);
 
   return (
@@ -587,7 +559,7 @@ export default function CustomerIntelligenceWorkspace() {
       <div className="flex-1 overflow-y-auto">
         {isIntelligenceMode ? (
           renderIntelligenceView()
-        ) : isCustomerListMode ? (
+        ) : (
           <div className="p-6 max-w-6xl mx-auto">
             {isLoading ? (
               <LoadingTable rows={8} className="py-12" />
@@ -622,7 +594,7 @@ export default function CustomerIntelligenceWorkspace() {
               />
             )}
           </div>
-        ) : null}
+        )}
       </div>
 
       {/* ── Dialogs ── */}
