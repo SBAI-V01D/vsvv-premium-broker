@@ -39,6 +39,7 @@ import Vertragsablaeufe from './pages/Vertragsablaeufe'
 import AdminTeamAccess from './pages/AdminTeamAccess'
 import AdvisoryDossier from './pages/AdvisoryDossier'
 import AdminEnterpriseControlCenter from './pages/AdminEnterpriseControlCenter'
+import AiReviewCenter from './pages/AiReviewCenter'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -128,6 +129,7 @@ const AuthenticatedApp = () => {
         {/* AdvisoryDossierEngine — Phase 1 — Admin-Only */}
         <Route path="/beratungsdossier" element={<AdvisoryDossier />} />
         <Route path="/admin/enterprise-control-center" element={<AdminEnterpriseControlCenter />} />
+        <Route path="/ai-review" element={<AiReviewCenter />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
