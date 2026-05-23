@@ -28,16 +28,16 @@ function analyzeContract(contract) {
     const seit = endDays !== null ? Math.abs(endDays) : 0
     actions.push({ type: 'expired', label: `Seit ${seit}d abgelaufen`, severity: 'expired', days: endDays ?? -1 })
   }
-  if (cancelDays !== null && cancelDays >= -30 && cancelDays <= 180) {
-    let sev = cancelDays <= 0 ? 'expired' : cancelDays <= 30 ? 'critical' : cancelDays <= 60 ? 'urgent' : cancelDays <= 90 ? 'warning' : cancelDays <= 150 ? 'process' : 'early'
+  if (cancelDays !== null && cancelDays <= 365) {
+    let sev = cancelDays < 0 ? 'expired' : cancelDays <= 30 ? 'critical' : cancelDays <= 60 ? 'urgent' : cancelDays <= 90 ? 'warning' : cancelDays <= 150 ? 'process' : 'early'
     actions.push({ type: 'kuendigung', label: cancelDays <= 0 ? 'Kündigungsfrist abgelaufen' : `Kündigungsfrist in ${cancelDays}d`, severity: sev, days: cancelDays })
   }
-  if (endDays !== null && endDays >= 0 && endDays <= 180) {
-    let sev = endDays <= 30 ? 'critical' : endDays <= 60 ? 'urgent' : endDays <= 90 ? 'warning' : endDays <= 150 ? 'process' : 'early'
+  if (endDays !== null && endDays <= 365) {
+    let sev = endDays < 0 ? 'expired' : endDays <= 30 ? 'critical' : endDays <= 60 ? 'urgent' : endDays <= 90 ? 'warning' : endDays <= 150 ? 'process' : 'early'
     actions.push({ type: 'ablauf', label: `Ablauf in ${endDays}d`, severity: sev, days: endDays })
   }
 
-  const order = { expired: 0, critical: 1, urgent: 2, warning: 3, process: 4 }
+  const order = { early: 0, process: 1, warning: 2, urgent: 3, critical: 4, expired: 5 }
   actions.sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9))
   return actions
 }
@@ -209,8 +209,8 @@ export default function BestandsmanagementPanel({ contracts = [] }) {
         if (c.status === 'expired') return true
         const endDays = daysUntil(c.end_date)
         const cancelDays = daysUntil(c.cancellation_deadline)
-        if (endDays !== null && endDays <= 360) return true
-        if (cancelDays !== null && cancelDays <= 360) return true
+        if (endDays !== null && endDays <= 365) return true
+        if (cancelDays !== null && cancelDays <= 365) return true
         return false
       })
       .map(c => {
@@ -219,7 +219,7 @@ export default function BestandsmanagementPanel({ contracts = [] }) {
       })
       .filter(i => i.actions.length > 0)
       .sort((a, b) => {
-        const ord = { expired: 0, critical: 1, urgent: 2, warning: 3, process: 4 }
+        const ord = { early: 0, process: 1, warning: 2, urgent: 3, critical: 4, expired: 5 }
         const ao = ord[a.topAction?.severity] ?? 9
         const bo = ord[b.topAction?.severity] ?? 9
         if (ao !== bo) return ao - bo

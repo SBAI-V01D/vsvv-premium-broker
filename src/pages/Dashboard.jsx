@@ -278,14 +278,17 @@ export default function Dashboard() {
 
       {/* Neukunden Section */}
       {newCustomers.length > 0 && (
-        <div className="bg-white rounded-xl border border-[hsl(var(--border-subtle))]/40 p-5">
+        <div className="bg-white rounded-xl border border-[hsl(var(--border-subtle))]/40 p-5 relative">
+          {/* Optische Trennung: Blauer Strich */}
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-[hsl(var(--primary))]" />
+          
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
                 <Target className="w-4 h-4 text-white" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-[hsl(var(--text-heading))]">Neukunden</h2>
+                <h2 className="text-sm font-bold text-[hsl(var(--primary))]">Neukunden</h2>
                 <p className="text-[10px] text-[hsl(var(--text-muted))]">Alle Kunden ab 22.05.2026</p>
               </div>
             </div>
