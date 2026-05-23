@@ -61,23 +61,10 @@ const navGroups = [
     label: 'Kunden',
     items: [
       { label: 'Kundenübersicht',  icon: Users,      path: '/kunden',           color: 'primary' },
+      { label: 'Vertragsabläufe',  icon: Clock,      path: '/vertragsablaeufe', color: 'primary' },
       { label: 'Verkaufschancen',  icon: TrendingUp, path: '/verkaufschancen',  color: 'primary' },
+      { label: 'Leads',            icon: UserPlus,   path: '/leads',            color: 'primary' },
       { label: 'Beratungsdossiers',icon: BookOpen,   path: '/beratungsdossier', color: 'primary' },
-    ],
-  },
-  {
-    label: 'Administration',
-    items: [
-      { label: 'Verträge',       icon: FileText,   path: '/vertraege',       color: 'primary' },
-      { label: 'Vertragsabläufe', icon: Clock,      path: '/vertragsablaeufe', color: 'primary' },
-      { label: 'Anträge',        icon: FileText,   path: '/antraege',        color: 'primary' },
-      { label: 'Dokumente',      icon: FileText,   path: '/dokumente',       color: 'primary' },
-    ],
-  },
-  {
-    label: 'Vertrieb & Leads',
-    items: [
-      { label: 'Leads',            icon: UserPlus,   path: '/leads',             color: 'primary' },
     ],
   },
   {
