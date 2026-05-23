@@ -22,6 +22,12 @@ Deno.serve(async (req) => {
     const results = { updated: 0, skipped: 0, errors: 0, details: [] };
 
     for (const customer of customers) {
+      // ONLY primary customers (not family members)
+      if (customer.is_family_member) {
+        results.skipped++;
+        continue;
+      }
+
       const currentAdvisors = customer.assigned_advisors || [];
       const alreadyAssigned = currentAdvisors.includes(PETER_ADAM_ADVISOR_ID);
       const alreadyInactive = customer.mandate_status === 'invalid';
