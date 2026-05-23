@@ -391,9 +391,9 @@ export default function CustomerIntelligenceWorkspace() {
             </div>
           </div>
 
-          <BirthdaySection customers={primaryCustomers} />
           <RenewalsSection contracts={contracts} customers={customers} verkaufschancen={verkaufschancen} />
           <CancellationsSection contracts={contracts} customers={customers} />
+          <BirthdaySection customers={primaryCustomers} />
 
           {/* Combined layout: Mandate/Advisor issues and Household side by side */}
           <div className="grid gap-4 md:grid-cols-2">

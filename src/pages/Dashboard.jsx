@@ -15,14 +15,15 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import {
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, ChevronRight,
   TrendingUp, Target, RefreshCw,
-  AlertTriangle, Zap, BarChart2, Building2
+  AlertTriangle, Zap, BarChart2, Building2, User
 } from 'lucide-react'
 
 import TodayDashboard from '@/components/dashboard/TodayDashboard'
 import MoneyDashboard from '@/components/dashboard/MoneyDashboard'
 import AiInsightsPanel from '@/components/intelligence/AiInsightsPanel'
+import BirthdaySection from '@/components/customers/BirthdaySection'
 
 // Operative KPI Tile
 function KpiTile({ label, value, sub, icon: Icon, colorClass, bgClass, borderClass, onClick, urgent }) {
@@ -101,6 +102,20 @@ export default function Dashboard() {
   const { data: verkaufschancen = [] } = useQuery({
     queryKey: ['verkaufschancen'],
     queryFn: () => base44.entities.Verkaufschance.list('-created_date', 100)
+  })
+
+  // Neukunden ab 22.05.2026
+  const { data: newCustomers = [] } = useQuery({
+    queryKey: ['dashboard_new_customers'],
+    queryFn: async () => {
+      const all = await base44.entities.Customer.filter({ archived: false }, '-created_date', 50)
+      const cutoff = new Date('2026-05-22')
+      return all.filter(c => {
+        const created = c.created_date ? new Date(c.created_date) : null
+        return created && created >= cutoff
+      }).slice(0, 3) // Max 3 für Dashboard
+    },
+    staleTime: 5 * 60 * 1000,
   })
 
   const today = new Date()
@@ -247,6 +262,74 @@ export default function Dashboard() {
         onTaskClick={handleTaskClick}
         onTaskComplete={handleTaskComplete}
       />
+
+      {/* Neukunden Section */}
+      {newCustomers.length > 0 && (
+        <div className="bg-white rounded-xl border border-[hsl(var(--border-subtle))]/40 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-blue-600 flex items-center justify-center">
+                <Target className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-[hsl(var(--text-heading))]">Neukunden</h2>
+                <p className="text-[10px] text-[hsl(var(--text-muted))]">Alle Kunden ab 22.05.2026</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/neukunden')}
+              className="text-[11px] font-semibold text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]/80 inline-flex items-center gap-1"
+            >
+              Alle anzeigen <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="grid gap-3">
+            {newCustomers.map(customer => (
+              <button
+                key={customer.id}
+                onClick={() => navigate(`/kunden/${customer.id}`)}
+                className="flex items-center gap-3 p-3 rounded-lg border border-[hsl(var(--border-subtle))]/30 bg-[hsl(var(--surface-1))] hover:bg-[hsl(var(--surface-2))] hover:border-[hsl(var(--border-subtle))]/50 transition-all text-left group"
+              >
+                <div className={cn(
+                  'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
+                  customer.customer_type === 'business'
+                    ? 'bg-[hsl(var(--primary))/0.1] border border-[hsl(var(--primary))/0.2]'
+                    : 'bg-blue-50 border border-blue-200'
+                )}>
+                  {customer.customer_type === 'business' ? (
+                    <Building2 className="w-4 h-4 text-[hsl(var(--primary))]" />
+                  ) : (
+                    <User className="w-4 h-4 text-blue-600" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-[hsl(var(--text-heading))] truncate group-hover:text-[hsl(var(--primary))] transition-colors">
+                    {customer.company_name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim()}
+                  </p>
+                  <p className="text-[10px] text-[hsl(var(--text-muted))]">
+                    {customer.customer_type === 'business' ? 'Unternehmen' : 'Privatkunde'} · {new Date(customer.created_date).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' })}
+                  </p>
+                </div>
+                <div className="text-right">
+                  {customer.assigned_broker && (
+                    <p className="text-[10px] text-[hsl(var(--text-muted))] truncate max-w-[120px]">
+                      {customer.assigned_broker}
+                    </p>
+                  )}
+                  <span className={cn(
+                    'text-[9px] font-medium px-2 py-0.5 rounded-full',
+                    ['valid'].includes(customer.mandate_status)
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : 'bg-rose-50 text-rose-700 border border-rose-200'
+                  )}>
+                    {customer.mandate_status || 'pending'}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* AI Intelligence Panel */}
       <AiInsightsPanel />
