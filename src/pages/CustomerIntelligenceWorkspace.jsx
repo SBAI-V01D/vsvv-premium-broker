@@ -651,24 +651,26 @@ export default function CustomerIntelligenceWorkspace() {
                         size="lg"
                       />
                     ) : (
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <User className="w-3.5 h-3.5 text-slate-400" />
-                          <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Privatkunden</h3>
-                          <span className="text-[10px] text-slate-400">({displayed.filter(c => c.customer_type !== 'business').length})</span>
+                      <div className="border-t-2 border-[hsl(var(--primary))] bg-white">
+                        <div className="flex items-center gap-2 px-4 py-3 bg-[hsl(var(--surface-1))] border-b border-[hsl(var(--border-subtle))]">
+                          <User className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
+                          <h3 className="text-[11px] font-semibold uppercase tracking-widest text-[hsl(var(--text-heading))]">Privatkunden</h3>
+                          <span className="text-[10px] text-[hsl(var(--text-muted))]">({displayed.filter(c => c.customer_type !== 'business').length})</span>
                         </div>
-                        <CustomerFeed
-                          displayed={displayed.filter(c => c.customer_type !== 'business')}
-                          customers={customers}
-                          segments={segments}
-                          matchedFamilyIds={matchedFamilyIds}
-                          onEdit={(c) => { setEditing(c); setShowForm(true); }}
-                          onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
-                          allContracts={contracts}
-                          allTasks={tasks}
-                          allDocuments={documents}
-                          workspaceMode="private"
-                        />
+                        <div className="p-4">
+                          <CustomerFeed
+                            displayed={displayed.filter(c => c.customer_type !== 'business')}
+                            customers={customers}
+                            segments={segments}
+                            matchedFamilyIds={matchedFamilyIds}
+                            onEdit={(c) => { setEditing(c); setShowForm(true); }}
+                            onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
+                            allContracts={contracts}
+                            allTasks={tasks}
+                            allDocuments={documents}
+                            workspaceMode="private"
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
@@ -693,24 +695,26 @@ export default function CustomerIntelligenceWorkspace() {
                         size="lg"
                       />
                     ) : (
-                      <div className="space-y-3 pt-4 border-t border-border/40">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                          <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Firmenkunden</h3>
-                          <span className="text-[10px] text-slate-400">({displayed.filter(c => c.customer_type === 'business').length})</span>
+                      <div className="border-t-2 border-[hsl(var(--primary))] bg-white">
+                        <div className="flex items-center gap-2 px-4 py-3 bg-[hsl(var(--surface-1))] border-b border-[hsl(var(--border-subtle))]">
+                          <Building2 className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
+                          <h3 className="text-[11px] font-semibold uppercase tracking-widest text-[hsl(var(--text-heading))]">Firmenkunden</h3>
+                          <span className="text-[10px] text-[hsl(var(--text-muted))]">({displayed.filter(c => c.customer_type === 'business').length})</span>
                         </div>
-                        <CustomerFeed
-                          displayed={displayed.filter(c => c.customer_type === 'business')}
-                          customers={customers}
-                          segments={segments}
-                          matchedFamilyIds={matchedFamilyIds}
-                          onEdit={(c) => { setEditing(c); setShowForm(true); }}
-                          onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
-                          allContracts={contracts}
-                          allTasks={tasks}
-                          allDocuments={documents}
-                          workspaceMode="business"
-                        />
+                        <div className="p-4">
+                          <CustomerFeed
+                            displayed={displayed.filter(c => c.customer_type === 'business')}
+                            customers={customers}
+                            segments={segments}
+                            matchedFamilyIds={matchedFamilyIds}
+                            onEdit={(c) => { setEditing(c); setShowForm(true); }}
+                            onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
+                            allContracts={contracts}
+                            allTasks={tasks}
+                            allDocuments={documents}
+                            workspaceMode="business"
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
