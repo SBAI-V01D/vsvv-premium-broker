@@ -81,41 +81,54 @@ export default function Dashboard() {
   const [formData, setFormData] = useState({ title: '', status: '', notes: '', due_date: '' })
   const queryClient = useQueryClient()
 
+  // Dashboard Query Optimization — Cached Operational Snapshots
   const { data: tasks = [] } = useQuery({
-    queryKey: ['tasks'],
-    queryFn: () => base44.entities.Task.filter({ status: ['open', 'in_progress'] }, '-due_date', 100)
+    queryKey: ['dashboard_tasks'],
+    queryFn: () => base44.entities.Task.filter({ status: ['open', 'in_progress'] }, '-due_date', 50), // Limit 50
+    staleTime: 3 * 60 * 1000, // 3 Minuten cache
+    refetchOnWindowFocus: false,
   })
+  
   const { data: contracts = [] } = useQuery({
-    queryKey: ['contracts'],
+    queryKey: ['dashboard_contracts'],
     queryFn: async () => {
       const res = await base44.functions.invoke('getAllContractsForDashboard', {})
       return res.data?.data || res.data || []
-    }
+    },
+    staleTime: 5 * 60 * 1000, // 5 Minuten cache
+    refetchOnWindowFocus: false,
   })
+  
   const { data: leads = [] } = useQuery({
-    queryKey: ['leads'],
+    queryKey: ['dashboard_leads'],
     queryFn: async () => {
-      const all = await base44.entities.Lead.list('-lead_score', 100)
+      const all = await base44.entities.Lead.list('-lead_score', 50) // Limit 50
       return all.filter(l => ['new', 'contacted', 'qualified'].includes(l.status))
-    }
+    },
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   })
+  
   const { data: verkaufschancen = [] } = useQuery({
-    queryKey: ['verkaufschancen'],
-    queryFn: () => base44.entities.Verkaufschance.list('-created_date', 100)
+    queryKey: ['dashboard_verkaufschancen'],
+    queryFn: () => base44.entities.Verkaufschance.list('-created_date', 50), // Limit 50
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   })
 
-  // Neukunden ab 22.05.2026
+  // Neukunden ab 22.05.2026 — Optimized Query
   const { data: newCustomers = [] } = useQuery({
     queryKey: ['dashboard_new_customers'],
     queryFn: async () => {
-      const all = await base44.entities.Customer.filter({ archived: false }, '-created_date', 50)
+      const all = await base44.entities.Customer.filter({ archived: false }, '-created_date', 20) // Limit 20
       const cutoff = new Date('2026-05-22')
       return all.filter(c => {
         const created = c.created_date ? new Date(c.created_date) : null
         return created && created >= cutoff
-      }).slice(0, 3) // Max 3 für Dashboard
+      }).slice(0, 3)
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000, // 10 Minuten cache
+    refetchOnWindowFocus: false,
   })
 
   const today = new Date()
