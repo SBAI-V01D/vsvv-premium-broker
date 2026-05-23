@@ -174,7 +174,8 @@ export default function CustomerIntelligenceWorkspace() {
   const { data: organizations = [] } = useQuery({
     queryKey: ['organizations'],
     queryFn: () => base44.entities.Organization.list('-created_date', 50),
-    staleTime: 10 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
+    retry: false,
   });
 
   const { data: customers = [], isLoading } = useQuery({
@@ -193,30 +194,36 @@ export default function CustomerIntelligenceWorkspace() {
       return [];
     },
     enabled: !!currentUser,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 
   const { data: tasks = [] } = useQuery({
     queryKey: ['customers_tasks'],
     queryFn: () => base44.entities.Task.filter({ status: 'open' }, '-due_date', 200),
-    staleTime: 60_000,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 
   const { data: contracts = [] } = useQuery({
     queryKey: ['customers_contracts'],
     queryFn: () => base44.entities.Contract.filter({ status: 'active', archived: false }, '-created_date', 500),
-    staleTime: 60_000,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 
   const { data: documents = [] } = useQuery({
     queryKey: ['customers_documents'],
     queryFn: () => base44.entities.Document.filter({ archived: false }, '-uploaded_at', 500),
-    staleTime: 60_000,
+    staleTime: 10 * 60 * 1000,
+    retry: false,
   });
 
   const { data: verkaufschancen = [] } = useQuery({
     queryKey: ['customers_verkaufschancen'],
     queryFn: () => base44.entities.Verkaufschance.filter({}),
-    staleTime: 60_000,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
   });
 
   const createMutation = useMutation({
