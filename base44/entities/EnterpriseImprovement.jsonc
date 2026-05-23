@@ -1,0 +1,213 @@
+{
+  "name": "EnterpriseImprovement",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Eindeutige ID (z.B. IMP-001)"
+    },
+    "audit_id": {
+      "type": "string",
+      "description": "Zugeh\u00f6riges Audit"
+    },
+    "title": {
+      "type": "string",
+      "description": "Kurzer Titel der Verbesserung"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low"
+      ],
+      "description": "Priorit\u00e4t"
+    },
+    "area": {
+      "type": "string",
+      "enum": [
+        "performance",
+        "relationship_integrity",
+        "ai_quality",
+        "query_governance",
+        "design",
+        "mobile",
+        "workflow"
+      ],
+      "description": "Bereich"
+    },
+    "current_state": {
+      "type": "string",
+      "description": "Aktueller Zustand (Problem)"
+    },
+    "target_state": {
+      "type": "string",
+      "description": "Zielzustand (messbar)"
+    },
+    "ki_recommendation": {
+      "type": "string",
+      "description": "KI-Empfehlung"
+    },
+    "implementation_steps": {
+      "type": "array",
+      "description": "Schritt-f\u00fcr-Schritt Anleitung",
+      "items": {
+        "type": "string"
+      }
+    },
+    "estimated_impact": {
+      "type": "object",
+      "description": "Gesch\u00e4tzter Impact",
+      "properties": {
+        "performance_improvement_percent": {
+          "type": "number",
+          "description": "Performance-Verbesserung in %"
+        },
+        "ux_improvement": {
+          "type": "string",
+          "description": "UX-Verbesserung"
+        },
+        "compliance_benefit": {
+          "type": "string",
+          "description": "Compliance-Vorteil"
+        },
+        "effort_level": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "description": "Aufwand"
+        },
+        "estimated_hours": {
+          "type": "number",
+          "description": "Gesch\u00e4tzte Stunden"
+        }
+      }
+    },
+    "affected_entities": {
+      "type": "array",
+      "description": "Betroffene Entities",
+      "items": {
+        "type": "string"
+      }
+    },
+    "affected_pages": {
+      "type": "array",
+      "description": "Betroffene Pages",
+      "items": {
+        "type": "string"
+      }
+    },
+    "success_metrics": {
+      "type": "object",
+      "description": "Erfolgsmessung",
+      "properties": {
+        "metric": {
+          "type": "string",
+          "description": "Metrik-Name"
+        },
+        "before_ms": {
+          "type": "number",
+          "description": "Wert vorher (ms)"
+        },
+        "target_ms": {
+          "type": "number",
+          "description": "Zielwert (ms)"
+        },
+        "how_to_measure": {
+          "type": "string",
+          "description": "Wie messen?"
+        }
+      }
+    },
+    "risks": {
+      "type": "array",
+      "description": "Risiken",
+      "items": {
+        "type": "string"
+      }
+    },
+    "rollback_plan": {
+      "type": "string",
+      "description": "Rollback-Plan"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "proposed",
+        "approved",
+        "in_progress",
+        "implemented",
+        "verified",
+        "rejected"
+      ],
+      "default": "proposed",
+      "description": "Status im Workflow"
+    },
+    "proposed_by": {
+      "type": "string",
+      "description": "Vorgeschlagen von (E-Mail)"
+    },
+    "proposed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Vorgeschlagen am"
+    },
+    "approved_by": {
+      "type": "string",
+      "description": "Freigegeben von (E-Mail)"
+    },
+    "approved_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Freigegeben am"
+    },
+    "implemented_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Implementiert am"
+    },
+    "verified_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Verifiziert am (Impact gemessen)"
+    },
+    "actual_impact": {
+      "type": "object",
+      "description": "Tats\u00e4chlicher Impact (nach Implementation)",
+      "properties": {
+        "performance_improvement_actual_percent": {
+          "type": "number",
+          "description": "Tats\u00e4chliche Verbesserung %"
+        },
+        "measured_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "verified_by": {
+          "type": "string"
+        }
+      }
+    },
+    "rejection_reason": {
+      "type": "string",
+      "description": "Ablehnungsgrund (wenn rejected)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notizen"
+    }
+  },
+  "required": [
+    "audit_id",
+    "title",
+    "priority",
+    "area",
+    "current_state",
+    "target_state",
+    "status"
+  ]
+}
