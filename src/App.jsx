@@ -44,6 +44,7 @@ import AdminEnterpriseControlCenter from './pages/AdminEnterpriseControlCenter'
 import KiAnalyseVerbesserungen from './pages/KiAnalyseVerbesserungen'
 import BrokerReporting from './pages/BrokerReporting'
 import EnterpriseAudit from './pages/EnterpriseAudit'
+import EnterpriseSystemCheck from './pages/EnterpriseSystemCheck'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -137,6 +138,7 @@ const AuthenticatedApp = () => {
         <Route path="/ai-review" element={<KiAnalyseVerbesserungen />} />
         <Route path="/reporting" element={<BrokerReporting />} />
         <Route path="/admin/enterprise-audit" element={<EnterpriseAudit />} />
+        <Route path="/admin/system-check" element={<EnterpriseSystemCheck />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
