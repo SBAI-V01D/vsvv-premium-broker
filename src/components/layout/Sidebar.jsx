@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
   ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink,
   Target, User, Briefcase, TrendingUp, RefreshCw, Lock, Menu, BookOpen, Activity,
-  Building2, Gift, AlertCircle, Brain
+  Building2, Gift, AlertCircle, Brain, BarChart2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -73,6 +73,12 @@ const navGroups = [
       { label: 'Verträge',  icon: FileText,   path: '/vertraege', color: 'primary' },
       { label: 'Anträge',   icon: FileText,   path: '/antraege',  color: 'primary' },
       { label: 'Dokumente', icon: FileText,   path: '/dokumente', color: 'primary' },
+    ],
+  },
+  {
+    label: 'Reporting',
+    items: [
+      { label: 'Broker Reporting', icon: BarChart2, path: '/reporting', color: 'primary' },
     ],
   },
   {
