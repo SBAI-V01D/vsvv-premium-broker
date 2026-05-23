@@ -171,40 +171,8 @@ export default function RenewalsSection({ contracts, customers, verkaufschancen 
         </p>
       </div>
 
-      {/* Combined layout: Critical and 90-365 side by side */}
+      {/* Combined layout: 90-365 first, then Critical */}
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Critical (<90 Tage) */}
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--critical-hsl))]" />
-            <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
-              Kritisch (&lt;90 Tage)
-            </h3>
-            <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
-              {renewalsData.critical.length}
-            </span>
-          </div>
-          {renewalsData.critical.length === 0 ? (
-            <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
-              Keine kritischen Abläufe
-            </p>
-          ) : (
-            <>
-              <div className="space-y-3">
-                {(showAllCritical ? renewalsData.critical : renewalsData.critical.slice(0, DISPLAY_LIMIT)).map(item => renderContractCard(item, true))}
-              </div>
-              {renewalsData.critical.length > DISPLAY_LIMIT && (
-                <button
-                  onClick={() => setShowAllCritical(!showAllCritical)}
-                  className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
-                >
-                  {showAllCritical ? 'Weniger anzeigen' : `+${renewalsData.critical.length - DISPLAY_LIMIT} weitere anzeigen`}
-                </button>
-              )}
-            </>
-          )}
-        </div>
-
         {/* Upcoming 90-365 Tage */}
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -231,6 +199,38 @@ export default function RenewalsSection({ contracts, customers, verkaufschancen 
                   className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
                 >
                   {showAllUpcoming ? 'Weniger anzeigen' : `+${renewalsData.upcoming90to365.length - DISPLAY_LIMIT} weitere anzeigen`}
+                </button>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Critical (<90 Tage) */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--critical-hsl))]" />
+            <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
+              Kritisch (&lt;90 Tage)
+            </h3>
+            <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
+              {renewalsData.critical.length}
+            </span>
+          </div>
+          {renewalsData.critical.length === 0 ? (
+            <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
+              Keine kritischen Abläufe
+            </p>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {(showAllCritical ? renewalsData.critical : renewalsData.critical.slice(0, DISPLAY_LIMIT)).map(item => renderContractCard(item, true))}
+              </div>
+              {renewalsData.critical.length > DISPLAY_LIMIT && (
+                <button
+                  onClick={() => setShowAllCritical(!showAllCritical)}
+                  className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))/0.8]"
+                >
+                  {showAllCritical ? 'Weniger anzeigen' : `+${renewalsData.critical.length - DISPLAY_LIMIT} weitere anzeigen`}
                 </button>
               )}
             </>
