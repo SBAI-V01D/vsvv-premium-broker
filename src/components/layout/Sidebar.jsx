@@ -61,34 +61,34 @@ const navGroups = [
     items: [
       { label: 'Kundenübersicht', icon: Users,    path: '/kunden', color: 'primary' },
       { label: 'Beratungsdossiers', icon: BookOpen, path: '/beratungsdossier', adminOnly: true, color: 'primary' },
-      { label: 'Verträge',        icon: FileText,  path: '/vertraege' },
+      { label: 'Verträge',        icon: FileText,  path: '/vertraege', color: 'primary' },
       { label: 'Anträge',         icon: CheckSquare, path: '/antraege', color: 'primary' },
-      { label: 'Dokumente',       icon: BookOpen,   path: '/dokumente' },
+      { label: 'Dokumente',       icon: BookOpen,   path: '/dokumente', color: 'primary' },
     ],
   },
   {
     label: 'Vertrieb',
     items: [
       { label: 'Leads',           icon: Target,      path: '/leads', color: 'primary' },
-      { label: 'Verkaufschancen', icon: TrendingUp,  path: '/verkaufschancen' },
+      { label: 'Verkaufschancen', icon: TrendingUp,  path: '/verkaufschancen', color: 'primary' },
       { label: 'Vertragsabläufe', icon: RefreshCw,   path: '/vertragsablaeufe', color: 'primary' },
-      { label: 'Aufgaben',        icon: CheckSquare, path: '/aufgaben' },
+      { label: 'Aufgaben',        icon: CheckSquare, path: '/aufgaben', color: 'primary' },
     ],
   },
   {
     label: 'Administration',
     items: [
       { label: 'Provisionen',           icon: Wallet,    path: '/provisionen-courtagen', color: 'primary' },
-      { label: 'Berater & Partner',     icon: Briefcase, path: '/berater-organisation' },
+      { label: 'Berater & Partner',     icon: Briefcase, path: '/berater-organisation', color: 'primary' },
       { label: 'Team & Zugriffsrechte', icon: Lock,      path: '/admin/team-zugriffsrechte', adminOnly: true, color: 'primary' },
-      { label: 'System',                icon: Menu,      path: '/admin-logs' },
+      { label: 'System',                icon: Menu,      path: '/admin-logs', color: 'primary' },
     ],
   },
   {
     label: 'Enterprise',
     items: [
 
-      { label: 'Enterprise Audit Monitor', icon: Activity, path: '/admin-logs',                     adminOnly: true },
+      { label: 'Enterprise Audit Monitor', icon: Activity, path: '/admin-logs',                     adminOnly: true, color: 'primary' },
       { label: 'Enterprise Control Center', icon: Shield,   path: '/admin/enterprise-control-center', adminOnly: true, color: 'primary' },
       { label: 'AI Review Center',          icon: Brain,    path: '/ai-review',                       adminOnly: true, color: 'primary' },
     ],
