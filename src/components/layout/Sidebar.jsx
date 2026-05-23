@@ -58,6 +58,14 @@ const navGroups = [
     ],
   },
   {
+    label: 'Administration',
+    items: [
+      { label: 'Verträge',  icon: FileText,   path: '/vertraege',        color: 'primary' },
+      { label: 'Anträge',   icon: CheckSquare, path: '/antraege',         color: 'primary' },
+      { label: 'Dokumente', icon: BookOpen,   path: '/dokumente',        color: 'primary' },
+    ],
+  },
+  {
     label: 'Kunden',
     items: [
       { label: 'Kundenübersicht',  icon: Users,      path: '/kunden',           color: 'primary' },
