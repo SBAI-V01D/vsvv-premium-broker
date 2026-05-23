@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
+import toast from 'react-hot-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -110,11 +111,25 @@ export default function KiAnalyseVerbesserungen() {
           status: 'implemented',
           implemented_at: new Date().toISOString(),
         });
+        return { success: true, autoImplemented: true, area: improvement.area };
       }
       
-      return { success: true, autoImplemented: autoImplementAreas.includes(improvement.area) };
+      return { success: true, autoImplemented: false, area: improvement.area };
     },
-    onSuccess: () => refetchImprovements(),
+    onSuccess: (data) => {
+      refetchImprovements();
+      if (data.autoImplemented) {
+        toast.success(`Verbesserung wurde automatisch umgesetzt!`, {
+          duration: 4000,
+          icon: '✅',
+        });
+      } else {
+        toast.success(`Verbesserung genehmigt - bereit zur Umsetzung`, {
+          duration: 3000,
+          icon: '✓',
+        });
+      }
+    },
   });
 
   const rejectMutation = useMutation({
