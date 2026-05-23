@@ -104,11 +104,7 @@ const WORKSPACE_MODES = [
 ];
 
 // ── Grouped customer feed ─────────────────────────────────────────────────
-function CustomerFeed({ displayed, customers, segments, matchedFamilyIds, onEdit, onDelete, allContracts, allTasks, allDocuments }) {
-  const businesses = displayed.filter(c => c.customer_type === 'business');
-  const privates   = displayed.filter(c => c.customer_type !== 'business');
-  const showGroups = businesses.length > 0 && privates.length > 0;
-
+function CustomerFeed({ displayed, customers, segments, matchedFamilyIds, onEdit, onDelete, allContracts, allTasks, allDocuments, workspaceMode }) {
   const renderCard = (customer) => (
     <CustomerCard
       key={customer.id}
@@ -124,6 +120,16 @@ function CustomerFeed({ displayed, customers, segments, matchedFamilyIds, onEdit
       allDocuments={allDocuments}
     />
   );
+
+  // Im filtered mode (private/business) keine Gruppierung - direkt anzeigen
+  if (workspaceMode === 'private' || workspaceMode === 'business') {
+    return <>{displayed.map(renderCard)}</>;
+  }
+
+  // Im unfiltered mode (alle Kunden) gruppieren
+  const businesses = displayed.filter(c => c.customer_type === 'business');
+  const privates   = displayed.filter(c => c.customer_type !== 'business');
+  const showGroups = businesses.length > 0 && privates.length > 0;
 
   if (!showGroups) return <>{displayed.map(renderCard)}</>;
 
@@ -583,6 +589,7 @@ export default function CustomerIntelligenceWorkspace() {
                 allContracts={contracts}
                 allTasks={tasks}
                 allDocuments={documents}
+                workspaceMode={workspaceMode}
               />
             )}
           </div>
