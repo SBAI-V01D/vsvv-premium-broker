@@ -173,13 +173,8 @@ export default function Documents() {
     return matchSearch && matchTab
   })
 
-  // Sort: pruefung_erforderlich first, then by date
-  filtered.sort((a, b) => {
-    const pa = a.classification_status === 'pruefung_erforderlich' ? 0 : a.classification_status === 'ausstehend' ? 1 : 2
-    const pb = b.classification_status === 'pruefung_erforderlich' ? 0 : b.classification_status === 'ausstehend' ? 1 : 2
-    if (pa !== pb) return pa - pb
-    return new Date(b.created_date) - new Date(a.created_date)
-  })
+  // Sort: always by date descending (newest first)
+  filtered.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
 
   const counts = {
     all: documents.length,
@@ -234,7 +229,7 @@ export default function Documents() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-[hsl(var(--primary))]">Dokumente ({documents.length})</h1>
+          <h1 className="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight">Dokumente ({documents.length})</h1>
           <p className="text-muted-foreground mt-1">Intelligente Klassifizierung &amp; automatische Antragserfassung</p>
         </div>
         <div className="flex gap-2">
