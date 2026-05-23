@@ -8,7 +8,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
   Plus, User, Building2, Upload, Download, Users, Search,
-  AlertTriangle, Loader2, XCircle, TrendingUp, Target, Calendar, ChevronRight
+  AlertTriangle, Loader2, XCircle, TrendingUp, Target, Calendar, ChevronRight,
+  Heart
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -29,6 +30,7 @@ import BirthdaySection from '@/components/customers/BirthdaySection';
 import RenewalsSection from '@/components/customers/RenewalsSection';
 import CancellationsSection from '@/components/customers/CancellationsSection';
 import HouseholdIntelligenceSection from '@/components/customers/HouseholdIntelligenceSection';
+import NewCustomersSection from '@/components/customers/NewCustomersSection';
 
 // ── Segment builder ────────────────────────────────────────────────────────
 function buildSegments(customers, tasks, contracts, documents) {
@@ -94,11 +96,12 @@ function sortCustomers(list, sortBy) {
   });
 }
 
-// NEW: Broker Intelligence Workspace Modes
+// Interne Navigation: AUSSCHLIESSLICH Fokusansichten
 const WORKSPACE_MODES = [
   { id: 'kundenaktionen', label: 'Kundenübersicht', icon: Users },
   { id: 'private', label: 'Privatkunden', icon: User },
   { id: 'business', label: 'Unternehmen', icon: Building2 },
+  { id: 'birthdays', label: 'Geburtstage', icon: Calendar },
 ];
 
 // ── Grouped customer feed ─────────────────────────────────────────────────
@@ -272,7 +275,7 @@ export default function CustomerIntelligenceWorkspace() {
 
   useEffect(() => {
     if (urlView) {
-      if (['private', 'business', 'vip'].includes(urlView)) {
+      if (['private', 'business', 'vip', 'birthdays'].includes(urlView)) {
         setWorkspaceMode(urlView);
       }
     }
@@ -282,6 +285,7 @@ export default function CustomerIntelligenceWorkspace() {
     if (workspaceMode === 'private') return primaryCustomers.filter(c => c.customer_type !== 'business');
     if (workspaceMode === 'business') return primaryCustomers.filter(c => c.customer_type === 'business');
     if (workspaceMode === 'vip') return primaryCustomers.filter(c => (c.total_premium || 0) >= 5000);
+    if (workspaceMode === 'birthdays') return primaryCustomers; // Geburtstage zeigen alle an
     return primaryCustomers;
   }, [primaryCustomers, workspaceMode]);
 
@@ -356,6 +360,22 @@ export default function CustomerIntelligenceWorkspace() {
     window.history.replaceState({}, '', newUrl);
   }, [workspaceMode]);
 
+  // Geburtstage-Filter für den Geburtstage-Modus
+  const birthdayCustomers = useMemo(() => {
+    if (workspaceMode !== 'birthdays') return [];
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    return primaryCustomers.filter(c => {
+      if (!c.birthdate) return false;
+      const birthDate = new Date(c.birthdate);
+      return birthDate.getMonth() === currentMonth;
+    }).sort((a, b) => {
+      const dateA = new Date(a.birthdate).getDate();
+      const dateB = new Date(b.birthdate).getDate();
+      return dateA - dateB;
+    });
+  }, [primaryCustomers, workspaceMode]);
+
   const renderIntelligenceView = () => {
     if (workspaceMode === 'kundenaktionen') {
       // Filter mandate issues by search
@@ -393,6 +413,7 @@ export default function CustomerIntelligenceWorkspace() {
 
           <RenewalsSection contracts={contracts} customers={customers} verkaufschancen={verkaufschancen} />
           <CancellationsSection contracts={contracts} customers={customers} />
+          <NewCustomersSection searchQuery={search} />
           <BirthdaySection customers={primaryCustomers} />
 
           {/* Combined layout: Mandate/Advisor issues and Household side by side */}
@@ -468,6 +489,15 @@ export default function CustomerIntelligenceWorkspace() {
         </div>
       );
     }
+    
+    if (workspaceMode === 'birthdays') {
+      return (
+        <div className="p-6 max-w-[1600px] mx-auto">
+          <BirthdaySection customers={birthdayCustomers} />
+        </div>
+      );
+    }
+    
     if (workspaceMode === 'vip') {
       return (
         <div className="p-6 max-w-[1600px] mx-auto">
@@ -475,11 +505,12 @@ export default function CustomerIntelligenceWorkspace() {
         </div>
       );
     }
+    
     return null;
   };
 
-  const isIntelligenceMode = ['kundenaktionen', 'vip'].includes(workspaceMode);
-  const isCustomerListMode = ['private', 'business', 'overview'].includes(workspaceMode);
+  const isIntelligenceMode = ['kundenaktionen', 'vip', 'birthdays'].includes(workspaceMode);
+  const isCustomerListMode = ['private', 'business'].includes(workspaceMode);
 
   return (
     <div className="flex flex-col h-full bg-[hsl(var(--surface-1))]">
