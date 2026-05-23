@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
   ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink,
   Target, User, Briefcase, TrendingUp, Lock, Menu, BookOpen, Activity,
-  Building2, AlertCircle, Brain, BarChart2, Calendar
+  Building2, AlertCircle, Brain, BarChart2, Calendar, Clock, UserPlus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -63,15 +63,21 @@ const navGroups = [
       { label: 'Kundenübersicht',  icon: Users,      path: '/kunden',           color: 'primary' },
       { label: 'Verkaufschancen',  icon: TrendingUp, path: '/verkaufschancen',  color: 'primary' },
       { label: 'Beratungsdossiers',icon: BookOpen,   path: '/beratungsdossier', color: 'primary' },
-      { label: 'Geburtstage',      icon: Calendar,   path: '/kunden?view=birthdays', color: 'primary' },
     ],
   },
   {
     label: 'Administration',
     items: [
-      { label: 'Verträge',  icon: FileText,   path: '/vertraege', color: 'primary' },
-      { label: 'Anträge',   icon: FileText,   path: '/antraege',  color: 'primary' },
-      { label: 'Dokumente', icon: FileText,   path: '/dokumente', color: 'primary' },
+      { label: 'Verträge',       icon: FileText,   path: '/vertraege',       color: 'primary' },
+      { label: 'Vertragsabläufe', icon: Clock,      path: '/vertragsablaeufe', color: 'primary' },
+      { label: 'Anträge',        icon: FileText,   path: '/antraege',        color: 'primary' },
+      { label: 'Dokumente',      icon: FileText,   path: '/dokumente',       color: 'primary' },
+    ],
+  },
+  {
+    label: 'Vertrieb & Leads',
+    items: [
+      { label: 'Leads',            icon: UserPlus,   path: '/leads',             color: 'primary' },
     ],
   },
   {
