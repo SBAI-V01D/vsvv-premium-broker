@@ -138,6 +138,20 @@ export default function Customer360() {
     return { active, totalPremium, expiringSoon, openVs, openTasks, overdueTasks }
   }, [allHouseholdContracts, verkaufschancen, tasks])
 
+  // Cross-sell gap detection (mirrors CrossSellingPanel logic)
+  const crossSellGaps = useMemo(() => {
+    if (!customer) return []
+    const activeContracts = allHouseholdContracts.filter(c => c.status === 'active')
+    const coveredSparten = new Set(activeContracts.map(c => c.sparte).filter(Boolean))
+    const openVsSparten = new Set(verkaufschancen
+      .filter(v => !['gewonnen', 'verloren'].includes(v.status))
+      .map(v => v.sparte).filter(Boolean))
+    const recommended = customer.customer_type === 'business'
+      ? ['haftpflicht_privat', 'bvg', 'uvg', 'ktg']
+      : ['kvg', 'haftpflicht_privat', 'hausrat']
+    return recommended.filter(s => !coveredSparten.has(s) && !openVsSparten.has(s))
+  }, [customer, allHouseholdContracts, verkaufschancen])
+
   const nextStep = useMemo(() => {
     if (metrics.overdueTasks.length > 0) return { text: `${metrics.overdueTasks.length} überfällige Aufgabe(n)`, color: 'text-red-600', urgent: true }
     const entscheidVs = metrics.openVs.find(v => v.status === 'kunde_entscheidet')
@@ -145,10 +159,11 @@ export default function Customer360() {
     const offertenVs = metrics.openVs.find(v => v.status === 'offerten_erhalten')
     if (offertenVs) return { text: `Vergleich erstellen: ${offertenVs.title || getSparteLabel(offertenVs.sparte)}`, color: 'text-blue-600', urgent: false }
     if (metrics.expiringSoon.length > 0) return { text: `${metrics.expiringSoon.length} Vertrag/Verträge ablaufend`, color: 'text-amber-600', urgent: false }
+    if (crossSellGaps.length > 0) return { text: `${crossSellGaps.length} Versicherungslücke(n) erkannt`, color: 'text-orange-600', urgent: false }
     if (metrics.openTasks.length > 0) return { text: `${metrics.openTasks.length} offene Aufgabe(n)`, color: 'text-amber-600', urgent: false }
     if (metrics.openVs.length > 0) return { text: `${metrics.openVs.length} offene Verkaufschance(n)`, color: 'text-primary', urgent: false }
     return null
-  }, [metrics])
+  }, [metrics, crossSellGaps])
 
   const selectedVs = selectedVsId ? verkaufschancen.find(v => v.id === selectedVsId) : null
 
@@ -541,7 +556,7 @@ export default function Customer360() {
               <p className="text-sm font-bold">Cross-Selling & Beratungspotenziale</p>
               <p className="text-xs text-muted-foreground mt-0.5">Automatisch erkannte Lücken und Optimierungspotenziale</p>
             </div>
-            <CrossSellingPanel customer={customer} contracts={contracts} verkaufschancen={verkaufschancen} />
+            <CrossSellingPanel customer={customer} contracts={allHouseholdContracts} verkaufschancen={verkaufschancen} />
           </div>
         )}
 
