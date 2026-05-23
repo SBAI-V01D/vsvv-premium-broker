@@ -164,6 +164,7 @@ export default function CustomerIntelligenceWorkspace() {
   const [workspaceMode, setWorkspaceMode] = useState('kundenaktionen');
   const [sortBy, setSortBy]               = useState('alpha');
   const [search, setSearch]             = useState('');
+  const [intelligenceSearch, setIntelligenceSearch] = useState('');
   const [showImport, setShowImport]     = useState(false);
   const [showMerge, setShowMerge]       = useState(false);
   const [showAllMandate, setShowAllMandate] = useState(false);
@@ -313,6 +314,17 @@ export default function CustomerIntelligenceWorkspace() {
     };
   }, [modeFiltered, search, customers, sortBy]);
 
+  const filteredMandateIssues = useMemo(() => {
+    if (!intelligenceSearch.trim()) return mandateIssues;
+    const query = intelligenceSearch.toLowerCase();
+    return mandateIssues.filter(c => {
+      const name = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
+      const email = (c.email || '').toLowerCase();
+      const number = (c.customer_number || '').toLowerCase();
+      return name.includes(query) || email.includes(query) || number.includes(query);
+    });
+  }, [mandateIssues, intelligenceSearch]);
+
   const handleSave = async (data) => {
     if (editing) { updateMutation.mutate({ id: editing.id, data }); return; }
     const orgId = data.organization_id || organizations[0]?.id || '';
@@ -351,17 +363,6 @@ export default function CustomerIntelligenceWorkspace() {
 
 
   const renderIntelligenceView = () => {
-    // Filter mandate issues by search
-    const filteredMandateIssues = search.trim()
-      ? mandateIssues.filter(c => {
-          const query = search.toLowerCase();
-          const name = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
-          const email = (c.email || '').toLowerCase();
-          const number = (c.customer_number || '').toLowerCase();
-          return name.includes(query) || email.includes(query) || number.includes(query);
-        })
-      : mandateIssues;
-
     return (
       <div className="space-y-6 p-6 max-w-[1600px] mx-auto">
         {/* Search bar for kundenaktionen mode */}
@@ -370,13 +371,13 @@ export default function CustomerIntelligenceWorkspace() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--text-subtle))]" />
               <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
+                value={intelligenceSearch}
+                onChange={e => setIntelligenceSearch(e.target.value)}
                 placeholder="Kunden suchen (Name, E-Mail, Kundennummer)…"
                 className="w-full pl-9 pr-8 py-1.5 text-[13px] border border-[hsl(var(--border-subtle))] rounded-lg bg-[hsl(var(--surface-0))] text-[hsl(var(--text-heading))] placeholder:text-[hsl(var(--text-subtle))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))/0.3] focus:border-[hsl(var(--primary))/0.4] transition-all"
               />
-              {search && (
-                <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))]">
+              {intelligenceSearch && (
+                <button onClick={() => setIntelligenceSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))]">
                   <XCircle className="w-3.5 h-3.5" />
                 </button>
               )}
@@ -384,7 +385,7 @@ export default function CustomerIntelligenceWorkspace() {
           </div>
         </div>
 
-        <NewCustomersSection searchQuery={search} />
+        <NewCustomersSection searchQuery={intelligenceSearch} />
         <div className="h-px bg-[hsl(var(--primary))]/20 my-2" />
         <RenewalsSection contracts={contracts} customers={customers} verkaufschancen={verkaufschancen} />
         <div className="h-px bg-[hsl(var(--primary))]/20 my-2" />
@@ -412,7 +413,7 @@ export default function CustomerIntelligenceWorkspace() {
               </span>
             </div>
             {filteredMandateIssues.length === 0 ? (
-              search ? (
+              intelligenceSearch ? (
                 <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
                   Keine Mandat-Probleme für diese Suche gefunden
                 </p>
