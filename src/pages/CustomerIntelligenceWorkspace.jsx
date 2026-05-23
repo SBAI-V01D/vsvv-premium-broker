@@ -397,10 +397,13 @@ export default function CustomerIntelligenceWorkspace() {
           </div>
 
           <NewCustomersSection searchQuery={search} />
+          <div className="h-px bg-[hsl(var(--primary))]/20 my-2" />
           <RenewalsSection contracts={contracts} customers={customers} verkaufschancen={verkaufschancen} />
+          <div className="h-px bg-[hsl(var(--primary))]/20 my-2" />
           <CancellationsSection contracts={contracts} customers={customers} />
 
           {/* Combined layout: Haushalt first, then Mandat/Berater */}
+          <div className="h-px bg-[hsl(var(--primary))]/20 my-2" />
           <div className="grid gap-4 md:grid-cols-2">
             {/* Haushalte */}
             <div>

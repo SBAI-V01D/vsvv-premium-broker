@@ -114,13 +114,10 @@ export default function NewCustomersSection({ searchQuery = '' }) {
   }
 
   return (
-    <div className="relative">
-      {/* Blauer Trennstrich oben */}
-      <div className="absolute top-0 left-0 right-0 h-0.5 bg-[hsl(var(--primary))]" />
-      
+    <div>
       <div className="flex items-center gap-2 mb-2">
-        <Calendar className="w-3.5 h-3.5 text-[hsl(var(--critical-hsl))]" />
-        <h3 className="text-sm font-bold text-[hsl(var(--critical-hsl))]">Neukunden</h3>
+        <Calendar className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
+        <h3 className="text-sm font-bold text-[hsl(var(--primary))]">Neukunden</h3>
         <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
           {filteredCustomers.length} seit 22.05.
         </span>
