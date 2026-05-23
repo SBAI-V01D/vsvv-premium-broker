@@ -252,13 +252,13 @@ export default function CustomerIntelligenceWorkspace() {
   const primaryCustomers = useMemo(() => customers.filter(c => !c.is_family_member), [customers]);
 
   const mandateIssues = useMemo(() =>
-    primaryCustomers.filter(c =>
-      c.status !== 'inactive' && (
-        (!c.advisor_id && !c.primary_advisor_id) ||
-        ['expired', 'pending'].includes(c.mandate_status)
+    customers.filter(c =>
+      c.status !== 'inactive' && !c.archived && (
+        (!c.advisor_id && !c.primary_advisor_id && (!c.assigned_advisors || c.assigned_advisors.length === 0)) ||
+        ['expired', 'pending', 'invalid'].includes(c.mandate_status)
       )
     ),
-    [primaryCustomers]
+    [customers]
   );
 
   const householdCustomers = useMemo(() =>
