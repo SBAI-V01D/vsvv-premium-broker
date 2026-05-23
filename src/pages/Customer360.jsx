@@ -1,8 +1,8 @@
 /**
  * Customer360 — Die zentrale Kundenakte
- * Alles auf einen Blick. Keine versteckten Tabs. Maximale Geschwindigkeit.
+ * Policen gruppiert nach Person (Haushalt-Ansicht)
  */
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
@@ -14,15 +14,13 @@ import { Badge } from '@/components/ui/badge'
 import { StandardModal, KpiCard, EmptyState } from '@/components/shared'
 import {
   ArrowLeft, Phone, Mail, MapPin, Plus, FileText, TrendingUp,
-  CheckCircle2, Clock, AlertCircle, Download, ChevronRight,
-  RefreshCw, Target, Building2, CalendarClock, Star, Trophy,
-  Zap, Shield, Pencil
+  CheckCircle2, Clock, Download, Shield, Pencil
 } from 'lucide-react'
 import VerkaufschanceStatusBadge from '@/components/verkaufschance/VerkaufschanceStatusBadge'
 import VerkaufschanceForm from '@/components/verkaufschance/VerkaufschanceForm'
 import VerkaufschanceDetail from '@/components/verkaufschance/VerkaufschanceDetail'
 import CrossSellingPanel from '@/components/verkaufschance/CrossSellingPanel'
-import { format, parseISO, differenceInDays } from 'date-fns'
+import { parseISO, differenceInDays } from 'date-fns'
 
 const NEXT_STEP = {
   neu: 'Gesellschaften anfragen',
@@ -35,13 +33,15 @@ const NEXT_STEP = {
   wiedervorlage: 'Wiedervorlage prüfen',
 }
 
+const ROLE_LABEL = { spouse: 'Partner/in', child: 'Kind', parent: 'Elternteil', other: 'Mitglied' }
+
 export default function Customer360() {
   const { customerId } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showVsForm, setShowVsForm] = useState(false)
   const [selectedVsId, setSelectedVsId] = useState(null)
-  const [activeSection, setActiveSection] = useState('overview') // overview | verkaufschancen | vertraege | aufgaben | dokumente | crossselling
+  const [activeSection, setActiveSection] = useState('overview')
 
   // ── Data ─────────────────────────────────────────────────────────────────
   const { data: customer, isLoading } = useQuery({
@@ -67,6 +67,22 @@ export default function Customer360() {
     select: d => d.filter(t => t.customer_id === customerId),
   })
 
+  const { data: familyMembers = [] } = useQuery({
+    queryKey: ['family-members', customerId],
+    queryFn: () => base44.entities.Customer.filter({ primary_customer_id: customerId }),
+  })
+
+  const { data: familyContracts = [] } = useQuery({
+    queryKey: ['family-contracts', customerId],
+    queryFn: async () => {
+      const members = await base44.entities.Customer.filter({ primary_customer_id: customerId })
+      if (!members.length) return []
+      const all = await base44.entities.Contract.list()
+      return all.filter(c => members.some(m => m.id === c.customer_id))
+    },
+    enabled: !!customerId,
+  })
+
   const { data: allDocuments = [] } = useQuery({
     queryKey: ['documents-all'],
     queryFn: () => base44.entities.Document.list(),
@@ -90,9 +106,25 @@ export default function Customer360() {
     },
   })
 
-  // ── Metrics ──────────────────────────────────────────────────────────────
+  // ── Computed ──────────────────────────────────────────────────────────────
+  const allHouseholdContracts = useMemo(() => [...contracts, ...familyContracts], [contracts, familyContracts])
+
+  const contractsByPerson = useMemo(() => {
+    if (!customer) return []
+    const persons = [
+      { ...customer, _role: 'primary' },
+      ...familyMembers.map(m => ({ ...m, _role: m.family_role || 'other' })),
+    ]
+    return persons
+      .map(person => ({
+        person,
+        contracts: allHouseholdContracts.filter(c => c.customer_id === person.id),
+      }))
+      .filter(g => g.contracts.length > 0)
+  }, [customer, familyMembers, allHouseholdContracts])
+
   const metrics = useMemo(() => {
-    const active = contracts.filter(c => c.status === 'active')
+    const active = allHouseholdContracts.filter(c => c.status === 'active')
     const totalPremium = active.reduce((s, c) => s + (c.premium_yearly || 0), 0)
     const today = new Date()
     const expiringSoon = active.filter(c => {
@@ -104,18 +136,17 @@ export default function Customer360() {
     const openTasks = tasks.filter(t => t.status !== 'completed')
     const overdueTasks = openTasks.filter(t => t.due_date && new Date(t.due_date) < today)
     return { active, totalPremium, expiringSoon, openVs, openTasks, overdueTasks }
-  }, [contracts, verkaufschancen, tasks])
+  }, [allHouseholdContracts, verkaufschancen, tasks])
 
   const nextStep = useMemo(() => {
-    // Priorisierter nächster Schritt für diesen Kunden
-    if (metrics.overdueTasks.length > 0) return { type: 'task', text: `${metrics.overdueTasks.length} überfällige Aufgabe(n)`, color: 'text-red-600', urgent: true }
+    if (metrics.overdueTasks.length > 0) return { text: `${metrics.overdueTasks.length} überfällige Aufgabe(n)`, color: 'text-red-600', urgent: true }
     const entscheidVs = metrics.openVs.find(v => v.status === 'kunde_entscheidet')
-    if (entscheidVs) return { type: 'vs', text: `Entscheid nachfassen: ${entscheidVs.title || getSparteLabel(entscheidVs.sparte)}`, color: 'text-orange-600', urgent: true }
+    if (entscheidVs) return { text: `Entscheid nachfassen: ${entscheidVs.title || getSparteLabel(entscheidVs.sparte)}`, color: 'text-orange-600', urgent: true }
     const offertenVs = metrics.openVs.find(v => v.status === 'offerten_erhalten')
-    if (offertenVs) return { type: 'vs', text: `Vergleich erstellen: ${offertenVs.title || getSparteLabel(offertenVs.sparte)}`, color: 'text-blue-600', urgent: false }
-    if (metrics.expiringSoon.length > 0) return { type: 'contract', text: `${metrics.expiringSoon.length} Vertrag/Verträge ablaufend`, color: 'text-amber-600', urgent: false }
-    if (metrics.openTasks.length > 0) return { type: 'task', text: `${metrics.openTasks.length} offene Aufgabe(n)`, color: 'text-amber-600', urgent: false }
-    if (metrics.openVs.length > 0) return { type: 'vs', text: `${metrics.openVs.length} offene Verkaufschance(n)`, color: 'text-primary', urgent: false }
+    if (offertenVs) return { text: `Vergleich erstellen: ${offertenVs.title || getSparteLabel(offertenVs.sparte)}`, color: 'text-blue-600', urgent: false }
+    if (metrics.expiringSoon.length > 0) return { text: `${metrics.expiringSoon.length} Vertrag/Verträge ablaufend`, color: 'text-amber-600', urgent: false }
+    if (metrics.openTasks.length > 0) return { text: `${metrics.openTasks.length} offene Aufgabe(n)`, color: 'text-amber-600', urgent: false }
+    if (metrics.openVs.length > 0) return { text: `${metrics.openVs.length} offene Verkaufschance(n)`, color: 'text-primary', urgent: false }
     return null
   }, [metrics])
 
@@ -125,13 +156,120 @@ export default function Customer360() {
   if (!customer) return <div className="p-6 text-muted-foreground">Kunde nicht gefunden</div>
 
   const SECTIONS = [
-    { id: 'overview',        label: 'Übersicht',       badge: null },
-    { id: 'verkaufschancen', label: 'Chancen',         badge: metrics.openVs.length || null },
-    { id: 'crossselling',   label: 'Cross-Selling',    badge: null },
-    { id: 'vertraege',      label: 'Verträge',         badge: metrics.active.length || null },
-    { id: 'aufgaben',       label: 'Aufgaben',         badge: metrics.openTasks.length || null },
-    { id: 'dokumente',      label: 'Dokumente',        badge: documents.length || null },
+    { id: 'overview',        label: 'Übersicht',     badge: null },
+    { id: 'verkaufschancen', label: 'Chancen',       badge: metrics.openVs.length || null },
+    { id: 'crossselling',   label: 'Cross-Selling',  badge: null },
+    { id: 'vertraege',      label: 'Verträge',       badge: metrics.active.length || null },
+    { id: 'aufgaben',       label: 'Aufgaben',       badge: metrics.openTasks.length || null },
+    { id: 'dokumente',      label: 'Dokumente',      badge: documents.length || null },
   ]
+
+  // ── Reusable contract card ────────────────────────────────────────────────
+  const renderContractCard = (c, withAusschreibung = false) => {
+    const today = new Date()
+    const daysLeft = c.end_date ? differenceInDays(parseISO(c.end_date), today) : null
+    const isCritical = daysLeft !== null && daysLeft <= 30 && daysLeft >= 0
+    return (
+      <Card key={c.id} className={cn('border-l-4', isCritical ? 'border-l-red-500' : c.status === 'active' ? 'border-l-green-500' : 'border-l-slate-300')}>
+        <CardContent className="p-4">
+          <div className="flex justify-between items-start gap-3 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <p className="font-bold text-sm">{c.insurer}</p>
+                <Badge variant="outline" className="text-xs">{getSparteLabel(c.sparte) || c.insurance_type || '–'}</Badge>
+                {c.policy_number && <span className="text-xs text-muted-foreground">{c.policy_number}</span>}
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-xs mt-2">
+                <div>
+                  <p className="text-muted-foreground">Prämie/Jahr</p>
+                  <p className="font-semibold text-emerald-700">CHF {(c.premium_yearly || 0).toLocaleString('de-CH')}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Gültig bis</p>
+                  <p className={cn('font-semibold', isCritical ? 'text-red-600' : '')}>
+                    {c.end_date ? new Date(c.end_date).toLocaleDateString('de-CH') : '–'}
+                    {isCritical && ` (${daysLeft}d)`}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1 items-end">
+              <span className={cn('text-[10px] px-2 py-1 rounded-full font-bold',
+                c.status === 'active' ? 'bg-green-100 text-green-700' :
+                c.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                'bg-slate-100 text-slate-600'
+              )}>
+                {c.status === 'active' ? 'Aktiv' : c.status === 'cancelled' ? 'Gekündigt' : c.status}
+              </span>
+              {withAusschreibung && isCritical && (
+                <Button size="sm" variant="outline" className="h-7 text-xs border-red-200 text-red-700 hover:bg-red-50"
+                  onClick={() => { setActiveSection('verkaufschancen'); setShowVsForm(true) }}
+                >
+                  <Plus className="w-3 h-3 mr-1" /> Ausschreibung
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // ── Person section (used in overview + vertraege) ─────────────────────────
+  const renderPersonGroup = ({ person, contracts: pContracts }, compact = false) => {
+    const activeContracts = pContracts.filter(c => c.status === 'active')
+    const premium = activeContracts.reduce((s, c) => s + (c.premium_yearly || 0), 0)
+    const initials = (person.first_name?.[0] || '') + (person.last_name?.[0] || '')
+    return (
+      <div key={person.id}>
+        <div className="flex items-center gap-2 mb-2">
+          <div className={cn(
+            'rounded-full flex items-center justify-center font-bold text-primary bg-primary/10 flex-shrink-0',
+            compact ? 'w-5 h-5 text-[9px]' : 'w-6 h-6 text-[10px]'
+          )}>
+            {initials}
+          </div>
+          <span className={cn('font-bold', compact ? 'text-[11px]' : 'text-sm')}>{person.first_name} {person.last_name}</span>
+          {person._role !== 'primary' && (
+            <span className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+              {ROLE_LABEL[person._role] || 'Mitglied'}
+            </span>
+          )}
+          <span className="ml-auto text-xs font-semibold text-emerald-700">
+            {activeContracts.length} Polic{activeContracts.length === 1 ? 'e' : 'en'} · CHF {premium.toLocaleString('de-CH')}/J
+          </span>
+        </div>
+        <div className={cn('space-y-1.5', !compact && 'ml-8')}>
+          {compact ? (
+            // compact: pill-style für Übersicht
+            pContracts.filter(c => c.status === 'active').map(c => {
+              const today = new Date()
+              const daysLeft = c.end_date ? differenceInDays(parseISO(c.end_date), today) : null
+              return (
+                <div key={c.id} className={cn('flex items-center gap-3 px-3 py-2 rounded-lg border text-sm ml-7',
+                  daysLeft !== null && daysLeft <= 30 ? 'bg-red-50 border-red-200' : 'bg-card border-border'
+                )}>
+                  <Shield className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-[12px] truncate">{c.insurer}</p>
+                    <p className="text-[10px] text-muted-foreground">{getSparteLabel(c.sparte) || c.insurance_type || '–'}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-xs font-semibold text-emerald-700">CHF {(c.premium_yearly || 0).toLocaleString('de-CH')}</p>
+                    {daysLeft !== null && daysLeft <= 30 && (
+                      <p className="text-[10px] text-red-600 font-bold">Ablauf: {daysLeft}d</p>
+                    )}
+                  </div>
+                </div>
+              )
+            })
+          ) : (
+            pContracts.map(c => renderContractCard(c, true))
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-0 pb-10">
@@ -142,12 +280,9 @@ export default function Customer360() {
           <Button variant="ghost" size="sm" onClick={() => navigate('/kunden')} className="flex-shrink-0">
             <ArrowLeft className="w-4 h-4" />
           </Button>
-
-          {/* Avatar */}
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary flex-shrink-0 text-sm">
             {customer.first_name?.[0]}{customer.last_name?.[0]}
           </div>
-
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-bold leading-tight truncate">{customer.first_name} {customer.last_name}</h1>
             <div className="flex items-center gap-2 flex-wrap mt-0.5">
@@ -158,10 +293,13 @@ export default function Customer360() {
               ) : (
                 <span className="text-xs text-muted-foreground">Kein Handlungsbedarf</span>
               )}
+              {familyMembers.length > 0 && (
+                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
+                  Haushalt: {familyMembers.length + 1} Personen
+                </span>
+              )}
             </div>
           </div>
-
-          {/* Quick Actions */}
           <div className="flex gap-1.5 flex-shrink-0">
             {customer.phone && (
               <a href={`tel:${customer.phone}`} className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center hover:bg-green-200 transition-colors">
@@ -243,40 +381,38 @@ export default function Customer360() {
               </CardContent>
             </Card>
 
-            {/* Aktive Verträge Kurzübersicht */}
+            {/* Aktive Policen — per Person */}
             {metrics.active.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Aktive Policen</p>
                   <button onClick={() => setActiveSection('vertraege')} className="text-xs text-primary hover:underline">Alle →</button>
                 </div>
-                <div className="space-y-1.5">
-                  {metrics.active.slice(0, 4).map(c => {
-                    const today = new Date()
-                    const daysLeft = c.end_date ? differenceInDays(parseISO(c.end_date), today) : null
-                    return (
-                      <div key={c.id} className={cn('flex items-center gap-3 px-3 py-2.5 rounded-xl border text-sm',
-                        daysLeft !== null && daysLeft <= 30 ? 'bg-red-50 border-red-200' : 'bg-card border-border'
-                      )}>
-                        <Shield className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold truncate">{c.insurer}</p>
-                          <p className="text-xs text-muted-foreground">{getSparteLabel(c.sparte) || c.insurance_type || '–'}</p>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-xs font-semibold text-emerald-700">CHF {(c.premium_yearly || 0).toLocaleString('de-CH')}</p>
-                          {daysLeft !== null && daysLeft <= 30 && (
-                            <p className="text-[10px] text-red-600 font-bold">Ablauf: {daysLeft}d</p>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
+                <div className="space-y-3">
+                  {contractsByPerson.length > 0
+                    ? contractsByPerson.map(g => renderPersonGroup(g, true))
+                    : metrics.active.slice(0, 4).map(c => {
+                        const today = new Date()
+                        const daysLeft = c.end_date ? differenceInDays(parseISO(c.end_date), today) : null
+                        return (
+                          <div key={c.id} className={cn('flex items-center gap-3 px-3 py-2.5 rounded-xl border text-sm',
+                            daysLeft !== null && daysLeft <= 30 ? 'bg-red-50 border-red-200' : 'bg-card border-border'
+                          )}>
+                            <Shield className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold truncate">{c.insurer}</p>
+                              <p className="text-xs text-muted-foreground">{getSparteLabel(c.sparte) || c.insurance_type || '–'}</p>
+                            </div>
+                            <p className="text-xs font-semibold text-emerald-700 flex-shrink-0">CHF {(c.premium_yearly || 0).toLocaleString('de-CH')}</p>
+                          </div>
+                        )
+                      })
+                  }
                 </div>
               </div>
             )}
 
-            {/* Offene Verkaufschancen Kurzübersicht */}
+            {/* Verkaufschancen Kurzübersicht */}
             {metrics.openVs.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -302,7 +438,7 @@ export default function Customer360() {
               </div>
             )}
 
-            {/* Offene Aufgaben Kurzübersicht */}
+            {/* Aufgaben Kurzübersicht */}
             {metrics.openTasks.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -346,8 +482,6 @@ export default function Customer360() {
               <div className="space-y-2">
                 {verkaufschancen.map(vs => {
                   const ges = vs.gesellschaften || []
-                  const offerten = ges.filter(g => g.praemie_yearly).length
-                  const best = offerten > 0 ? Math.min(...ges.filter(g => g.praemie_yearly).map(g => g.praemie_yearly)) : null
                   return (
                     <button
                       key={vs.id}
@@ -411,63 +545,16 @@ export default function Customer360() {
           </div>
         )}
 
-        {/* ── VERTRÄGE ─────────────────────────────────────────────────── */}
+        {/* ── VERTRÄGE — gruppiert nach Person ─────────────────────────── */}
         {activeSection === 'vertraege' && (
-          <div className="space-y-2">
-            {contracts.length === 0 ? (
+          <div className="space-y-5">
+            {allHouseholdContracts.length === 0 ? (
               <EmptyState icon={Shield} title="Keine Verträge" />
-            ) : contracts.map((c, idx) => {
-              const today = new Date()
-              const daysLeft = c.end_date ? differenceInDays(parseISO(c.end_date), today) : null
-              const isCritical = daysLeft !== null && daysLeft <= 30 && daysLeft >= 0
-              return (
-                <Card key={c.id} className={cn('border-l-4', isCritical ? 'border-l-red-500' : c.status === 'active' ? 'border-l-green-500' : 'border-l-slate-300')}>
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start gap-3 flex-wrap">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <p className="font-bold text-sm">{c.insurer}</p>
-                          <Badge variant="outline" className="text-xs">{getSparteLabel(c.sparte) || c.insurance_type || '–'}</Badge>
-                          {c.policy_number && <span className="text-xs text-muted-foreground">{c.policy_number}</span>}
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 text-xs mt-2">
-                          <div>
-                            <p className="text-muted-foreground">Prämie/Jahr</p>
-                            <p className="font-semibold text-emerald-700">CHF {(c.premium_yearly || 0).toLocaleString('de-CH')}</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Gültig bis</p>
-                            <p className={cn('font-semibold', isCritical ? 'text-red-600' : '')}>
-                              {c.end_date ? new Date(c.end_date).toLocaleDateString('de-CH') : '–'}
-                              {isCritical && ` (${daysLeft}d)`}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <span className={cn('text-[10px] px-2 py-1 rounded-full font-bold',
-                          c.status === 'active' ? 'bg-green-100 text-green-700' :
-                          c.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                          'bg-slate-100 text-slate-600'
-                        )}>
-                          {c.status === 'active' ? 'Aktiv' : c.status === 'cancelled' ? 'Gekündigt' : c.status}
-                        </span>
-                        {isCritical && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs border-red-200 text-red-700 hover:bg-red-50"
-                            onClick={() => { setActiveSection('verkaufschancen'); setShowVsForm(true) }}
-                          >
-                            <Plus className="w-3 h-3 mr-1" /> Ausschreibung
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
+            ) : contractsByPerson.length > 0 ? (
+              contractsByPerson.map(g => renderPersonGroup(g, false))
+            ) : (
+              allHouseholdContracts.map(c => renderContractCard(c, true))
+            )}
           </div>
         )}
 
@@ -488,9 +575,11 @@ export default function Customer360() {
                       }
                       <div className="flex-1 min-w-0">
                         <p className={cn('text-sm font-medium', t.status === 'completed' ? 'line-through text-muted-foreground' : '')}>{t.title}</p>
-                        {t.due_date && <p className={cn('text-xs mt-0.5', overdue ? 'text-red-500 font-semibold' : 'text-muted-foreground')}>
-                          {overdue ? '⚠ Überfällig: ' : 'Fällig: '}{new Date(t.due_date).toLocaleDateString('de-CH')}
-                        </p>}
+                        {t.due_date && (
+                          <p className={cn('text-xs mt-0.5', overdue ? 'text-red-500 font-semibold' : 'text-muted-foreground')}>
+                            {overdue ? '⚠ Überfällig: ' : 'Fällig: '}{new Date(t.due_date).toLocaleDateString('de-CH')}
+                          </p>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
