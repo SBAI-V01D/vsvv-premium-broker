@@ -265,23 +265,148 @@ export default function EnterpriseAudit() {
                 {Object.entries(auditResult.sections).map(([key, data]) => renderSection(key, data))}
               </div>
 
-              {/* Recommendations */}
-              <Card>
+              {/* Nächste Schritte - Überprüfbar */}
+              <Card className="border-blue-200 bg-blue-50">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-bold text-[hsl(var(--text-heading))] flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-blue-600" />
-                    Empfehlungen
+                  <CardTitle className="text-sm font-bold text-blue-800 flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Nächste Schritte - Überprüfbar
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-2">
-                    {auditResult.recommendations.map((rec, i) => (
-                      <li key={i} className="text-sm text-[hsl(var(--text-body))] flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5" />
-                        {rec}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="space-y-3">
+                    {/* Automatisierte Issues */}
+                    {auditResult.critical_issues.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-rose-700 mb-1.5">
+                          1. Kritische Issues beheben (sofort)
+                        </p>
+                        <ul className="space-y-1 ml-2">
+                          {auditResult.critical_issues.map((issue, i) => (
+                            <li key={i} className="text-xs text-rose-700 flex items-start gap-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1 flex-shrink-0" />
+                              {issue}
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="text-[9px] text-rose-600 mt-1.5 ml-2">
+                          ✓ Überprüfbar: Audit erneut durchführen → Issues sollten verschwunden sein
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Warnings */}
+                    {auditResult.warnings && auditResult.warnings.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 mb-1.5">
+                          2. Warnings prüfen (innert 7 Tagen)
+                        </p>
+                        <ul className="space-y-1 ml-2">
+                          {auditResult.warnings.slice(0, 5).map((w, i) => (
+                            <li key={i} className="text-xs text-amber-700 flex items-start gap-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1 flex-shrink-0" />
+                              {w}
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="text-[9px] text-amber-600 mt-1.5 ml-2">
+                          ✓ Überprüfbar: Weekly Audit → Trend sollte sinken
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Manuelle Checklisten */}
+                    {auditResult.sections.design_consistency?.checklist && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-700 mb-1.5">
+                          3. Design-Checkliste (manuell - diese Woche)
+                        </p>
+                        <div className="space-y-1 ml-2">
+                          {Object.entries(auditResult.sections.design_consistency.checklist).map(([item, status]) => (
+                            <div key={item} className="flex items-center gap-2 text-xs">
+                              {status === 'pending' ? (
+                                <div className="w-3.5 h-3.5 rounded border border-blue-300" />
+                              ) : (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                              )}
+                              <span className="text-blue-800">{item.replace(/_/g, ' ')}</span>
+                              <Badge className={STATUS_COLORS[status]}>{status}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[9px] text-blue-600 mt-1.5 ml-2">
+                          ✓ Überprüfbar: Checklist durchgehen → Status ändert sich auf "audited"
+                        </p>
+                      </div>
+                    )}
+
+                    {auditResult.sections.mobile_reality?.checklist && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-700 mb-1.5">
+                          4. Mobile Reality Test (manuell - diese Woche)
+                        </p>
+                        <div className="space-y-1 ml-2">
+                          {Object.entries(auditResult.sections.mobile_reality.checklist).map(([item, status]) => (
+                            <div key={item} className="flex items-center gap-2 text-xs">
+                              {status === 'pending' ? (
+                                <div className="w-3.5 h-3.5 rounded border border-blue-300" />
+                              ) : (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                              )}
+                              <span className="text-blue-800">{item.replace(/_/g, ' ')}</span>
+                              <Badge className={STATUS_COLORS[status]}>{status}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[9px] text-blue-600 mt-1.5 ml-2">
+                          ✓ Überprüfbar: Mobile testen → Checklist abhaken
+                        </p>
+                      </div>
+                    )}
+
+                    {auditResult.sections.workflow_friction?.checklist && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-700 mb-1.5">
+                          5. Workflow-Observation (manuell - laufend)
+                        </p>
+                        <div className="space-y-1 ml-2">
+                          {Object.entries(auditResult.sections.workflow_friction.checklist).map(([item, status]) => (
+                            <div key={item} className="flex items-center gap-2 text-xs">
+                              {status === 'pending' ? (
+                                <div className="w-3.5 h-3.5 rounded border border-blue-300" />
+                              ) : (
+                                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                              )}
+                              <span className="text-blue-800">{item.replace(/_/g, ' ')}</span>
+                              <Badge className={STATUS_COLORS[status]}>{status}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-[9px] text-blue-600 mt-1.5 ml-2">
+                          ✓ Überprüfbar: Broker beobachten → Pain points dokumentieren
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Zusammenfassung */}
+                    <div className="mt-4 p-3 bg-white rounded-lg border border-blue-200">
+                      <p className="text-[10px] font-bold text-blue-800 mb-1">Überprüfbarkeit zusammengefasst:</p>
+                      <ul className="space-y-1 text-[10px] text-blue-700">
+                        <li className="flex items-start gap-1.5">
+                          <CheckCircle2 className="w-3 h-3 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <span><strong>Automatisiert:</strong> Issues werden rot/amber/grün angezeigt · Audit zeigt Fortschritt</span>
+                        </li>
+                        <li className="flex items-start gap-1.5">
+                          <CheckCircle2 className="w-3 h-3 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <span><strong>Manuell:</strong> Checklisten mit Status (pending → audited) · Direkte Rückmeldung</span>
+                        </li>
+                        <li className="flex items-start gap-1.5">
+                          <CheckCircle2 className="w-3 h-3 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <span><strong>Metriken:</strong> Query-Zeiten, Critical Counts, Truth Layer % · Alles messbar</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </>
