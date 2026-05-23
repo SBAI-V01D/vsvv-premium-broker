@@ -60,6 +60,7 @@ const navGroups = [
     label: 'Kunden',
     items: [
       { label: 'Kundenübersicht', icon: Users,    path: '/kunden', color: 'primary' },
+      { label: 'Beratungsdossiers', icon: BookOpen, path: '/beratungsdossier', adminOnly: true, color: 'primary' },
       { label: 'Verträge',        icon: FileText,  path: '/vertraege' },
       { label: 'Anträge',         icon: CheckSquare, path: '/antraege', color: 'primary' },
       { label: 'Dokumente',       icon: BookOpen,   path: '/dokumente' },
@@ -86,7 +87,7 @@ const navGroups = [
   {
     label: 'Enterprise',
     items: [
-      { label: 'Beratungsdossiers',      icon: BookOpen, path: '/beratungsdossier',               adminOnly: true, color: 'primary' },
+
       { label: 'Enterprise Audit Monitor', icon: Activity, path: '/admin-logs',                     adminOnly: true },
       { label: 'Enterprise Control Center', icon: Shield,   path: '/admin/enterprise-control-center', adminOnly: true, color: 'primary' },
       { label: 'AI Review Center',          icon: Brain,    path: '/ai-review',                       adminOnly: true, color: 'primary' },
