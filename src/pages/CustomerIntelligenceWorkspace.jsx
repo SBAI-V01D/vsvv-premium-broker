@@ -501,11 +501,26 @@ export default function CustomerIntelligenceWorkspace() {
   const showBusiness = workspaceMode === 'business';
 
   return (
-    <div className="flex flex-col h-full bg-[hsl(var(--surface-1))]">
+    <div className="flex flex-col h-full bg-background">
 
-      {/* ── Operational Workspace Bar ───────────────── */}
-      <div className="px-6 py-4 border-b border-[hsl(var(--border-subtle))] bg-white shrink-0">
+      {/* ── Operational Workspace Bar — horizontal, ruhig ───────────────── */}
+      <div className="px-6 py-4 border-b border-[hsl(var(--border-subtle))] bg-[hsl(var(--surface-1))] shrink-0">
         <div className="flex items-center gap-6 flex-wrap">
+          {/* Title */}
+          <div className="shrink-0">
+            <h1 className="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight">
+              {workspaceMode === 'private' ? 'Privatkunden' : workspaceMode === 'business' ? 'Unternehmen' : 'Kundenübersicht'}
+            </h1>
+            <p className="text-body-sm text-[hsl(var(--text-muted))] mt-0.5">
+              {workspaceMode === 'private' 
+                ? displayed.filter(c => c.customer_type !== 'business').length + ' Kunden'
+                : workspaceMode === 'business'
+                ? displayed.filter(c => c.customer_type === 'business').length + ' Kunden'
+                : primaryCustomers.length + ' Kunden'}
+            </p>
+          </div>
+
+          {/* Workspace Modes */}
           <div className="flex items-center gap-1 overflow-x-auto pb-1">
             {WORKSPACE_MODES.map(mode => {
               const Icon = mode.icon;
@@ -514,7 +529,7 @@ export default function CustomerIntelligenceWorkspace() {
                   key={mode.id}
                   onClick={() => setWorkspaceMode(mode.id)}
                   className={cn(
-                    'flex items-center gap-2 px-3 py-2 text-[12.5px] font-medium rounded-lg transition-all whitespace-nowrap',
+                    'flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-lg transition-all whitespace-nowrap',
                     workspaceMode === mode.id
                       ? 'bg-[hsl(var(--primary))] text-white shadow-sm'
                       : 'text-[hsl(var(--text-muted))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))]'
@@ -529,6 +544,7 @@ export default function CustomerIntelligenceWorkspace() {
 
           {isCustomerListMode && (
             <>
+              {/* Search */}
               <div className="flex-1 min-w-[280px] max-w-xl">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--text-subtle))]" />
@@ -546,6 +562,7 @@ export default function CustomerIntelligenceWorkspace() {
                 </div>
               </div>
 
+              {/* Actions */}
               <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                 <button onClick={handleExport} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Export">
                   <Download className="w-4 h-4" />
@@ -579,88 +596,128 @@ export default function CustomerIntelligenceWorkspace() {
       </div>
 
       {/* ── Main Content Area — Stable Container with min-height ─────────────────── */}
-      <div className="flex-1 overflow-y-auto min-h-[70vh]">
+      <div className="flex-1 overflow-y-auto bg-[hsl(var(--surface-1))] min-h-[70vh]">
         {isIntelligenceMode ? (
           renderIntelligenceView()
         ) : (
-          <div className="p-6 max-w-6xl mx-auto">
-            {/* Keep-mounted: Beide Listen immer im DOM, nur Visibility wechseln */}
-            {isLoading ? (
-              <LoadingTable rows={8} className="py-12" />
-            ) : (
-              <>
-                {/* Private Customers — always mounted, only visibility changes */}
-                <div hidden={!showPrivate}>
-                  {displayed.filter(c => c.customer_type !== 'business').length === 0 ? (
-                    <EmptyState
-                      type={search ? 'empty' : 'customers'}
-                      title={search ? 'Keine Ergebnisse' : 'Keine Privatkunden'}
-                      description={search ? 'Passen Sie den Suchbegriff an oder ändern Sie das Filter.' : 'Fügen Sie Ihren ersten Privatkunden hinzu, um zu starten.'}
-                      action={
-                        !search && (
-                          <button
-                            onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}
-                            className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
-                          >
-                            <Plus className="w-4 h-4" /> Privatkunde hinzufügen
-                          </button>
-                        )
-                      }
-                      size="lg"
-                    />
-                  ) : (
-                    <CustomerFeed
-                      displayed={displayed.filter(c => c.customer_type !== 'business')}
-                      customers={customers}
-                      segments={segments}
-                      matchedFamilyIds={matchedFamilyIds}
-                      onEdit={(c) => { setEditing(c); setShowForm(true); }}
-                      onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
-                      allContracts={contracts}
-                      allTasks={tasks}
-                      allDocuments={documents}
-                      workspaceMode="private"
-                    />
-                  )}
-                </div>
+          <>
+            {/* Mode Indicator Strip */}
+            <div className="sticky top-0 z-10 px-6 py-3 bg-white/95 backdrop-blur-sm border-b border-[hsl(var(--border-subtle))] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-[13px] font-semibold text-[hsl(var(--text-heading))]">
+                  {workspaceMode === 'private' ? 'Privatkunden' : 'Unternehmen'}
+                </span>
+                <span className="text-[11px] text-[hsl(var(--text-muted))]">
+                  {displayed.length} Kunden{search ? ` · "${search}"` : ''}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value)}
+                  className="text-[11px] border border-[hsl(var(--border-subtle))] rounded-lg px-2.5 py-1.5 bg-[hsl(var(--surface-0))] text-[hsl(var(--text-heading))] focus:outline-none"
+                >
+                  <option value="alpha">A – Z</option>
+                  <option value="updated">Zuletzt aktualisiert</option>
+                  <option value="premium">Höchste Prämie</option>
+                  <option value="new">Neuste zuerst</option>
+                </select>
+              </div>
+            </div>
 
-                {/* Business Customers — always mounted, only visibility changes */}
-                <div hidden={!showBusiness}>
-                  {displayed.filter(c => c.customer_type === 'business').length === 0 ? (
-                    <EmptyState
-                      type={search ? 'empty' : 'customers'}
-                      title={search ? 'Keine Ergebnisse' : 'Keine Firmenkunden'}
-                      description={search ? 'Passen Sie den Suchbegriff an oder ändern Sie das Filter.' : 'Fügen Sie Ihren ersten Firmenkunden hinzu, um zu starten.'}
-                      action={
-                        !search && (
-                          <button
-                            onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}
-                            className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
-                          >
-                            <Plus className="w-4 h-4" /> Firmenkunde hinzufügen
-                          </button>
-                        )
-                      }
-                      size="lg"
-                    />
-                  ) : (
-                    <CustomerFeed
-                      displayed={displayed.filter(c => c.customer_type === 'business')}
-                      customers={customers}
-                      segments={segments}
-                      matchedFamilyIds={matchedFamilyIds}
-                      onEdit={(c) => { setEditing(c); setShowForm(true); }}
-                      onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
-                      allContracts={contracts}
-                      allTasks={tasks}
-                      allDocuments={documents}
-                      workspaceMode="business"
-                    />
-                  )}
-                </div>
-              </>
-            )}
-          </div>
+            <div className="p-6 space-y-6 max-w-6xl mx-auto">
+              {/* Keep-mounted: Beide Listen immer im DOM, nur Visibility wechseln */}
+              {isLoading ? (
+                <LoadingTable rows={8} className="py-12" />
+              ) : (
+                <>
+                  {/* Private Customers — always mounted, only visibility changes */}
+                  <div hidden={!showPrivate}>
+                    {displayed.filter(c => c.customer_type !== 'business').length === 0 ? (
+                      <EmptyState
+                        type={search ? 'empty' : 'customers'}
+                        title={search ? 'Keine Ergebnisse' : 'Keine Privatkunden'}
+                        description={search ? 'Passen Sie den Suchbegriff an oder ändern Sie das Filter.' : 'Fügen Sie Ihren ersten Privatkunden hinzu, um zu starten.'}
+                        action={
+                          !search && (
+                            <button
+                              onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}
+                              className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
+                            >
+                              <Plus className="w-4 h-4" /> Privatkunde hinzufügen
+                            </button>
+                          )
+                        }
+                        size="lg"
+                      />
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <User className="w-3.5 h-3.5 text-slate-400" />
+                          <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Privatkunden</h3>
+                          <span className="text-[10px] text-slate-400">({displayed.filter(c => c.customer_type !== 'business').length})</span>
+                        </div>
+                        <CustomerFeed
+                          displayed={displayed.filter(c => c.customer_type !== 'business')}
+                          customers={customers}
+                          segments={segments}
+                          matchedFamilyIds={matchedFamilyIds}
+                          onEdit={(c) => { setEditing(c); setShowForm(true); }}
+                          onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
+                          allContracts={contracts}
+                          allTasks={tasks}
+                          allDocuments={documents}
+                          workspaceMode="private"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Business Customers — always mounted, only visibility changes */}
+                  <div hidden={!showBusiness}>
+                    {displayed.filter(c => c.customer_type === 'business').length === 0 ? (
+                      <EmptyState
+                        type={search ? 'empty' : 'customers'}
+                        title={search ? 'Keine Ergebnisse' : 'Keine Firmenkunden'}
+                        description={search ? 'Passen Sie den Suchbegriff an oder ändern Sie das Filter.' : 'Fügen Sie Ihren ersten Firmenkunden hinzu, um zu starten.'}
+                        action={
+                          !search && (
+                            <button
+                              onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}
+                              className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
+                            >
+                              <Plus className="w-4 h-4" /> Firmenkunde hinzufügen
+                            </button>
+                          )
+                        }
+                        size="lg"
+                      />
+                    ) : (
+                      <div className="space-y-3 pt-4 border-t border-border/40">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                          <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Firmenkunden</h3>
+                          <span className="text-[10px] text-slate-400">({displayed.filter(c => c.customer_type === 'business').length})</span>
+                        </div>
+                        <CustomerFeed
+                          displayed={displayed.filter(c => c.customer_type === 'business')}
+                          customers={customers}
+                          segments={segments}
+                          matchedFamilyIds={matchedFamilyIds}
+                          onEdit={(c) => { setEditing(c); setShowForm(true); }}
+                          onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
+                          allContracts={contracts}
+                          allTasks={tasks}
+                          allDocuments={documents}
+                          workspaceMode="business"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </>
         )}
       </div>
 
