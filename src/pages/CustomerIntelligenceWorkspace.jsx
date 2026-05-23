@@ -273,10 +273,8 @@ export default function CustomerIntelligenceWorkspace() {
   const urlView = urlParams.get('view');
 
   useEffect(() => {
-    if (urlView) {
-      if (['private', 'business', 'vip', 'birthdays'].includes(urlView)) {
-        setWorkspaceMode(urlView);
-      }
+    if (urlView && ['private', 'business'].includes(urlView)) {
+      setWorkspaceMode(urlView);
     }
   }, [urlView]);
 
@@ -350,10 +348,10 @@ export default function CustomerIntelligenceWorkspace() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (workspaceMode === 'kundenaktionen') {
-      params.delete('view');
-    } else {
+    if (['private', 'business'].includes(workspaceMode)) {
       params.set('view', workspaceMode);
+    } else {
+      params.delete('view');
     }
     const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
     window.history.replaceState({}, '', newUrl);
