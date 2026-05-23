@@ -668,62 +668,123 @@ export default function KiAnalyseVerbesserungen() {
               <div className="space-y-3">
                 <h4 className="text-sm font-bold text-slate-700">Messergebnisse</h4>
                 
-                {autoMeasureResult.measurements ? (
-                  <>
-                    {autoMeasureResult.measurements.performance && (
+                {autoMeasureResult.measurements && Object.keys(autoMeasureResult.measurements).length > 0 ? (
+                  <div className="space-y-2">
+                    {/* Performance-Metriken */}
+                    {autoMeasureResult.measurements.customer_query_time_ms && (
                       <div className="p-3 bg-slate-50 rounded-lg">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-semibold text-slate-600">Performance</span>
-                          <Badge className={autoMeasureResult.measurements.performance.success ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}>
-                            {autoMeasureResult.measurements.performance.success ? '✓ Ziel erreicht' : '⚠ Ziel verfehlt'}
+                          <span className="text-xs font-semibold text-slate-600">Query-Performance</span>
+                          <Badge className={autoMeasureResult.success ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}>
+                            {autoMeasureResult.success ? '✓ Ziel erreicht' : '⚠ Ziel verfehlt'}
                           </Badge>
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-center">
                           <div>
                             <p className="text-[10px] text-slate-500">Vorher</p>
-                            <p className="text-sm font-bold text-slate-700">{autoMeasureResult.measurements.performance.before_ms} ms</p>
+                            <p className="text-sm font-bold text-slate-700">{autoMeasureResult.actual_impact?.target_metrics?.before_ms || '-'} ms</p>
                           </div>
                           <div>
                             <p className="text-[10px] text-slate-500">Nachher</p>
-                            <p className="text-sm font-bold text-slate-700">{autoMeasureResult.measurements.performance.after_ms} ms</p>
+                            <p className="text-sm font-bold text-slate-700">{autoMeasureResult.measurements.customer_query_time_ms} ms</p>
                           </div>
                           <div>
-                            <p className="text-[10px] text-slate-500">Verbesserung</p>
-                            <p className={cn('text-sm font-bold', autoMeasureResult.measurements.performance.improvement_percent >= 0 ? 'text-emerald-600' : 'text-amber-600')}>
-                              {autoMeasureResult.measurements.performance.improvement_percent > 0 ? '+' : ''}{autoMeasureResult.measurements.performance.improvement_percent.toFixed(1)}%
-                            </p>
+                            <p className="text-[10px] text-slate-500">Ziel</p>
+                            <p className="text-sm font-bold text-slate-700">{autoMeasureResult.actual_impact?.target_metrics?.target_ms || '-'} ms</p>
                           </div>
                         </div>
                       </div>
                     )}
+                    
+                    {autoMeasureResult.measurements.contract_query_time_ms && (
+                      <div className="p-3 bg-slate-50 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-slate-600">Contract Query</span>
+                          <span className="text-xs font-bold text-slate-700">{autoMeasureResult.measurements.contract_query_time_ms} ms</span>
+                        </div>
+                      </div>
+                    )}
 
-                    {autoMeasureResult.measurements.data_quality && (
+                    {/* Datenqualität-Metriken */}
+                    {autoMeasureResult.measurements.advisor_coverage_percent !== undefined && (
                       <div className="p-3 bg-slate-50 rounded-lg">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-semibold text-slate-600">Datenqualität</span>
-                          <span className="text-xs font-bold text-slate-700">{autoMeasureResult.measurements.data_quality.completeness_score}% vollständig</span>
+                          <span className="text-xs font-bold text-slate-700">Ø {(autoMeasureResult.measurements.advisor_coverage_percent + autoMeasureResult.measurements.mandate_valid_percent + autoMeasureResult.measurements.email_coverage_percent) / 3 | 0}%</span>
                         </div>
-                        <div className="w-full bg-slate-200 rounded-full h-2">
-                          <div 
-                            className="bg-blue-600 h-2 rounded-full transition-all"
-                            style={{ width: `${autoMeasureResult.measurements.data_quality.completeness_score}%` }}
-                          />
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-slate-600">Advisor Coverage</span>
+                            <span className="font-bold text-slate-700">{autoMeasureResult.measurements.advisor_coverage_percent}%</span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-1.5">
+                            <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${autoMeasureResult.measurements.advisor_coverage_percent}%` }} />
+                          </div>
+                          
+                          <div className="flex justify-between text-xs">
+                            <span className="text-slate-600">Mandate Valid</span>
+                            <span className="font-bold text-slate-700">{autoMeasureResult.measurements.mandate_valid_percent}%</span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-1.5">
+                            <div className="bg-emerald-600 h-1.5 rounded-full" style={{ width: `${autoMeasureResult.measurements.mandate_valid_percent}%` }} />
+                          </div>
+                          
+                          <div className="flex justify-between text-xs">
+                            <span className="text-slate-600">Email Coverage</span>
+                            <span className="font-bold text-slate-700">{autoMeasureResult.measurements.email_coverage_percent}%</span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-1.5">
+                            <div className="bg-violet-600 h-1.5 rounded-full" style={{ width: `${autoMeasureResult.measurements.email_coverage_percent}%` }} />
+                          </div>
                         </div>
                       </div>
                     )}
 
-                    {autoMeasureResult.measurements.process_efficiency && (
+                    {/* Workflow-Metriken */}
+                    {autoMeasureResult.measurements.task_completion_rate_percent !== undefined && (
                       <div className="p-3 bg-slate-50 rounded-lg">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-semibold text-slate-600">Prozess-Effizienz</span>
-                          <span className="text-xs font-bold text-slate-700">{autoMeasureResult.measurements.process_efficiency.avg_completion_days} Tage (Ø)</span>
+                          <span className="text-xs font-semibold text-slate-600">Workflow-Effizienz</span>
+                          <span className="text-xs font-bold text-slate-700">{autoMeasureResult.measurements.task_completion_rate_percent}% Completion</span>
                         </div>
-                        <p className="text-xs text-slate-500">
-                          {autoMeasureResult.measurements.process_efficiency.completed_tasks} von {autoMeasureResult.measurements.process_efficiency.total_tasks} Tasks erledigt
-                        </p>
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div>
+                            <p className="text-[10px] text-slate-500">Open</p>
+                            <p className="text-sm font-bold text-slate-700">{autoMeasureResult.measurements.open_task_count}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-500">Overdue</p>
+                            <p className={cn('text-sm font-bold', autoMeasureResult.measurements.overdue_task_count > 0 ? 'text-rose-600' : 'text-emerald-600')}>
+                              {autoMeasureResult.measurements.overdue_task_count}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-slate-500">Completed</p>
+                            <p className="text-sm font-bold text-emerald-600">{autoMeasureResult.measurements.task_completion_rate_percent}%</p>
+                          </div>
+                        </div>
                       </div>
                     )}
-                  </>
+
+                    {/* Fallback: Zeige alle Metriken als Key-Value */}
+                    {!autoMeasureResult.measurements.customer_query_time_ms && 
+                     !autoMeasureResult.measurements.advisor_coverage_percent && 
+                     !autoMeasureResult.measurements.task_completion_rate_percent && (
+                      <div className="p-3 bg-slate-50 rounded-lg">
+                        <p className="text-xs font-semibold text-slate-600 mb-2">Gemessene Metriken</p>
+                        <div className="space-y-1">
+                          {Object.entries(autoMeasureResult.measurements).map(([key, value]) => (
+                            <div key={key} className="flex justify-between text-xs">
+                              <span className="text-slate-600 font-mono">{key}</span>
+                              <span className="font-bold text-slate-700">
+                                {typeof value === 'number' ? value.toFixed(1) : String(value)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-sm text-slate-600">Keine detaillierten Messdaten verfügbar</p>
                 )}
