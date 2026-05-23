@@ -43,6 +43,7 @@ import AdvisoryDossier from './pages/AdvisoryDossier'
 import AdminEnterpriseControlCenter from './pages/AdminEnterpriseControlCenter'
 import AiReviewCenter from './pages/AiReviewCenter'
 import BrokerReporting from './pages/BrokerReporting'
+import EnterpriseAudit from './pages/EnterpriseAudit'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -135,6 +136,7 @@ const AuthenticatedApp = () => {
         <Route path="/admin/enterprise-control-center" element={<AdminEnterpriseControlCenter />} />
         <Route path="/ai-review" element={<AiReviewCenter />} />
         <Route path="/reporting" element={<BrokerReporting />} />
+        <Route path="/admin/enterprise-audit" element={<EnterpriseAudit />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
