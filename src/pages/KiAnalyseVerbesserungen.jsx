@@ -67,6 +67,8 @@ export default function KiAnalyseVerbesserungen() {
   const [improvementsTab, setImprovementsTab] = useState('active'); // 'active' | 'archived'
   const [showAutoMeasure, setShowAutoMeasure] = useState(false);
   const [measuringId, setMeasuringId] = useState(null);
+  const [autoMeasureResult, setAutoMeasureResult] = useState(null);
+  const [showResultDialog, setShowResultDialog] = useState(false);
 
   // Analyse
   const [reviewResult, setReviewResult] = useState(null);
@@ -201,22 +203,8 @@ export default function KiAnalyseVerbesserungen() {
     },
     onSuccess: (data) => {
       refetchImprovements();
-      if (data.learned_from_success && data.new_suggestions?.length > 0) {
-        toast.success(`Impact gemessen! ${data.new_suggestions.length} neue Vorschläge generiert`, {
-          duration: 5000,
-          icon: '🎯',
-        });
-      } else if (data.success) {
-        toast.success('Impact automatisch gemessen & verifiziert!', {
-          duration: 3000,
-          icon: '✅',
-        });
-      } else {
-        toast.info('Impact gemessen, aber Ziel nicht erreicht', {
-          duration: 4000,
-          icon: '📊',
-        });
-      }
+      setAutoMeasureResult(data);
+      setShowResultDialog(true);
     },
   });
 
@@ -643,6 +631,153 @@ export default function KiAnalyseVerbesserungen() {
               </>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Auto-Measure Result Dialog */}
+      <Dialog open={showResultDialog} onOpenChange={setShowResultDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-violet-600" />
+              Automatische Impact-Messung
+            </DialogTitle>
+          </DialogHeader>
+          {autoMeasureResult && (
+            <div className="space-y-4">
+              {/* Header Status */}
+              <div className={cn('p-4 rounded-xl border-2', autoMeasureResult.success ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200')}>
+                <div className="flex items-center gap-3 mb-2">
+                  {autoMeasureResult.success ? (
+                    <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                  ) : (
+                    <Activity className="w-6 h-6 text-amber-600" />
+                  )}
+                  <div>
+                    <p className={cn('text-sm font-bold', autoMeasureResult.success ? 'text-emerald-800' : 'text-amber-800')}>
+                      {autoMeasureResult.success ? 'Ziel erreicht!' : 'Ziel (noch) nicht erreicht'}
+                    </p>
+                    <p className={cn('text-xs', autoMeasureResult.success ? 'text-emerald-600' : 'text-amber-600')}>
+                      {autoMeasureResult.measurements?.performance ? 'Performance-Messung durchgeführt' : 'Automatische Messung abgeschlossen'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Messergebnisse */}
+              {autoMeasureResult.measurements && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold text-slate-700">Messergebnisse</h4>
+                  
+                  {autoMeasureResult.measurements.performance && (
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-slate-600">Performance</span>
+                        <Badge className={autoMeasureResult.measurements.performance.success ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}>
+                          {autoMeasureResult.measurements.performance.success ? '✓ Ziel erreicht' : '⚠ Ziel verfehlt'}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <p className="text-[10px] text-slate-500">Vorher</p>
+                          <p className="text-sm font-bold text-slate-700">{autoMeasureResult.measurements.performance.before_ms} ms</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-500">Nachher</p>
+                          <p className="text-sm font-bold text-slate-700">{autoMeasureResult.measurements.performance.after_ms} ms</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-500">Verbesserung</p>
+                          <p className={cn('text-sm font-bold', autoMeasureResult.measurements.performance.improvement_percent >= 0 ? 'text-emerald-600' : 'text-amber-600')}>
+                            {autoMeasureResult.measurements.performance.improvement_percent > 0 ? '+' : ''}{autoMeasureResult.measurements.performance.improvement_percent.toFixed(1)}%
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {autoMeasureResult.measurements.data_quality && (
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-slate-600">Datenqualität</span>
+                        <span className="text-xs font-bold text-slate-700">{autoMeasureResult.measurements.data_quality.completeness_score}% vollständig</span>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full transition-all"
+                          style={{ width: `${autoMeasureResult.measurements.data_quality.completeness_score}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {autoMeasureResult.measurements.process_efficiency && (
+                    <div className="p-3 bg-slate-50 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-slate-600">Prozess-Effizienz</span>
+                        <span className="text-xs font-bold text-slate-700">{autoMeasureResult.measurements.process_efficiency.avg_completion_days} Tage (Ø)</span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        {autoMeasureResult.measurements.process_efficiency.completed_tasks} von {autoMeasureResult.measurements.process_efficiency.total_tasks} Tasks erledigt
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Optimierungsvorschläge */}
+              {autoMeasureResult.optimization_suggestions && autoMeasureResult.optimization_suggestions.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-violet-600" />
+                    Optimierungsvorschläge
+                  </h4>
+                  <div className="space-y-2">
+                    {autoMeasureResult.optimization_suggestions.map((suggestion, idx) => (
+                      <div key={idx} className="p-3 bg-violet-50 border border-violet-200 rounded-lg">
+                        <p className="text-xs font-semibold text-violet-700 mb-1">{suggestion.title}</p>
+                        <p className="text-xs text-violet-800">{suggestion.description}</p>
+                        {suggestion.expected_improvement && (
+                          <p className="text-[10px] text-violet-600 mt-1">
+                            Erwartete Verbesserung: {suggestion.expected_improvement}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Neue Vorschläge aus Erfolg gelernt */}
+              {autoMeasureResult.learned_from_success && autoMeasureResult.new_suggestions && autoMeasureResult.new_suggestions.length > 0 && (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Brain className="w-4 h-4 text-emerald-600" />
+                    <p className="text-sm font-bold text-emerald-800">
+                      {autoMeasureResult.new_suggestions.length} neue Vorschläge generiert
+                    </p>
+                  </div>
+                  <p className="text-xs text-emerald-600 mb-3">
+                    Die KI hat aus diesem Erfolg gelernt und automatische neue Verbesserungen vorgeschlagen:
+                  </p>
+                  <ul className="space-y-1">
+                    {autoMeasureResult.new_suggestions.slice(0, 3).map((s, idx) => (
+                      <li key={idx} className="text-xs text-emerald-700 flex items-start gap-1.5">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        {s.title}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-2">
+                <Button onClick={() => setShowResultDialog(false)} className="bg-slate-800">
+                  Schliessen
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
