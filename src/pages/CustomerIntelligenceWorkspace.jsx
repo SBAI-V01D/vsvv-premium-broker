@@ -364,7 +364,7 @@ export default function CustomerIntelligenceWorkspace() {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--critical-hsl))]" />
-                  <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
+                  <h3 className="text-sm font-bold text-[hsl(var(--primary))]">
                     Mandat / Berater
                   </h3>
                   <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
@@ -413,7 +413,7 @@ export default function CustomerIntelligenceWorkspace() {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Users className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
-                  <h3 className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">
+                  <h3 className="text-sm font-bold text-[hsl(var(--primary))]">
                     Haushalte
                   </h3>
                   <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
