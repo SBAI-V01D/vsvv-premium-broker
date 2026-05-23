@@ -11,6 +11,7 @@ import {
   AlertTriangle, Loader2, XCircle, TrendingUp, Target, Calendar, ChevronRight,
   Heart
 } from 'lucide-react';
+import BirthdaySection from '@/components/customers/BirthdaySection';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
@@ -26,7 +27,6 @@ import { cn } from '@/lib/utils';
 // Intelligence Components
 import OperationsIntelligence from '@/components/intelligence/OperationsIntelligence';
 import PortfolioDashboard from '@/components/intelligence/PortfolioDashboard';
-import BirthdaySection from '@/components/customers/BirthdaySection';
 import RenewalsSection from '@/components/customers/RenewalsSection';
 import CancellationsSection from '@/components/customers/CancellationsSection';
 import HouseholdIntelligenceSection from '@/components/customers/HouseholdIntelligenceSection';
@@ -101,7 +101,6 @@ const WORKSPACE_MODES = [
   { id: 'kundenaktionen', label: 'Kundenübersicht', icon: Users },
   { id: 'private', label: 'Privatkunden', icon: User },
   { id: 'business', label: 'Unternehmen', icon: Building2 },
-  { id: 'birthdays', label: 'Geburtstage', icon: Calendar },
 ];
 
 // ── Grouped customer feed ─────────────────────────────────────────────────
@@ -285,7 +284,7 @@ export default function CustomerIntelligenceWorkspace() {
     if (workspaceMode === 'private') return primaryCustomers.filter(c => c.customer_type !== 'business');
     if (workspaceMode === 'business') return primaryCustomers.filter(c => c.customer_type === 'business');
     if (workspaceMode === 'vip') return primaryCustomers.filter(c => (c.total_premium || 0) >= 5000);
-    if (workspaceMode === 'birthdays') return primaryCustomers; // Geburtstage zeigen alle an
+    if (workspaceMode === 'birthdays') return primaryCustomers;
     return primaryCustomers;
   }, [primaryCustomers, workspaceMode]);
 
@@ -360,21 +359,7 @@ export default function CustomerIntelligenceWorkspace() {
     window.history.replaceState({}, '', newUrl);
   }, [workspaceMode]);
 
-  // Geburtstage-Filter für den Geburtstage-Modus
-  const birthdayCustomers = useMemo(() => {
-    if (workspaceMode !== 'birthdays') return [];
-    const today = new Date();
-    const currentMonth = today.getMonth();
-    return primaryCustomers.filter(c => {
-      if (!c.birthdate) return false;
-      const birthDate = new Date(c.birthdate);
-      return birthDate.getMonth() === currentMonth;
-    }).sort((a, b) => {
-      const dateA = new Date(a.birthdate).getDate();
-      const dateB = new Date(b.birthdate).getDate();
-      return dateA - dateB;
-    });
-  }, [primaryCustomers, workspaceMode]);
+
 
   const renderIntelligenceView = () => {
     if (workspaceMode === 'kundenaktionen') {
@@ -411,13 +396,21 @@ export default function CustomerIntelligenceWorkspace() {
             </div>
           </div>
 
+          <NewCustomersSection searchQuery={search} />
           <RenewalsSection contracts={contracts} customers={customers} verkaufschancen={verkaufschancen} />
           <CancellationsSection contracts={contracts} customers={customers} />
-          <NewCustomersSection searchQuery={search} />
-          <BirthdaySection customers={primaryCustomers} />
 
-          {/* Combined layout: Mandate/Advisor issues and Household side by side */}
+          {/* Combined layout: Haushalt first, then Mandate/Advisor issues */}
           <div className="grid gap-4 md:grid-cols-2">
+            {/* Haushalte */}
+            <div>
+              <HouseholdIntelligenceSection
+                householdCustomers={householdCustomers}
+                customers={customers}
+                contracts={contracts}
+              />
+            </div>
+
             {/* Kunden ohne Mandat oder Berater */}
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -476,21 +469,23 @@ export default function CustomerIntelligenceWorkspace() {
                 </div>
               )}
             </div>
-
-            {/* Haushalte */}
-            <div>
-              <HouseholdIntelligenceSection
-                householdCustomers={householdCustomers}
-                customers={customers}
-                contracts={contracts}
-              />
-            </div>
           </div>
         </div>
       );
     }
     
     if (workspaceMode === 'birthdays') {
+      const today = new Date();
+      const currentMonth = today.getMonth();
+      const birthdayCustomers = primaryCustomers.filter(c => {
+        if (!c.birthdate) return false;
+        const birthDate = new Date(c.birthdate);
+        return birthDate.getMonth() === currentMonth;
+      }).sort((a, b) => {
+        const dateA = new Date(a.birthdate).getDate();
+        const dateB = new Date(b.birthdate).getDate();
+        return dateA - dateB;
+      });
       return (
         <div className="p-6 max-w-[1600px] mx-auto">
           <BirthdaySection customers={birthdayCustomers} />

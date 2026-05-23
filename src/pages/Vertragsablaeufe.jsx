@@ -375,13 +375,13 @@ export default function Vertragsablaeufe() {
   }), [actionableItems])
 
   const groups = {
-    expired:         filtered.filter(i => i.topAction?.severity === 'expired'),
-    critical:        filtered.filter(i => i.topAction?.severity === 'critical'),
-    urgent:          filtered.filter(i => i.topAction?.severity === 'urgent'),
-    warning:         filtered.filter(i => i.topAction?.severity === 'warning'),
-    process:         filtered.filter(i => i.topAction?.severity === 'process'),
-    early:           filtered.filter(i => i.topAction?.severity === 'early'),
     review_required: filtered.filter(i => i.topAction?.severity === 'review_required'),
+    early:           filtered.filter(i => i.topAction?.severity === 'early'),       // 150-180 Tage
+    process:         filtered.filter(i => i.topAction?.severity === 'process'),     // 90-150 Tage
+    warning:         filtered.filter(i => i.topAction?.severity === 'warning'),     // 60-90 Tage
+    urgent:          filtered.filter(i => i.topAction?.severity === 'urgent'),      // 30-60 Tage
+    critical:        filtered.filter(i => i.topAction?.severity === 'critical'),    // <30 Tage
+    expired:         filtered.filter(i => i.topAction?.severity === 'expired'),     // Abgelaufen
   }
 
   const handleCreateVs = (contract) => {
@@ -417,13 +417,13 @@ export default function Vertragsablaeufe() {
   const hasFilters = search || filterSeverity !== 'all' || filterProcessStatus !== 'all'
 
   const GROUP_LABELS = {
-    expired:         'Bereits abgelaufen — sofort handeln',
-    critical:        'Kritisch — innerhalb 30 Tage',
-    urgent:          'Dringend — 30 bis 60 Tage',
-    warning:         'Bald fällig — 60 bis 90 Tage',
-    process:         'In Vorbereitung — 90 bis 150 Tage',
-    early:           'Früh — 150 bis 180 Tage',
     review_required: '⚠ Manuelle Datumsprüfung ausstehend — Platzhalter 9999-12-31',
+    early:           'Früh — 150 bis 180 Tage',
+    process:         'In Vorbereitung — 90 bis 150 Tage',
+    warning:         'Bald fällig — 60 bis 90 Tage',
+    urgent:          'Dringend — 30 bis 60 Tage',
+    critical:        'Kritisch — innerhalb 30 Tage',
+    expired:         'Bereits abgelaufen — sofort handeln',
   }
 
   const renderGroup = (key) => {
@@ -549,7 +549,7 @@ export default function Vertragsablaeufe() {
         <div className="rounded-xl border border-border overflow-hidden bg-card shadow-xs overflow-x-auto">
           <TableHeader />
           <div>
-            {['review_required', 'expired', 'critical', 'urgent', 'warning', 'process', 'early'].map(renderGroup)}
+            {['review_required', 'early', 'process', 'warning', 'urgent', 'critical', 'expired'].map(renderGroup)}
           </div>
         </div>
       )}

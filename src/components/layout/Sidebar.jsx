@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
   ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink,
   Target, User, Briefcase, TrendingUp, Lock, Menu, BookOpen, Activity,
-  Building2, AlertCircle, Brain, BarChart2
+  Building2, AlertCircle, Brain, BarChart2, Calendar
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -63,6 +63,7 @@ const navGroups = [
       { label: 'Kundenübersicht',  icon: Users,      path: '/kunden',           color: 'primary' },
       { label: 'Verkaufschancen',  icon: TrendingUp, path: '/verkaufschancen',  color: 'primary' },
       { label: 'Beratungsdossiers',icon: BookOpen,   path: '/beratungsdossier', color: 'primary' },
+      { label: 'Geburtstage',      icon: Calendar,   path: '/kunden?view=birthdays', color: 'primary' },
     ],
   },
   {
