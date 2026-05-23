@@ -364,15 +364,15 @@ export default function Vertragsablaeufe() {
   }), [actionableItems, filterSeverity, filterProcessStatus, search])
 
   const stats = useMemo(() => ({
-    expired:         actionableItems.filter(i => i.topAction?.severity === 'expired').length,
-    critical:        actionableItems.filter(i => i.topAction?.severity === 'critical').length,
-    urgent:          actionableItems.filter(i => i.topAction?.severity === 'urgent').length,
-    warning:         actionableItems.filter(i => i.topAction?.severity === 'warning').length,
-    process:         actionableItems.filter(i => i.topAction?.severity === 'process').length,
-    early:           actionableItems.filter(i => i.topAction?.severity === 'early').length,
-    review_required: actionableItems.filter(i => i.topAction?.severity === 'review_required').length,
-    totalPremium:    actionableItems.filter(i => i.topAction?.severity !== 'review_required').reduce((s, i) => s + (i.contract.premium_yearly || 0), 0),
-  }), [actionableItems])
+    expired:         filtered.filter(i => i.topAction?.severity === 'expired').length,
+    critical:        filtered.filter(i => i.topAction?.severity === 'critical').length,
+    urgent:          filtered.filter(i => i.topAction?.severity === 'urgent').length,
+    warning:         filtered.filter(i => i.topAction?.severity === 'warning').length,
+    process:         filtered.filter(i => i.topAction?.severity === 'process').length,
+    early:           filtered.filter(i => i.topAction?.severity === 'early').length,
+    review_required: filtered.filter(i => i.topAction?.severity === 'review_required').length,
+    totalPremium:    filtered.filter(i => i.topAction?.severity !== 'review_required').reduce((s, i) => s + (i.contract.premium_yearly || 0), 0),
+  }), [filtered, actionableItems])
 
   const groups = {
     review_required: filtered.filter(i => i.topAction?.severity === 'review_required'),
