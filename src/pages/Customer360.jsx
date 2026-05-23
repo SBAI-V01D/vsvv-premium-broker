@@ -147,8 +147,8 @@ export default function Customer360() {
       .filter(v => !['gewonnen', 'verloren'].includes(v.status))
       .map(v => v.sparte).filter(Boolean))
     const recommended = customer.customer_type === 'business'
-      ? ['haftpflicht_privat', 'bvg', 'uvg', 'ktg']
-      : ['kvg', 'haftpflicht_privat', 'hausrat']
+      ? ['haftpflicht_privat', 'bvg', 'uvg', 'ktg', 'cyber', 'rechtsschutz']
+      : ['kvg', 'vvg_krankenzusatz', 'haftpflicht_privat', 'hausrat', 'rechtsschutz', 'leben', 'reise']
     return recommended.filter(s => !coveredSparten.has(s) && !openVsSparten.has(s))
   }, [customer, allHouseholdContracts, verkaufschancen])
 
