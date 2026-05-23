@@ -371,6 +371,7 @@ export default function BrokerReporting() {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [activeTemplate, setActiveTemplate] = useState(null);
   const [postFilterFn, setPostFilterFn] = useState(null);
+  const [showAllRows, setShowAllRows] = useState(false);
 
   const { data: currentUser } = useQuery({ queryKey: ['me'], queryFn: () => base44.auth.me() });
   const isAdmin  = currentUser?.role === 'admin';
@@ -412,6 +413,7 @@ export default function BrokerReporting() {
   const runPreview = async () => {
     if (!entityDef) return;
     setLoadingPreview(true);
+    setShowAllRows(false);
     try {
       let rows = await entityDef.fetch();
       // Apply filters
@@ -426,6 +428,26 @@ export default function BrokerReporting() {
       if (postFilterFn) rows = postFilterFn(rows);
       setTotalCount(rows.length);
       setPreviewRows(rows.slice(0, 10));
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const showAllPreview = async () => {
+    if (!entityDef || totalCount === null) return;
+    setLoadingPreview(true);
+    try {
+      let rows = await entityDef.fetch();
+      rows = rows.filter(row => {
+        const results = filters
+          .filter(f => f.field && f.value)
+          .map(f => applyFilter(row, f));
+        if (results.length === 0) return true;
+        return logic === 'AND' ? results.every(Boolean) : results.some(Boolean);
+      });
+      if (postFilterFn) rows = postFilterFn(rows);
+      setPreviewRows(rows); // Alle anzeigen
+      setShowAllRows(true);
     } finally {
       setLoadingPreview(false);
     }
@@ -735,10 +757,16 @@ export default function BrokerReporting() {
               <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                   <p className="text-xs font-semibold text-slate-600">
-                    Vorschau — erste {previewRows.length} von {totalCount} Datensätzen
+                    {showAllRows
+                      ? `Alle ${totalCount} Datensätze`
+                      : `Vorschau — erste ${previewRows.length} von ${totalCount} Datensätzen`
+                    }
                   </p>
-                  {totalCount > 10 && (
-                    <span className="text-[11px] text-slate-400">+{totalCount - 10} weitere im Export</span>
+                  {!showAllRows && totalCount > 10 && (
+                    <Button variant="outline" size="sm" onClick={showAllPreview} disabled={loadingPreview} className="gap-1.5 text-xs">
+                      {loadingPreview ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Table2 className="w-3.5 h-3.5" />}
+                      Alle {totalCount} anzeigen
+                    </Button>
                   )}
                 </div>
                 {previewRows.length === 0 ? (

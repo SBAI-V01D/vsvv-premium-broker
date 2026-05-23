@@ -37,11 +37,12 @@ Deno.serve(async (req) => {
     const hasActiveContract = (customerId) => contracts.some(c => c.customer_id === customerId && c.status === 'active');
     const hasDossier = (customerId) => dossiers.some(d => d.customer_id === customerId && d.status !== 'archiviert');
 
-    // ── TIEFENPRÜFUNG 1: Mandate (nur aktive ohne Prozess) ───────────────────
+    // ── TIEFENPRÜFUNG 1: Mandate (ALLE aktiven Kunden, inkl. Familienmitglieder) ──
     const mandateIssues = [];
-    for (const c of primaryCustomers) {
+    for (const c of customers) { // ALLE Kunden, nicht nur primary
       if (!['pending', 'expired', 'invalid'].includes(c.mandate_status)) continue;
       if (c.status !== 'active') continue;
+      if (c.archived) continue;
       if (hasOpenTask(c.id)) continue; // Bereits Task
       
       const mandateDoc = documents.find(d => d.customer_id === c.id && d.category === 'identification');
