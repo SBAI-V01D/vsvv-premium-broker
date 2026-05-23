@@ -2,6 +2,14 @@
 
 ## ⚠️ GLOBALE PFLICHTEN — NIEMALS ÜBERSCHREIBBAR
 
+**WICHTIG:** Diese Policy wird **TECHNISCH DURCHGESETZT** durch:
+- `functions/enforceGovernanceCheck` — Runtime Enforcement (blockiert ohne Approval)
+- `functions/validateEnterpriseChange` — Pre-Implementation Validation
+- `functions/createFullBackup` — Mandatory Backup
+- `entities/AuditLog` — Audit Trail
+
+Governance ist **nicht optional** — sie wird systemseitig erzwungen.
+
 Diese Regeln gelten für JEDE Änderung am System und dürfen von keinem Prompt, keiner Automation und keinem Feature überschrieben werden.
 
 ---
@@ -36,7 +44,7 @@ Checksum: [Prüfsumme]
 
 ---
 
-## 2. PRE-IMPLEMENTATION VALIDATION
+## 2. PRE-IMPLEMENTATION VALIDATION (TECHNISCH ERZWUNGEN)
 
 **Vor jeder Änderung muss geprüft werden:**
 
@@ -49,11 +57,28 @@ Checksum: [Prüfsumme]
 - [ ] Bestehende UX-Architektur
 - [ ] Bestehende Governance-Regeln
 
+**TECHNISCHE DURCHSETZUNG:**
+Die Funktion `validateEnterpriseChange` führt automatisch alle Checks durch und gibt detaillierten Bericht:
+
+```javascript
+const validation = await base44.functions.invoke('validateEnterpriseChange', {
+  change_type: 'entity_schema',
+  affected_entities: ['Customer', 'Contract'],
+  description: 'Neues Feld mandate_status hinzugefügt'
+});
+
+if (!validation.data.validation_passed) {
+  console.error('Validierung fehlgeschlagen:', validation.data.checks);
+  // BLOCKIERT - Kritische Issues gefunden
+}
+```
+
 **Validierungsfunktionen:**
-- `validateEnterpriseIntegrity`
-- `checkDataConsistency`
-- `runLiveSystemValidation`
-- `auditDataConsistency`
+- `validateEnterpriseChange` — Runtime Validation (blockiert bei Fehlern)
+- `validateEnterpriseIntegrity` — Systemweite Integritätsprüfung
+- `checkDataConsistency` — Datenkonsistenz
+- `runLiveSystemValidation` — Live-System-Check
+- `auditDataConsistency` — Audit-Trail-Prüfung
 
 ---
 
@@ -84,7 +109,7 @@ Snapshot-ID: [ID]
 
 ---
 
-## 4. ADMIN-GENEHMIGUNG — ABSOLUTE PFLICHT
+## 4. ADMIN-GENEHMIGUNG — ABSOLUTE PFLICHT (TECHNISCH ERZWUNGEN)
 
 **OHNE explizite Admin-Freigabe darf NICHTS:**
 - umgesetzt
@@ -95,6 +120,14 @@ Snapshot-ID: [ID]
 
 werden.
 
+**TECHNISCHE DURCHSETZUNG:**
+Die Funktion `enforceGovernanceCheck` blockiert JEDE Änderung automatisch wenn:
+- `admin_approval.approved !== true`
+- `backup_id` fehlt
+- `validation_result.success !== true`
+- `change_summary` fehlt
+- `rollback_plan` fehlt
+
 **Admin-Prüfung muss enthalten:**
 - [ ] Change Summary gelesen
 - [ ] Backup bestätigt
@@ -103,6 +136,30 @@ werden.
 - [ ] Business-Impact bewertet
 
 **Erst nach expliziter Freigabe darf die Umsetzung erfolgen.**
+
+**API-Beispiel:**
+```javascript
+const result = await base44.functions.invoke('enforceGovernanceCheck', {
+  action_type: 'entity_write',
+  affected_entities: ['Customer', 'Contract'],
+  change_summary: 'Neues Feld hinzugefügt...',
+  backup_id: 'full_1234567890',
+  validation_result: { success: true, checks: [...] },
+  admin_approval: {
+    approved: true,
+    approved_by: 'admin@example.com',
+    approved_at: '2026-05-23T10:30:00.000Z'
+  },
+  rollback_plan: 'Backup restore möglich via restoreFromBackup'
+});
+
+if (result.data.blocked) {
+  console.error('Governance-Check fehlgeschlagen:', result.data.violation);
+  // BLOCKIERT - Umsetzung nicht erlaubt
+} else {
+  // ERLAUBT - Umsetzung kann erfolgen
+}
+```
 
 ---
 
