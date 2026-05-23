@@ -16,6 +16,7 @@ import TabModules     from '@/components/admin/enterprise/TabModules';
 import TabValidation  from '@/components/admin/enterprise/TabValidation';
 import TabIncidents   from '@/components/admin/enterprise/TabIncidents';
 import TabSystemCheck from '@/components/admin/enterprise/TabSystemCheck';
+import TabSystemExcellence from '@/components/admin/enterprise/TabSystemExcellence';
 
 const TABS = [
   { id: 'modules',     label: 'Alle Module', component: TabModules },
@@ -29,6 +30,7 @@ const TABS = [
   { id: 'validation',  label: '▶ Live-Validation', component: TabValidation },
   { id: 'incidents',   label: '🚨 Incidents',       component: TabIncidents },
   { id: 'systemcheck', label: '✓ System Check',     component: TabSystemCheck },
+  { id: 'excellence',  label: '★ Excellence Report', component: TabSystemExcellence },
 ];
 
 export default function AdminEnterpriseControlCenter() {
