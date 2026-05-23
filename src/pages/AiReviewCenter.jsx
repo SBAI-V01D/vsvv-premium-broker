@@ -43,6 +43,7 @@ function sortFindings(findings) {
 
 // ── Quick Action Button ─────────────────────────────────────────────────────
 function QuickActionBtn({ action }) {
+  const navigate = useNavigate();
   const icons = {
     open_customer:      User,
     open_contracts:     FileText,
@@ -52,30 +53,51 @@ function QuickActionBtn({ action }) {
     open_tasks:         CheckSquare,
   };
   const Icon = icons[action.type] || ArrowRight;
+  
+  const handleClick = (e) => {
+    e.preventDefault();
+    if (action.link && action.link.startsWith('/')) {
+      navigate(action.link);
+    } else {
+      window.location.href = action.link || '/';
+    }
+  };
+  
   return (
-    <Link
-      to={action.link || '/'}
+    <button
+      onClick={handleClick}
       className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 transition-all"
     >
       <Icon className="w-3 h-3 text-slate-400" />
       {action.label}
-    </Link>
+    </button>
   );
 }
 
 // ── Affected Entity Chip ────────────────────────────────────────────────────
 function EntityChip({ entity }) {
+  const navigate = useNavigate();
+  
+  const handleClick = (e) => {
+    e.preventDefault();
+    if (entity.link && entity.link.startsWith('/')) {
+      navigate(entity.link);
+    } else {
+      window.location.href = entity.link || '/';
+    }
+  };
+  
   return (
-    <Link
-      to={entity.link || '/'}
-      className="flex items-start gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 transition-all group"
+    <button
+      onClick={handleClick}
+      className="w-full flex items-start gap-2 px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 transition-all group text-left"
     >
       <div className="min-w-0 flex-1">
         <p className="text-[11px] font-semibold text-slate-800 truncate group-hover:text-blue-700 transition-colors">{entity.name}</p>
         {entity.detail && <p className="text-[10px] text-slate-500 truncate mt-0.5">{entity.detail}</p>}
       </div>
       <ExternalLink className="w-3 h-3 text-slate-300 group-hover:text-blue-500 flex-shrink-0 mt-0.5 transition-colors" />
-    </Link>
+    </button>
   );
 }
 
@@ -136,7 +158,7 @@ function FindingCard({ finding }) {
             <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
               Betroffen ({entities.length})
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
               {visibleEnts.map((e, i) => <EntityChip key={e.id || i} entity={e} />)}
             </div>
             {hasMore && (
@@ -144,7 +166,7 @@ function FindingCard({ finding }) {
                 onClick={() => setShowAllEntities(!showAllEntities)}
                 className="mt-2 text-[11px] font-medium text-blue-600 hover:text-blue-700"
               >
-                {showAllEntities ? 'Weniger anzeigen' : `+${entities.length - 3} weitere`}
+                {showAllEntities ? 'Weniger anzeigen' : `+${entities.length - visibleEnts.length} weitere anzeigen`}
               </button>
             )}
           </div>
