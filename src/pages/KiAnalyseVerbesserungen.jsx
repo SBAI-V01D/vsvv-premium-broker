@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Brain, TrendingUp, CheckCircle2, Clock, Zap, Activity,
   ThumbsUp, ThumbsDown, BarChart2, RefreshCw, Loader2,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, Archive, Inbox
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -58,6 +58,7 @@ export default function KiAnalyseVerbesserungen() {
   const [selectedImprovement, setSelectedImprovement] = useState(null);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [improvementsTab, setImprovementsTab] = useState('active'); // 'active' | 'archived'
 
   // Analyse
   const [reviewResult, setReviewResult] = useState(null);
@@ -66,8 +67,14 @@ export default function KiAnalyseVerbesserungen() {
   // Verbesserungen
   const { data: improvements = [], refetch: refetchImprovements } = useQuery({
     queryKey: ['enterprise_improvements'],
-    queryFn: async () => await base44.entities.EnterpriseImprovement.list('-proposed_at', 50),
+    queryFn: async () => await base44.entities.EnterpriseImprovement.list('-proposed_at', 100),
   });
+
+  // Tab split: active (proposed, approved, in_progress) vs archived (implemented, verified, rejected)
+  const ARCHIVED_STATUSES = ['implemented', 'verified', 'rejected'];
+  const activeImprovements = improvements.filter(i => !ARCHIVED_STATUSES.includes(i.status));
+  const archivedImprovements = improvements.filter(i => ARCHIVED_STATUSES.includes(i.status));
+  const tabSource = improvementsTab === 'active' ? activeImprovements : archivedImprovements;
 
   // Review starten
   const runReview = async () => {
@@ -162,6 +169,8 @@ export default function KiAnalyseVerbesserungen() {
     approved: improvements.filter(i => i.status === 'approved').length,
     implemented: improvements.filter(i => i.status === 'implemented').length,
     critical: improvements.filter(i => i.priority === 'critical').length,
+    active: activeImprovements.length,
+    archived: archivedImprovements.length,
   };
 
   return (
@@ -319,12 +328,46 @@ export default function KiAnalyseVerbesserungen() {
           <TabsContent value="verbesserungen" className="mt-6">
             <div className="max-w-7xl mx-auto space-y-6">
               {/* Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
                 <StatCard label="Total" value={stats.total} color="text-slate-700" bg="bg-slate-50" />
+                <StatCard label="Aktiv" value={stats.active} color="text-blue-700" bg="bg-blue-50" />
+                <StatCard label="Archiv" value={stats.archived} color="text-slate-600" bg="bg-slate-100" />
                 <StatCard label="Vorgeschlagen" value={stats.proposed} color="text-blue-700" bg="bg-blue-50" />
                 <StatCard label="Genehmigt" value={stats.approved} color="text-emerald-700" bg="bg-emerald-50" />
                 <StatCard label="Implementiert" value={stats.implemented} color="text-emerald-700" bg="bg-emerald-50" />
                 <StatCard label="Kritisch" value={stats.critical} color="text-rose-700" bg="bg-rose-50" />
+              </div>
+
+              {/* Tabs: Active vs Archived */}
+              <div className="flex gap-1 mb-4 bg-muted/40 rounded-lg p-1 w-fit">
+                <button
+                  onClick={() => setImprovementsTab('active')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    improvementsTab === 'active'
+                      ? 'bg-card shadow text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Inbox className="w-4 h-4" />
+                  Aktive Vorschläge
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${improvementsTab === 'active' ? 'bg-blue-100 text-blue-700' : 'bg-muted text-muted-foreground'}`}>
+                    {activeImprovements.length}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setImprovementsTab('archived')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    improvementsTab === 'archived'
+                      ? 'bg-card shadow text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Archive className="w-4 h-4" />
+                  Archiv
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${improvementsTab === 'archived' ? 'bg-emerald-100 text-emerald-700' : 'bg-muted text-muted-foreground'}`}>
+                    {archivedImprovements.length}
+                  </span>
+                </button>
               </div>
 
               {/* Generate Button */}
@@ -354,10 +397,12 @@ export default function KiAnalyseVerbesserungen() {
               </Card>
 
               {/* Improvements List */}
-              {improvements.length > 0 ? (
+              {tabSource.length > 0 ? (
                 <div className="space-y-3">
-                  <h2 className="text-sm font-bold">Verbesserungsvorschläge ({improvements.length})</h2>
-                  {improvements.map((imp) => (
+                  <h2 className="text-sm font-bold">
+                    {improvementsTab === 'active' ? 'Aktive Vorschläge' : 'Archiv'} ({tabSource.length})
+                  </h2>
+                  {tabSource.map((imp) => (
                     <ImprovementCard
                       key={imp.id}
                       improvement={imp}
@@ -370,13 +415,21 @@ export default function KiAnalyseVerbesserungen() {
               ) : (
                 <div className="bg-white rounded-xl border p-10 text-center">
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-50 to-blue-50 flex items-center justify-center mx-auto mb-4">
-                    <TrendingUp className="w-7 h-7 text-violet-400" />
+                    {improvementsTab === 'active' ? <Inbox className="w-7 h-7 text-violet-400" /> : <Archive className="w-7 h-7 text-violet-400" />}
                   </div>
-                  <h3 className="text-base font-bold mb-2">Keine Verbesserungsvorschläge</h3>
-                  <p className="text-sm text-slate-400 mb-4">Generieren Sie Vorschläge basierend auf einem Audit.</p>
-                  <Button onClick={() => generateMutation.mutate({})} className="h-10 px-6 bg-gradient-to-r from-violet-600 to-blue-600">
-                    <Zap className="w-4 h-4 mr-2" /> Vorschläge generieren
-                  </Button>
+                  <h3 className="text-base font-bold mb-2">
+                    {improvementsTab === 'active' ? 'Keine aktiven Vorschläge' : 'Keine archivierten Vorschläge'}
+                  </h3>
+                  <p className="text-sm text-slate-400 mb-4">
+                    {improvementsTab === 'active' 
+                      ? 'Generieren Sie Vorschläge basierend auf einem Audit.' 
+                      : 'Implementierte oder abgelehnte Vorschläge werden hier automatisch archiviert.'}
+                  </p>
+                  {improvementsTab === 'active' && (
+                    <Button onClick={() => generateMutation.mutate({})} className="h-10 px-6 bg-gradient-to-r from-violet-600 to-blue-600">
+                      <Zap className="w-4 h-4 mr-2" /> Vorschläge generieren
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
@@ -428,6 +481,10 @@ function ImprovementCard({ improvement, onApprove, onReject, onImplement }) {
     proposed: 'Vorgeschlagen', approved: 'Genehmigt', in_progress: 'In Arbeit',
     implemented: 'Implementiert', verified: 'Verifiziert', rejected: 'Abgelehnt',
   };
+
+  // Hide action buttons for archived statuses
+  const ARCHIVED_STATUSES = ['implemented', 'verified', 'rejected'];
+  const isArchived = ARCHIVED_STATUSES.includes(improvement.status);
 
   return (
     <Card className={cn('border hover:shadow-sm', improvement.priority === 'critical' ? 'border-rose-200' : 'border-[hsl(var(--border-subtle))]/40')}>
@@ -488,23 +545,25 @@ function ImprovementCard({ improvement, onApprove, onReject, onImplement }) {
             </div>
           )}
 
-          <div className="flex gap-2 pt-2 border-t">
-            {improvement.status === 'proposed' && (
-              <>
-                <Button size="sm" onClick={onApprove} className="bg-emerald-600">
-                  <ThumbsUp className="w-3.5 h-3.5 mr-1.5" /> {['performance', 'design', 'ai_quality'].includes(improvement.area) ? 'Genehmigen & Umsetzen' : 'Genehmigen'}
+          {!isArchived && (
+            <div className="flex gap-2 pt-2 border-t">
+              {improvement.status === 'proposed' && (
+                <>
+                  <Button size="sm" onClick={onApprove} className="bg-emerald-600">
+                    <ThumbsUp className="w-3.5 h-3.5 mr-1.5" /> {['performance', 'design', 'ai_quality'].includes(improvement.area) ? 'Genehmigen & Umsetzen' : 'Genehmigen'}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={onReject} className="text-rose-600 border-rose-200">
+                    <ThumbsDown className="w-3.5 h-3.5 mr-1.5" /> Ablehnen
+                  </Button>
+                </>
+              )}
+              {improvement.status === 'approved' && (
+                <Button size="sm" onClick={onImplement} className="bg-violet-600">
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Als implementiert markieren
                 </Button>
-                <Button size="sm" variant="outline" onClick={onReject} className="text-rose-600 border-rose-200">
-                  <ThumbsDown className="w-3.5 h-3.5 mr-1.5" /> Ablehnen
-                </Button>
-              </>
-            )}
-            {improvement.status === 'approved' && (
-              <Button size="sm" onClick={onImplement} className="bg-violet-600">
-                <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" /> Als implementiert markieren
-              </Button>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </CardContent>
       )}
     </Card>
