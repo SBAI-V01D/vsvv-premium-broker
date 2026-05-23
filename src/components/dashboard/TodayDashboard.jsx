@@ -218,26 +218,6 @@ export default function TodayDashboard({ openTasks, expiringContracts, contracts
   return (
     <div className="space-y-3">
 
-      {/* ── Tages-Übersicht — monochrome KPIs ────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        {[
-          { label: 'Tasks', value: openTasks.length, path: '/aufgaben', icon: CheckSquare },
-          { label: 'Offerten', value: verkaufschancen.filter(v => !['gewonnen','verloren'].includes(v.status)).length, path: '/verkaufschancen', icon: TrendingUp },
-          { label: 'Neu', value: newLeadsCount, path: '/leads', icon: Target },
-          { label: 'Abläufe', value: expiringContracts.length, path: '/vertragsablaeufe', icon: RefreshCw },
-        ].map(k => (
-          <button
-            key={k.label}
-            onClick={() => navigate(k.path)}
-            className="flex flex-col gap-0.5 p-3 rounded-lg border border-[hsl(var(--border-subtle))] bg-[hsl(var(--surface-0))] hover:bg-[hsl(var(--surface-2))] transition-colors text-left"
-          >
-            <k.icon className="w-3.5 h-3.5 text-[hsl(var(--text-muted))]" />
-            <p className="text-[20px] font-bold text-[hsl(var(--text-heading))] leading-none">{k.value}</p>
-            <p className="text-[10px] text-[hsl(var(--text-muted))]">{k.label}</p>
-          </button>
-        ))}
-      </div>
-
       {/* Wiedervorlagen — nur wenn kritisch */}
       {wiedervorlagen.length > 0 && (
         <div className="space-y-2">
