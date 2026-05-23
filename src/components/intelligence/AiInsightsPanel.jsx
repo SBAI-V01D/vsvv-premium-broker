@@ -44,7 +44,7 @@ function CreateTaskDialog({ insight, open, onClose, onSuccess }) {
     },
   })
 
-  if (!form) return null
+  if (!insight || !form) return null
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
