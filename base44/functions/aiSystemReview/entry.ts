@@ -37,18 +37,16 @@ Deno.serve(async (req) => {
     const hasActiveContract = (customerId) => contracts.some(c => c.customer_id === customerId && c.status === 'active');
     const hasDossier = (customerId) => dossiers.some(d => d.customer_id === customerId && d.status !== 'archiviert');
 
-    // ── TIEFENPRÜFUNG 1: Mandate (ALLE aktiven Kunden, inkl. Familienmitglieder) ──
+    // ── TIEFENPRÜFUNG 1: Mandate (ALLE Kunden mit Problemen, wie Broker Reporting) ──
     const mandateIssues = [];
-    for (const c of customers) { // ALLE Kunden, nicht nur primary
+    for (const c of customers) {
       if (!['pending', 'expired', 'invalid'].includes(c.mandate_status)) continue;
-      if (c.status !== 'active') continue;
       if (c.archived) continue;
-      if (hasOpenTask(c.id)) continue; // Bereits Task
+      // NICHT nach status filtern — Broker Reporting zeigt auch prospects
+      // NICHT nach Tasks filtern — Mandat-Problem bleibt Problem, auch mit Task
       
-      const mandateDoc = documents.find(d => d.customer_id === c.id && d.category === 'identification');
       mandateIssues.push({
         customer: c,
-        hasMandateDoc: !!mandateDoc,
         hasOpenProcess: hasOpenTask(c.id),
       });
     }
@@ -145,28 +143,28 @@ Deno.serve(async (req) => {
     // ── FINDINGS generieren (nur handlungsrelevante) ─────────────────────────
     const findings = [];
 
-    // 1. Mandat-Probleme (kritisch: Compliance)
+    // 1. Mandat-Probleme (kritisch: Compliance) — exakt wie Broker Reporting
     if (mandateIssues.length > 0) {
       findings.push({
         id: 'COMP-001',
         area: 'operative_risiken',
         severity: 'critical',
-        title: 'Mandat-Probleme bei aktiven Kunden',
-        explanation: `${mandateIssues.length} aktive Kunden haben ungültige/fehlende Mandate — Compliance-Risiko bei Beratung.`,
+        title: `Kunden ohne gültiges Mandat (${mandateIssues.length} Fälle)`,
+        explanation: `${mandateIssues.length} Kunden haben Mandat-Status "pending", "expired" oder "invalid" — sofortige Prüfung erforderlich.`,
         business_impact: 'Beratungen ohne gültiges Mandat sind rechtlich nicht abgesichert.',
         affected_entities: mandateIssues.slice(0, 10).map(m => ({
           type: 'customer',
           id: m.customer.id,
           name: custName(m.customer),
-          detail: `Mandat: ${m.customer.mandate_status}${m.hasMandateDoc ? ' · Dokument vorhanden' : ' · Kein Dokument'}`,
+          detail: `Mandat: ${m.customer.mandate_status} · ${m.customer.status}`,
           link: makeLink('customer', m.customer.id),
         })),
-        recommendation: 'Mandate für betroffene Kunden umgehend prüfen und erneuern.',
+        recommendation: 'Mandate für alle betroffenen Kunden umgehend prüfen und erneuern.',
         quick_actions: [
           { type: 'open_customer', label: 'Kunde öffnen', link: makeLink('customer', mandateIssues[0].customer.id) },
           { type: 'create_task', label: 'Task erstellen', link: '/aufgaben' },
         ],
-        why_ai_suggests: 'Mandat-Status ist ungültig/abgelaufen und es gibt keinen offenen Prozess zur Klärung.',
+        why_ai_suggests: `Mandat-Status ist "${mandateIssues[0].customer.mandate_status}" (pending/expired/invalid) — identisch mit Broker Reporting Filter.`,
       });
     }
 
