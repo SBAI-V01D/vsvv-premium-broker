@@ -53,18 +53,19 @@ const navGroups = [
   {
     label: 'Cockpit',
     items: [
-      { label: 'Dashboard',       icon: LayoutDashboard, path: '/',                 color: 'primary' },
-      { label: 'Vertragsabläufe', icon: RefreshCw,       path: '/vertragsablaeufe', color: 'primary' },
-      { label: 'Leads',           icon: Target,          path: '/leads',            color: 'primary' },
-      { label: 'Verkaufschancen', icon: TrendingUp,       path: '/verkaufschancen',  color: 'primary' },
+      { label: 'Dashboard',        icon: LayoutDashboard, path: '/',          color: 'primary' },
+      { label: 'Broker Reporting', icon: BarChart2,       path: '/reporting', color: 'primary' },
     ],
   },
   {
     label: 'Kunden',
     items: [
       { label: 'Kundenübersicht',  icon: Users,      path: '/kunden',           color: 'primary' },
-      { label: 'Beratungsdossiers',icon: BookOpen,   path: '/beratungsdossier', color: 'primary' },
-      { label: 'Aufgaben',         icon: CheckSquare,path: '/aufgaben',         color: 'primary' },
+      { label: 'Vertragsabläufe',  icon: RefreshCw,    path: '/vertragsablaeufe', color: 'primary' },
+      { label: 'Leads',            icon: Target,       path: '/leads',            color: 'primary' },
+      { label: 'Verkaufschancen',  icon: TrendingUp,   path: '/verkaufschancen',  color: 'primary' },
+      { label: 'Beratungsdossiers',icon: BookOpen,     path: '/beratungsdossier', color: 'primary' },
+      { label: 'Aufgaben',         icon: CheckSquare,  path: '/aufgaben',         color: 'primary' },
     ],
   },
   {
@@ -73,12 +74,6 @@ const navGroups = [
       { label: 'Verträge',  icon: FileText,   path: '/vertraege', color: 'primary' },
       { label: 'Anträge',   icon: FileText,   path: '/antraege',  color: 'primary' },
       { label: 'Dokumente', icon: FileText,   path: '/dokumente', color: 'primary' },
-    ],
-  },
-  {
-    label: 'Reporting',
-    items: [
-      { label: 'Broker Reporting', icon: BarChart2, path: '/reporting', color: 'primary' },
     ],
   },
   {
