@@ -326,46 +326,267 @@ Antworte auf Deutsch, technisch präzise, aber verständlich.`
           console.log('[AI Solution] Gemini failed, using fallback:', error.message);
         }
 
-        // Fallback: Generische Lösung wenn Gemini fehlschlägt
+        // Fallback: Spezifische Lösung basierend auf Kategorie
         if (!solution || solution.trim().length < 50) {
-          solution = `## 🛠️ Lösung für: ${incident.title}
+          const affectedRecords = (() => {
+            try {
+              return JSON.parse(incident.technical_details || '{}').affected_records || [];
+            } catch {
+              return [];
+            }
+          })();
+
+          const categorySolutions = {
+            tenant_isolation: `## 🛠️ Lösung für: ${incident.title}
 
 ### 1. Root Cause Analyse
-Das Problem in der Kategorie **${incident.category}** wurde erkannt und muss priorisiert behandelt werden.
+**Problem:** Tenant-Isolation verletzt — ${incident.entity_type || 'Entities'} ohne organization_id
 
-**Wahrscheinliche Ursache:**
-- ${incident.root_cause || 'Systemkonfiguration oder Dateninkonsistenz'}
-- Betroffene Entity: ${incident.entity_type || 'Multiple'}
+**Ursache:**
+- ${incident.root_cause || 'Daten wurden ohne organization_id erstellt (Migration, Import, oder Bug)'}
+- Betroffene Records: ${affectedRecords.length > 0 ? affectedRecords.length : 'Mehrere'}
 
 ### 2. Lösungsschritte
 
-**Schritt 1: Problem verifizieren**
-- Prüfe betroffene Datensätze im Enterprise Control Center
-- Dokumentiere den aktuellen Zustand
+**Schritt 1: Betroffene Datensätze identifizieren**
+- Gehe zu Enterprise Incidents Tab
+- Öffne diesen Incident (${incident.id})
+- Notiere die betroffenen Entity-IDs aus "Technische Details"
 
-**Schritt 2: Daten korrigieren**
-- Öffne Enterprise Incidents Tab
-- Bearbeite den Incident mit Status "in_review"
-- Korrigiere die betroffenen Entity-Daten
+**Schritt 2: organization_id nachtragen**
+- Öffne jeden betroffenen Datensatz im entsprechenden Tab
+- Füge die korrekte organization_id hinzu (vom Owner/Creator)
+- Speichere die Änderungen
 
-**Schritt 3: System prüfen**
-- Führe Live-Validation durch (Tab "Live-Validation")
-- Stelle sicher, dass keine weiteren Incidents auftreten
+**ODER für Bulk-Fix (Admin Only):**
+- Verwende Backend Function: \`repairDossierOrgIds\` (für Dossiers)
+- Oder erstelle custom Script für andere Entities
+
+**Schritt 3: Validierung**
+- Führe "Live-Validation" durch (Tab im Enterprise Control Center)
+- Stelle sicher, dass Incident nicht mehr erscheint
 
 **Schritt 4: Abschluss**
 - Setze Incident-Status auf "resolved"
-- Dokumentiere die Lösung im Resolution Notes Feld
+- Füge Resolution Notes hinzu: "organization_id nachgetragen für ${affectedRecords.length || 'X'} Records"
 
 ### 3. Prävention
-- Regelmässige System-Checks durchführen
-- Automatische Validierung aktivieren
-- Frühwarnsystem für ähnliche Probleme einrichten
+- RLS-Regeln prüfen (stellen sicher, dass organization_id required ist)
+- Import-Prozesse validieren (müssen organization_id setzen)
+- Automatische Guards bei Entity-Create (guardDataAccess)
 
 ### 4. Geschätzter Aufwand
-**Aufwand:** ${incident.auto_fix_possible ? 'Low (automatisierbar)' : 'Medium (manuelle Prüfung erforderlich)'}
+**Aufwand:** ${affectedRecords.length > 10 ? 'Medium (Bulk-Operation empfohlen)' : 'Low (manuell machbar)'}
+**Zeit:** ~${affectedRecords.length > 10 ? '30-60' : '5-10'} Minuten`,
 
----
-*Hinweis: Dies ist eine generische Lösung. Für eine detaillierte KI-Analyse stelle sicher, dass die Gemini API konfiguriert ist.*`;
+            export_gate: `## 🛠️ Lösung für: ${incident.title}
+
+### 1. Root Cause Analyse
+**Problem:** Export-Gate verletzt — Daten könnten unbefugt exportiert werden
+
+**Ursache:**
+- ${incident.root_cause || 'RLS-Regeln oder Guard-Funktion nicht korrekt konfiguriert'}
+- Modul: ${incident.module || 'Unbekannt'}
+
+### 2. Lösungsschritte
+
+**Schritt 1: Guard-Funktion prüfen**
+- Öffne Backend Functions: \`guardDataAccess\`, \`guardDocumentAccess\`, \`guardCommissionAccess\`
+- Prüfe ob user.role === 'admin' Check vorhanden ist
+- Stelle sicher, dass organization_id Vergleich korrekt ist
+
+**Schritt 2: RLS-Regeln validieren**
+- Gehe zu Entity-Definition (z.B. entities/Contract.json)
+- Prüfe "rls" Section (read, create, update, delete)
+- Stelle sicher, dass organization_id in allen Regeln geprüft wird
+
+**Schritt 3: Testen**
+- Erstelle Test-User mit role="user" (nicht admin)
+- Versuche Daten anderer Organisation zu lesen
+- Sollte 403 Forbidden zurückgeben
+
+**Schritt 4: Abschluss**
+- Incident-Status auf "resolved"
+- Dokumentation: Welche Guards wurden korrigiert?
+
+### 3. Prävention
+- Security-Audits monatlich durchführen
+- automateSecurityTests in CI/CD Pipeline
+- guardDataAccess bei JEDEM neuen Endpoint verwenden
+
+### 4. Geschätzter Aufwand
+**Aufwand:** Medium (Security-Relevant — sorgfältig testen!)
+**Zeit:** ~30-60 Minuten`,
+
+            snapshot_integrity: `## 🛠️ Lösung für: ${incident.title}
+
+### 1. Root Cause Analyse
+**Problem:** Dossier-Snapshots inkonsistent oder fehlen
+
+**Ursache:**
+- ${incident.root_cause || 'Snapshot wurde nicht erstellt vor PDF-Export oder Änderung'}
+- Betroffene Dossiers: ${affectedRecords.length}
+
+### 2. Lösungsschritte
+
+**Schritt 1: Betroffene Dossiers identifizieren**
+- Gehe zu Beratungsdossier Tab
+- Filtere nach Dossiers mit approved=true aber approved_snapshot_id=""
+
+**Schritt 2: Snapshots nacherstellen**
+- Öffne jedes Dossier
+- Klicke auf "Snapshot erstellen" vor dem Export
+- Verwende Backend Function: \`dossierSnapshot.create\`
+
+**Schritt 3: PDF-Hash prüfen**
+- Für exportierte PDFs: final_pdf_hash muss gesetzt sein
+- Falls leer: PDF erneut generieren mit generateDossierPdf
+
+**Schritt 4: Validierung**
+- Live-Validation durchführen
+- Incident sollte verschwunden sein
+
+### 3. Prävention
+- Export-Guard implementieren (kein Export ohne Snapshot)
+- Automation: Snapshot bei advisor_approved=true
+- PDF-Hash-Check bei jedem Export
+
+### 4. Geschätzter Aufwand
+**Aufwand:** ${affectedRecords.length > 5 ? 'Medium' : 'Low'}
+**Zeit:** ~${affectedRecords.length * 5} Minuten`,
+
+            audit_trail: `## 🛠️ Lösung für: ${incident.title}
+
+### 1. Root Cause Analyse
+**Problem:** Audit-Trail unvollständig oder fehlt
+
+**Ursache:**
+- ${incident.root_cause || 'auditLogWrite wurde nicht aufgerufen bei Entity-Änderung'}
+- Fehlende Logs: ${affectedRecords.length}
+
+### 2. Lösungsschritte
+
+**Schritt 1: Audit-Log prüfen**
+- Gehe zu Admin Logs Tab
+- Filtere nach betroffener Entity und Zeitraum
+- Identifiziere fehlende Einträge
+
+**Schritt 2: Automation einrichten**
+- Entity Automation erstellen (on update/create)
+- Trigger: auditLogWrite Function
+- Payload: { entity_type, entity_id, action, user_id }
+
+**Schritt 3: Backend Functions prüfen**
+- Jede Function die Entities ändert MUSS auditLogWrite aufrufen
+- Beispiel:
+  \`\`\`javascript
+  await base44.asServiceRole.entities.AuditLog.create({
+    audit_id: 'AUD-' + Date.now(),
+    timestamp: new Date().toISOString(),
+    entity_type: 'Contract',
+    entity_id: contract.id,
+    action: 'update',
+    actor_type: 'user',
+    actor_id: user.id,
+    // ... weitere Felder
+  });
+  \`\`\`
+
+**Schritt 4: Abschluss**
+- Incident auf "resolved" setzen
+- Dokumentation: Welche Automations wurden erstellt?
+
+### 3. Prävention
+- Audit-Pflicht für alle kritischen Entities (Contract, Commission, Dossier)
+- Automatische Tests für Audit-Logging
+- Monthly Audit-Reports
+
+### 4. Geschätzter Aufwand
+**Aufwand:** Medium (Infrastructure-Work)
+**Zeit:** ~60-90 Minuten`,
+
+            pdf_integrity: `## 🛠️ Lösung für: ${incident.title}
+
+### 1. Root Cause Analyse
+**Problem:** PDF-Hash fehlt oder ist inkorrekt
+
+**Ursache:**
+- ${incident.root_cause || 'PDF wurde ohne Hash-Generierung exportiert'}
+- Betroffene PDFs: ${affectedRecords.length}
+
+### 2. Lösungsschritte
+
+**Schritt 1: Betroffene Dossiers finden**
+- Filtere AdvisoryDossier nach: final_pdf_version > 0 UND final_pdf_hash = ""
+
+**Schritt 2: Hash nachberechnen**
+- Lade PDF von final_pdf_file_uri
+- Berechne SHA-256 Hash (Crypto API)
+- Update Dossier: final_pdf_hash = "..."
+
+**Schritt 3: Für zukünftige Exports**
+- generateDossierPdf muss Hash berechnen:
+  \`\`\`javascript
+  const pdfBytes = await pdfDoc.save();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', pdfBytes);
+  const hash = Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+  \`\`\`
+
+**Schritt 4: Validierung**
+- Live-Validation: Incident muss weg sein
+
+### 3. Prävention
+- Hash-Pflicht in generateDossierPdf
+- Guard: Kein Export ohne Hash
+- PdfExportLog muss Hash enthalten
+
+### 4. Geschätzter Aufwand
+**Aufwand:** Low
+**Zeit:** ~15-30 Minuten`,
+
+            other: `## 🛠️ Lösung für: ${incident.title}
+
+### 1. Root Cause Analyse
+**Problem:** ${incident.description}
+
+**Ursache:**
+- ${incident.root_cause || 'Unbekannt - manuelle Analyse erforderlich'}
+- Kategorie: ${incident.category}
+- Betroffene: ${affectedRecords.length || 'Multiple'} Entities
+
+### 2. Lösungsschritte
+
+**Schritt 1: Problem analysieren**
+- Öffne Enterprise Incidents Tab
+- Lies "Technische Details" und "Root Cause"
+- Identifiziere betroffene Datensätze
+
+**Schritt 2: Daten korrigieren**
+- Navigiere zum entsprechenden Entity-Tab
+- Bearbeite die betroffenen Records
+- Korrigiere die fehlerhaften Felder
+
+**Schritt 3: System prüfen**
+- Führe Live-Validation durch
+- Stelle sicher, dass Problem behoben ist
+
+**Schritt 4: Dokumentation**
+- Incident-Status: "resolved"
+- Resolution Notes: Was wurde korrigiert?
+
+### 3. Prävention
+- Regelmässige System-Checks
+- Automatische Validierung aktivieren
+- Guards für kritische Felder
+
+### 4. Geschätzter Aufwand
+**Aufwand:** ${incident.auto_fix_possible ? 'Low' : 'Medium'}
+**Zeit:** ~${affectedRecords.length > 10 ? '30-60' : '10-20'} Minuten`,
+          };
+
+          solution = categorySolutions[incident.category] || categorySolutions.other;
         }
           
         return {
