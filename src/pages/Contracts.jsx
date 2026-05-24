@@ -166,28 +166,27 @@ export default function Contracts() {
   const reviewCount = contracts.filter(c => c.requires_review).length
 
   return (
-    <div>
-      <PageHeader
-        title={`Verträge (${filtered.length})`}
-        subtitle={`${contracts.length} Verträge insgesamt`}
-        titleClassName="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight"
-        actions={
-          <>
-            <Button variant="outline" size="sm" onClick={handleExport}>
-              <Download className="w-4 h-4 mr-1.5" /> Export
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setShowImport(true)}>
-              <Upload className="w-4 h-4 mr-1.5" /> Import
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setShowUploadWizard(true)}>
-              <FileText className="w-4 h-4 mr-1.5" /> Police
-            </Button>
-            <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }}>
-              <Plus className="w-4 h-4 mr-1.5" /> Neuer Vertrag
-            </Button>
-          </>
-        }
-      />
+    <div className="page-enter flex flex-col h-full">
+      <div className="px-6 py-5 border-b border-border bg-card shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-[hsl(var(--primary))] tracking-tight">Verträge ({filtered.length})</h1>
+              <p className="text-xs text-muted-foreground">{contracts.length} Verträge insgesamt</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4 mr-1.5" /> Export</Button>
+            <Button variant="outline" size="sm" onClick={() => setShowImport(true)}><Upload className="w-4 h-4 mr-1.5" /> Import</Button>
+            <Button variant="outline" size="sm" onClick={() => setShowUploadWizard(true)}><FileText className="w-4 h-4 mr-1.5" /> Police</Button>
+            <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }}><Plus className="w-4 h-4 mr-1.5" /> Neuer Vertrag</Button>
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
 
       <FilterBar search={search} onSearchChange={setSearch} placeholder="Suche (Kunde, Versicherer, Police...)" />
 
@@ -444,6 +443,7 @@ export default function Contracts() {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   )
 }

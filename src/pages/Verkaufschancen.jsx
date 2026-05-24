@@ -111,18 +111,24 @@ export default function Verkaufschancen() {
   const selectedCustomer = selectedVs ? customers.find(c => c.id === selectedVs.customer_id) : null
 
   return (
-    <div className="space-y-5 pb-10">
-
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight">Verkaufschancen &amp; Ausschreibungen</h1>
-          <p className="text-body-sm text-muted-foreground mt-0.5">Pipeline · Offertmanagement · Abschluss — strikt getrennt von aktiven Policen</p>
+    <div className="page-enter flex flex-col h-full">
+      <div className="px-6 py-5 border-b border-border bg-card shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Target className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-[hsl(var(--primary))] tracking-tight">Verkaufschancen &amp; Ausschreibungen</h1>
+              <p className="text-xs text-muted-foreground">Pipeline · Offertmanagement · Abschluss</p>
+            </div>
+          </div>
+          <Button onClick={() => setShowNewForm(true)} className="gap-2">
+            <Plus className="w-4 h-4" /> Neue Chance
+          </Button>
         </div>
-        <Button onClick={() => setShowNewForm(true)} className="gap-2 flex-shrink-0">
-          <Plus className="w-4 h-4" /> Neue Chance
-        </Button>
       </div>
+      <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
       {/* ── KPI Row ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -356,6 +362,7 @@ export default function Verkaufschancen() {
         </DialogContent>
       </Dialog>
 
+      </div>
     </div>
   )
 }

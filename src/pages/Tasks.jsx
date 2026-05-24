@@ -135,17 +135,24 @@ export default function Tasks() {
   );
 
   return (
-    <div className="p-6 space-y-5 page-enter">
-      <PageHeader
-        title="Aufgaben"
-        subtitle={`${filtered.length} Aufgabe${filtered.length !== 1 ? 'n' : ''}`}
-        titleClassName="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight"
-        actions={
+    <div className="page-enter flex flex-col h-full">
+      <div className="px-6 py-5 border-b border-border bg-card shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-[hsl(var(--primary))] tracking-tight">Aufgaben</h1>
+              <p className="text-xs text-muted-foreground">{filtered.length} Aufgabe{filtered.length !== 1 ? 'n' : ''}</p>
+            </div>
+          </div>
           <Button size="sm" onClick={openCreate} className="gap-1.5">
             <Plus className="w-3.5 h-3.5" /> Aufgabe erstellen
           </Button>
-        }
-      />
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
       <FilterBar
         search={search}
@@ -306,6 +313,7 @@ export default function Tasks() {
           </form>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

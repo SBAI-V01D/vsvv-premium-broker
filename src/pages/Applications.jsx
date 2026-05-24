@@ -199,23 +199,30 @@ export default function Applications() {
   const [creatingContract, setCreatingContract] = useState(false)
 
   return (
-    <div>
+    <div className="page-enter flex flex-col h-full">
+      <div className="px-6 py-5 border-b border-border bg-card shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <FileText className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-[hsl(var(--primary))] tracking-tight">Versicherungsanträge</h1>
+              <p className="text-xs text-muted-foreground">{pendingApps.length} pendente · {archivedApps.length} archivierte Anträge</p>
+            </div>
+          </div>
+          <Button onClick={() => { setEditing(null); setShowForm(true) }}>
+            <Plus className="w-4 h-4 mr-2" /> Neuer Antrag
+          </Button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto p-6 space-y-5">
       {creatingContract && (
         <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 bg-card border border-border shadow-card-md rounded-xl px-4 py-3 text-sm">
           <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
           <span className="font-medium text-foreground">Vertrag wird erstellt…</span>
         </div>
       )}
-      <PageHeader
-        title="Versicherungsanträge"
-        subtitle={`${pendingApps.length} pendente · ${archivedApps.length} archivierte Anträge`}
-        titleClassName="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight"
-        actions={
-          <Button onClick={() => { setEditing(null); setShowForm(true) }}>
-            <Plus className="w-4 h-4 mr-2" /> Neuer Antrag
-          </Button>
-        }
-      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
@@ -604,6 +611,7 @@ export default function Applications() {
           />
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   )
 }
