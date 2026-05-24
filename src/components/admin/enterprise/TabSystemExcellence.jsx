@@ -12,7 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import {
   Shield, Activity, Zap, Target, Brain, Layout, Smartphone, TrendingUp,
   CheckCircle2, AlertTriangle, XCircle, Loader2, RefreshCw, AlertCircle,
-  BarChart3, FileText, Layers, Users, Clock, Award
+  BarChart3, FileText, Layers, Users, Clock, Award, Lightbulb, Sparkles,
+  Wrench, BookOpen, ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -39,6 +40,7 @@ const CATEGORY_LABELS = {
 
 export default function TabSystemExcellence() {
   const [report, setReport] = useState(null);
+  const [expandedSolution, setExpandedSolution] = useState(null);
 
   const runReportMutation = useMutation({
     mutationFn: async () => {
@@ -188,25 +190,44 @@ export default function TabSystemExcellence() {
 
       {/* Critical Incidents Analysis */}
       {critical_incidents.total > 0 && (
-        <Card className="border-rose-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold text-rose-700 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-bold text-[hsl(var(--text-heading))] flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600" />
               Kritische Incidents ({critical_incidents.total})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {critical_incidents.top_priorities.map((incident, i) => (
+            </h4>
+            {report.ai_solutions?.length > 0 && (
+              <Badge className="bg-violet-100 text-violet-700 border-violet-200">
+                <Sparkles className="w-3 h-3 mr-1" />
+                {report.ai_solutions.length} KI-Lösungen
+              </Badge>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            {critical_incidents.top_priorities.map((incident, i) => {
+              const aiSolution = report.ai_solutions?.find(s => s.incident_id === incident.id);
+              const hasSolution = aiSolution && !aiSolution.ai_solution.includes('fehlgeschlagen');
+              const isExpanded = expandedSolution === incident.id;
+
+              return (
                 <div key={incident.id} className="p-4 bg-rose-50 border border-rose-200 rounded-lg">
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <p className="text-xs font-bold text-rose-700 mb-1">{incident.title}</p>
                       <p className="text-xs text-rose-600">{incident.root_cause}</p>
                     </div>
-                    <Badge className={incident.risk_level.includes('HIGH') ? 'bg-rose-600 text-white' : 'bg-amber-100 text-amber-700'}>
-                      {incident.risk_level.split(' ')[0]}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      {hasSolution && (
+                        <Badge className="bg-violet-100 text-violet-700 border-violet-200">
+                          <Lightbulb className="w-3 h-3 mr-1" />
+                          KI-Lösung
+                        </Badge>
+                      )}
+                      <Badge className={incident.risk_level.includes('HIGH') ? 'bg-rose-600 text-white' : 'bg-amber-100 text-amber-700'}>
+                        {incident.risk_level.split(' ')[0]}
+                      </Badge>
+                    </div>
                   </div>
                   <div className="grid md:grid-cols-2 gap-2 text-xs mt-2">
                     <div>
@@ -230,11 +251,52 @@ export default function TabSystemExcellence() {
                       </ul>
                     </div>
                   )}
+                  
+                  {/* KI-Lösung anzeigen */}
+                  {hasSolution && (
+                    <div className="mt-3 pt-3 border-t border-rose-200">
+                      <button
+                        onClick={() => setExpandedSolution(isExpanded ? null : incident.id)}
+                        className="flex items-center gap-2 text-xs font-semibold text-violet-700 hover:text-violet-900 transition-colors"
+                      >
+                        <Lightbulb className="w-3.5 h-3.5" />
+                        {isExpanded ? 'KI-Lösung ausblenden' : 'KI-Lösung anzeigen'}
+                        <ChevronRight className={cn('w-3.5 h-3.5 transition-transform', isExpanded && 'rotate-90')} />
+                      </button>
+                      
+                      {isExpanded && (
+                        <div className="mt-3 p-4 bg-white border border-violet-200 rounded-lg">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Sparkles className="w-4 h-4 text-violet-600" />
+                            <p className="text-xs font-bold text-violet-700">KI-Problemlösung</p>
+                          </div>
+                          <div className="prose prose-sm max-w-none">
+                            <div className="text-xs text-slate-700 whitespace-pre-line leading-relaxed">
+                              {aiSolution.ai_solution}
+                            </div>
+                          </div>
+                          <div className="mt-3 pt-3 border-t border-violet-100 flex items-center justify-between text-[10px] text-slate-500">
+                            <span>Generiert: {new Date(aiSolution.generated_at).toLocaleString('de-CH')}</span>
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                navigator.clipboard.writeText(aiSolution.ai_solution);
+                                toast.success('Lösung kopiert!', { duration: 2000 });
+                              }}
+                              className="h-7 text-[10px] bg-violet-600 hover:bg-violet-700"
+                            >
+                              <FileText className="w-3 h-3 mr-1" /> Kopieren
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {/* Recommendations */}

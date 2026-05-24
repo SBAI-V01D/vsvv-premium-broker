@@ -268,7 +268,69 @@ Deno.serve(async (req) => {
     const overallScore = Object.values(categoryScores).reduce((a, b) => a + b, 0) / Object.keys(categoryScores).length;
 
     // ══════════════════════════════════════════════════════════════════════════
-    // 10. REPORT GENERIEREN
+    // 10. KI-LÖSUNGSVORSCHLÄGE GENERIEREN
+    // ══════════════════════════════════════════════════════════════════════════
+    console.log('[SystemExcellenceReport] Generating AI solutions...');
+    
+    const aiSolutions = await Promise.all(
+      openCriticalIncidents.slice(0, 5).map(async (incident) => {
+        try {
+          const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + Deno.env.get('GEMINI_API_KEY'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{
+                  text: `Du bist ein Enterprise System Architect. Analysiere dieses kritische System-Problem und gib eine konkrete, schrittweise Lösung:
+
+PROBLEM:
+- Titel: ${incident.title}
+- Kategorie: ${incident.category}
+- Ursache: ${incident.root_cause || 'Unbekannt'}
+- Beschreibung: ${incident.description}
+- Betroffene Entity: ${incident.entity_type || 'Multiple'}
+- Auto-Fix möglich: ${incident.auto_fix_possible ? 'Ja' : 'Nein'}
+
+Erstelle eine Lösung mit:
+1. Root Cause Analyse (warum ist das passiert?)
+2. Konkrete Lösungsschritte (max 5 Schritte)
+3. Code-Beispiel falls relevant (Backend Function oder Entity Update)
+4. Prävention (wie verhindern wir das in Zukunft?)
+5. Geschätzter Aufwand (Low/Medium/High)
+
+Antworte auf Deutsch, technisch präzise, aber verständlich.`
+                }]
+              }],
+              generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 1024,
+              }
+            })
+          });
+          
+          const data = await res.json();
+          const solution = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Keine Lösung generiert';
+          
+          return {
+            incident_id: incident.id,
+            incident_title: incident.title,
+            ai_solution: solution,
+            generated_at: new Date().toISOString(),
+          };
+        } catch (error) {
+          console.error('[AI Solution] Failed:', error);
+          return {
+            incident_id: incident.id,
+            incident_title: incident.title,
+            ai_solution: 'KI-Lösung fehlgeschlagen: ' + error.message,
+            generated_at: new Date().toISOString(),
+          };
+        }
+      })
+    );
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // 11. REPORT GENERIEREN
     // ══════════════════════════════════════════════════════════════════════════
     const report = {
       generated_at: new Date().toISOString(),
@@ -353,6 +415,7 @@ Deno.serve(async (req) => {
         '5. Mobile-Darstellung komplexer Tabellen optimieren',
       ],
 
+      ai_solutions: aiSolutions,
       analysis_duration_ms: Date.now() - startTime,
     };
 
