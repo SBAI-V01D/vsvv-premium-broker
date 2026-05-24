@@ -17,6 +17,7 @@ import TabValidation  from '@/components/admin/enterprise/TabValidation';
 import TabIncidents   from '@/components/admin/enterprise/TabIncidents';
 import TabSystemCheck from '@/components/admin/enterprise/TabSystemCheck';
 import TabSystemExcellence from '@/components/admin/enterprise/TabSystemExcellence';
+import TabGovernanceScore from '@/components/admin/enterprise/TabGovernanceScore';
 
 const TABS = [
   { id: 'modules',     label: 'Alle Module', component: TabModules },
@@ -31,6 +32,7 @@ const TABS = [
   { id: 'incidents',   label: '🚨 Incidents',       component: TabIncidents },
   { id: 'systemcheck', label: '✓ System Check',     component: TabSystemCheck },
   { id: 'excellence',  label: '★ Excellence Report', component: TabSystemExcellence },
+  { id: 'governance',   label: '◈ Governance Score',   component: TabGovernanceScore },
 ];
 
 export default function AdminEnterpriseControlCenter() {
