@@ -521,21 +521,21 @@ export default function BrokerReporting() {
   const canProceedStep2 = selectedFields.length > 0;
 
   return (
-    <div className="min-h-full bg-[hsl(var(--surface-1))]">
+    <div className="page-enter flex flex-col h-full">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-6 py-5">
-        <div className="max-w-5xl mx-auto flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-sm">
-            <BarChart2 className="w-5 h-5 text-white" />
+      <div className="px-6 py-5 border-b border-border bg-card shrink-0">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+            <BarChart2 className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-slate-800">Broker Reporting</h1>
-            <p className="text-xs text-slate-500">Operative Auswertungen — Entität · Filter · Felder · Export (CSV, Excel-kompatibel, Schweizer Format)</p>
+            <h1 className="text-lg font-bold text-[hsl(var(--primary))] tracking-tight">Broker Reporting</h1>
+            <p className="text-xs text-muted-foreground">Operative Auswertungen — Entität · Filter · Felder · Export (CSV, Excel-kompatibel, Schweizer Format)</p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
         {/* Templates */}
         <div>
