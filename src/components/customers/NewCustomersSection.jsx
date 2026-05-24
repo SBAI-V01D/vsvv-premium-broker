@@ -58,11 +58,11 @@ export default function NewCustomersSection({ searchQuery = '' }) {
   const { data: newCustomers = [], isLoading } = useQuery({
     queryKey: ['new_customers_section', searchQuery],
     queryFn: async () => {
-      const all = await base44.entities.Customer.filter({ archived: false }, '-created_date', 100);
-      const since = new Date(NEW_CUSTOMERS_SINCE);
+      const all = await base44.entities.Customer.filter({ archived: false }, '-created_date', 500);
       return all.filter(c => {
-        const created = new Date(c.created_date);
-        return created >= since && !c.is_family_member;
+        // Datumsvergleich als String (erste 10 Zeichen = YYYY-MM-DD) → kein Timezone-Problem
+        const createdDate = (c.created_date || '').slice(0, 10);
+        return createdDate >= NEW_CUSTOMERS_SINCE && !c.is_family_member;
       });
     },
     staleTime: 2 * 60 * 1000,
