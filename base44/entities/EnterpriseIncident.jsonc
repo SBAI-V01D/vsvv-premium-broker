@@ -2,6 +2,17 @@
   "name": "EnterpriseIncident",
   "type": "object",
   "properties": {
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "default": "medium",
+      "description": "Priorit\u00e4t (unabh\u00e4ngig von Severity)"
+    },
     "severity": {
       "type": "string",
       "enum": [
@@ -27,21 +38,23 @@
         "document_integrity",
         "recovery",
         "performance",
+        "sla_breach",
         "other"
       ],
       "description": "Fehlerkategorie"
     },
     "module": {
-      "type": "string",
-      "description": "Betroffenes Modul"
+      "type": "string"
     },
     "entity_type": {
-      "type": "string",
-      "description": "Entity-Typ des betroffenen Datensatzes"
+      "type": "string"
     },
     "entity_id": {
+      "type": "string"
+    },
+    "organization_id": {
       "type": "string",
-      "description": "ID des betroffenen Datensatzes"
+      "description": "Tenant-ID \u2014 Pflichtfeld"
     },
     "title": {
       "type": "string",
@@ -49,57 +62,55 @@
     },
     "description": {
       "type": "string",
-      "description": "Detailbeschreibung des Problems"
+      "description": "Detailbeschreibung"
     },
     "root_cause": {
       "type": "string",
-      "description": "Ursachenanalyse: Warum ist das Problem aufgetreten?"
+      "description": "Ursachenanalyse"
     },
     "technical_details": {
       "type": "string",
-      "description": "Technische Details, Felder, Werte, Stack-Informationen"
+      "description": "Technische Details inkl. betroffener Datens\u00e4tze"
     },
     "recommended_action": {
       "type": "string",
-      "description": "Konkrete empfohlene Massnahme (Step-by-Step)"
+      "description": "Step-by-Step L\u00f6sung"
     },
     "auto_fix_possible": {
       "type": "boolean",
-      "default": false,
-      "description": "Kann eine sichere technische Reparatur ausgef\u00fchrt werden?"
+      "default": false
     },
     "auto_fix_action": {
-      "type": "string",
-      "description": "Name der Repair-Action (nur f\u00fcr sichere technische Fixes)"
+      "type": "string"
     },
     "manual_review_required": {
       "type": "boolean",
-      "default": true,
-      "description": "Erfordert manuellen Entscheid"
+      "default": true
     },
     "governance_block": {
       "type": "boolean",
       "default": false,
-      "description": "Governance-Entscheid \u2014 niemals automatisch beheben"
+      "description": "Niemals automatisch beheben"
     },
     "status": {
       "type": "string",
       "enum": [
         "open",
-        "in_review",
+        "investigating",
+        "in_progress",
         "resolved",
+        "closed",
+        "rejected",
         "accepted_risk",
         "auto_fixed"
       ],
       "default": "open"
     },
     "assigned_to": {
-      "type": "string",
-      "description": "Zugewiesen an (User-Email)"
+      "type": "string"
     },
     "resolution_notes": {
-      "type": "string",
-      "description": "Erkl\u00e4rung zur Behebung oder Risikoakzeptanz"
+      "type": "string"
     },
     "resolved_at": {
       "type": "string",
@@ -109,16 +120,94 @@
       "type": "string"
     },
     "detected_by": {
-      "type": "string",
-      "description": "Erkannt durch (z.B. runLiveSystemValidation)"
+      "type": "string"
     },
     "detected_at": {
       "type": "string",
       "format": "date-time"
     },
-    "validation_run_id": {
+    "sla_due_at": {
       "type": "string",
-      "description": "ID des Validierungslaufs"
+      "format": "date-time",
+      "description": "SLA-Frist f\u00fcr L\u00f6sung"
+    },
+    "sla_status": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "warning",
+        "breached"
+      ],
+      "default": "ok",
+      "description": "SLA-Status: ok / warning (< 2h) / breached (\u00fcberschritten)"
+    },
+    "sla_escalated": {
+      "type": "boolean",
+      "default": false,
+      "description": "SLA-Eskalation ausgel\u00f6st"
+    },
+    "sla_escalated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "affected_entities": {
+      "type": "array",
+      "description": "Betroffene Entit\u00e4ten (Typ + ID)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "entity_type": {
+            "type": "string"
+          },
+          "entity_id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "incident_audit_log": {
+      "type": "array",
+      "description": "Vollst\u00e4ndiger Audit-Trail des Incidents",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "previous_status": {
+            "type": "string"
+          },
+          "new_status": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "string"
+          },
+          "previous_state": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "new_state": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "validation_run_id": {
+      "type": "string"
     }
   },
   "required": [

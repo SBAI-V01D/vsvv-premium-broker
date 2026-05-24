@@ -126,6 +126,19 @@ export default function Dashboard() {
     refetchOnWindowFocus: false,
   })
 
+  const { data: criticalIncidents = [] } = useQuery({
+    queryKey: ['dashboard_critical_incidents'],
+    queryFn: async () => {
+      const all = await base44.entities.EnterpriseIncident.list('-detected_at', 50)
+      return all.filter(i =>
+        ['open', 'investigating', 'in_progress'].includes(i.status) &&
+        ['critical', 'blocking'].includes(i.severity)
+      )
+    },
+    staleTime: 2 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  })
+
   const today = new Date()
   const in30 = new Date(today); in30.setDate(today.getDate() + 30)
   const in360 = new Date(today); in360.setDate(today.getDate() + 360)
@@ -205,6 +218,33 @@ export default function Dashboard() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+        {/* Critical Incident Banner */}
+        {criticalIncidents.length > 0 && (
+          <div className="flex items-start gap-3 px-4 py-3 bg-rose-50 border border-rose-300 rounded-xl">
+            <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse mt-1.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-rose-800">
+                {criticalIncidents.length} kritische{criticalIncidents.length !== 1 ? ' Incidents' : 'r Incident'} offen
+                {criticalIncidents.some(i => i.sla_status === 'breached') && (
+                  <span className="ml-2 text-[10px] font-bold px-2 py-0.5 bg-rose-600 text-white rounded-full">
+                    SLA ÜBERSCHRITTEN
+                  </span>
+                )}
+              </p>
+              <p className="text-xs text-rose-700 mt-0.5 truncate">
+                {criticalIncidents[0]?.title}{criticalIncidents.length > 1 ? ` + ${criticalIncidents.length - 1} weitere` : ''}
+              </p>
+            </div>
+            <button
+              onClick={() => window.location.href = '/admin/enterprise-control-center'}
+              className="text-xs font-semibold text-rose-700 hover:text-rose-900 whitespace-nowrap underline"
+            >
+              Jetzt beheben →
+            </button>
+          </div>
+        )}
+
         {/* KPI Row */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <KpiTile
