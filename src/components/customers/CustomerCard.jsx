@@ -41,9 +41,9 @@ export default function CustomerCard({
   const isCompany = customer.customer_type === 'business';
   
   // Calculate HealthScore
-  const customerContracts = (allContracts || []).filter(c => c.customer_id === customer.id || c.primary_customer_id === customer.id)
+  const customerContracts = (allContracts || []).filter(c => c.customer_id === customer.id)
   const customerTasks = (allTasks || []).filter(t => t.customer_id === customer.id)
-  const customerDocs = (allDocuments || []).filter(d => d.customer_id === customer.id || d.primary_customer_id === customer.id)
+  const customerDocs = (allDocuments || []).filter(d => d.customer_id === customer.id)
   const healthScore = calculateHealthScore(customer, customerContracts, customerTasks, customerDocs)
 
   const displayName = isCompany

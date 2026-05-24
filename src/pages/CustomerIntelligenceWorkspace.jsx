@@ -47,7 +47,8 @@ function buildSegments(customers, tasks, contracts, documents) {
 
   const contractsByCustomer = {};
   (contracts || []).forEach(c => {
-    if (c.customer_id && c.status === 'active')
+    // Count only by direct customer_id (not primary_customer_id) to avoid double-counting
+    if (c.customer_id)
       contractsByCustomer[c.customer_id] = (contractsByCustomer[c.customer_id] || 0) + 1;
   });
 
