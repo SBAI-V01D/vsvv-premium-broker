@@ -275,8 +275,21 @@ export default function TabSystemExcellence() {
                               {aiSolution.ai_solution}
                             </div>
                           </div>
-                          <div className="mt-3 pt-3 border-t border-violet-100 flex items-center justify-between text-[10px] text-slate-500">
-                            <span>Generiert: {new Date(aiSolution.generated_at).toLocaleString('de-CH')}</span>
+                          <div className="mt-3 pt-3 border-t border-violet-100 flex items-center justify-between text-[10px]">
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-500">Generiert: {new Date(aiSolution.generated_at).toLocaleString('de-CH')}</span>
+                              {aiSolution.source === 'gemini' ? (
+                                <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[9px]">
+                                  <Sparkles className="w-2.5 h-2.5 mr-1" />
+                                  KI (Gemini)
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[9px]">
+                                  <Wrench className="w-2.5 h-2.5 mr-1" />
+                                  Fallback
+                                </Badge>
+                              )}
+                            </div>
                             <Button
                               size="sm"
                               onClick={() => {

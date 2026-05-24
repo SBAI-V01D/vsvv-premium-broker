@@ -274,14 +274,20 @@ Deno.serve(async (req) => {
     
     const aiSolutions = await Promise.all(
       openCriticalIncidents.slice(0, 5).map(async (incident) => {
+        let solution = null;
+        let usedGemini = false;
+
+        // Versuch 1: Gemini API
         try {
-          const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + Deno.env.get('GEMINI_API_KEY'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{
-                parts: [{
-                  text: `Du bist ein Enterprise System Architect. Analysiere dieses kritische System-Problem und gib eine konkrete, schrittweise Lösung:
+          const apiKey = Deno.env.get('GEMINI_API_KEY');
+          if (apiKey) {
+            const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + apiKey, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{
+                  parts: [{
+                    text: `Du bist ein Enterprise System Architect. Analysiere dieses kritische System-Problem und gib eine konkrete, schrittweise Lösung:
 
 PROBLEM:
 - Titel: ${incident.title}
@@ -299,33 +305,76 @@ Erstelle eine Lösung mit:
 5. Geschätzter Aufwand (Low/Medium/High)
 
 Antworte auf Deutsch, technisch präzise, aber verständlich.`
-                }]
-              }],
-              generationConfig: {
-                temperature: 0.3,
-                maxOutputTokens: 1024,
+                  }]
+                }],
+                generationConfig: {
+                  temperature: 0.3,
+                  maxOutputTokens: 1024,
+                }
+              })
+            });
+            
+            if (res.ok) {
+              const data = await res.json();
+              solution = data.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (solution && solution.trim().length > 50) {
+                usedGemini = true;
               }
-            })
-          });
-          
-          const data = await res.json();
-          const solution = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Keine Lösung generiert';
-          
-          return {
-            incident_id: incident.id,
-            incident_title: incident.title,
-            ai_solution: solution,
-            generated_at: new Date().toISOString(),
-          };
+            }
+          }
         } catch (error) {
-          console.error('[AI Solution] Failed:', error);
-          return {
-            incident_id: incident.id,
-            incident_title: incident.title,
-            ai_solution: 'KI-Lösung fehlgeschlagen: ' + error.message,
-            generated_at: new Date().toISOString(),
-          };
+          console.log('[AI Solution] Gemini failed, using fallback:', error.message);
         }
+
+        // Fallback: Generische Lösung wenn Gemini fehlschlägt
+        if (!solution || solution.trim().length < 50) {
+          solution = `## 🛠️ Lösung für: ${incident.title}
+
+### 1. Root Cause Analyse
+Das Problem in der Kategorie **${incident.category}** wurde erkannt und muss priorisiert behandelt werden.
+
+**Wahrscheinliche Ursache:**
+- ${incident.root_cause || 'Systemkonfiguration oder Dateninkonsistenz'}
+- Betroffene Entity: ${incident.entity_type || 'Multiple'}
+
+### 2. Lösungsschritte
+
+**Schritt 1: Problem verifizieren**
+- Prüfe betroffene Datensätze im Enterprise Control Center
+- Dokumentiere den aktuellen Zustand
+
+**Schritt 2: Daten korrigieren**
+- Öffne Enterprise Incidents Tab
+- Bearbeite den Incident mit Status "in_review"
+- Korrigiere die betroffenen Entity-Daten
+
+**Schritt 3: System prüfen**
+- Führe Live-Validation durch (Tab "Live-Validation")
+- Stelle sicher, dass keine weiteren Incidents auftreten
+
+**Schritt 4: Abschluss**
+- Setze Incident-Status auf "resolved"
+- Dokumentiere die Lösung im Resolution Notes Feld
+
+### 3. Prävention
+- Regelmässige System-Checks durchführen
+- Automatische Validierung aktivieren
+- Frühwarnsystem für ähnliche Probleme einrichten
+
+### 4. Geschätzter Aufwand
+**Aufwand:** ${incident.auto_fix_possible ? 'Low (automatisierbar)' : 'Medium (manuelle Prüfung erforderlich)'}
+
+---
+*Hinweis: Dies ist eine generische Lösung. Für eine detaillierte KI-Analyse stelle sicher, dass die Gemini API konfiguriert ist.*`;
+        }
+          
+        return {
+          incident_id: incident.id,
+          incident_title: incident.title,
+          ai_solution: solution,
+          generated_at: new Date().toISOString(),
+          source: usedGemini ? 'gemini' : 'fallback',
+        };
       })
     );
 
