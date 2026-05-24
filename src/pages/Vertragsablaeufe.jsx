@@ -549,7 +549,7 @@ export default function Vertragsablaeufe() {
         <div className="rounded-xl border border-border overflow-hidden bg-card shadow-xs overflow-x-auto">
           <TableHeader />
           <div>
-            {['review_required', 'early', 'process', 'warning', 'urgent', 'critical', 'expired'].map(renderGroup)}
+            {['review_required', 'expired', 'critical', 'urgent', 'warning', 'process', 'early'].map(renderGroup)}
           </div>
         </div>
       )}
