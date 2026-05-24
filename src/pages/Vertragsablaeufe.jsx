@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 const daysUntil = (d) => d ? Math.ceil((new Date(d + 'T00:00:00') - new Date()) / 86400000) : null
 const fmtDate   = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('de-CH') : '–'
 const fmtCHF    = (n) => n > 0 ? `CHF ${Number(n).toLocaleString('de-CH')}` : null
@@ -27,7 +26,6 @@ function analyzeContract(contract) {
   const cancelDays = daysUntil(contract.cancellation_deadline)
   const actions = []
 
-  // Placeholder-Daten (9999): als separate Kategorie behandeln, NICHT als normale Renewals
   const isPlaceholderEnd    = contract.end_date?.startsWith('9999')
   const isPlaceholderCancel = contract.cancellation_deadline?.startsWith('9999')
   if (isPlaceholderEnd || isPlaceholderCancel || contract.requires_review) {
@@ -52,7 +50,6 @@ function analyzeContract(contract) {
   return actions
 }
 
-// ── Design-Tokens ─────────────────────────────────────────────────────────────
 const SEV = {
   expired:         { badge: 'bg-red-700 text-white',       countText: 'text-red-700',    rowBg: 'hover:bg-red-50/50',    borderL: 'border-l-red-500',    label: 'Abgelaufen',           barColor: 'bg-red-500',    kpiBg: 'bg-red-50',    kpiBorder: 'border-red-200',    kpiText: 'text-red-700' },
   critical:        { badge: 'bg-red-500 text-white',        countText: 'text-red-600',    rowBg: 'hover:bg-red-50/40',    borderL: 'border-l-red-400',    label: 'Kritisch',             barColor: 'bg-red-400',    kpiBg: 'bg-red-50',    kpiBorder: 'border-red-200',    kpiText: 'text-red-600' },
@@ -72,7 +69,6 @@ const PROCESS_STATUS = {
   erledigt:                  { label: 'Erledigt',      color: 'text-green-600' },
 }
 
-// ── Countdown Bar ─────────────────────────────────────────────────────────────
 function CountdownBar({ days, maxDays = 180, color }) {
   const pct = Math.max(0, Math.min(100, ((maxDays - Math.max(days, 0)) / maxDays) * 100))
   return (
@@ -82,7 +78,6 @@ function CountdownBar({ days, maxDays = 180, color }) {
   )
 }
 
-// ── Cockpit Row ───────────────────────────────────────────────────────────────
 function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange }) {
   const { contract, topAction, actions } = item
   const cfg = SEV[topAction.severity] || SEV.process
@@ -98,21 +93,16 @@ function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange }) {
       className={cn('grid items-center border-b border-border/40 transition-colors cursor-pointer border-l-[3px]', cfg.rowBg, cfg.borderL)}
       style={{ gridTemplateColumns: '200px 140px 1fr 100px 100px 100px 160px 110px' }}
     >
-      {/* Kunde */}
       <div className="py-2.5 px-3 min-w-0" onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}/360`)}>
         <p className="text-[12px] font-semibold truncate hover:text-primary transition-colors leading-tight">{contract.customer_name || '–'}</p>
         <p className="text-[10px] text-muted-foreground truncate">{contract.insurer || '–'} · {getSparteLabel(contract.sparte || contract.insurance_type) || '–'}</p>
       </div>
-
-      {/* Police */}
       <div className="py-2.5 px-2 min-w-0">
         <p className="text-[10px] text-muted-foreground font-mono truncate">{contract.policy_number || '–'}</p>
         {fmtCHF(contract.premium_yearly) && (
           <p className="text-[11px] font-semibold text-emerald-700 leading-tight mt-0.5">{fmtCHF(contract.premium_yearly)}</p>
         )}
       </div>
-
-      {/* Countdown */}
       <div className="py-2.5 px-3 min-w-0 space-y-1">
         {isReview ? (
           <p className="text-[10px] text-amber-700 font-semibold">⚠ Datum prüfen</p>
@@ -144,25 +134,17 @@ function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange }) {
           </>
         )}
       </div>
-
-      {/* Ablaufdatum */}
       <div className="py-2.5 px-2 text-center">
         <p className="text-[11px] font-medium">{isReview ? '—' : fmtDate(contract.end_date)}</p>
         <p className="text-[9px] text-muted-foreground">Ablauf</p>
       </div>
-
-      {/* Kündigungsfrist */}
       <div className="py-2.5 px-2 text-center">
         <p className="text-[11px] font-medium">{isReview ? '—' : fmtDate(contract.cancellation_deadline)}</p>
         <p className="text-[9px] text-muted-foreground">Kündigung bis</p>
       </div>
-
-      {/* Priorität */}
       <div className="py-2.5 px-2 text-center">
         <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-bold inline-block', cfg.badge)}>{cfg.label}</span>
       </div>
-
-      {/* Prozess-Status */}
       <div className="py-2 px-2" onClick={e => e.stopPropagation()}>
         <Select value={contract.process_status || 'neu'} onValueChange={(v) => onStatusChange(contract.id, v)}>
           <SelectTrigger className="h-6 text-[10px] border-0 bg-transparent px-0 shadow-none focus:ring-0 w-full">
@@ -175,8 +157,6 @@ function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange }) {
           </SelectContent>
         </Select>
       </div>
-
-      {/* Aktionen */}
       <div className="py-2 px-2 flex items-center gap-1 justify-end" onClick={e => e.stopPropagation()}>
         <button
           onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}/360`)}
@@ -195,7 +175,6 @@ function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange }) {
   )
 }
 
-// ── KPI Card ──────────────────────────────────────────────────────────────────
 function KpiCard({ label, sublabel, value, icon: Icon, cfg, active, onClick }) {
   return (
     <button
@@ -210,7 +189,6 @@ function KpiCard({ label, sublabel, value, icon: Icon, cfg, active, onClick }) {
   )
 }
 
-// ── Section Divider ───────────────────────────────────────────────────────────
 function SectionDivider({ label, count, cfg }) {
   return (
     <div className={cn('flex items-center gap-2 px-3 py-2 text-[11px] font-semibold', cfg.kpiBg)}>
@@ -221,7 +199,6 @@ function SectionDivider({ label, count, cfg }) {
   )
 }
 
-// ── Table Header ──────────────────────────────────────────────────────────────
 function TableHeader() {
   return (
     <div className="grid text-[9px] font-bold uppercase tracking-wider text-muted-foreground bg-slate-50/80 border-b border-border"
@@ -238,7 +215,6 @@ function TableHeader() {
   )
 }
 
-// ── Today Panel ───────────────────────────────────────────────────────────────
 function TodayPanel({ items }) {
   const today = items.filter(i => {
     const sev = i.topAction?.severity
@@ -280,7 +256,6 @@ function TodayPanel({ items }) {
   )
 }
 
-// ── MAIN ──────────────────────────────────────────────────────────────────────
 export default function Vertragsablaeufe() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -321,7 +296,6 @@ export default function Vertragsablaeufe() {
         if (c.archived) return false
         if (['cancelled', 'archived'].includes(c.status)) return false
         if (c.process_status === 'erledigt' && filterProcessStatus !== 'erledigt') return false
-        // Verträge mit Platzhalter-Daten IMMER einbeziehen
         if (c.requires_review || c.end_date?.startsWith('9999') || c.cancellation_deadline?.startsWith('9999')) return true
         if (c.status === 'expired') return true
         const endDays = daysUntil(c.end_date)
@@ -376,12 +350,12 @@ export default function Vertragsablaeufe() {
 
   const groups = {
     review_required: filtered.filter(i => i.topAction?.severity === 'review_required'),
-    early:           filtered.filter(i => i.topAction?.severity === 'early'),       // 150-180 Tage
-    process:         filtered.filter(i => i.topAction?.severity === 'process'),     // 90-150 Tage
-    warning:         filtered.filter(i => i.topAction?.severity === 'warning'),     // 60-90 Tage
-    urgent:          filtered.filter(i => i.topAction?.severity === 'urgent'),      // 30-60 Tage
-    critical:        filtered.filter(i => i.topAction?.severity === 'critical'),    // <30 Tage
-    expired:         filtered.filter(i => i.topAction?.severity === 'expired'),     // Abgelaufen
+    early:           filtered.filter(i => i.topAction?.severity === 'early'),
+    process:         filtered.filter(i => i.topAction?.severity === 'process'),
+    warning:         filtered.filter(i => i.topAction?.severity === 'warning'),
+    urgent:          filtered.filter(i => i.topAction?.severity === 'urgent'),
+    critical:        filtered.filter(i => i.topAction?.severity === 'critical'),
+    expired:         filtered.filter(i => i.topAction?.severity === 'expired'),
   }
 
   const handleCreateVs = (contract) => {
@@ -447,112 +421,112 @@ export default function Vertragsablaeufe() {
   }
 
   return (
-    <div className="space-y-4 pb-6 page-enter">
-
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
-              <Repeat2 className="w-4 h-4 text-orange-600" />
+    <div className="page-enter flex flex-col h-full">
+      <div className="px-6 py-5 border-b border-border bg-card shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Repeat2 className="w-5 h-5 text-primary" />
             </div>
-            Renewal-Center
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Kundenbindung · Kündigungsfristen · Verlängerungen · 180-Tage-Horizont
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => navigate('/verkaufschancen')} variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
-            <Target className="w-3.5 h-3.5" /> Verkaufschancen
-          </Button>
-          <Button onClick={() => navigate('/vertraege')} variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
-            <Shield className="w-3.5 h-3.5" /> Verträge
-          </Button>
+            <div>
+              <h1 className="text-lg font-bold text-[hsl(var(--primary))] tracking-tight">Renewal-Center</h1>
+              <p className="text-xs text-muted-foreground">Kundenbindung · Kündigungsfristen · Verlängerungen · 180-Tage-Horizont</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate('/verkaufschancen')} variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
+              <Target className="w-3.5 h-3.5" /> Verkaufschancen
+            </Button>
+            <Button onClick={() => navigate('/vertraege')} variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
+              <Shield className="w-3.5 h-3.5" /> Verträge
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* ── KPI Strip ── */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
-        <KpiCard label="Abgelaufen"   sublabel="Sofort handeln" value={stats.expired}         icon={AlertTriangle} cfg={SEV.expired}         active={filterSeverity === 'expired'}         onClick={() => setFilterSeverity(f => f === 'expired' ? 'all' : 'expired')} />
-        <KpiCard label="Kritisch"     sublabel="≤ 30 Tage"      value={stats.critical}        icon={Zap}           cfg={SEV.critical}        active={filterSeverity === 'critical'}        onClick={() => setFilterSeverity(f => f === 'critical' ? 'all' : 'critical')} />
-        <KpiCard label="Dringend"     sublabel="30–60 Tage"     value={stats.urgent}          icon={Clock}         cfg={SEV.urgent}          active={filterSeverity === 'urgent'}          onClick={() => setFilterSeverity(f => f === 'urgent' ? 'all' : 'urgent')} />
-        <KpiCard label="Bald fällig"  sublabel="60–90 Tage"     value={stats.warning}         icon={CalendarClock} cfg={SEV.warning}         active={filterSeverity === 'warning'}         onClick={() => setFilterSeverity(f => f === 'warning' ? 'all' : 'warning')} />
-        <KpiCard label="Vorbereitung" sublabel="90–150 Tage"    value={stats.process}         icon={TrendingUp}    cfg={SEV.process}         active={filterSeverity === 'process'}         onClick={() => setFilterSeverity(f => f === 'process' ? 'all' : 'process')} />
-        <KpiCard label="Früh"         sublabel="150–180 Tage"   value={stats.early}           icon={CalendarClock} cfg={SEV.early}           active={filterSeverity === 'early'}           onClick={() => setFilterSeverity(f => f === 'early' ? 'all' : 'early')} />
-        {stats.review_required > 0 && (
-          <KpiCard label="Datumsprüfung" sublabel="Platzhalter gesetzt" value={stats.review_required} icon={ClipboardCheck} cfg={SEV.review_required} active={filterSeverity === 'review_required'} onClick={() => setFilterSeverity(f => f === 'review_required' ? 'all' : 'review_required')} />
-        )}
-        {stats.totalPremium > 0 && (
-          <div className="flex-1 min-w-[150px] p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-left">
-            <TrendingUp className="w-3.5 h-3.5 text-emerald-600 mb-1" />
-            <p className="text-lg font-black text-emerald-800 leading-none">{fmtCHF(stats.totalPremium)}</p>
-            <p className="text-[10px] font-semibold text-emerald-700 mt-1">Prämienvolumen</p>
-            <p className="text-[9px] text-emerald-600">{actionableItems.length} Verträge</p>
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        {/* KPI Strip */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
+          <KpiCard label="Abgelaufen"   sublabel="Sofort handeln" value={stats.expired}         icon={AlertTriangle} cfg={SEV.expired}         active={filterSeverity === 'expired'}         onClick={() => setFilterSeverity(f => f === 'expired' ? 'all' : 'expired')} />
+          <KpiCard label="Kritisch"     sublabel="≤ 30 Tage"      value={stats.critical}        icon={Zap}           cfg={SEV.critical}        active={filterSeverity === 'critical'}        onClick={() => setFilterSeverity(f => f === 'critical' ? 'all' : 'critical')} />
+          <KpiCard label="Dringend"     sublabel="30–60 Tage"     value={stats.urgent}          icon={Clock}         cfg={SEV.urgent}          active={filterSeverity === 'urgent'}          onClick={() => setFilterSeverity(f => f === 'urgent' ? 'all' : 'urgent')} />
+          <KpiCard label="Bald fällig"  sublabel="60–90 Tage"     value={stats.warning}         icon={CalendarClock} cfg={SEV.warning}         active={filterSeverity === 'warning'}         onClick={() => setFilterSeverity(f => f === 'warning' ? 'all' : 'warning')} />
+          <KpiCard label="Vorbereitung" sublabel="90–150 Tage"    value={stats.process}         icon={TrendingUp}    cfg={SEV.process}         active={filterSeverity === 'process'}         onClick={() => setFilterSeverity(f => f === 'process' ? 'all' : 'process')} />
+          <KpiCard label="Früh"         sublabel="150–180 Tage"   value={stats.early}           icon={CalendarClock} cfg={SEV.early}           active={filterSeverity === 'early'}           onClick={() => setFilterSeverity(f => f === 'early' ? 'all' : 'early')} />
+          {stats.review_required > 0 && (
+            <KpiCard label="Datumsprüfung" sublabel="Platzhalter gesetzt" value={stats.review_required} icon={ClipboardCheck} cfg={SEV.review_required} active={filterSeverity === 'review_required'} onClick={() => setFilterSeverity(f => f === 'review_required' ? 'all' : 'review_required')} />
+          )}
+          {stats.totalPremium > 0 && (
+            <div className="flex-1 min-w-[150px] p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-left">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-600 mb-1" />
+              <p className="text-lg font-black text-emerald-800 leading-none">{fmtCHF(stats.totalPremium)}</p>
+              <p className="text-[10px] font-semibold text-emerald-700 mt-1">Prämienvolumen</p>
+              <p className="text-[9px] text-emerald-600">{actionableItems.length} Verträge</p>
+            </div>
+          )}
+        </div>
+
+        {/* Heute handeln Panel */}
+        <TodayPanel items={actionableItems} />
+
+        {/* Filter Bar */}
+        <div className="flex gap-2 flex-wrap items-center">
+          <div className="relative">
+            <Input placeholder="Kunde, Versicherer, Police..." value={search} onChange={e => setSearch(e.target.value)} className="w-[220px] h-8 text-xs pl-3" />
+          </div>
+          <Select value={filterSeverity} onValueChange={setFilterSeverity}>
+            <SelectTrigger className="w-48 h-8 text-xs"><SelectValue placeholder="Dringlichkeit" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Dringlichkeiten</SelectItem>
+              <SelectItem value="review_required">⚠ Datumsprüfung ausstehend</SelectItem>
+              <SelectItem value="critical">Kritisch / Abgelaufen</SelectItem>
+              <SelectItem value="urgent">Dringend (30–60d)</SelectItem>
+              <SelectItem value="warning">Bald fällig (60–90d)</SelectItem>
+              <SelectItem value="process">Vorbereitung (90–150d)</SelectItem>
+              <SelectItem value="early">Früh (150–180d)</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterProcessStatus} onValueChange={setFilterProcessStatus}>
+            <SelectTrigger className="w-40 h-8 text-xs"><SelectValue placeholder="Prozess-Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Status</SelectItem>
+              {Object.entries(PROCESS_STATUS).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{v.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setFilterSeverity('all'); setFilterProcessStatus('all') }} className="text-muted-foreground h-8 text-xs gap-1">
+              <X className="w-3 h-3" /> Zurücksetzen
+            </Button>
+          )}
+          <span className="ml-auto text-xs text-muted-foreground">{filtered.length} von {actionableItems.length} Verträgen</span>
+        </div>
+
+        {/* Cockpit Liste */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
+            <RefreshCw className="w-4 h-4 animate-spin" /> Lädt...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="py-16 text-center rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/20">
+            <CheckCircle2 className="w-10 h-10 mx-auto mb-3 text-emerald-400" />
+            <p className="text-base font-bold text-emerald-700">
+              {actionableItems.length === 0 ? 'Alle Verträge stabil' : 'Keine Einträge für diesen Filter'}
+            </p>
+            <p className="text-sm text-emerald-600 mt-1">
+              {actionableItems.length === 0 ? 'Kein Handlungsbedarf in den nächsten 180 Tagen ✓' : 'Filter anpassen.'}
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border overflow-hidden bg-card shadow-xs overflow-x-auto">
+            <TableHeader />
+            <div>
+              {['review_required', 'expired', 'critical', 'urgent', 'warning', 'process', 'early'].map(renderGroup)}
+            </div>
           </div>
         )}
       </div>
-
-      {/* ── Heute handeln Panel ── */}
-      <TodayPanel items={actionableItems} />
-
-      {/* ── Filter Bar ── */}
-      <div className="flex gap-2 flex-wrap items-center">
-        <div className="relative">
-          <Input placeholder="Kunde, Versicherer, Police..." value={search} onChange={e => setSearch(e.target.value)} className="w-[220px] h-8 text-xs pl-3" />
-        </div>
-        <Select value={filterSeverity} onValueChange={setFilterSeverity}>
-          <SelectTrigger className="w-48 h-8 text-xs"><SelectValue placeholder="Dringlichkeit" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Alle Dringlichkeiten</SelectItem>
-            <SelectItem value="review_required">⚠ Datumsprüfung ausstehend</SelectItem>
-            <SelectItem value="critical">Kritisch / Abgelaufen</SelectItem>
-            <SelectItem value="urgent">Dringend (30–60d)</SelectItem>
-            <SelectItem value="warning">Bald fällig (60–90d)</SelectItem>
-            <SelectItem value="process">Vorbereitung (90–150d)</SelectItem>
-            <SelectItem value="early">Früh (150–180d)</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filterProcessStatus} onValueChange={setFilterProcessStatus}>
-          <SelectTrigger className="w-40 h-8 text-xs"><SelectValue placeholder="Prozess-Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Alle Status</SelectItem>
-            {Object.entries(PROCESS_STATUS).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {hasFilters && (
-          <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setFilterSeverity('all'); setFilterProcessStatus('all') }} className="text-muted-foreground h-8 text-xs gap-1">
-            <X className="w-3 h-3" /> Zurücksetzen
-          </Button>
-        )}
-        <span className="ml-auto text-xs text-muted-foreground">{filtered.length} von {actionableItems.length} Verträgen</span>
-      </div>
-
-      {/* ── Cockpit Liste ── */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-16 text-muted-foreground gap-2">
-          <RefreshCw className="w-4 h-4 animate-spin" /> Lädt...
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="py-16 text-center rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/20">
-          <CheckCircle2 className="w-10 h-10 mx-auto mb-3 text-emerald-400" />
-          <p className="text-base font-bold text-emerald-700">
-            {actionableItems.length === 0 ? 'Alle Verträge stabil' : 'Keine Einträge für diesen Filter'}
-          </p>
-          <p className="text-sm text-emerald-600 mt-1">
-            {actionableItems.length === 0 ? 'Kein Handlungsbedarf in den nächsten 180 Tagen ✓' : 'Filter anpassen.'}
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-border overflow-hidden bg-card shadow-xs overflow-x-auto">
-          <TableHeader />
-          <div>
-            {['review_required', 'expired', 'critical', 'urgent', 'warning', 'process', 'early'].map(renderGroup)}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
