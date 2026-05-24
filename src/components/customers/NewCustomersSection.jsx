@@ -62,7 +62,7 @@ export default function NewCustomersSection({ searchQuery = '' }) {
       return all.filter(c => {
         // Datumsvergleich als String (erste 10 Zeichen = YYYY-MM-DD) → kein Timezone-Problem
         const createdDate = (c.created_date || '').slice(0, 10);
-        return createdDate >= NEW_CUSTOMERS_SINCE && !c.is_family_member;
+        return createdDate >= NEW_CUSTOMERS_SINCE;
       });
     },
     staleTime: 2 * 60 * 1000,
