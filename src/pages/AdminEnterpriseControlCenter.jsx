@@ -56,6 +56,13 @@ function TabSkeleton() {
 export default function AdminEnterpriseControlCenter() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('governance');
+  // hasBeenActive: keeps tabs mounted after first visit to preserve state & React Query cache
+  const [visited, setVisited] = useState(() => new Set(['governance']));
+
+  function handleTabChange(tabId) {
+    setActiveTab(tabId);
+    setVisited(prev => new Set([...prev, tabId]));
+  }
 
   if (user?.role !== 'admin') {
     return (
@@ -93,7 +100,7 @@ export default function AdminEnterpriseControlCenter() {
           {TABS.map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={cn(
                 'px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
                 activeTab === tab.id
@@ -107,11 +114,19 @@ export default function AdminEnterpriseControlCenter() {
         </div>
       </div>
 
-      {/* Content — lazy loaded per tab */}
+      {/* Content — hasBeenActive: visited tabs stay mounted (hidden), no remount on switch */}
       <div className="flex-1 overflow-y-auto p-6">
-        <Suspense fallback={<TabSkeleton />}>
-          <ActiveComponent />
-        </Suspense>
+        {TABS.map(tab => {
+          if (!visited.has(tab.id)) return null;
+          const TabComp = tab.component;
+          return (
+            <div key={tab.id} className={activeTab !== tab.id ? 'hidden' : ''}>
+              <Suspense fallback={<TabSkeleton />}>
+                <TabComp />
+              </Suspense>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

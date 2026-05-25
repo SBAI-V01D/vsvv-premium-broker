@@ -140,11 +140,19 @@ export default function TabGovernanceScore() {
 
   const data = snapshot; // backward compat
 
+  const [computeError, setComputeError] = useState(null);
+
   async function handleComputeSnapshot() {
     setIsComputing(true);
-    await base44.functions.invoke('snapshotGovernanceScore', {});
-    await refetch();
-    setIsComputing(false);
+    setComputeError(null);
+    try {
+      await base44.functions.invoke('snapshotGovernanceScore', {});
+      await refetch();
+    } catch (e) {
+      setComputeError(e?.response?.data?.error || e.message || 'Unbekannter Fehler');
+    } finally {
+      setIsComputing(false);
+    }
   }
 
   return (
@@ -163,9 +171,14 @@ export default function TabGovernanceScore() {
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--surface-1))] text-xs font-medium text-[hsl(var(--text-muted))] hover:bg-[hsl(var(--surface-2))] transition-colors"
         >
           <RefreshCw className={cn('w-3.5 h-3.5', isComputing && 'animate-spin')} />
-          Neu berechnen
+          {isComputing ? 'Berechne…' : 'Neu berechnen'}
         </button>
       </div>
+      {computeError && (
+        <div className="flex items-center gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 px-3 py-2 rounded-lg">
+          <XCircle className="w-3.5 h-3.5 shrink-0" /> Fehler: {computeError}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">

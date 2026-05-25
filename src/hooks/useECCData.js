@@ -62,6 +62,15 @@ export function useECCGovernanceSnapshot(options = {}) {
   });
 }
 
+export function useECCGovernanceHistory(options = {}) {
+  return useQuery({
+    queryKey: ['ecc_governance_history'],
+    queryFn: () => base44.entities.GovernanceScoreSnapshot.list('-computed_at', 30),
+    staleTime: 30 * 60 * 1000, // 30min — historical data changes rarely
+    ...options,
+  });
+}
+
 export function useECCAiFindings(options = {}) {
   return useQuery({
     queryKey: ['ecc_ai_findings'],

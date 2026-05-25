@@ -308,6 +308,13 @@ export default function TabIncidents() {
   const [severityFilter, setSeverityFilter] = useState('all');
   const qc = useQueryClient();
 
+  // KPI counts: shared key 'ecc_incidents' deduplicates with useECCData across the app
+  const { data: allIncidents = [] } = useQuery({
+    queryKey: ['ecc_incidents'],
+    queryFn: () => base44.entities.EnterpriseIncident.list('-detected_at', 200),
+    staleTime: 2 * 60 * 1000,
+  });
+
   const { data: incidents = [], isLoading } = useQuery({
     queryKey: ['enterprise_incidents', filter],
     queryFn: () => {
@@ -333,12 +340,13 @@ export default function TabIncidents() {
   });
 
   const displayed = severityFilter === 'all' ? incidents : incidents.filter(i => i.severity === severityFilter);
+  // Use allIncidents for counts so KPIs are always accurate regardless of active filter
   const counts = {
-    blocking:   incidents.filter(i => i.severity === 'blocking' && i.status === 'open').length,
-    critical:   incidents.filter(i => i.severity === 'critical' && i.status === 'open').length,
-    warning:    incidents.filter(i => i.severity === 'warning'  && i.status === 'open').length,
-    governance: incidents.filter(i => i.governance_block && i.status === 'open').length,
-    open:       incidents.filter(i => i.status === 'open').length,
+    blocking:   allIncidents.filter(i => i.severity === 'blocking' && i.status === 'open').length,
+    critical:   allIncidents.filter(i => i.severity === 'critical' && i.status === 'open').length,
+    warning:    allIncidents.filter(i => i.severity === 'warning'  && i.status === 'open').length,
+    governance: allIncidents.filter(i => i.governance_block && i.status === 'open').length,
+    open:       allIncidents.filter(i => i.status === 'open').length,
   };
 
   return (
