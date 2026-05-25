@@ -517,26 +517,72 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── LLM Prompt (für Priorisierung und Erklärung) ─────────────────────────
+    // ── PRE-CORRELATION: Findings vor LLM-Aufruf konsolidieren ────────────────
+    // Gruppiere Findings nach Root-Cause-Klasse — verhindert Duplicate-Noise
+    const correlatedFindings = [];
+    const seenCategories = new Set();
+    for (const f of findings) {
+      const cat = f.id.split('-')[0]; // e.g. 'REN', 'TSK', 'DOC'
+      if (!seenCategories.has(cat)) {
+        seenCategories.add(cat);
+        correlatedFindings.push(f);
+      } else {
+        // Merge into existing finding of same category
+        const existing = correlatedFindings.find(cf => cf.id.startsWith(cat));
+        if (existing && f.affected_entities) {
+          existing.affected_entities = [...(existing.affected_entities || []), ...f.affected_entities].slice(0, 15);
+          existing.title = existing.title.replace(/\(\d+ Fälle\)/, `(${(existing.affected_entities || []).length} Fälle)`);
+        }
+      }
+    }
+
+    // ── LLM Prompt (Severity Calibration + Korrelation + Duplicate Suppression) ────────────────────────
     const levelInstructions = {
-      quick: 'Zeige NUR: Mandat-Probleme, kritische Renewals (<30 Tage), überfällige High-Priority Tasks. Maximal 4 Findings.',
-      operational: 'Zeige alle Risiken und Potenziale. Maximal 10 Findings.',
-      enterprise: 'Zeige vollständige Analyse inkl. Datenqualität. Maximal 15 Findings.',
+      quick: 'Zeige NUR: kritische Compliance-Risiken und überfällige High-Priority Tasks. Maximal 3 Findings.',
+      operational: 'Zeige alle aktiven Risiken. Maximal 7 Findings. Keine reinen Info-Findings.',
+      enterprise: 'Vollständige Analyse. Maximal 10 Findings. Konsolidiere ähnliche Findings.',
     };
 
-    const prompt = `Du bist operative KI für Versicherungsbroker.
+    const prompt = `Du bist eine operative KI für einen Versicherungsbroker. Analysiere die Findings und gib eine konsolidierte, kalibrierte Liste zurück.
 
-DEEP AUDIT RESULTS (alle Findings wurden prozessgeprüft):
-${JSON.stringify({ findings, total: findings.length }, null, 2)}
+## SEVERITY CALIBRATION — PFLICHT:
+| Situation | Severity |
+|-----------|----------|
+| Echte Compliance-Verletzung, Tenant-Problem, sofortiger Handlungsbedarf | critical |
+| Geschäftsrisiko in <30 Tagen, überfälliger wichtiger Prozess | warning |
+| Optionale Verbesserung, mittelfristiges Risiko, fehlendes optionales Feld | info |
+| Umsatzpotenzial, Cross-Sell, inaktiver Kunde | opportunity |
+| Historische Daten-Inkonsistenz, Legacy-Problem ohne akuten Handlungsbedarf | info |
+| Fehlendes optionales Feld (z.B. Geburtsdatum, Notizen) | REMOVE — kein Finding |
 
-LEVEL: ${level}
-ANWEISUNG: ${levelInstructions[level]}
+## KORRELATION & DUPLIKAT-SUPPRESSION — PFLICHT:
+- NIEMALS zwei Findings zum gleichen Thema erzeugen (z.B. nicht "Renewals 30 Tage" UND "Renewals 90 Tage" separat)
+- Statt 10 einzelne Findings derselben Klasse: EIN konsolidiertes Finding mit N betroffenen Records
+- Gleiche Root Cause = ein Finding mit allen betroffenen Entitäten
+- Jede Finding-ID (REN, TSK, DOC etc.) darf NUR EINMAL vorkommen
 
-AUFGABE:
-1. PRIORISIERE nach: critical > warning > opportunity > info
-2. ENTFERNE irrelevante Findings gemäss Level-Anweisung
-3. BEHALTE alle affected_entities (max 10)
-4. KORRIGIERE explanation/business_impact falls unklar
+## ROOT CAUSE DETECTION:
+- Suche nach gemeinsamen Mustern hinter mehreren Problemen
+- Falls mehrere Findings auf dieselbe Root Cause hinweisen → zu einem zusammenfassen
+- Dokumentiere in explanation: "Betrifft N Datensätze mit derselben Ursache: ..."
+
+## FALSE POSITIVE FILTER:
+- Kunden mit laufendem Prozess (task_in_progress, opportunity_in_progress) → Severity auf info senken
+- Historische Daten (>6 Monate alt) ohne aktuelle Auswirkung → REMOVE
+- Grosse Mengen desselben Problems → 1 konsolidiertes Finding, NICHT N Einzelfindings
+
+## INPUT FINDINGS (pre-korreliert):
+${JSON.stringify({ findings: correlatedFindings, total: correlatedFindings.length }, null, 2)}
+
+## LEVEL: ${level}
+## ANWEISUNG: ${levelInstructions[level]}
+
+## AUSGABE-REGELN:
+1. Maximal 1 Finding pro ID-Präfix (REN, TSK, DOC, ADV, CRS, INA, NOC, COMP, OPP)
+2. Sortierung: critical → warning → opportunity → info
+3. Jedes Finding braucht ein präzises root_cause Feld
+4. Keine redundanten oder überlappenden Findings
+5. Lieber 4 präzise Findings als 12 granulare
 
 ANTWORTE ALS JSON:
 {
@@ -588,6 +634,7 @@ ANTWORTE ALS JSON:
                   },
                 },
                 why_ai_suggests: { type: 'string' },
+                root_cause: { type: 'string' },
               },
             },
           },

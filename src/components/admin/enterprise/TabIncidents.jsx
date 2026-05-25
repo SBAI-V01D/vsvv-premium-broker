@@ -3,7 +3,7 @@
  *
  * Auto-Fix · Manual Review Workflow · Governance Block Details · Full Audit Trail
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
@@ -11,7 +11,7 @@ import {
   Wrench, Eye, Filter, Loader2, ChevronDown, ChevronUp,
   Search, FileText, ArrowRight, ExternalLink,
   Play, AlertCircle, ClipboardList, Lock, MessageSquare,
-  CheckSquare, SkipForward
+  CheckSquare, SkipForward, GitMerge, LayoutList, Layers
 } from 'lucide-react';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -461,11 +461,139 @@ function IncidentRow({ incident, onUpdateStatus, onAutoFixed, updating }) {
   );
 }
 
+// ─── Bulk Action Bar ──────────────────────────────────────────────────────────
+
+function BulkActionBar({ selected, allIds, onSelectAll, onClearAll, onBulkUpdate, updating }) {
+  const [bulkStatus, setBulkStatus] = useState('');
+  const [bulkComment, setBulkComment] = useState('');
+
+  function handleApply() {
+    if (!bulkStatus) return;
+    onBulkUpdate(Array.from(selected), bulkStatus, bulkComment.trim() || undefined);
+    setBulkStatus('');
+    setBulkComment('');
+    onClearAll();
+  }
+
+  return (
+    <div className="sticky top-0 z-10 bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 space-y-2 shadow-sm">
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="text-xs font-black text-amber-800">{selected.size} ausgewählt</span>
+        <button onClick={onSelectAll} className="text-xs text-amber-700 underline">Alle auswählen ({allIds.length})</button>
+        <button onClick={onClearAll} className="text-xs text-amber-600 underline">Auswahl aufheben</button>
+        <div className="flex-1" />
+        <select
+          value={bulkStatus}
+          onChange={e => setBulkStatus(e.target.value)}
+          className="text-xs border border-amber-300 rounded-lg px-2 py-1.5 bg-white focus:outline-none"
+        >
+          <option value="">Bulk-Aktion wählen…</option>
+          <option value="in_review">In Prüfung setzen</option>
+          <option value="resolved">Als behoben markieren</option>
+          <option value="accepted_risk">Risiko akzeptieren</option>
+          <option value="rejected">Abweisen</option>
+          <option value="closed">Schliessen</option>
+        </select>
+        <input
+          value={bulkComment}
+          onChange={e => setBulkComment(e.target.value)}
+          placeholder="Kommentar (optional)…"
+          className="text-xs border border-amber-300 rounded-lg px-2 py-1.5 bg-white w-48 focus:outline-none"
+        />
+        <button
+          onClick={handleApply}
+          disabled={!bulkStatus || selected.size === 0 || updating}
+          className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-40 transition-colors"
+        >
+          {updating ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckSquare className="w-3 h-3" />}
+          Anwenden
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Root Cause Group View ─────────────────────────────────────────────────────
+
+function RootCauseGroupView({ incidents, onUpdateStatus, onAutoFixed, updating, selected, onToggle }) {
+  const groups = useMemo(() => {
+    const map = {};
+    for (const inc of incidents) {
+      const key = inc.category || 'other';
+      if (!map[key]) map[key] = [];
+      map[key].push(inc);
+    }
+    return Object.entries(map).sort((a, b) => {
+      const sev = { blocking: 0, critical: 1, warning: 2, info: 3 };
+      const aMax = Math.min(...a[1].map(i => sev[i.severity] ?? 3));
+      const bMax = Math.min(...b[1].map(i => sev[i.severity] ?? 3));
+      return aMax - bMax;
+    });
+  }, [incidents]);
+
+  const [collapsed, setCollapsed] = useState({});
+
+  return (
+    <div className="space-y-3">
+      {groups.map(([cat, items]) => {
+        const isCollapsed = collapsed[cat];
+        const worstSev = items.reduce((w, i) => {
+          const order = ['blocking','critical','warning','info'];
+          return order.indexOf(i.severity) < order.indexOf(w) ? i.severity : w;
+        }, 'info');
+        const sev = SEVERITY_CFG[worstSev] || SEVERITY_CFG.warning;
+        return (
+          <div key={cat} className={`border rounded-xl overflow-hidden ${sev.border}`}>
+            <div
+              className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer ${sev.bg}`}
+              onClick={() => setCollapsed(p => ({ ...p, [cat]: !p[cat] }))}
+            >
+              <Layers className={`w-4 h-4 ${sev.text}`} />
+              <span className="text-xs font-bold text-foreground">{CATEGORY_LABELS[cat] || cat}</span>
+              <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${sev.badge}`}>{items.length} Incidents</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded border ${sev.badge} ml-1`}>{worstSev.toUpperCase()}</span>
+              <div className="flex-1" />
+              <span className="text-xs text-muted-foreground">{isCollapsed ? '▶' : '▼'}</span>
+            </div>
+            {!isCollapsed && (
+              <div className="bg-white divide-y divide-border/30">
+                {items.map(inc => (
+                  <div key={inc.id} className="flex items-start gap-3 px-4 py-2.5">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(inc.id)}
+                      onChange={() => onToggle(inc.id)}
+                      className="mt-0.5 shrink-0 w-3.5 h-3.5 rounded"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-foreground truncate">{inc.title}</p>
+                      {inc.root_cause && <p className="text-[10px] text-rose-700 italic truncate">{inc.root_cause.split('.')[0]}.</p>}
+                    </div>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${(SEVERITY_CFG[inc.severity] || SEVERITY_CFG.warning).badge}`}>
+                      {inc.severity?.toUpperCase()}
+                    </span>
+                    <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded border ${STATUS_CFG[inc.status]?.color || ''}`}>
+                      {STATUS_CFG[inc.status]?.label || inc.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Main Tab ──────────────────────────────────────────────────────────────────
 
 export default function TabIncidents() {
   const [filter, setFilter] = useState('open');
   const [severityFilter, setSeverityFilter] = useState('all');
+  const [triageMode, setTriageMode] = useState(false);
+  const [groupByRootCause, setGroupByRootCause] = useState(false);
+  const [selected, setSelected] = useState(new Set());
   const qc = useQueryClient();
 
   const { data: allIncidents = [] } = useQuery({
@@ -534,13 +662,44 @@ export default function TabIncidents() {
     open:       allIncidents.filter(i => ['open','investigating','in_progress','in_review'].includes(i.status)).length,
   }), [allIncidents]);
 
+  const handleBulkUpdate = useCallback(async (ids, status, notes) => {
+    for (const id of ids) {
+      await updateMutation.mutateAsync({ id, status, notes });
+    }
+    setSelected(new Set());
+  }, [updateMutation]);
+
+  const toggleSelected = useCallback((id) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
   return (
     <div className="max-w-4xl space-y-5">
-      <div>
-        <h2 className="text-base font-semibold text-foreground">Incident Resolution Framework</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Root Cause · Auto-Fix · Manual Review · Governance-Entscheid · Vollständiger Audit-Trail
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">Incident Resolution Framework</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Root Cause · Auto-Fix · Manual Review · Governance-Entscheid · Vollständiger Audit-Trail
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => { setGroupByRootCause(g => !g); if (!triageMode) setTriageMode(true); }}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${groupByRootCause ? 'bg-violet-600 text-white border-violet-600' : 'border-border text-muted-foreground hover:text-foreground'}`}
+          >
+            <Layers className="w-3.5 h-3.5" /> Root Cause View
+          </button>
+          <button
+            onClick={() => { setTriageMode(t => !t); if (triageMode) { setSelected(new Set()); setGroupByRootCause(false); } }}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${triageMode ? 'bg-amber-600 text-white border-amber-600' : 'border-border text-muted-foreground hover:text-foreground'}`}
+          >
+            <GitMerge className="w-3.5 h-3.5" /> Bulk Triage
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
@@ -599,6 +758,17 @@ export default function TabIncidents() {
         ))}
       </div>
 
+      {triageMode && selected.size > 0 && (
+        <BulkActionBar
+          selected={selected}
+          allIds={displayed.map(i => i.id)}
+          onSelectAll={() => setSelected(new Set(displayed.map(i => i.id)))}
+          onClearAll={() => setSelected(new Set())}
+          onBulkUpdate={handleBulkUpdate}
+          updating={updateMutation.isPending}
+        />
+      )}
+
       {isLoading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-8">
           <Loader2 className="w-4 h-4 animate-spin" /> Lade Incidents...
@@ -611,16 +781,36 @@ export default function TabIncidents() {
             {filter === 'open' ? 'Keine offenen Governance-Incidents.' : 'Keine Einträge für diesen Filter.'}
           </p>
         </div>
+      ) : groupByRootCause ? (
+        <RootCauseGroupView
+          incidents={displayed}
+          onUpdateStatus={handleUpdateStatus}
+          onAutoFixed={handleAutoFixed}
+          updating={updateMutation.isPending}
+          selected={selected}
+          onToggle={toggleSelected}
+        />
       ) : (
         <div className="space-y-2">
           {displayed.map(inc => (
-            <IncidentRow
-              key={inc.id}
-              incident={inc}
-              onUpdateStatus={handleUpdateStatus}
-              onAutoFixed={handleAutoFixed}
-              updating={updateMutation.isPending}
-            />
+            <div key={inc.id} className={triageMode ? 'flex items-start gap-2' : ''}>
+              {triageMode && (
+                <input
+                  type="checkbox"
+                  checked={selected.has(inc.id)}
+                  onChange={() => toggleSelected(inc.id)}
+                  className="mt-4 shrink-0 w-3.5 h-3.5 rounded"
+                />
+              )}
+              <div className="flex-1">
+                <IncidentRow
+                  incident={inc}
+                  onUpdateStatus={handleUpdateStatus}
+                  onAutoFixed={handleAutoFixed}
+                  updating={updateMutation.isPending}
+                />
+              </div>
+            </div>
           ))}
         </div>
       )}
