@@ -1,0 +1,186 @@
+{
+  "name": "GovernanceRule",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Eindeutiger Name der Regel (z.B. 'CustomerOrgIdMandatory')"
+    },
+    "description": {
+      "type": "string",
+      "description": "Beschreibung der Regel und ihres Zwecks"
+    },
+    "rule_version": {
+      "type": "string",
+      "default": "1.0",
+      "description": "Versionsnummer (z.B. '1.0', '2.1-beta', '2026.05')"
+    },
+    "effective_from": {
+      "type": "string",
+      "format": "date-time",
+      "description": "G\u00fcltig ab"
+    },
+    "effective_to": {
+      "type": "string",
+      "format": "date-time",
+      "description": "G\u00fcltig bis (leer = unbegrenzt)"
+    },
+    "entity_type": {
+      "type": "string",
+      "description": "Betroffene Entit\u00e4t (z.B. 'Customer', 'Contract', 'AdvisoryDossier')"
+    },
+    "event_types": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "create",
+          "update",
+          "delete",
+          "read"
+        ]
+      },
+      "description": "Trigger-Ereignisse"
+    },
+    "layer": {
+      "type": "string",
+      "enum": [
+        "WARNING",
+        "VALIDATION",
+        "GOVERNANCE_BLOCK",
+        "SECURITY_BLOCK"
+      ],
+      "description": "Enforcement-Level"
+    },
+    "business_criticality": {
+      "type": "string",
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ],
+      "default": "MEDIUM",
+      "description": "Betriebswirtschaftliche Kritikalit\u00e4t"
+    },
+    "enforcement_mode": {
+      "type": "string",
+      "enum": [
+        "monitor",
+        "enforce",
+        "strict"
+      ],
+      "default": "monitor",
+      "description": "Durchsetzungsmodus: monitor=nur Audit, enforce=kontextabh\u00e4ngig blockieren, strict=harte Blockade"
+    },
+    "simulate_only": {
+      "type": "boolean",
+      "default": true,
+      "description": "true = nur simulieren und auditieren, niemals blockieren"
+    },
+    "condition_json": {
+      "type": "object",
+      "description": "Einfache Bedingung (nur: exists-checks, Vergleiche, einfache AND/OR). Keine Business-Logik.",
+      "additionalProperties": true
+    },
+    "custom_validator_function_name": {
+      "type": "string",
+      "description": "Backend-Funktion f\u00fcr komplexe Validierung. Hat Vorrang vor condition_json."
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Fehlermeldung bei Verletzung"
+    },
+    "resolution_guidance": {
+      "type": "string",
+      "description": "Anleitung zur Behebung"
+    },
+    "rule_status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "testing",
+        "active",
+        "deprecated",
+        "archived"
+      ],
+      "default": "draft",
+      "description": "Lebenszyklus-Status"
+    },
+    "rule_scope": {
+      "type": "string",
+      "enum": [
+        "GLOBAL",
+        "ORGANIZATION",
+        "ENTITY",
+        "FEATURE"
+      ],
+      "default": "GLOBAL",
+      "description": "Geltungsbereich (f\u00fcr sp\u00e4tere Erweiterung vorbereitet)"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "User-ID des Erstellers"
+    },
+    "created_by_email": {
+      "type": "string",
+      "description": "E-Mail des Erstellers (Audit-Snapshot)"
+    },
+    "updated_by": {
+      "type": "string",
+      "description": "User-ID der letzten \u00c4nderung"
+    },
+    "updated_by_email": {
+      "type": "string",
+      "description": "E-Mail (Audit-Snapshot)"
+    },
+    "last_execution_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Letzter Ausf\u00fchrungszeitpunkt (Observability)"
+    },
+    "last_execution_ms": {
+      "type": "number",
+      "description": "Letzte Ausf\u00fchrungsdauer in ms (Performance-Monitoring)"
+    },
+    "execution_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Gesamtanzahl Ausf\u00fchrungen (Observability)"
+    },
+    "violation_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Anzahl erkannter Verletzungen"
+    },
+    "simulate_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Anzahl Simulationsl\u00e4ufe"
+    },
+    "timeout_ms": {
+      "type": "number",
+      "default": 50,
+      "description": "Execution Budget in ms (WARNING=20, VALIDATION=50, GOVERNANCE_BLOCK=100, SECURITY_BLOCK=100)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Interne Notizen"
+    }
+  },
+  "required": [
+    "name",
+    "description",
+    "rule_version",
+    "effective_from",
+    "entity_type",
+    "event_types",
+    "layer",
+    "business_criticality",
+    "enforcement_mode",
+    "simulate_only",
+    "error_message",
+    "rule_status",
+    "rule_scope"
+  ]
+}

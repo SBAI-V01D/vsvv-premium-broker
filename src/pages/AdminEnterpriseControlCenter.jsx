@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 
 // Lazy-loaded tab components — only bundle/load when tab is first opened
 const TabGovernanceScore = lazy(() => import('@/components/admin/enterprise/TabGovernanceScore'));
+const TabGovernanceRules = lazy(() => import('@/components/admin/enterprise/TabGovernanceRules'));
 const TabIncidents       = lazy(() => import('@/components/admin/enterprise/TabIncidents'));
 const TabSystemHealth    = lazy(() => import('@/components/admin/enterprise/TabSystemHealth'));
 const TabAiQuality       = lazy(() => import('@/components/admin/enterprise/TabAiQuality'));
@@ -28,11 +29,12 @@ const TabSystemAdmin     = lazy(() => import('@/components/admin/enterprise/TabS
 
 const TABS = [
   { id: 'governance', label: '◈ Governance Score', component: TabGovernanceScore },
-  { id: 'incidents',  label: '🚨 Incidents',        component: TabIncidents },
-  { id: 'health',     label: '⚕ System Health',     component: TabSystemHealth },
-  { id: 'ai',         label: '🧠 AI Quality',        component: TabAiQuality },
-  { id: 'audit',      label: '🔒 Audit & Security',  component: TabAuditSecurity },
-  { id: 'system',     label: '⚙ System',             component: TabSystemAdmin },
+  { id: 'rules',      label: '📋 Rules',             component: TabGovernanceRules },
+  { id: 'incidents',  label: '🚨 Incidents',          component: TabIncidents },
+  { id: 'health',     label: '⚕ System Health',       component: TabSystemHealth },
+  { id: 'ai',         label: '🧠 AI Quality',          component: TabAiQuality },
+  { id: 'audit',      label: '🔒 Audit & Security',    component: TabAuditSecurity },
+  { id: 'system',     label: '⚙ System',               component: TabSystemAdmin },
 ];
 
 function TabSkeleton() {
