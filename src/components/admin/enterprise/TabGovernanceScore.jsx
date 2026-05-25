@@ -127,14 +127,25 @@ function DomainCard({ domainKey, data, weight }) {
 }
 
 export default function TabGovernanceScore() {
-  const { data, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['governance_risk_score'],
+  const [isComputing, setIsComputing] = useState(false);
+
+  const { data: snapshot, isLoading, refetch } = useQuery({
+    queryKey: ['ecc_governance_snapshot'],
     queryFn: async () => {
-      const res = await base44.functions.invoke('calculateGovernanceRiskScore', {});
-      return res.data;
+      const snapshots = await base44.entities.GovernanceScoreSnapshot.list('-computed_at', 1);
+      return snapshots[0] || null;
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 15 * 60 * 1000,
   });
+
+  const data = snapshot; // backward compat
+
+  async function handleComputeSnapshot() {
+    setIsComputing(true);
+    await base44.functions.invoke('snapshotGovernanceScore', {});
+    await refetch();
+    setIsComputing(false);
+  }
 
   return (
     <div className="space-y-6">
@@ -147,11 +158,11 @@ export default function TabGovernanceScore() {
           </p>
         </div>
         <button
-          onClick={() => refetch()}
-          disabled={isFetching}
+          onClick={handleComputeSnapshot}
+          disabled={isComputing}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--surface-1))] text-xs font-medium text-[hsl(var(--text-muted))] hover:bg-[hsl(var(--surface-2))] transition-colors"
         >
-          <RefreshCw className={cn('w-3.5 h-3.5', isFetching && 'animate-spin')} />
+          <RefreshCw className={cn('w-3.5 h-3.5', isComputing && 'animate-spin')} />
           Neu berechnen
         </button>
       </div>

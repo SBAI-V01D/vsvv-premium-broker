@@ -1,0 +1,73 @@
+{
+  "name": "GovernanceScoreSnapshot",
+  "type": "object",
+  "properties": {
+    "snapshot_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Datum des Snapshots (f\u00fcr Trendanalyse)"
+    },
+    "overall": {
+      "type": "number",
+      "description": "Gesamt-Score 0\u2013100"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "description": "Risiko-Level"
+    },
+    "domains": {
+      "type": "object",
+      "description": "Domain-Scores (compliance, tenant_integrity, audit_trail, ai_reliability, incident_health, data_quality)",
+      "additionalProperties": true
+    },
+    "alerts": {
+      "type": "array",
+      "description": "Aktive Governance-Warnungen",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "weights": {
+      "type": "object",
+      "description": "Gewichtungen der Domains",
+      "additionalProperties": true
+    },
+    "computed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Berechnungszeitpunkt"
+    },
+    "computed_by": {
+      "type": "string",
+      "description": "Ausgel\u00f6st von (user email oder 'scheduler')"
+    },
+    "previous_overall": {
+      "type": "number",
+      "description": "Vorheriger Gesamt-Score (f\u00fcr Trendanzeige)"
+    },
+    "trend": {
+      "type": "string",
+      "enum": [
+        "up",
+        "down",
+        "stable"
+      ],
+      "description": "Trendrichtung gegen\u00fcber Vortag"
+    },
+    "trend_delta": {
+      "type": "number",
+      "description": "Punktedifferenz zum Vortag"
+    }
+  },
+  "required": [
+    "overall",
+    "computed_at"
+  ]
+}
