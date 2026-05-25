@@ -27,8 +27,8 @@ Deno.serve(async (req) => {
       // Scheduled call — service role only
     }
 
-    // 1. Compute fresh score
-    const scoreResult = await base44.asServiceRole.functions.invoke('calculateGovernanceRiskScore', {});
+    // 1. Compute fresh score — use passthrough auth (forwards user token for admin check)
+    const scoreResult = await base44.functions.invoke('calculateGovernanceRiskScore', {});
     const score = scoreResult?.overall !== undefined ? scoreResult : null;
 
     if (!score) {
