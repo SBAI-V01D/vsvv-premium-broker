@@ -73,7 +73,7 @@ export default function AdminEnterpriseControlCenter() {
 
       {/* Tabs */}
       <div className="px-6 border-b border-border bg-card shrink-0">
-        <div className="flex gap-0 overflow-x-auto scrollbar-none">
+        <div className="flex flex-wrap gap-0">
           {TABS.map(tab => (
             <button
               key={tab.id}
