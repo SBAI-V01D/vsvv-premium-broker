@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Edit, Trash2, Building2, Users, ChevronDown, ChevronRight, MoreHorizontal } from 'lucide-react'
+import { Plus, Edit, Trash2, Building2, Users, ChevronDown, ChevronRight, MoreHorizontal, UserX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,7 +25,7 @@ const ROLE_LABELS = {
 }
 
 function OrgForm({ org, onSave, onCancel, saving }) {
-  const [form, setForm] = useState(org || { name: '', type: 'broker', status: 'active', finma_number: '', notes: '' })
+  const [form, setForm] = useState(org || { name: '', type: 'broker', status: 'active', finma_number: '', works_with_address_brokers: false, notes: '' })
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }))
   return (
     <form onSubmit={e => { e.preventDefault(); onSave(form) }} className="space-y-4">
@@ -56,6 +56,23 @@ function OrgForm({ org, onSave, onCancel, saving }) {
               <SelectItem value="inactive">Inaktiv</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+      </div>
+      <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+        <input
+          type="checkbox"
+          id="works_with_address_brokers"
+          checked={!!form.works_with_address_brokers}
+          onChange={e => set('works_with_address_brokers', e.target.checked)}
+          className="mt-0.5 w-4 h-4 accent-amber-600 cursor-pointer"
+        />
+        <div>
+          <label htmlFor="works_with_address_brokers" className="text-sm font-semibold text-amber-800 cursor-pointer flex items-center gap-1.5">
+            <UserX className="w-3.5 h-3.5" /> Arbeitet mit Adressvermittlern
+          </label>
+          <p className="text-xs text-amber-700 mt-0.5">
+            Kunden dieser Organisation werden vom Governance-Mandat-Score ausgenommen, da Adressvermittler keine Mandate aufnehmen.
+          </p>
         </div>
       </div>
       <div>
