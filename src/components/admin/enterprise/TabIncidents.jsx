@@ -1,7 +1,7 @@
 /**
- * TabIncidents — Enterprise Incident Resolution & Repair Framework
+ * TabIncidents — Enterprise Incident Resolution Framework with Action Layer
  *
- * Root Cause Analysis · Concrete Fix Steps · Governance Separation · Resolution Workflow
+ * Auto-Fix · Manual Review Workflow · Governance Block Details · Full Audit Trail
  */
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -9,8 +9,12 @@ import { base44 } from '@/api/base44Client';
 import {
   AlertTriangle, XCircle, Info, Shield, CheckCircle2,
   Wrench, Eye, Filter, Loader2, ChevronDown, ChevronUp,
-  Search, FileText, ArrowRight, Ban, ExternalLink
+  Search, FileText, ArrowRight, Ban, ExternalLink,
+  Play, AlertCircle, ClipboardList, Lock, MessageSquare,
+  CheckSquare, SkipForward
 } from 'lucide-react';
+
+// ─── Config ───────────────────────────────────────────────────────────────────
 
 const SEVERITY_CFG = {
   info:     { icon: Info,          bg: 'bg-blue-50',   border: 'border-blue-200',  text: 'text-blue-700',   badge: 'bg-blue-100 text-blue-700 border-blue-200',   label: 'INFO' },
@@ -21,10 +25,14 @@ const SEVERITY_CFG = {
 
 const STATUS_CFG = {
   open:          { label: 'Offen',             color: 'text-red-600 bg-red-50 border-red-200' },
-  in_review:     { label: 'In Pruefung',       color: 'text-amber-700 bg-amber-50 border-amber-200' },
+  investigating: { label: 'Untersucht',        color: 'text-amber-600 bg-amber-50 border-amber-200' },
+  in_progress:   { label: 'In Bearbeitung',    color: 'text-blue-600 bg-blue-50 border-blue-200' },
+  in_review:     { label: 'In Prüfung',        color: 'text-amber-700 bg-amber-50 border-amber-200' },
   resolved:      { label: 'Behoben',           color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+  closed:        { label: 'Geschlossen',       color: 'text-slate-600 bg-slate-100 border-slate-200' },
   accepted_risk: { label: 'Risiko akzeptiert', color: 'text-slate-600 bg-slate-50 border-slate-200' },
   auto_fixed:    { label: 'Auto-repariert',    color: 'text-blue-700 bg-blue-50 border-blue-200' },
+  rejected:      { label: 'Abgelehnt',         color: 'text-slate-500 bg-slate-50 border-slate-200' },
 };
 
 const CATEGORY_LABELS = {
@@ -32,41 +40,66 @@ const CATEGORY_LABELS = {
   approval:           'Approval',
   snapshots:          'Snapshots',
   tenant_isolation:   'Tenant-Isolation',
-  data_integrity:     'Datenintegritaet',
+  data_integrity:     'Datenintegrität',
   audit_trail:        'Audit-Trail',
-  pdf_integrity:      'PDF-Integritaet',
+  pdf_integrity:      'PDF-Integrität',
   security:           'Security',
   document_integrity: 'Dokumente',
   recovery:           'Recovery',
   performance:        'Performance',
+  sla_breach:         'SLA-Breach',
   other:              'Sonstiges',
 };
 
-const REPAIR_ACTIONS = {
-  sync_customer_status:     { label: 'Kundenstatus synchronisieren', fn: 'syncCustomerStatusFromContracts' },
-  check_data_consistency:   { label: 'Konsistenz pruefen',           fn: 'checkDataConsistency' },
-  repair_dossier_org_ids:   { label: 'organization_id automatisch ergänzen', fn: 'repairDossierOrgIds' },
+// Safe auto-fix actions — NEVER includes governance, approvals, PDFs, roles
+const AUTO_FIX_REGISTRY = {
+  sync_customer_status:       { label: 'Kundenstatus synchronisieren',         fn: 'syncCustomerStatusFromContracts', safe: true },
+  check_data_consistency:     { label: 'Datenkonsistenz prüfen & reparieren',  fn: 'checkDataConsistency',            safe: true },
+  repair_dossier_org_ids:     { label: 'Fehlende organization_id ergänzen',    fn: 'repairDossierOrgIds',             safe: true },
+  repair_broken_relations:    { label: 'Broken Relations reparieren',          fn: 'repairBrokenRelations',           safe: true },
+  validate_tenant_integrity:  { label: 'Tenant-Integrität validieren',         fn: 'validateTenantIntegrity',         safe: true },
+  validate_enterprise:        { label: 'Enterprise-Integrität validieren',     fn: 'validateEnterpriseIntegrity',     safe: true },
+  sync_application_customer:  { label: 'Antrag-Kunden-Zuweisung reparieren',  fn: 'syncApplicationCustomerAuto',     safe: true },
 };
 
-function parseAffectedRecords(technical_details) {
-  if (!technical_details) return null;
-  try {
-    const parsed = JSON.parse(technical_details);
-    if (parsed.affected_records && parsed.affected_records.length > 0) return parsed.affected_records;
-  } catch {}
-  return null;
+// Governance-blocked categories — auto-fix is NEVER allowed for these
+const GOVERNANCE_CATEGORIES = new Set(['approval', 'pdf_integrity', 'security', 'export_gate', 'snapshots']);
+
+// ─── Sub-Components ────────────────────────────────────────────────────────────
+
+function MetaGrid({ incident }) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+      {[
+        ['Erkannt am',   incident.detected_at ? new Date(incident.detected_at).toLocaleString('de-CH') : '—'],
+        ['Erkannt durch', incident.detected_by || '—'],
+        ['Modul',         incident.module || incident.entity_type || '—'],
+        ['SLA-Status',    incident.sla_status ? incident.sla_status.toUpperCase() : '—'],
+      ].map(([l, v]) => (
+        <div key={l}>
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">{l}</div>
+          <div className={`font-medium truncate ${l === 'SLA-Status' && incident.sla_status === 'breached' ? 'text-rose-600' : 'text-foreground'}`}>{v}</div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function RootCauseSection({ incident }) {
   if (!incident.root_cause && !incident.technical_details) return null;
-  const affectedRecords = parseAffectedRecords(incident.technical_details);
+  let affectedRecords = null;
+  try {
+    const parsed = JSON.parse(incident.technical_details);
+    if (parsed?.affected_records?.length > 0) affectedRecords = parsed.affected_records;
+  } catch {}
+
   return (
     <div className="space-y-2">
       {incident.root_cause && (
         <div className="bg-rose-50 border border-rose-200 rounded-lg px-3 py-2.5">
           <div className="flex items-center gap-1.5 mb-1.5">
             <Search className="w-3 h-3 text-rose-600" />
-            <span className="text-[10px] font-black text-rose-700 uppercase tracking-wide">Ursache (Root Cause)</span>
+            <span className="text-[10px] font-black text-rose-700 uppercase tracking-wide">Root Cause</span>
           </div>
           <p className="text-xs text-rose-900 leading-relaxed">{incident.root_cause}</p>
         </div>
@@ -82,23 +115,15 @@ function RootCauseSection({ incident }) {
           <div className="space-y-1">
             {affectedRecords.map((rec, i) => (
               <div key={i} className="flex items-center gap-2 bg-white border border-slate-200 rounded px-2 py-1.5">
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0">
-                  {rec.type}
-                </span>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0">{rec.type}</span>
                 {rec.link ? (
-                  <a
-                    href={rec.link}
-                    className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 truncate"
-                  >
-                    {rec.name}
-                    <ExternalLink className="w-2.5 h-2.5 shrink-0 opacity-60" />
+                  <a href={rec.link} className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 truncate">
+                    {rec.name}<ExternalLink className="w-2.5 h-2.5 shrink-0 opacity-60" />
                   </a>
                 ) : (
                   <span className="text-xs font-semibold text-foreground truncate">{rec.name}</span>
                 )}
-                {rec.detail && (
-                  <span className="text-[10px] text-muted-foreground ml-auto shrink-0 truncate max-w-[200px]">{rec.detail}</span>
-                )}
+                {rec.detail && <span className="text-[10px] text-muted-foreground ml-auto shrink-0 truncate max-w-[200px]">{rec.detail}</span>}
               </div>
             ))}
           </div>
@@ -109,7 +134,7 @@ function RootCauseSection({ incident }) {
             <FileText className="w-3 h-3 text-slate-500" />
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Technische Details</span>
           </div>
-          <p className="text-xs text-slate-700 font-mono leading-relaxed">{incident.technical_details}</p>
+          <p className="text-xs text-slate-700 font-mono leading-relaxed whitespace-pre-wrap">{incident.technical_details}</p>
         </div>
       )}
     </div>
@@ -124,15 +149,13 @@ function RecommendedFixSection({ incident }) {
     <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5">
       <div className="flex items-center gap-1.5 mb-2">
         <ArrowRight className="w-3 h-3 text-emerald-700" />
-        <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wide">Empfohlene Loesung</span>
+        <span className="text-[10px] font-black text-emerald-700 uppercase tracking-wide">Empfohlene Lösungsschritte</span>
       </div>
       {steps.length > 1 ? (
         <ol className="space-y-1">
           {steps.map((step, i) => (
             <li key={i} className="flex items-start gap-2 text-xs text-emerald-900">
-              <span className="shrink-0 w-4 h-4 rounded-full bg-emerald-200 text-emerald-800 flex items-center justify-center text-[9px] font-bold mt-0.5">
-                {i + 1}
-              </span>
+              <span className="shrink-0 w-4 h-4 rounded-full bg-emerald-200 text-emerald-800 flex items-center justify-center text-[9px] font-bold mt-0.5">{i + 1}</span>
               <span className="leading-relaxed">{step.replace(/^\d+\.\s*/, '')}</span>
             </li>
           ))}
@@ -144,41 +167,254 @@ function RecommendedFixSection({ incident }) {
   );
 }
 
-function ClassificationBadge({ incident }) {
-  if (incident.governance_block) {
-    return (
-      <div className="flex items-center gap-2 px-3 py-2 bg-rose-50 border border-rose-200 rounded-lg text-xs">
-        <Ban className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-        <span className="text-rose-800"><strong>Governance-Block</strong> — Menschlicher Entscheid zwingend. Niemals automatisch beheben.</span>
-      </div>
-    );
-  }
-  if (incident.auto_fix_possible) {
-    return (
-      <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs">
-        <Wrench className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-        <span className="text-blue-800"><strong>Auto-Fix verfuegbar</strong> — Sichere technische Reparatur. Keine Geschaeftsdaten betroffen.</span>
-      </div>
-    );
-  }
+function GovernanceBlockSection({ incident }) {
+  if (!incident.governance_block) return null;
+
+  // Parse what's blocking from description/technical_details
+  const blockReasons = [];
+  const desc = (incident.description || '').toLowerCase();
+  if (desc.includes('freigabe') || desc.includes('approval')) blockReasons.push('Fehlende Berater-Freigabe (advisor_approved)');
+  if (desc.includes('reapproval')) blockReasons.push('Reapproval nach Änderung ausstehend');
+  if (desc.includes('pdf') || desc.includes('hash')) blockReasons.push('Fehlender oder ungültiger PDF-Hash');
+  if (desc.includes('rolle') || desc.includes('role')) blockReasons.push('Fehlende oder unzureichende Benutzerrolle');
+  if (desc.includes('provision') || desc.includes('commission')) blockReasons.push('Provisionsentscheid manuell erforderlich');
+  if (blockReasons.length === 0) blockReasons.push('Governance-Entscheid durch Administrator erforderlich');
+
   return (
-    <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs">
-      <Eye className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-      <span className="text-amber-800"><strong>Manueller Review</strong> — Admin-Entscheid erforderlich.</span>
+    <div className="border border-rose-300 bg-rose-50 rounded-lg px-3 py-3 space-y-3">
+      <div className="flex items-center gap-2">
+        <Lock className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+        <span className="text-xs font-black text-rose-800 uppercase tracking-wide">Governance-Block — Manueller Entscheid zwingend</span>
+      </div>
+
+      <div>
+        <p className="text-[10px] font-bold text-rose-700 uppercase mb-1.5">Blockierungsgründe</p>
+        <ul className="space-y-1">
+          {blockReasons.map((r, i) => (
+            <li key={i} className="flex items-start gap-1.5 text-xs text-rose-900">
+              <XCircle className="w-3 h-3 text-rose-500 shrink-0 mt-0.5" />{r}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="bg-rose-100 border border-rose-200 rounded px-2.5 py-2 text-xs text-rose-800">
+        <strong>Warum kein Auto-Fix?</strong> Approval-, PDF-, Rollen- und Compliance-Entscheide berühren rechtlich bindende Prozesse und dürfen ausschliesslich durch einen autorisierten Administrator manuell entschieden und dokumentiert werden.
+      </div>
+
+      {incident.affected_entities?.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold text-rose-700 uppercase mb-1">Betroffene Entitäten</p>
+          <div className="space-y-1">
+            {incident.affected_entities.map((e, i) => (
+              <div key={i} className="flex items-center gap-2 text-xs bg-white/60 rounded px-2 py-1">
+                <span className="text-[9px] font-bold bg-rose-200 text-rose-800 px-1.5 rounded">{e.entity_type}</span>
+                <span className="text-rose-900 truncate">{e.description || e.entity_id}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function IncidentRow({ incident, onUpdateStatus, updating }) {
+function AutoFixSection({ incident, onAutoFixed }) {
+  const [state, setState] = useState('idle'); // idle | running | success | error
+  const [result, setResult] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  if (!incident.auto_fix_possible || incident.governance_block) return null;
+  if (GOVERNANCE_CATEGORIES.has(incident.category)) return null;
+  if (!incident.auto_fix_action) return null;
+
+  const action = AUTO_FIX_REGISTRY[incident.auto_fix_action];
+  if (!action?.fn) return null;
+
+  async function runAutoFix() {
+    setState('running');
+    setErrorMsg('');
+    try {
+      const res = await base44.functions.invoke(action.fn, {
+        entity_id: incident.entity_id,
+        entity_type: incident.entity_type,
+        incident_id: incident.id,
+      });
+      setResult(res.data);
+      setState('success');
+      onAutoFixed(incident.id, `Auto-Fix via ${action.fn} — ${JSON.stringify(res.data).slice(0, 120)}`);
+    } catch (e) {
+      setErrorMsg(e?.response?.data?.error || e.message || 'Unbekannter Fehler');
+      setState('error');
+    }
+  }
+
+  return (
+    <div className="border border-blue-200 bg-blue-50 rounded-lg px-3 py-3 space-y-2.5">
+      <div className="flex items-center gap-2">
+        <Wrench className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+        <span className="text-xs font-black text-blue-800 uppercase tracking-wide">Auto-Fix verfügbar</span>
+        <span className="ml-auto text-[10px] bg-blue-100 border border-blue-200 text-blue-700 px-2 py-0.5 rounded font-semibold">SICHER — Keine Governance-Daten</span>
+      </div>
+
+      <p className="text-xs text-blue-800">
+        <strong>Aktion:</strong> {action.label}
+      </p>
+
+      {state === 'idle' && (
+        <button
+          onClick={runAutoFix}
+          className="flex items-center gap-2 text-xs font-bold px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Play className="w-3.5 h-3.5" /> Auto-Fix ausführen
+        </button>
+      )}
+
+      {state === 'running' && (
+        <div className="flex items-center gap-2 text-xs text-blue-700">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Reparatur läuft…
+        </div>
+      )}
+
+      {state === 'success' && (
+        <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-bold text-emerald-800">Auto-Fix erfolgreich ausgeführt</p>
+            {result && <p className="text-[10px] text-emerald-700 mt-0.5 font-mono">{JSON.stringify(result).slice(0, 200)}</p>}
+            <p className="text-[10px] text-emerald-600 mt-1">Incident wird als auto_fixed markiert. Audit-Eintrag erstellt.</p>
+          </div>
+        </div>
+      )}
+
+      {state === 'error' && (
+        <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-bold text-red-800">Auto-Fix fehlgeschlagen</p>
+            <p className="text-[10px] text-red-700 mt-0.5">{errorMsg}</p>
+            <button onClick={() => setState('idle')} className="text-[10px] text-red-600 underline mt-1">Erneut versuchen</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ManualReviewSection({ incident, onUpdateStatus, updating }) {
+  const [comment, setComment] = useState('');
+  const [decision, setDecision] = useState('');
+  const isGovBlock = incident.governance_block;
+  const requiresComment = isGovBlock || incident.manual_review_required;
+
+  const canSubmit = !requiresComment || (comment.trim().length >= 10 && decision);
+
+  const DECISIONS = isGovBlock
+    ? [
+        { value: 'resolved',      label: 'Manuell behoben',       cls: 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' },
+        { value: 'accepted_risk', label: 'Risiko akzeptiert',     cls: 'border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100' },
+        { value: 'rejected',      label: 'Finding abgelehnt',     cls: 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100' },
+      ]
+    : [
+        { value: 'in_review',     label: 'In Prüfung setzen',     cls: 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100' },
+        { value: 'resolved',      label: 'Als behoben markieren', cls: 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100' },
+        { value: 'accepted_risk', label: 'Risiko akzeptieren',    cls: 'border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100' },
+      ];
+
+  return (
+    <div className="border border-amber-200 bg-amber-50/40 rounded-lg px-3 py-3 space-y-3">
+      <div className="flex items-center gap-2">
+        <ClipboardList className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+        <span className="text-xs font-black text-amber-800 uppercase tracking-wide">
+          {isGovBlock ? 'Governance-Entscheid dokumentieren' : 'Manual Review Workflow'}
+        </span>
+      </div>
+
+      {requiresComment && (
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-bold text-amber-700 uppercase flex items-center gap-1">
+            <MessageSquare className="w-3 h-3" />
+            Pflicht-Kommentar {comment.trim().length < 10 && <span className="text-rose-500">({Math.max(0, 10 - comment.trim().length)} Zeichen noch)</span>}
+          </label>
+          <textarea
+            value={comment}
+            onChange={e => setComment(e.target.value)}
+            placeholder={isGovBlock
+              ? 'Was wurde geprüft? Welche Entscheidung wurde getroffen und warum? (min. 10 Zeichen)'
+              : 'Was wurde untersucht? Was wurde getan oder entschieden? (min. 10 Zeichen)'}
+            rows={3}
+            className="w-full text-xs border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none bg-white"
+          />
+        </div>
+      )}
+
+      {!requiresComment && (
+        <textarea
+          value={comment}
+          onChange={e => setComment(e.target.value)}
+          placeholder="Optionale Resolution Notes..."
+          rows={2}
+          className="w-full text-xs border border-input rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+        />
+      )}
+
+      <div className="flex gap-2 flex-wrap">
+        {DECISIONS.map(d => (
+          <button
+            key={d.value}
+            onClick={() => { setDecision(d.value); onUpdateStatus(incident.id, d.value, comment.trim() || undefined); }}
+            disabled={updating || !canSubmit}
+            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${d.cls}`}
+          >
+            {d.value === 'resolved' || d.value === 'in_review' ? <CheckSquare className="w-3 h-3" /> : <SkipForward className="w-3 h-3" />}
+            {d.label}
+          </button>
+        ))}
+      </div>
+
+      {requiresComment && !canSubmit && (
+        <p className="text-[10px] text-amber-700 flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" />
+          Bitte Pflicht-Kommentar ausfüllen (min. 10 Zeichen) um eine Entscheidung zu treffen.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ResolutionSummary({ incident }) {
+  if (!['resolved', 'closed', 'accepted_risk', 'auto_fixed', 'rejected'].includes(incident.status)) return null;
+  return (
+    <div className="bg-muted/30 border border-border/60 rounded-lg px-3 py-2.5 space-y-1">
+      <div className="flex items-center gap-1.5">
+        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Resolution</span>
+        <span className={`ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded border ${STATUS_CFG[incident.status]?.color || ''}`}>
+          {STATUS_CFG[incident.status]?.label || incident.status}
+        </span>
+      </div>
+      {incident.resolution_notes && <p className="text-xs text-foreground">{incident.resolution_notes}</p>}
+      {incident.resolved_at && (
+        <p className="text-[10px] text-muted-foreground">
+          {new Date(incident.resolved_at).toLocaleString('de-CH')} · {incident.resolved_by || '—'}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── Incident Row ──────────────────────────────────────────────────────────────
+
+function IncidentRow({ incident, onUpdateStatus, onAutoFixed, updating }) {
   const [expanded, setExpanded] = useState(false);
-  const [notes, setNotes] = useState('');
   const sev = SEVERITY_CFG[incident.severity] || SEVERITY_CFG.warning;
   const SevIcon = sev.icon;
   const statusCfg = STATUS_CFG[incident.status] || STATUS_CFG.open;
-  const isOpen = incident.status === 'open' || incident.status === 'in_review';
+  const isActive = ['open', 'investigating', 'in_progress', 'in_review'].includes(incident.status);
 
   return (
     <div className={`border rounded-xl overflow-hidden ${sev.border}`}>
+      {/* Header row — clickable */}
       <div
         className={`px-4 py-3 flex items-start gap-3 cursor-pointer ${sev.bg} hover:brightness-95 transition-all`}
         onClick={() => setExpanded(e => !e)}
@@ -186,21 +422,22 @@ function IncidentRow({ incident, onUpdateStatus, updating }) {
         <SevIcon className={`w-4 h-4 mt-0.5 shrink-0 ${sev.text}`} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${sev.badge}`}>
-              {sev.label}
-            </span>
+            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${sev.badge}`}>{sev.label}</span>
             <span className="text-xs bg-white/70 text-muted-foreground px-2 py-0.5 rounded border border-border/60">
               {CATEGORY_LABELS[incident.category] || incident.category}
             </span>
             {incident.governance_block && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded border bg-rose-100 text-rose-700 border-rose-200 flex items-center gap-1">
-                <Ban className="w-2.5 h-2.5" /> Governance
+                <Lock className="w-2.5 h-2.5" /> Gov-Block
               </span>
             )}
             {incident.auto_fix_possible && !incident.governance_block && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded border bg-blue-100 text-blue-700 border-blue-200 flex items-center gap-1">
                 <Wrench className="w-2.5 h-2.5" /> Auto-Fix
               </span>
+            )}
+            {incident.sla_status === 'breached' && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded border bg-rose-100 text-rose-700 border-rose-200">SLA BREACH</span>
             )}
             <span className={`ml-auto text-[10px] font-semibold px-2 py-0.5 rounded border ${statusCfg.color}`}>
               {statusCfg.label}
@@ -209,9 +446,7 @@ function IncidentRow({ incident, onUpdateStatus, updating }) {
           <p className="text-sm font-semibold text-foreground mt-1.5">{incident.title}</p>
           <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{incident.description}</p>
           {!expanded && incident.root_cause && (
-            <p className="text-[11px] text-rose-700 mt-1 italic truncate">
-              Ursache: {incident.root_cause.split('.')[0]}.
-            </p>
+            <p className="text-[11px] text-rose-700 mt-1 italic truncate">Ursache: {incident.root_cause.split('.')[0]}.</p>
           )}
         </div>
         <div className="shrink-0 text-muted-foreground mt-1">
@@ -219,82 +454,52 @@ function IncidentRow({ incident, onUpdateStatus, updating }) {
         </div>
       </div>
 
+      {/* Expanded detail panel */}
       {expanded && (
         <div className="bg-white border-t border-border/60 px-4 py-4 space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-            {[
-              ['Erkannt am', incident.detected_at ? new Date(incident.detected_at).toLocaleString('de-CH') : '—'],
-              ['Erkannt durch', incident.detected_by || '—'],
-              ['Zugewiesen', incident.assigned_to || 'Nicht zugewiesen'],
-              ['Entity-ID', incident.entity_id ? incident.entity_id.slice(0, 14) + '...' : '—'],
-            ].map(([l, v]) => (
-              <div key={l}>
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wide mb-0.5">{l}</div>
-                <div className="font-medium text-foreground truncate">{v}</div>
-              </div>
-            ))}
-          </div>
-
+          <MetaGrid incident={incident} />
           <RootCauseSection incident={incident} />
-          <ClassificationBadge incident={incident} />
+
+          {/* Governance Block — show details first */}
+          {incident.governance_block && <GovernanceBlockSection incident={incident} />}
+
+          {/* Recommended steps — always visible */}
           <RecommendedFixSection incident={incident} />
 
-          {isOpen && (
-            <div className="space-y-2 pt-1 border-t border-border/40">
-              <textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                placeholder="Resolution Notes — Was wurde getan? Warum sicher?"
-                rows={2}
-                className="w-full text-xs border border-input rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-ring resize-none"
+          {/* ACTION LAYER — only for active incidents */}
+          {isActive && (
+            <div className="space-y-3 pt-1 border-t border-border/30">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Resolution Actions</p>
+
+              {/* Auto-Fix (only if eligible) */}
+              <AutoFixSection incident={incident} onAutoFixed={onAutoFixed} />
+
+              {/* Manual Review / Governance decision */}
+              <ManualReviewSection
+                incident={incident}
+                onUpdateStatus={onUpdateStatus}
+                updating={updating}
               />
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  onClick={() => onUpdateStatus(incident.id, 'in_review', notes)}
-                  disabled={updating}
-                  className="text-xs font-semibold px-3 py-1.5 border border-amber-300 bg-amber-50 text-amber-800 rounded-lg hover:bg-amber-100 transition-colors disabled:opacity-50"
-                >
-                  In Pruefung setzen
-                </button>
-                <button
-                  onClick={() => onUpdateStatus(incident.id, 'resolved', notes)}
-                  disabled={updating}
-                  className="text-xs font-semibold px-3 py-1.5 border border-emerald-300 bg-emerald-50 text-emerald-800 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
-                >
-                  <CheckCircle2 className="w-3 h-3 inline mr-1" />Behoben markieren
-                </button>
-                <button
-                  onClick={() => onUpdateStatus(incident.id, 'accepted_risk', notes)}
-                  disabled={updating}
-                  className="text-xs font-semibold px-3 py-1.5 border border-slate-300 bg-slate-50 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
-                >
-                  Risiko akzeptieren
-                </button>
-                {incident.auto_fix_possible && !incident.governance_block && incident.auto_fix_action && REPAIR_ACTIONS[incident.auto_fix_action]?.fn && (
-                  <button
-                    onClick={() =>
-                      base44.functions.invoke(REPAIR_ACTIONS[incident.auto_fix_action].fn, { entity_id: incident.entity_id })
-                        .then(() => onUpdateStatus(incident.id, 'auto_fixed', 'Auto-repair via ' + REPAIR_ACTIONS[incident.auto_fix_action].fn))}
-                    disabled={updating}
-                    className="text-xs font-semibold px-3 py-1.5 border border-blue-300 bg-blue-50 text-blue-800 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
-                  >
-                    <Wrench className="w-3 h-3 inline mr-1" />
-                    {REPAIR_ACTIONS[incident.auto_fix_action]?.label || 'Auto-Fix ausfuehren'}
-                  </button>
-                )}
-              </div>
             </div>
           )}
 
-          {!isOpen && incident.resolution_notes && (
-            <div className="bg-muted/30 border border-border/60 rounded-lg px-3 py-2.5">
-              <div className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Resolution</div>
-              <p className="text-xs text-foreground">{incident.resolution_notes}</p>
-              {incident.resolved_at && (
-                <p className="text-[10px] text-muted-foreground mt-1.5">
-                  {new Date(incident.resolved_at).toLocaleString('de-CH')} · {incident.resolved_by}
-                </p>
-              )}
+          {/* Resolution summary for closed incidents */}
+          <ResolutionSummary incident={incident} />
+
+          {/* Audit log preview */}
+          {incident.incident_audit_log?.length > 0 && (
+            <div className="border border-border/40 rounded-lg px-3 py-2.5">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2">Audit-Trail ({incident.incident_audit_log.length} Einträge)</p>
+              <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                {[...incident.incident_audit_log].reverse().map((entry, i) => (
+                  <div key={i} className="flex items-start gap-2 text-[10px] text-muted-foreground">
+                    <span className="shrink-0 font-mono">{entry.timestamp ? new Date(entry.timestamp).toLocaleString('de-CH') : '—'}</span>
+                    <span className="text-foreground font-medium">{entry.user_name || entry.user_id || '—'}</span>
+                    <span>→ {entry.action}</span>
+                    {entry.comment && <span className="italic truncate max-w-[200px]">"{entry.comment}"</span>}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -303,12 +508,14 @@ function IncidentRow({ incident, onUpdateStatus, updating }) {
   );
 }
 
+// ─── Main Tab ─────────────────────────────────────────────────────────────────
+
 export default function TabIncidents() {
   const [filter, setFilter] = useState('open');
   const [severityFilter, setSeverityFilter] = useState('all');
   const qc = useQueryClient();
 
-  // KPI counts: shared key 'ecc_incidents' deduplicates with useECCData across the app
+  // KPI counts — shared cache key with useECCData
   const { data: allIncidents = [] } = useQuery({
     queryKey: ['ecc_incidents'],
     queryFn: () => base44.entities.EnterpriseIncident.list('-detected_at', 200),
@@ -329,24 +536,43 @@ export default function TabIncidents() {
   const updateMutation = useMutation({
     mutationFn: async ({ id, status, notes }) => {
       const me = await base44.auth.me();
+      const isResolved = ['resolved', 'accepted_risk', 'auto_fixed', 'rejected', 'closed'].includes(status);
+      const existing = incidents.find(i => i.id === id);
+      const auditEntry = {
+        timestamp: new Date().toISOString(),
+        user_id: me.id,
+        user_name: me.full_name || me.email,
+        action: status,
+        previous_status: existing?.status,
+        new_status: status,
+        comment: notes || '',
+      };
       return base44.entities.EnterpriseIncident.update(id, {
         status,
         resolution_notes: notes || undefined,
-        resolved_at: ['resolved', 'accepted_risk', 'auto_fixed'].includes(status) ? new Date().toISOString() : undefined,
-        resolved_by: ['resolved', 'accepted_risk', 'auto_fixed'].includes(status) ? (me.full_name || me.email) : undefined,
+        resolved_at: isResolved ? new Date().toISOString() : undefined,
+        resolved_by: isResolved ? (me.full_name || me.email) : undefined,
+        incident_audit_log: [...(existing?.incident_audit_log || []), auditEntry],
       });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['enterprise_incidents'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['enterprise_incidents'] });
+      qc.invalidateQueries({ queryKey: ['ecc_incidents'] });
+    },
   });
 
+  // Called by AutoFixSection after successful fix
+  function handleAutoFixed(id, notes) {
+    updateMutation.mutate({ id, status: 'auto_fixed', notes });
+  }
+
   const displayed = severityFilter === 'all' ? incidents : incidents.filter(i => i.severity === severityFilter);
-  // Use allIncidents for counts so KPIs are always accurate regardless of active filter
   const counts = {
-    blocking:   allIncidents.filter(i => i.severity === 'blocking' && i.status === 'open').length,
-    critical:   allIncidents.filter(i => i.severity === 'critical' && i.status === 'open').length,
-    warning:    allIncidents.filter(i => i.severity === 'warning'  && i.status === 'open').length,
-    governance: allIncidents.filter(i => i.governance_block && i.status === 'open').length,
-    open:       allIncidents.filter(i => i.status === 'open').length,
+    blocking:   allIncidents.filter(i => i.severity === 'blocking' && ['open','investigating','in_progress'].includes(i.status)).length,
+    critical:   allIncidents.filter(i => i.severity === 'critical' && ['open','investigating','in_progress'].includes(i.status)).length,
+    warning:    allIncidents.filter(i => i.severity === 'warning'  && ['open','investigating','in_progress'].includes(i.status)).length,
+    governance: allIncidents.filter(i => i.governance_block && ['open','investigating','in_progress'].includes(i.status)).length,
+    open:       allIncidents.filter(i => ['open','investigating','in_progress','in_review'].includes(i.status)).length,
   };
 
   return (
@@ -354,31 +580,31 @@ export default function TabIncidents() {
       <div>
         <h2 className="text-base font-semibold text-foreground">Incident Resolution Framework</h2>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Root Cause · Concrete Fix Steps · Governance Separation · Resolution Workflow
+          Root Cause · Auto-Fix · Manual Review · Governance-Entscheid · Vollständiger Audit-Trail
         </p>
       </div>
 
-      {/* 3-Typen-Erklarung */}
+      {/* 3-Typen-Erklärung */}
       <div className="grid grid-cols-3 gap-3">
         <div className="border border-blue-200 bg-blue-50 rounded-lg px-4 py-3 flex items-start gap-2">
           <Wrench className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
           <div>
             <p className="text-xs font-bold text-blue-800">Auto-Fix</p>
-            <p className="text-xs text-blue-700">Sichere technische Reparaturen. Keine Governance-Daten.</p>
+            <p className="text-xs text-blue-700">Deterministische Reparatur. Keine Governance-Daten. Vollständiger Audit-Eintrag.</p>
           </div>
         </div>
         <div className="border border-amber-200 bg-amber-50 rounded-lg px-4 py-3 flex items-start gap-2">
           <Eye className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <div>
             <p className="text-xs font-bold text-amber-800">Manual Review</p>
-            <p className="text-xs text-amber-700">Admin-Entscheid erforderlich. Pruefen und dokumentieren.</p>
+            <p className="text-xs text-amber-700">Admin-Entscheid. Pflicht-Kommentar. Dokumentierte Entscheidung.</p>
           </div>
         </div>
         <div className="border border-rose-200 bg-rose-50 rounded-lg px-4 py-3 flex items-start gap-2">
-          <Ban className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+          <Lock className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
           <div>
             <p className="text-xs font-bold text-rose-800">Governance-Block</p>
-            <p className="text-xs text-rose-700">Approval, PDFs, Rollen, Provisionen — immer human.</p>
+            <p className="text-xs text-rose-700">Approval, PDFs, Rollen, Provisionen — immer human, immer dokumentiert.</p>
           </div>
         </div>
       </div>
@@ -390,7 +616,7 @@ export default function TabIncidents() {
           ['Critical',   counts.critical,   'text-red-700 bg-red-50 border-red-300'],
           ['Warning',    counts.warning,    'text-amber-700 bg-amber-50 border-amber-300'],
           ['Governance', counts.governance, 'text-rose-800 bg-rose-50 border-rose-200'],
-          ['Offen ges.', counts.open,       'text-foreground bg-muted border-border'],
+          ['Aktiv ges.', counts.open,       'text-foreground bg-muted border-border'],
         ].map(([l, v, cls]) => (
           <div key={l} className={`border rounded-xl px-3 py-3 text-center ${cls}`}>
             <div className="text-xl font-black">{v}</div>
@@ -402,7 +628,7 @@ export default function TabIncidents() {
       {/* Filter */}
       <div className="flex gap-2 flex-wrap items-center">
         <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-        {[['open','Offen'],['in_review','In Pruefung'],['resolved','Behoben'],['all','Alle']].map(([v, l]) => (
+        {[['open','Offen'],['in_review','In Prüfung'],['resolved','Behoben'],['all','Alle']].map(([v, l]) => (
           <button key={v} onClick={() => setFilter(v)}
             className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition-colors ${filter === v ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:text-foreground'}`}>
             {l}
@@ -412,7 +638,7 @@ export default function TabIncidents() {
         {['all','blocking','critical','warning','info'].map(v => (
           <button key={v} onClick={() => setSeverityFilter(v)}
             className={`text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-colors ${severityFilter === v ? 'bg-foreground text-background border-foreground' : 'border-border text-muted-foreground hover:text-foreground'}`}>
-            {v === 'all' ? 'Alle Severity' : v.toUpperCase()}
+            {v === 'all' ? 'Alle' : v.toUpperCase()}
           </button>
         ))}
       </div>
@@ -426,10 +652,7 @@ export default function TabIncidents() {
           <CheckCircle2 className="w-10 h-10 text-emerald-300 mx-auto mb-3" />
           <p className="text-sm font-semibold text-foreground">Keine Incidents</p>
           <p className="text-xs text-muted-foreground mt-1">
-            {filter === 'open' ? 'Keine offenen Governance-Incidents.' : 'Keine Eintraege fuer diesen Filter.'}
-          </p>
-          <p className="text-xs text-muted-foreground mt-3">
-            Incidents werden automatisch durch <code className="bg-muted px-1 rounded">runLiveSystemValidation</code> erzeugt.
+            {filter === 'open' ? 'Keine offenen Governance-Incidents.' : 'Keine Einträge für diesen Filter.'}
           </p>
         </div>
       ) : (
@@ -439,6 +662,7 @@ export default function TabIncidents() {
               key={inc.id}
               incident={inc}
               onUpdateStatus={(id, status, notes) => updateMutation.mutate({ id, status, notes })}
+              onAutoFixed={handleAutoFixed}
               updating={updateMutation.isPending}
             />
           ))}
