@@ -43,17 +43,39 @@ Deno.serve(async (req) => {
     // 1. COMPLIANCE
     const customers = await sr.entities.Customer.list('-created_date', 500);
     const active = customers.filter(c => !c.archived);
-    const validMandate = active.filter(c => c.mandate_status === 'valid').length;
-    const mandateScore = active.length > 0 ? Math.round((validMandate / active.length) * 100) : 100;
+
+    // Adressvermittler-Ausnahme: Kunden aus Orgs mit works_with_address_brokers=true
+    // werden vom Mandat-Score ausgenommen, da dort keine Mandate aufgenommen werden.
+    const orgs = await sr.entities.Organization.list('-created_date', 100);
+    const addressBrokerOrgIds = new Set(
+      orgs.filter(o => o.works_with_address_brokers === true).map(o => o.id)
+    );
+    const mandateRelevant = addressBrokerOrgIds.size > 0
+      ? active.filter(c => !addressBrokerOrgIds.has(c.organization_id))
+      : active;
+    const validMandate = mandateRelevant.filter(c => c.mandate_status === 'valid').length;
+    const excludedFromMandate = active.length - mandateRelevant.length;
+    const mandateScore = mandateRelevant.length > 0 ? Math.round((validMandate / mandateRelevant.length) * 100) : 100;
+
     const dossiers = await sr.entities.AdvisoryDossier.list('-created_date', 100);
     const approvedDossiers = dossiers.filter(d => d.advisor_approved && d.approval_history?.length > 0).length;
     const dossierScore = dossiers.length > 0 ? Math.round((approvedDossiers / dossiers.length) * 100) : 100;
     domains.compliance = {
       score: Math.round((mandateScore * 0.6) + (dossierScore * 0.4)),
       label: 'Compliance',
-      details: { mandate_valid_pct: mandateScore, dossier_approval_pct: dossierScore, valid_mandates: validMandate, total_active_customers: active.length },
+      details: {
+        mandate_valid_pct: mandateScore,
+        dossier_approval_pct: dossierScore,
+        valid_mandates: validMandate,
+        mandate_relevant_customers: mandateRelevant.length,
+        excluded_address_broker_customers: excludedFromMandate,
+        total_active_customers: active.length,
+      },
     };
-    if (mandateScore < 70) alerts.push({ domain: 'compliance', message: `Nur ${mandateScore}% der Kunden haben gültiges Mandat`, severity: 'warning' });
+    if (mandateScore < 70) {
+      const note = excludedFromMandate > 0 ? ` (${excludedFromMandate} Adressvermittler-Kunden ausgenommen)` : '';
+      alerts.push({ domain: 'compliance', message: `Nur ${mandateScore}% der mandatspflichtigen Kunden haben gültiges Mandat${note}`, severity: 'warning' });
+    }
 
     // 2. TENANT INTEGRITY
     const contracts = await sr.entities.Contract.list('-created_date', 500);

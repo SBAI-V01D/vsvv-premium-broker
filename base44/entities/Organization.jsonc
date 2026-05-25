@@ -54,6 +54,11 @@
       "type": "string",
       "description": "Website"
     },
+    "works_with_address_brokers": {
+      "type": "boolean",
+      "default": false,
+      "description": "Organisation arbeitet mit Adressvermittlern \u2014 Kunden dieser Org werden vom Mandat-Score ausgenommen"
+    },
     "notes": {
       "type": "string",
       "description": "Notizen"
