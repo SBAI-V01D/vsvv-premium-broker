@@ -46,7 +46,7 @@ export default function TabAiExplainability() {
   const [severityFilter, setSeverityFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('new');
 
-  const { data: findings = [], isLoading, refetch } = useQuery({
+  const { data: findings = [], isLoading, refetch, isFetching } = useQuery({
     queryKey: ['ai_findings'],
     queryFn: () => base44.entities.AiFinding.list('-created_date', 100),
     staleTime: 3 * 60 * 1000,
@@ -78,10 +78,11 @@ export default function TabAiExplainability() {
         </div>
         <button
           onClick={() => refetch()}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--surface-1))] text-xs font-medium text-[hsl(var(--text-muted))] hover:bg-[hsl(var(--surface-2))] transition-colors"
+          disabled={isFetching}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(var(--surface-1))] text-xs font-medium text-[hsl(var(--text-muted))] hover:bg-[hsl(var(--surface-2))] transition-colors disabled:opacity-50"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
-          Aktualisieren
+          <RefreshCw className={cn('w-3.5 h-3.5', isFetching && 'animate-spin')} />
+          {isFetching ? 'Lädt...' : 'Aktualisieren'}
         </button>
       </div>
 

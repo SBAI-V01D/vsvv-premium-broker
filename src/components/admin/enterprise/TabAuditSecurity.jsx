@@ -20,13 +20,20 @@ function SubTabSkeleton() {
 
 export default function TabAuditSecurity() {
   const [active, setActive] = useState('audit');
+  const [mounted, setMounted] = useState({ audit: true });
+
+  function switchTab(id) {
+    setActive(id);
+    setMounted(prev => ({ ...prev, [id]: true }));
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex gap-1 border-b border-[hsl(var(--border-subtle))] pb-0">
         {SUB_TABS.map(t => (
           <button
             key={t.id}
-            onClick={() => setActive(t.id)}
+            onClick={() => switchTab(t.id)}
             className={cn(
               'px-4 py-2 text-xs font-semibold border-b-2 -mb-px transition-colors',
               active === t.id ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -36,11 +43,21 @@ export default function TabAuditSecurity() {
           </button>
         ))}
       </div>
-      <Suspense fallback={<SubTabSkeleton />}>
-        {active === 'audit'      && <TabAudit />}
-        {active === 'compliance' && <TabCompliance />}
-        {active === 'security'   && <TabSecurity />}
-      </Suspense>
+      {mounted.audit && (
+        <div className={active === 'audit' ? '' : 'hidden'}>
+          <Suspense fallback={<SubTabSkeleton />}><TabAudit /></Suspense>
+        </div>
+      )}
+      {mounted.compliance && (
+        <div className={active === 'compliance' ? '' : 'hidden'}>
+          <Suspense fallback={<SubTabSkeleton />}><TabCompliance /></Suspense>
+        </div>
+      )}
+      {mounted.security && (
+        <div className={active === 'security' ? '' : 'hidden'}>
+          <Suspense fallback={<SubTabSkeleton />}><TabSecurity /></Suspense>
+        </div>
+      )}
     </div>
   );
 }

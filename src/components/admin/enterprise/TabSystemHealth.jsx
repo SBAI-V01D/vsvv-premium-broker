@@ -26,13 +26,20 @@ function SubTabSkeleton() {
 
 export default function TabSystemHealth() {
   const [active, setActive] = useState('integrity');
+  const [mounted, setMounted] = useState({ integrity: true });
+
+  function switchTab(id) {
+    setActive(id);
+    setMounted(prev => ({ ...prev, [id]: true }));
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex gap-1 border-b border-[hsl(var(--border-subtle))] pb-0">
         {SUB_TABS.map(t => (
           <button
             key={t.id}
-            onClick={() => setActive(t.id)}
+            onClick={() => switchTab(t.id)}
             className={cn(
               'px-4 py-2 text-xs font-semibold border-b-2 -mb-px transition-colors',
               active === t.id ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -42,11 +49,21 @@ export default function TabSystemHealth() {
           </button>
         ))}
       </div>
-      <Suspense fallback={<SubTabSkeleton />}>
-        {active === 'integrity'   && <TabIntegrity />}
-        {active === 'validation'  && <TabValidation />}
-        {active === 'systemcheck' && <TabSystemCheck />}
-      </Suspense>
+      {mounted.integrity && (
+        <div className={active === 'integrity' ? '' : 'hidden'}>
+          <Suspense fallback={<SubTabSkeleton />}><TabIntegrity /></Suspense>
+        </div>
+      )}
+      {mounted.validation && (
+        <div className={active === 'validation' ? '' : 'hidden'}>
+          <Suspense fallback={<SubTabSkeleton />}><TabValidation /></Suspense>
+        </div>
+      )}
+      {mounted.systemcheck && (
+        <div className={active === 'systemcheck' ? '' : 'hidden'}>
+          <Suspense fallback={<SubTabSkeleton />}><TabSystemCheck /></Suspense>
+        </div>
+      )}
     </div>
   );
 }

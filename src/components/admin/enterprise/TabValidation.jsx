@@ -3,6 +3,7 @@
  * Zeigt affected_records: konkrete betroffene Datensätze mit ID, Name, Link, Detail
  */
 import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { CheckCircle2, XCircle, AlertTriangle, Loader2, PlayCircle, Shield, Award, ExternalLink } from 'lucide-react';
 
@@ -89,7 +90,15 @@ function AffectedRecordsList({ records, severity }) {
 }
 
 export default function TabValidation() {
-  const [report, setReport] = useState(null);
+  const qc = useQueryClient();
+  // Report wird im Query-Cache persistiert — überlebt Navigation
+  const { data: report = null } = useQuery({
+    queryKey: ['validation_report'],
+    queryFn: () => null,
+    enabled: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -98,7 +107,7 @@ export default function TabValidation() {
     setError(null);
     try {
       const res = await base44.functions.invoke('runLiveSystemValidation', {});
-      setReport(res.data);
+      qc.setQueryData(['validation_report'], res.data);
     } catch (e) {
       setError(e.message);
     } finally {

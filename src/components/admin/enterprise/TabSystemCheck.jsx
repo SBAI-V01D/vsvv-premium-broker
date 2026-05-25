@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -53,7 +53,15 @@ const STATUS_ICONS = {
 };
 
 export default function TabSystemCheck() {
-  const [report, setReport] = useState(null);
+  const qc = useQueryClient();
+  // Report wird im Query-Cache persistiert — überlebt Navigation
+  const { data: report = null } = useQuery({
+    queryKey: ['system_check_report'],
+    queryFn: () => null,
+    enabled: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
 
   const runCheckMutation = useMutation({
     mutationFn: async () => {
@@ -61,7 +69,7 @@ export default function TabSystemCheck() {
       return res.data;
     },
     onSuccess: (data) => {
-      setReport(data);
+      qc.setQueryData(['system_check_report'], data);
       toast.success('System Check abgeschlossen', { duration: 3000, icon: '✓' });
     },
     onError: (error) => {
@@ -125,7 +133,7 @@ export default function TabSystemCheck() {
         </div>
         <Button
           onClick={() => {
-            setReport(null);
+            qc.setQueryData(['system_check_report'], null);
             setTimeout(() => runCheckMutation.mutate(), 100);
           }}
           variant="outline"

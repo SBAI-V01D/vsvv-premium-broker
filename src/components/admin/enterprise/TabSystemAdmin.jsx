@@ -23,13 +23,20 @@ function SubTabSkeleton() {
 
 export default function TabSystemAdmin() {
   const [active, setActive] = useState('performance');
+  const [mounted, setMounted] = useState({ performance: true });
+
+  function switchTab(id) {
+    setActive(id);
+    setMounted(prev => ({ ...prev, [id]: true }));
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex gap-1 flex-wrap border-b border-[hsl(var(--border-subtle))] pb-0">
         {SUB_TABS.map(t => (
           <button
             key={t.id}
-            onClick={() => setActive(t.id)}
+            onClick={() => switchTab(t.id)}
             className={cn(
               'px-4 py-2 text-xs font-semibold border-b-2 -mb-px transition-colors',
               active === t.id ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -39,12 +46,26 @@ export default function TabSystemAdmin() {
           </button>
         ))}
       </div>
-      <Suspense fallback={<SubTabSkeleton />}>
-        {active === 'performance' && <TabPerformance />}
-        {active === 'exports'     && <TabExports />}
-        {active === 'modules'     && <TabModules />}
-        {active === 'excellence'  && <TabSystemExcellence />}
-      </Suspense>
+      {mounted.performance && (
+        <div className={active === 'performance' ? '' : 'hidden'}>
+          <Suspense fallback={<SubTabSkeleton />}><TabPerformance /></Suspense>
+        </div>
+      )}
+      {mounted.exports && (
+        <div className={active === 'exports' ? '' : 'hidden'}>
+          <Suspense fallback={<SubTabSkeleton />}><TabExports /></Suspense>
+        </div>
+      )}
+      {mounted.modules && (
+        <div className={active === 'modules' ? '' : 'hidden'}>
+          <Suspense fallback={<SubTabSkeleton />}><TabModules /></Suspense>
+        </div>
+      )}
+      {mounted.excellence && (
+        <div className={active === 'excellence' ? '' : 'hidden'}>
+          <Suspense fallback={<SubTabSkeleton />}><TabSystemExcellence /></Suspense>
+        </div>
+      )}
     </div>
   );
 }
