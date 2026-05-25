@@ -1,0 +1,267 @@
+{
+  "name": "AiFinding",
+  "type": "object",
+  "properties": {
+    "review_id": {
+      "type": "string",
+      "description": "Zugeh\u00f6riges AiReview (optional)"
+    },
+    "organization_id": {
+      "type": "string",
+      "description": "Tenant-ID \u2014 Pflichtfeld"
+    },
+    "finding_type": {
+      "type": "string",
+      "enum": [
+        "tenant_violation",
+        "missing_required_field",
+        "orphan_relationship",
+        "compliance_gap",
+        "data_quality",
+        "sla_risk",
+        "approval_missing",
+        "audit_gap",
+        "financial_inconsistency",
+        "duplicate_detected",
+        "pricing_anomaly",
+        "churn_risk",
+        "coverage_gap",
+        "other"
+      ],
+      "description": "Typ des Findings"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "info",
+        "warning",
+        "critical",
+        "blocking"
+      ],
+      "default": "warning"
+    },
+    "confidence_score": {
+      "type": "number",
+      "description": "KI-Konfidenz 0.0\u20131.0: Wie sicher ist die KI?"
+    },
+    "evidence_strength": {
+      "type": "string",
+      "enum": [
+        "weak",
+        "moderate",
+        "strong",
+        "conclusive"
+      ],
+      "description": "St\u00e4rke der Datenevidenz (unabh\u00e4ngig von KI-Konfidenz)"
+    },
+    "governance_risk_score": {
+      "type": "number",
+      "description": "Business/Compliance-Risiko 0\u2013100"
+    },
+    "false_positive_risk": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "default": "low",
+      "description": "Wahrscheinlichkeit Fehlalarm"
+    },
+    "explanation": {
+      "type": "object",
+      "description": "Vollst\u00e4ndige Erkl\u00e4rung des Findings",
+      "properties": {
+        "summary": {
+          "type": "string",
+          "description": "1-Satz Zusammenfassung"
+        },
+        "reasoning": {
+          "type": "string",
+          "description": "Warum wurde das erkannt? Detailliert."
+        },
+        "violated_rules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Liste verletzter Governance-Regeln"
+        },
+        "data_sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Datenquellen die zur Erkennung f\u00fchrten"
+        },
+        "affected_entities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "entity_type": {
+                "type": "string"
+              },
+              "entity_id": {
+                "type": "string"
+              },
+              "field": {
+                "type": "string"
+              },
+              "issue": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "recommendation": {
+          "type": "string",
+          "description": "Empfohlene Massnahme"
+        },
+        "remediation_steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Konkrete L\u00f6sungsschritte"
+        },
+        "governance_impact": {
+          "type": "string",
+          "description": "Auswirkung auf Governance/Compliance"
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "description": "Konkrete Datenpunkte als Belege",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "entity_type": {
+            "type": "string"
+          },
+          "entity_id": {
+            "type": "string"
+          },
+          "expected_value": {
+            "type": "string"
+          },
+          "actual_value": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "explainability": {
+      "type": "object",
+      "description": "KI-Transparenz-Metadaten",
+      "properties": {
+        "ai_model": {
+          "type": "string"
+        },
+        "detection_method": {
+          "type": "string",
+          "enum": [
+            "rule_based",
+            "ai_inference",
+            "statistical",
+            "hybrid"
+          ]
+        },
+        "validation_checks_passed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "validation_checks_failed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tenant_validation_passed": {
+          "type": "boolean"
+        },
+        "hallucination_risk": {
+          "type": "string",
+          "enum": [
+            "none",
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": "low"
+        },
+        "pipeline_version": {
+          "type": "string"
+        }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "description": "Audit-Trail der Finding-Generierung",
+      "properties": {
+        "generated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "generated_by": {
+          "type": "string"
+        },
+        "processing_time_ms": {
+          "type": "number"
+        },
+        "pipeline_version": {
+          "type": "string"
+        },
+        "reviewed_by": {
+          "type": "string"
+        },
+        "reviewed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "review_decision": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "confirmed",
+            "rejected_false_positive",
+            "escalated"
+          ]
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "under_review",
+        "confirmed",
+        "resolved",
+        "false_positive",
+        "accepted_risk"
+      ],
+      "default": "new"
+    },
+    "linked_incident_id": {
+      "type": "string",
+      "description": "Verkn\u00fcpfter EnterpriseIncident (falls eskaliert)"
+    }
+  },
+  "required": [
+    "finding_type",
+    "severity",
+    "organization_id"
+  ]
+}
