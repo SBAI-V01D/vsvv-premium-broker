@@ -3,13 +3,13 @@
  *
  * Auto-Fix · Manual Review Workflow · Governance Block Details · Full Audit Trail
  */
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
   AlertTriangle, XCircle, Info, Shield, CheckCircle2,
   Wrench, Eye, Filter, Loader2, ChevronDown, ChevronUp,
-  Search, FileText, ArrowRight, Ban, ExternalLink,
+  Search, FileText, ArrowRight, ExternalLink,
   Play, AlertCircle, ClipboardList, Lock, MessageSquare,
   CheckSquare, SkipForward
 } from 'lucide-react';
@@ -51,18 +51,16 @@ const CATEGORY_LABELS = {
   other:              'Sonstiges',
 };
 
-// Safe auto-fix actions — NEVER includes governance, approvals, PDFs, roles
 const AUTO_FIX_REGISTRY = {
-  sync_customer_status:       { label: 'Kundenstatus synchronisieren',         fn: 'syncCustomerStatusFromContracts', safe: true },
-  check_data_consistency:     { label: 'Datenkonsistenz prüfen & reparieren',  fn: 'checkDataConsistency',            safe: true },
-  repair_dossier_org_ids:     { label: 'Fehlende organization_id ergänzen',    fn: 'repairDossierOrgIds',             safe: true },
-  repair_broken_relations:    { label: 'Broken Relations reparieren',          fn: 'repairBrokenRelations',           safe: true },
-  validate_tenant_integrity:  { label: 'Tenant-Integrität validieren',         fn: 'validateTenantIntegrity',         safe: true },
-  validate_enterprise:        { label: 'Enterprise-Integrität validieren',     fn: 'validateEnterpriseIntegrity',     safe: true },
-  sync_application_customer:  { label: 'Antrag-Kunden-Zuweisung reparieren',  fn: 'syncApplicationCustomerAuto',     safe: true },
+  sync_customer_status:       { label: 'Kundenstatus synchronisieren',         fn: 'syncCustomerStatusFromContracts' },
+  check_data_consistency:     { label: 'Datenkonsistenz prüfen & reparieren',  fn: 'checkDataConsistency' },
+  repair_dossier_org_ids:     { label: 'Fehlende organization_id ergänzen',    fn: 'repairDossierOrgIds' },
+  repair_broken_relations:    { label: 'Broken Relations reparieren',          fn: 'repairBrokenRelations' },
+  validate_tenant_integrity:  { label: 'Tenant-Integrität validieren',         fn: 'validateTenantIntegrity' },
+  validate_enterprise:        { label: 'Enterprise-Integrität validieren',     fn: 'validateEnterpriseIntegrity' },
+  sync_application_customer:  { label: 'Antrag-Kunden-Zuweisung reparieren',  fn: 'syncApplicationCustomerAuto' },
 };
 
-// Governance-blocked categories — auto-fix is NEVER allowed for these
 const GOVERNANCE_CATEGORIES = new Set(['approval', 'pdf_integrity', 'security', 'export_gate', 'snapshots']);
 
 // ─── Sub-Components ────────────────────────────────────────────────────────────
@@ -71,7 +69,7 @@ function MetaGrid({ incident }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
       {[
-        ['Erkannt am',   incident.detected_at ? new Date(incident.detected_at).toLocaleString('de-CH') : '—'],
+        ['Erkannt am',    incident.detected_at ? new Date(incident.detected_at).toLocaleString('de-CH') : '—'],
         ['Erkannt durch', incident.detected_by || '—'],
         ['Modul',         incident.module || incident.entity_type || '—'],
         ['SLA-Status',    incident.sla_status ? incident.sla_status.toUpperCase() : '—'],
@@ -169,8 +167,6 @@ function RecommendedFixSection({ incident }) {
 
 function GovernanceBlockSection({ incident }) {
   if (!incident.governance_block) return null;
-
-  // Parse what's blocking from description/technical_details
   const blockReasons = [];
   const desc = (incident.description || '').toLowerCase();
   if (desc.includes('freigabe') || desc.includes('approval')) blockReasons.push('Fehlende Berater-Freigabe (advisor_approved)');
@@ -186,7 +182,6 @@ function GovernanceBlockSection({ incident }) {
         <Lock className="w-3.5 h-3.5 text-rose-600 shrink-0" />
         <span className="text-xs font-black text-rose-800 uppercase tracking-wide">Governance-Block — Manueller Entscheid zwingend</span>
       </div>
-
       <div>
         <p className="text-[10px] font-bold text-rose-700 uppercase mb-1.5">Blockierungsgründe</p>
         <ul className="space-y-1">
@@ -197,11 +192,9 @@ function GovernanceBlockSection({ incident }) {
           ))}
         </ul>
       </div>
-
       <div className="bg-rose-100 border border-rose-200 rounded px-2.5 py-2 text-xs text-rose-800">
         <strong>Warum kein Auto-Fix?</strong> Approval-, PDF-, Rollen- und Compliance-Entscheide berühren rechtlich bindende Prozesse und dürfen ausschliesslich durch einen autorisierten Administrator manuell entschieden und dokumentiert werden.
       </div>
-
       {incident.affected_entities?.length > 0 && (
         <div>
           <p className="text-[10px] font-bold text-rose-700 uppercase mb-1">Betroffene Entitäten</p>
@@ -220,14 +213,13 @@ function GovernanceBlockSection({ incident }) {
 }
 
 function AutoFixSection({ incident, onAutoFixed }) {
-  const [state, setState] = useState('idle'); // idle | running | success | error
+  const [state, setState] = useState('idle');
   const [result, setResult] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
 
   if (!incident.auto_fix_possible || incident.governance_block) return null;
   if (GOVERNANCE_CATEGORIES.has(incident.category)) return null;
   if (!incident.auto_fix_action) return null;
-
   const action = AUTO_FIX_REGISTRY[incident.auto_fix_action];
   if (!action?.fn) return null;
 
@@ -256,37 +248,26 @@ function AutoFixSection({ incident, onAutoFixed }) {
         <span className="text-xs font-black text-blue-800 uppercase tracking-wide">Auto-Fix verfügbar</span>
         <span className="ml-auto text-[10px] bg-blue-100 border border-blue-200 text-blue-700 px-2 py-0.5 rounded font-semibold">SICHER — Keine Governance-Daten</span>
       </div>
-
-      <p className="text-xs text-blue-800">
-        <strong>Aktion:</strong> {action.label}
-      </p>
-
+      <p className="text-xs text-blue-800"><strong>Aktion:</strong> {action.label}</p>
       {state === 'idle' && (
-        <button
-          onClick={runAutoFix}
-          className="flex items-center gap-2 text-xs font-bold px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
+        <button onClick={runAutoFix} className="flex items-center gap-2 text-xs font-bold px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
           <Play className="w-3.5 h-3.5" /> Auto-Fix ausführen
         </button>
       )}
-
       {state === 'running' && (
         <div className="flex items-center gap-2 text-xs text-blue-700">
           <Loader2 className="w-3.5 h-3.5 animate-spin" /> Reparatur läuft…
         </div>
       )}
-
       {state === 'success' && (
         <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
           <div>
             <p className="text-xs font-bold text-emerald-800">Auto-Fix erfolgreich ausgeführt</p>
             {result && <p className="text-[10px] text-emerald-700 mt-0.5 font-mono">{JSON.stringify(result).slice(0, 200)}</p>}
-            <p className="text-[10px] text-emerald-600 mt-1">Incident wird als auto_fixed markiert. Audit-Eintrag erstellt.</p>
           </div>
         </div>
       )}
-
       {state === 'error' && (
         <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
           <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
@@ -306,7 +287,6 @@ function ManualReviewSection({ incident, onUpdateStatus, updating }) {
   const [decision, setDecision] = useState('');
   const isGovBlock = incident.governance_block;
   const requiresComment = isGovBlock || incident.manual_review_required;
-
   const canSubmit = !requiresComment || (comment.trim().length >= 10 && decision);
 
   const DECISIONS = isGovBlock
@@ -329,8 +309,7 @@ function ManualReviewSection({ incident, onUpdateStatus, updating }) {
           {isGovBlock ? 'Governance-Entscheid dokumentieren' : 'Manual Review Workflow'}
         </span>
       </div>
-
-      {requiresComment && (
+      {requiresComment ? (
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-amber-700 uppercase flex items-center gap-1">
             <MessageSquare className="w-3 h-3" />
@@ -339,16 +318,12 @@ function ManualReviewSection({ incident, onUpdateStatus, updating }) {
           <textarea
             value={comment}
             onChange={e => setComment(e.target.value)}
-            placeholder={isGovBlock
-              ? 'Was wurde geprüft? Welche Entscheidung wurde getroffen und warum? (min. 10 Zeichen)'
-              : 'Was wurde untersucht? Was wurde getan oder entschieden? (min. 10 Zeichen)'}
+            placeholder={isGovBlock ? 'Was wurde geprüft? Welche Entscheidung wurde getroffen und warum? (min. 10 Zeichen)' : 'Was wurde untersucht? Was wurde getan oder entschieden? (min. 10 Zeichen)'}
             rows={3}
             className="w-full text-xs border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-400 resize-none bg-white"
           />
         </div>
-      )}
-
-      {!requiresComment && (
+      ) : (
         <textarea
           value={comment}
           onChange={e => setComment(e.target.value)}
@@ -357,7 +332,6 @@ function ManualReviewSection({ incident, onUpdateStatus, updating }) {
           className="w-full text-xs border border-input rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-ring resize-none"
         />
       )}
-
       <div className="flex gap-2 flex-wrap">
         {DECISIONS.map(d => (
           <button
@@ -371,7 +345,6 @@ function ManualReviewSection({ incident, onUpdateStatus, updating }) {
           </button>
         ))}
       </div>
-
       {requiresComment && !canSubmit && (
         <p className="text-[10px] text-amber-700 flex items-center gap-1">
           <AlertCircle className="w-3 h-3" />
@@ -414,7 +387,6 @@ function IncidentRow({ incident, onUpdateStatus, onAutoFixed, updating }) {
 
   return (
     <div className={`border rounded-xl overflow-hidden ${sev.border}`}>
-      {/* Header row — clickable */}
       <div
         className={`px-4 py-3 flex items-start gap-3 cursor-pointer ${sev.bg} hover:brightness-95 transition-all`}
         onClick={() => setExpanded(e => !e)}
@@ -454,39 +426,20 @@ function IncidentRow({ incident, onUpdateStatus, onAutoFixed, updating }) {
         </div>
       </div>
 
-      {/* Expanded detail panel */}
       {expanded && (
         <div className="bg-white border-t border-border/60 px-4 py-4 space-y-4">
           <MetaGrid incident={incident} />
           <RootCauseSection incident={incident} />
-
-          {/* Governance Block — show details first */}
           {incident.governance_block && <GovernanceBlockSection incident={incident} />}
-
-          {/* Recommended steps — always visible */}
           <RecommendedFixSection incident={incident} />
-
-          {/* ACTION LAYER — only for active incidents */}
           {isActive && (
             <div className="space-y-3 pt-1 border-t border-border/30">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Resolution Actions</p>
-
-              {/* Auto-Fix (only if eligible) */}
               <AutoFixSection incident={incident} onAutoFixed={onAutoFixed} />
-
-              {/* Manual Review / Governance decision */}
-              <ManualReviewSection
-                incident={incident}
-                onUpdateStatus={onUpdateStatus}
-                updating={updating}
-              />
+              <ManualReviewSection incident={incident} onUpdateStatus={onUpdateStatus} updating={updating} />
             </div>
           )}
-
-          {/* Resolution summary for closed incidents */}
           <ResolutionSummary incident={incident} />
-
-          {/* Audit log preview */}
           {incident.incident_audit_log?.length > 0 && (
             <div className="border border-border/40 rounded-lg px-3 py-2.5">
               <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2">Audit-Trail ({incident.incident_audit_log.length} Einträge)</p>
@@ -508,18 +461,19 @@ function IncidentRow({ incident, onUpdateStatus, onAutoFixed, updating }) {
   );
 }
 
-// ─── Main Tab ─────────────────────────────────────────────────────────────────
+// ─── Main Tab ──────────────────────────────────────────────────────────────────
 
 export default function TabIncidents() {
   const [filter, setFilter] = useState('open');
   const [severityFilter, setSeverityFilter] = useState('all');
   const qc = useQueryClient();
 
-  // KPI counts — shared cache key with useECCData
   const { data: allIncidents = [] } = useQuery({
     queryKey: ['ecc_incidents'],
     queryFn: () => base44.entities.EnterpriseIncident.list('-detected_at', 200),
     staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   const { data: incidents = [], isLoading } = useQuery({
@@ -531,6 +485,9 @@ export default function TabIncidents() {
       return base44.entities.EnterpriseIncident.list('-detected_at', 200);
     },
     staleTime: 30_000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    placeholderData: (prev) => prev,
   });
 
   const updateMutation = useMutation({
@@ -561,19 +518,21 @@ export default function TabIncidents() {
     },
   });
 
-  // Called by AutoFixSection after successful fix
-  function handleAutoFixed(id, notes) {
-    updateMutation.mutate({ id, status: 'auto_fixed', notes });
-  }
+  const handleUpdateStatus = useCallback((id, status, notes) => updateMutation.mutate({ id, status, notes }), [updateMutation]);
+  const handleAutoFixed    = useCallback((id, notes) => updateMutation.mutate({ id, status: 'auto_fixed', notes }), [updateMutation]);
 
-  const displayed = severityFilter === 'all' ? incidents : incidents.filter(i => i.severity === severityFilter);
-  const counts = {
+  const displayed = useMemo(
+    () => severityFilter === 'all' ? incidents : incidents.filter(i => i.severity === severityFilter),
+    [incidents, severityFilter]
+  );
+
+  const counts = useMemo(() => ({
     blocking:   allIncidents.filter(i => i.severity === 'blocking' && ['open','investigating','in_progress'].includes(i.status)).length,
     critical:   allIncidents.filter(i => i.severity === 'critical' && ['open','investigating','in_progress'].includes(i.status)).length,
     warning:    allIncidents.filter(i => i.severity === 'warning'  && ['open','investigating','in_progress'].includes(i.status)).length,
     governance: allIncidents.filter(i => i.governance_block && ['open','investigating','in_progress'].includes(i.status)).length,
     open:       allIncidents.filter(i => ['open','investigating','in_progress','in_review'].includes(i.status)).length,
-  };
+  }), [allIncidents]);
 
   return (
     <div className="max-w-4xl space-y-5">
@@ -584,7 +543,6 @@ export default function TabIncidents() {
         </p>
       </div>
 
-      {/* 3-Typen-Erklärung */}
       <div className="grid grid-cols-3 gap-3">
         <div className="border border-blue-200 bg-blue-50 rounded-lg px-4 py-3 flex items-start gap-2">
           <Wrench className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
@@ -609,7 +567,6 @@ export default function TabIncidents() {
         </div>
       </div>
 
-      {/* KPI */}
       <div className="grid grid-cols-5 gap-3">
         {[
           ['Blocking',   counts.blocking,   'text-rose-700 bg-rose-50 border-rose-300'],
@@ -625,7 +582,6 @@ export default function TabIncidents() {
         ))}
       </div>
 
-      {/* Filter */}
       <div className="flex gap-2 flex-wrap items-center">
         <Filter className="w-3.5 h-3.5 text-muted-foreground" />
         {[['open','Offen'],['in_review','In Prüfung'],['resolved','Behoben'],['all','Alle']].map(([v, l]) => (
@@ -661,7 +617,7 @@ export default function TabIncidents() {
             <IncidentRow
               key={inc.id}
               incident={inc}
-              onUpdateStatus={(id, status, notes) => updateMutation.mutate({ id, status, notes })}
+              onUpdateStatus={handleUpdateStatus}
               onAutoFixed={handleAutoFixed}
               updating={updateMutation.isPending}
             />

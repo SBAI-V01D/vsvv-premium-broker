@@ -4,7 +4,7 @@
  * Shows: active rules, enforcement distribution, violation metrics,
  * simulate_only tracking, timeout monitoring, rule lifecycle management.
  */
-import { useState } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
@@ -59,7 +59,7 @@ const DEFAULT_RULE = {
 
 // ─── KPI Bar ──────────────────────────────────────────────────────────────────
 
-function GovernanceKpiBar({ rules }) {
+const GovernanceKpiBar = memo(function GovernanceKpiBar({ rules }) {
   const active     = rules.filter(r => r.rule_status === 'active').length;
   const simOnly    = rules.filter(r => r.rule_status === 'active' && r.simulate_only).length;
   const enforcing  = rules.filter(r => r.rule_status === 'active' && !r.simulate_only && r.enforcement_mode !== 'monitor').length;
@@ -86,11 +86,11 @@ function GovernanceKpiBar({ rules }) {
       ))}
     </div>
   );
-}
+});
 
 // ─── Rule Form ────────────────────────────────────────────────────────────────
 
-function RuleForm({ initial, onSave, onCancel, saving }) {
+const RuleForm = memo(function RuleForm({ initial, onSave, onCancel, saving }) {
   const [form, setForm] = useState(initial || DEFAULT_RULE);
   const useCustomValidator = !!(form.custom_validator_function_name?.trim());
 
@@ -257,11 +257,11 @@ function RuleForm({ initial, onSave, onCancel, saving }) {
       </div>
     </div>
   );
-}
+});
 
 // ─── Rule Row ─────────────────────────────────────────────────────────────────
 
-function RuleRow({ rule, onEdit, onToggleStatus, onTest }) {
+const RuleRow = memo(function RuleRow({ rule, onEdit, onToggleStatus }) {
   const [expanded, setExpanded] = useState(false);
   const layerCfg  = LAYER_CFG[rule.layer]  || LAYER_CFG.WARNING;
   const statusCfg = STATUS_CFG[rule.rule_status] || STATUS_CFG.draft;
@@ -355,7 +355,7 @@ function RuleRow({ rule, onEdit, onToggleStatus, onTest }) {
       )}
     </div>
   );
-}
+});
 
 // ─── Main Tab ─────────────────────────────────────────────────────────────────
 
@@ -382,9 +382,9 @@ export default function TabGovernanceRules() {
         custom_validator_function_name: form.custom_validator_function_name?.trim() || undefined,
       };
       if (form.id) {
-        return base44.entities.GovernanceRule.update(form.id, { ...payload, updated_by: me.id, updated_by_email: me.email, updated_at: new Date().toISOString() });
+        return base44.entities.GovernanceRule.update(form.id, { ...payload, updated_by: me.id, updated_by_email: me.email });
       }
-      return base44.entities.GovernanceRule.create({ ...payload, created_by: me.id, created_by_email: me.email, created_at: new Date().toISOString() });
+      return base44.entities.GovernanceRule.create({ ...payload, created_by: me.id, created_by_email: me.email });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['governance_rules'] }); setShowForm(false); setEditRule(null); },
   });
@@ -394,7 +394,12 @@ export default function TabGovernanceRules() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['governance_rules'] }),
   });
 
-  const displayed = statusFilter === 'all' ? rules : rules.filter(r => r.rule_status === statusFilter);
+  const displayed = useMemo(
+    () => statusFilter === 'all' ? rules : rules.filter(r => r.rule_status === statusFilter),
+    [rules, statusFilter]
+  );
+  const handleEdit = useCallback((r) => { setEditRule(r); setShowForm(false); }, []);
+  const handleToggleStatus = useCallback((id, status) => statusMutation.mutate({ id, status }), [statusMutation]);
 
   return (
     <div className="max-w-4xl space-y-5">
