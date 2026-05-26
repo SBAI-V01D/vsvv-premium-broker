@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import StatusBadge from '../shared/StatusBadge';
 import ContractDocuments from './ContractDocuments';
+import CancellationPanel from './CancellationPanel';
 import PolicyUploadDialog from './PolicyUploadDialog';
 
 const insuranceIcons = {
@@ -211,6 +212,9 @@ export default function ContractDetailCard({ contract, customerId, customerName,
               </div>
             </div>
           )}
+
+          {/* Kündigung */}
+          <CancellationPanel contract={contract} />
 
           {/* Dokumente */}
           <ContractDocuments
