@@ -32,6 +32,7 @@ Deno.serve(async (req) => {
       verkaufschancen,
       backupLogs,
       auditLogs,
+      governanceSnapshots,
     ] = await Promise.all([
       base44.asServiceRole.entities.EnterpriseIncident.list('-detected_at', 100).catch(() => []),
       base44.asServiceRole.entities.EnterpriseImprovement.list('-proposed_at', 200).catch(() => []),
@@ -44,6 +45,7 @@ Deno.serve(async (req) => {
       base44.asServiceRole.entities.Verkaufschance.list('-created_date', 200).catch(() => []),
       base44.asServiceRole.entities.BackupLog.list('-timestamp', 50).catch(() => []),
       base44.asServiceRole.entities.AuditLog.list('-timestamp', 100).catch(() => []),
+      base44.asServiceRole.entities.GovernanceScoreSnapshot.list('-computed_at', 1).catch(() => []),
     ]);
 
     console.log(`[SystemExcellenceReport] Loaded: ${incidents.length} incidents, ${customers.length} customers, ${contracts.length} contracts`);
@@ -80,17 +82,21 @@ Deno.serve(async (req) => {
     });
 
     // ══════════════════════════════════════════════════════════════════════════
-    // 3. PERFORMANCE ANALYSE
+    // 3. PERFORMANCE ANALYSE (dynamisch aus echten Daten)
     // ══════════════════════════════════════════════════════════════════════════
+    const latestGovernanceSnapshot = governanceSnapshots[0] || null;
+    const govScore = latestGovernanceSnapshot?.overall || null;
+    const govDomains = latestGovernanceSnapshot?.domains || {};
+
+    const openIncidents = incidents.filter(i => ['open','investigating','in_progress'].includes(i.status));
+    const perfIncidents = openIncidents.filter(i => i.category === 'performance');
     const performanceAnalysis = {
       react_rerenders: {
-        status: 'warning',
-        findings: [
-          'CustomerIntelligenceWorkspace: Komplexe State-Updates',
-          'CustomerDetail: Multiple useEffect ohne Optimierung',
-          'AdvisoryDossier: Teure Berechnungen ohne useMemo',
-        ],
-        recommendation: 'React.memo + useMemo für teure Komponenten',
+        status: perfIncidents.length > 0 ? 'warning' : 'pass',
+        findings: perfIncidents.length > 0
+          ? perfIncidents.map(i => i.title)
+          : ['Keine Performance-Incidents aktiv'],
+        recommendation: perfIncidents.length > 0 ? 'Betroffene Komponenten optimieren' : '',
       },
       household_queries: {
         status: 'pass',
@@ -98,16 +104,13 @@ Deno.serve(async (req) => {
         recommendation: '',
       },
       dashboard_load: {
-        status: 'warning',
-        findings: [
-          'Multiple parallel queries ohne Batch',
-          'KPIs werden bei jedem Render neu berechnet',
-        ],
-        recommendation: 'Prepared Operational Snapshots verwenden',
+        status: openIncidents.filter(i => i.category === 'other' && /dashboard/i.test(i.title)).length > 0 ? 'warning' : 'pass',
+        findings: ['Dashboard-Queries werden überwacht'],
+        recommendation: '',
       },
       document_pipeline: {
         status: 'pass',
-        findings: ['9 Dokumente in Queue - Async Processing aktiv'],
+        findings: ['Async Processing aktiv'],
         recommendation: '',
       },
     };
@@ -253,16 +256,18 @@ Deno.serve(async (req) => {
     };
 
     // ══════════════════════════════════════════════════════════════════════════
-    // 9. SYSTEM EXCELLENCE SCORE
+    // 9. SYSTEM EXCELLENCE SCORE (inkl. Governance Snapshot)
     // ══════════════════════════════════════════════════════════════════════════
     const categoryScores = {
       incident_management: Math.max(0, 100 - (openCriticalIncidents.length * 10)),
-      performance: performanceAnalysis.react_rerenders.status === 'pass' ? 100 : 60,
+      performance: performanceAnalysis.react_rerenders.status === 'pass' ? 90 : 60,
       ai_quality: parseFloat(aiAnalysis.finding_quality.success_rate) || 50,
       broker_operations: brokerOperationsAnalysis.task_management.status === 'pass' ? 90 : 60,
       ux_consistency: 95,
       mobile_readiness: 75,
-      governance: governanceAnalysis.approval_audit_trail.status === 'pass' ? 100 : 40,
+      governance: govScore !== null
+        ? govScore  // direkt aus GovernanceScoreSnapshot
+        : (governanceAnalysis.approval_audit_trail.status === 'pass' ? 100 : 40),
     };
 
     const overallScore = Object.values(categoryScores).reduce((a, b) => a + b, 0) / Object.keys(categoryScores).length;
@@ -613,6 +618,7 @@ Antworte auf Deutsch, technisch präzise, aber verständlich.`
         status: overallScore >= 90 ? 'EXCELLENT' : overallScore >= 70 ? 'GOOD' : overallScore >= 50 ? 'NEEDS_IMPROVEMENT' : 'CRITICAL',
         total_critical_incidents: openCriticalIncidents.length,
         platform_health: overallScore >= 70 ? 'Platform ist operativ einsetzbar' : 'Platform benötigt Verbesserungen',
+        governance_snapshot: govScore !== null ? { score: govScore, risk_level: latestGovernanceSnapshot.risk_level, trend: latestGovernanceSnapshot.trend, computed_at: latestGovernanceSnapshot.computed_at } : null,
       },
 
       critical_incidents: {
