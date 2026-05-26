@@ -115,10 +115,9 @@ export default function Sidebar({ onNavigate }) {
         collapsed ? 'w-[60px]' : 'w-[248px]'
       )}
       style={{
-        background: 'linear-gradient(180deg, hsl(224,52%,4%) 0%, hsl(222,50%,5%) 100%)',
-        border: '1px solid rgba(255,255,255,0.05)',
-        boxShadow: '0 8px 32px 0 rgba(0,0,0,0.5), inset 0 1px 0 0 rgba(255,255,255,0.04)',
-        backdropFilter: 'blur(20px)',
+        background: 'linear-gradient(180deg, hsl(220,36%,17%) 0%, hsl(220,36%,20%) 100%)',
+        border: '1px solid rgba(255,255,255,0.04)',
+        boxShadow: '2px 0 24px 0 rgba(59,130,246,0.08), 4px 0 12px 0 rgba(0,0,0,0.06)',
       }}
     >
       {/* ── Logo / VSV Management GmbH ────────────────────────────────── */}
