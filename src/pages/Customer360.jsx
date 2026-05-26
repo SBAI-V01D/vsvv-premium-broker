@@ -14,8 +14,13 @@ import { Badge } from '@/components/ui/badge'
 import { StandardModal, KpiCard, EmptyState } from '@/components/shared'
 import {
   ArrowLeft, Phone, Mail, MapPin, Plus, FileText, TrendingUp,
-  CheckCircle2, Clock, Download, Shield, Pencil
+  CheckCircle2, Clock, Download, Shield, Pencil, Calendar, Tag,
+  Building2, Edit, ChevronDown, ChevronUp, AlertTriangle
 } from 'lucide-react'
+import StatusBadge from '@/components/status/StatusBadge'
+import DateQualityBadge from '@/components/contracts/DateQualityBadge'
+import ContractDocumentsPanel from '@/components/contracts/ContractDocumentsPanel'
+import ContractForm from '@/components/contracts/ContractForm'
 import VerkaufschanceStatusBadge from '@/components/verkaufschance/VerkaufschanceStatusBadge'
 import VerkaufschanceForm from '@/components/verkaufschance/VerkaufschanceForm'
 import VerkaufschanceDetail from '@/components/verkaufschance/VerkaufschanceDetail'
@@ -42,6 +47,8 @@ export default function Customer360() {
   const [showVsForm, setShowVsForm] = useState(false)
   const [selectedVsId, setSelectedVsId] = useState(null)
   const [activeSection, setActiveSection] = useState('overview')
+  const [editingContract, setEditingContract] = useState(null)
+  const [expandedContractDocs, setExpandedContractDocs] = useState(null)
 
   // ── Data ─────────────────────────────────────────────────────────────────
   const { data: customer, isLoading } = useQuery({
@@ -96,6 +103,21 @@ export default function Customer360() {
       (d.linked_contract_id && contractIds.has(d.linked_contract_id))
     )
   }, [allDocuments, customerId, contracts])
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers-for-360'],
+    queryFn: () => base44.entities.Customer.filter({ archived: false }, '-created_date', 500),
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const updateContractMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Contract.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts', customerId] })
+      queryClient.invalidateQueries({ queryKey: ['family-contracts', customerId] })
+      setEditingContract(null)
+    },
+  })
 
   const createVsMutation = useMutation({
     mutationFn: d => base44.entities.Verkaufschance.create(d),
@@ -179,54 +201,136 @@ export default function Customer360() {
     { id: 'dokumente',      label: 'Dokumente',      badge: documents.length || null },
   ]
 
-  // ── Reusable contract card ────────────────────────────────────────────────
-  const renderContractCard = (c, withAusschreibung = false) => {
+  // ── Reusable contract card — konsistent mit Verträge-Modul ──────────────
+  const formatDate = (d) => {
+    if (!d) return '–'
+    if (d.startsWith('9999')) return 'Unbegrenzt'
+    return new Date(d).toLocaleDateString('de-CH')
+  }
+
+  const renderContractCard = (c) => {
     const today = new Date()
-    const daysLeft = c.end_date ? differenceInDays(parseISO(c.end_date), today) : null
+    const daysLeft = c.end_date && !c.end_date.startsWith('9999') ? differenceInDays(parseISO(c.end_date), today) : null
     const isCritical = daysLeft !== null && daysLeft <= 30 && daysLeft >= 0
+    const isExpired  = daysLeft !== null && daysLeft < 0
+    const docsOpen   = expandedContractDocs === c.id
+
     return (
-      <Card key={c.id} className={cn('border-l-4', isCritical ? 'border-l-red-500' : c.status === 'active' ? 'border-l-green-500' : 'border-l-slate-300')}>
-        <CardContent className="p-4">
-          <div className="flex justify-between items-start gap-3 flex-wrap">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <p className="font-bold text-sm">{c.insurer}</p>
-                <Badge variant="outline" className="text-xs">{getSparteLabel(c.sparte) || c.insurance_type || '–'}</Badge>
-                {c.policy_number && <span className="text-xs text-muted-foreground">{c.policy_number}</span>}
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-xs mt-2">
-                <div>
-                  <p className="text-muted-foreground">Prämie/Jahr</p>
-                  <p className="font-semibold text-emerald-700">CHF {(c.premium_yearly || 0).toLocaleString('de-CH')}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Gültig bis</p>
-                  <p className={cn('font-semibold', isCritical ? 'text-red-600' : '')}>
-                    {c.end_date ? new Date(c.end_date).toLocaleDateString('de-CH') : '–'}
-                    {isCritical && ` (${daysLeft}d)`}
-                  </p>
-                </div>
-              </div>
+      <div key={c.id} className={cn(
+        'rounded-xl border bg-card overflow-hidden transition-all',
+        isCritical ? 'border-red-300' : isExpired ? 'border-red-200' : 'border-border'
+      )}>
+        {/* Main row */}
+        <div className="grid grid-cols-1 sm:grid-cols-[2fr_1.5fr_1.5fr_1fr_1fr_auto] gap-x-3 gap-y-1 px-4 py-3 items-center">
+
+          {/* Versicherer / Sparte */}
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <Tag className="w-3 h-3 text-primary flex-shrink-0" />
+              <p className="text-xs font-semibold truncate">{getSparteLabel(c.sparte || c.insurance_type) || '–'}</p>
             </div>
-            <div className="flex flex-col gap-1 items-end">
-              <span className={cn('text-[10px] px-2 py-1 rounded-full font-bold',
-                c.status === 'active' ? 'bg-green-100 text-green-700' :
-                c.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                'bg-slate-100 text-slate-600'
-              )}>
-                {c.status === 'active' ? 'Aktiv' : c.status === 'cancelled' ? 'Gekündigt' : c.status}
-              </span>
-              {withAusschreibung && isCritical && (
-                <Button size="sm" variant="outline" className="h-7 text-xs border-red-200 text-red-700 hover:bg-red-50"
-                  onClick={() => { setActiveSection('verkaufschancen'); setShowVsForm(true) }}
-                >
-                  <Plus className="w-3 h-3 mr-1" /> Ausschreibung
-                </Button>
-              )}
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <Building2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+              <p className="text-xs text-muted-foreground truncate">{c.insurer || '–'}</p>
             </div>
+            {c.product && <p className="text-[10px] text-muted-foreground truncate mt-0.5">{c.product}</p>}
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Vertragsnummer */}
+          <div className="min-w-0">
+            {c.policy_number && (
+              <p className="text-xs font-mono text-muted-foreground">{c.policy_number}</p>
+            )}
+            {c.sparte_data?.model && <p className="text-[10px] text-muted-foreground">Modell: {c.sparte_data.model}</p>}
+            {c.sparte_data?.franchise && <p className="text-[10px] text-muted-foreground">Franchise: CHF {c.sparte_data.franchise}</p>}
+          </div>
+
+          {/* Laufzeit */}
+          <div className="space-y-0.5">
+            {c.start_date && (
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-2.5 h-2.5 text-green-600 flex-shrink-0" />
+                <span className="text-[10px] text-green-700 font-medium">{formatDate(c.start_date)}</span>
+              </div>
+            )}
+            {c.end_date && (
+              <div className="flex items-center gap-1.5">
+                <Calendar className={cn('w-2.5 h-2.5 flex-shrink-0', isCritical || isExpired ? 'text-red-500' : 'text-muted-foreground')} />
+                <span className={cn('text-[10px] font-medium', isCritical ? 'text-red-600' : isExpired ? 'text-red-500' : 'text-muted-foreground')}>
+                  {formatDate(c.end_date)}{isCritical && ` (${daysLeft}d)`}{isExpired ? ' (abgelaufen)' : ''}
+                </span>
+              </div>
+            )}
+            {c.cancellation_deadline && !c.cancellation_deadline.startsWith('9999') && (
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle className="w-2.5 h-2.5 text-amber-500 flex-shrink-0" />
+                <span className="text-[10px] text-amber-700">Künd.: {formatDate(c.cancellation_deadline)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Prämie */}
+          <div>
+            {c.premium_yearly != null && (
+              <p className="text-xs font-semibold text-foreground">
+                CHF {c.premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/J.
+              </p>
+            )}
+            {c.premium_monthly != null && (
+              <p className="text-[10px] text-muted-foreground">
+                CHF {c.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/M.
+              </p>
+            )}
+          </div>
+
+          {/* Status */}
+          <div className="space-y-1">
+            <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-bold inline-block',
+              c.status === 'active' ? 'bg-green-100 text-green-700' :
+              c.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+              c.status === 'expired' ? 'bg-red-50 text-red-600' :
+              'bg-slate-100 text-slate-600'
+            )}>
+              {c.status === 'active' ? 'Aktiv' : c.status === 'cancelled' ? 'Gekündigt' : c.status === 'expired' ? 'Abgelaufen' : c.status}
+            </span>
+            {c.requires_review && (
+              <DateQualityBadge dateQualityStatus={c.date_quality_status} requiresReview={c.requires_review} variant="compact" />
+            )}
+          </div>
+
+          {/* Aktionen */}
+          <div className="flex items-center gap-1 justify-end">
+            <button
+              onClick={() => setExpandedContractDocs(docsOpen ? null : c.id)}
+              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              title="Dokumente"
+            >
+              {docsOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
+            </button>
+            <button
+              onClick={() => setEditingContract(c)}
+              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              title="Bearbeiten"
+            >
+              <Edit className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => { setActiveSection('verkaufschancen'); setShowVsForm(true) }}
+              className="p-1.5 rounded-md hover:bg-primary/10 text-primary transition-colors"
+              title="Verkaufschance"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Dokumente Panel */}
+        {docsOpen && (
+          <div className="px-4 pb-4 border-t border-border bg-muted/20">
+            <ContractDocumentsPanel contract={c} />
+          </div>
+        )}
+      </div>
     )
   }
 
@@ -566,9 +670,28 @@ export default function Customer360() {
             {allHouseholdContracts.length === 0 ? (
               <EmptyState icon={Shield} title="Keine Verträge" />
             ) : contractsByPerson.length > 0 ? (
-              contractsByPerson.map(g => renderPersonGroup(g, false))
+              contractsByPerson.map(({ person, contracts: pContracts }) => {
+                const initials = (person.first_name?.[0] || '') + (person.last_name?.[0] || '')
+                const activeCount = pContracts.filter(c => c.status === 'active').length
+                const premium = pContracts.filter(c => c.status === 'active').reduce((s, c) => s + (c.premium_yearly || 0), 0)
+                return (
+                  <div key={person.id}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-primary bg-primary/10 flex-shrink-0 text-[10px]">{initials}</div>
+                      <span className="text-sm font-bold">{person.first_name} {person.last_name}</span>
+                      {person._role !== 'primary' && (
+                        <span className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">{ROLE_LABEL[person._role] || 'Mitglied'}</span>
+                      )}
+                      <span className="ml-auto text-xs font-semibold text-emerald-700">{activeCount} Polic{activeCount === 1 ? 'e' : 'en'} · CHF {premium.toLocaleString('de-CH')}/J</span>
+                    </div>
+                    <div className="space-y-2 ml-8">
+                      {pContracts.map(c => renderContractCard(c))}
+                    </div>
+                  </div>
+                )
+              })
             ) : (
-              allHouseholdContracts.map(c => renderContractCard(c, true))
+              <div className="space-y-2">{allHouseholdContracts.map(c => renderContractCard(c))}</div>
             )}
           </div>
         )}
@@ -631,6 +754,25 @@ export default function Customer360() {
         )}
 
       </div>
+
+      {/* Contract Edit Modal */}
+      {editingContract && (
+        <StandardModal
+          open={!!editingContract}
+          onOpenChange={o => { if (!o) setEditingContract(null) }}
+          title="Vertrag bearbeiten"
+          size="xl"
+          hideFooter
+        >
+          <ContractForm
+            contract={editingContract}
+            customers={customers}
+            onSave={data => updateContractMutation.mutate({ id: editingContract.id, data })}
+            onCancel={() => setEditingContract(null)}
+            saving={updateContractMutation.isPending}
+          />
+        </StandardModal>
+      )}
 
       <StandardModal
         open={showVsForm}
