@@ -15,11 +15,12 @@ import { StandardModal, KpiCard, EmptyState } from '@/components/shared'
 import {
   ArrowLeft, Phone, Mail, MapPin, Plus, FileText, TrendingUp,
   CheckCircle2, Clock, Download, Shield, Pencil, Calendar, Tag,
-  Building2, Edit, ChevronDown, ChevronUp, AlertTriangle
+  Building2, Edit, ChevronDown, ChevronUp, AlertTriangle, XCircle
 } from 'lucide-react'
 import StatusBadge from '@/components/status/StatusBadge'
 import DateQualityBadge from '@/components/contracts/DateQualityBadge'
 import ContractDocumentsPanel from '@/components/contracts/ContractDocumentsPanel'
+import CancellationPanel from '@/components/contracts/CancellationPanel'
 import ContractForm from '@/components/contracts/ContractForm'
 import VerkaufschanceStatusBadge from '@/components/verkaufschance/VerkaufschanceStatusBadge'
 import VerkaufschanceForm from '@/components/verkaufschance/VerkaufschanceForm'
@@ -49,6 +50,7 @@ export default function Customer360() {
   const [activeSection, setActiveSection] = useState('overview')
   const [editingContract, setEditingContract] = useState(null)
   const [expandedContractDocs, setExpandedContractDocs] = useState(null)
+  const [expandedCancellation, setExpandedCancellation] = useState(null)
 
   // ── Data ─────────────────────────────────────────────────────────────────
   const { data: customer, isLoading } = useQuery({
@@ -214,7 +216,9 @@ export default function Customer360() {
     const daysLeft = c.end_date && !c.end_date.startsWith('9999') ? differenceInDays(parseISO(c.end_date), today) : null
     const isCritical = daysLeft !== null && daysLeft <= 30 && daysLeft >= 0
     const isExpired  = daysLeft !== null && daysLeft < 0
-    const docsOpen   = expandedContractDocs === c.id
+    const docsOpen         = expandedContractDocs === c.id
+    const cancellationOpen  = expandedCancellation === c.id
+    const hasCancellation   = c.cancellation_status && c.cancellation_status !== 'none'
 
     return (
       <div key={c.id} className={cn(
@@ -302,6 +306,15 @@ export default function Customer360() {
           {/* Aktionen */}
           <div className="flex items-center gap-1 justify-end">
             <button
+              onClick={() => setExpandedCancellation(cancellationOpen ? null : c.id)}
+              className={`p-1.5 rounded-md transition-colors ${
+                hasCancellation ? 'text-red-500 hover:bg-red-50' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+              title="Kündigung"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+            </button>
+            <button
               onClick={() => setExpandedContractDocs(docsOpen ? null : c.id)}
               className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
               title="Dokumente"
@@ -324,6 +337,21 @@ export default function Customer360() {
             </button>
           </div>
         </div>
+
+        {/* Kündigung Panel */}
+        {cancellationOpen && (
+          <div className="px-4 pb-4 border-t border-border bg-red-50/20">
+            <div className="pt-3">
+              <CancellationPanel
+                contract={c}
+                onUpdated={() => {
+                  queryClient.invalidateQueries({ queryKey: ['contracts', customerId] })
+                  queryClient.invalidateQueries({ queryKey: ['family-contracts', customerId] })
+                }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Dokumente Panel */}
         {docsOpen && (
