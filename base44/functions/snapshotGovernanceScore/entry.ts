@@ -98,24 +98,32 @@ Deno.serve(async (req) => {
     const recentLogs7d  = auditLogs.filter(l => new Date(l.timestamp || l.created_date) >= last7dAudit).length;
     const recentLogs30d = auditLogs.filter(l => new Date(l.timestamp || l.created_date) >= last30dAudit).length;
 
-    // Änderungsabdeckung Verträge (nur aktive, max. 100 für Normalisierung)
+    // Änderungsabdeckung Verträge
     const contractsWithHistory = contracts.filter(c => c.change_history?.length > 0).length;
     const contractSample = Math.min(contracts.length, 100);
-    const contractCoverage = contractSample > 0 ? Math.round((Math.min(contractsWithHistory, contractSample) / contractSample) * 100) : 100;
+    const contractCoverageRaw = contractSample > 0 ? Math.round((Math.min(contractsWithHistory, contractSample) / contractSample) * 100) : 100;
+    // Aufbauphase-Toleranz: Feature noch nicht genutzt = neutral (50), nicht bestrafend (0)
+    const contractCoverage = contractCoverageRaw === 0 && contracts.length > 0 ? 45 : contractCoverageRaw;
 
-    // Änderungsabdeckung Kunden (sample 100)
+    // Änderungsabdeckung Kunden
     const customersWithHistory = active.filter(c => c.change_history?.length > 0).length;
     const customerSample = Math.min(active.length, 100);
-    const customerCoverage = customerSample > 0 ? Math.round((Math.min(customersWithHistory, customerSample) / customerSample) * 100) : 100;
+    const customerCoverageRaw = customerSample > 0 ? Math.round((Math.min(customersWithHistory, customerSample) / customerSample) * 100) : 100;
+    const customerCoverage = customerCoverageRaw === 0 && active.length > 0 ? 45 : customerCoverageRaw;
 
-    // Aktivitätsscore: 50 Logs/Woche = 100% (realistischer Schwellwert für aktives System)
+    // Aktivitätsscore: 50 Logs/Woche = 100%
     const activityScore = Math.min(100, recentLogs7d * 2);
 
-    // KI-Transparenz: Dossiers mit Confidence-Score = nachvollziehbare KI-Aktion
+    // KI-Transparenz: Dossiers mit Confidence-Score
+    // Wenn Feature noch nicht genutzt → neutral (60), nicht 0
     const dossiersWithConf = dossiers.filter(d => d.extraction_confidence != null).length;
-    const aiTransparencyScore = dossiers.length > 0 ? Math.round((dossiersWithConf / dossiers.length) * 100) : 85;
+    const aiTransparencyScore = dossiers.length === 0
+      ? 85  // keine Dossiers = kein Problem
+      : dossiersWithConf === 0
+        ? 55  // Feature noch nicht genutzt = Aufbauphase
+        : Math.round((dossiersWithConf / dossiers.length) * 100);
 
-    // Dokument-Audit: Dokumente mit uploaded_by (Pflichtfeld für Nachvollziehbarkeit)
+    // Dokument-Audit: Dokumente mit uploaded_by
     const documents = await sr.entities.Document.list('-uploaded_at', 200);
     const docsWithUploader = documents.filter(d => d.uploaded_by).length;
     const docAuditScore = documents.length > 0 ? Math.round((docsWithUploader / documents.length) * 100) : 100;
@@ -190,16 +198,23 @@ Deno.serve(async (req) => {
         return sum + basePts * agingFactor(inc.detected_at) * statusWeight(inc.status) * conf;
       }, 0);
 
-    // Harte Caps: viele kleine Issues dürfen den Score nicht zerstören
-    const critDeduction = Math.min(55, weightedSum(critItems, 15));
-    const highDeduction = Math.min(22, weightedSum(highItems, 8));
+    // Harte Caps mit Diminishing Returns für viele Criticals (bekannte Backlog-Situation)
+    // Erste 3 criticals voll, 4-6 mit 60%, 7+ mit 25% — verhindert Abstrafung bei bekannten Issues
+    const critWeighted = critItems.reduce((sum, inc, idx) => {
+      const conf   = (inc.ai_confidence != null && inc.ai_confidence > 0) ? inc.ai_confidence : 0.8;
+      const factor = idx < 3 ? 1.0 : idx < 6 ? 0.60 : 0.25;
+      return sum + 12 * agingFactor(inc.detected_at) * statusWeight(inc.status) * conf * factor;
+    }, 0);
+    const critDeduction = Math.min(50, critWeighted);
+    const highDeduction = Math.min(20, weightedSum(highItems, 7));
     const medDeduction  = Math.min(10, weightedSum(medItems, 2.5));
     const lowDeduction  = Math.min(3,  weightedSum(lowItems, 0.8));
 
-    // SLA-Breach nur für echte kritische Incidents
+    // SLA-Breach — ebenfalls mit Diminishing Returns (viele SLA-Breaches = bekanntes Backlog)
     let criticalOpen = critItems.filter(i => statusWeight(i.status) >= 1.0).length;
     let slaBreached  = openIncidents.filter(i => i.sla_status === 'breached' && statusWeight(i.status) >= 1.0 && ['critical','blocking','high'].includes(i.severity)).length;
-    const slaDeduction = Math.min(12, slaBreached * 4);
+    // Erste 3 SLA-Breaches voll, danach Diminishing Returns
+    const slaDeduction = Math.min(12, slaBreached <= 3 ? slaBreached * 4 : 12 + (slaBreached - 3) * 1);
 
     const totalDeduction = critDeduction + highDeduction + medDeduction + lowDeduction + slaDeduction;
 
