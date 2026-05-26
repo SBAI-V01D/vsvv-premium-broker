@@ -110,14 +110,16 @@ export default function Sidebar({ onNavigate }) {
     <aside
       className={cn(
         'flex flex-col z-50 transition-all duration-300',
-        // Floating sidebar — inset from viewport edges, rounded
         'my-2 ml-2 rounded-2xl overflow-hidden',
         'h-[calc(100vh-16px)]',
-        'bg-[hsl(var(--sidebar-surface))]',
-        'border border-[hsl(var(--border-subtle))]/60',
-        collapsed ? 'w-[60px]' : 'w-[244px]'
+        collapsed ? 'w-[60px]' : 'w-[248px]'
       )}
-      style={{ boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10), 0 1px 4px 0 rgba(0,0,0,0.06)' }}
+      style={{
+        background: 'linear-gradient(180deg, hsl(224,52%,4%) 0%, hsl(222,50%,5%) 100%)',
+        border: '1px solid rgba(255,255,255,0.05)',
+        boxShadow: '0 8px 32px 0 rgba(0,0,0,0.5), inset 0 1px 0 0 rgba(255,255,255,0.04)',
+        backdropFilter: 'blur(20px)',
+      }}
     >
       {/* ── Logo / VSV Management GmbH ────────────────────────────────── */}
       <div className={cn(
