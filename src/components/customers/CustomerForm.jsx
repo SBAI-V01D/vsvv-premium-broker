@@ -225,6 +225,29 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
    // eslint-disable-next-line react-hooks/exhaustive-deps
    }, [customer?.id])
 
+   // Auto-sync from primary customer for family members
+   const [syncedFromPrimary, setSyncedFromPrimary] = useState([])
+   useEffect(() => {
+     if (!form.is_family_member || !form.primary_customer_id) return
+     const primary = primaryCustomers.find(c => c.id === form.primary_customer_id)
+     if (!primary) return
+     const synced = []
+     setForm(prev => {
+       const next = { ...prev }
+       if (!prev.email && primary.email) { next.email = primary.email; synced.push('email') }
+       if (!prev.phone && primary.phone) { next.phone = primary.phone; synced.push('phone') }
+       if (!prev.mobile && primary.mobile) { next.mobile = primary.mobile; synced.push('mobile') }
+       if (!prev.street && primary.street) { next.street = primary.street; synced.push('address') }
+       if (!prev.zip_code && primary.zip_code) { next.zip_code = primary.zip_code; next.city = primary.city || ''; next.canton = primary.canton || '' }
+       if (primary.status) next.status = primary.status
+       if (primary.mandate_status) next.mandate_status = primary.mandate_status
+       if (primary.organization_id) next.organization_id = primary.organization_id
+       if (primary.advisor_id) next.advisor_id = primary.advisor_id
+       return next
+     })
+     setSyncedFromPrimary(synced)
+   }, [form.primary_customer_id, form.is_family_member])
+
    const { data: advisors = [] } = useQuery({
      queryKey: ['advisors'],
      queryFn: () => base44.entities.Advisor.filter({ status: 'active' }),
@@ -344,7 +367,7 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>Hauptkunde *</Label>
-            <Select value={form.primary_customer_id} onValueChange={v => set('primary_customer_id', v)}>
+            <Select value={form.primary_customer_id} onValueChange={v => { set('primary_customer_id', v); setSyncedFromPrimary([]) }}>
               <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {primaryCustomers.map(c => (
@@ -366,6 +389,13 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
               </SelectContent>
             </Select>
           </div>
+        </div>
+      )}
+
+      {syncedFromPrimary.length > 0 && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-700">
+          <span>🔗</span>
+          <span>Fehlende Felder automatisch vom Hauptkontakt übernommen: {syncedFromPrimary.join(', ')} · Status & Berater synchronisiert.</span>
         </div>
       )}
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronUp, Calendar, Hash, AlertTriangle, TrendingUp, FileText, Upload, ExternalLink, Plus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Calendar, Hash, AlertTriangle, TrendingUp, FileText, Upload, ExternalLink, Plus, Building2, User, Edit } from 'lucide-react';
 import { format, differenceInDays, addMonths } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -16,7 +16,7 @@ const insuranceIcons = {
   Krankentaggeld: '📋', BVG: '💼', 'Säule 3a': '💰', Sonstige: '📄',
 };
 
-export default function ContractDetailCard({ contract, customerId, customerName, familyMembers = [] }) {
+export default function ContractDetailCard({ contract, customerId, customerName, familyMembers = [], onEdit }) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const [showPolicyUpload, setShowPolicyUpload] = useState(false);
@@ -45,10 +45,13 @@ export default function ContractDetailCard({ contract, customerId, customerName,
         <CardContent className="p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
-              <span className="text-2xl flex-shrink-0">{insuranceIcons[contract.insurance_type] || '📄'}</span>
-              <div className="min-w-0">
+              <span className="text-xl flex-shrink-0">{insuranceIcons[contract.insurance_type] || '📄'}</span>
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold text-sm">{contract.insurance_type} {familyMemberName && `(${familyMemberName})`}</p>
+                  <p className="font-semibold text-sm">
+                    {contract.insurer || contract.insurance_type}
+                    {contract.product && <span className="text-muted-foreground font-normal"> · {contract.product}</span>}
+                  </p>
                   <StatusBadge status={contract.status} />
                   {expiresInThreeMonths && (
                     <Badge variant="outline" className="border-orange-300 text-orange-600 bg-orange-50 text-xs">
@@ -62,14 +65,35 @@ export default function ContractDetailCard({ contract, customerId, customerName,
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">{contract.provider}</p>
+                <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                  <p className="text-xs text-muted-foreground">
+                    {contract.insurance_type}
+                    {familyMemberName && ` · ${familyMemberName}`}
+                    {contract.policy_number && ` · ${contract.policy_number}`}
+                  </p>
+                  {contract.start_date && (
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(contract.start_date), 'dd.MM.yyyy')}
+                      {contract.end_date ? ` – ${format(new Date(contract.end_date), 'dd.MM.yyyy')}` : ' – Unbefristet'}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <div className="text-right hidden sm:block">
-                <p className="font-bold text-sm">CHF {contract.premium_monthly != null ? contract.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '–'}</p>
+                <p className="font-bold text-sm">CHF {contract.premium_monthly != null ? contract.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : contract.premium_yearly != null ? (contract.premium_yearly / 12).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '–'}</p>
                 <p className="text-xs text-muted-foreground">/ Monat</p>
               </div>
+              {onEdit && (
+                <button
+                  onClick={e => { e.stopPropagation(); onEdit(contract); }}
+                  className="p-1.5 rounded-md hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
+                  title="Bearbeiten"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                </button>
+              )}
               {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
             </div>
           </div>

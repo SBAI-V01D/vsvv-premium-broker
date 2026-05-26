@@ -564,15 +564,28 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Vertragsbeginn</label>
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                Vertragsbeginn
+                {!appData.start_date && <span className="text-amber-500 text-[10px]">(nicht erkannt)</span>}
+              </label>
               <Input type="date" value={appData.start_date}
+                className={!appData.start_date ? 'border-amber-300 focus:border-amber-400' : ''}
                 onChange={e => setAppData(d => ({ ...d, start_date: e.target.value }))} />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Geschätzte Provision CHF</label>
-              <Input type="number" value={appData.commission_estimate}
-                onChange={e => setAppData(d => ({ ...d, commission_estimate: e.target.value }))} />
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                Vertragsende
+                {!appData.end_date && <span className="text-amber-500 text-[10px]">(nicht erkannt)</span>}
+              </label>
+              <Input type="date" value={appData.end_date}
+                className={!appData.end_date ? 'border-amber-300 focus:border-amber-400' : ''}
+                onChange={e => setAppData(d => ({ ...d, end_date: e.target.value }))} />
             </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Geschätzte Provision CHF</label>
+            <Input type="number" value={appData.commission_estimate}
+              onChange={e => setAppData(d => ({ ...d, commission_estimate: e.target.value }))} />
           </div>
         </div>
 

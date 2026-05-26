@@ -60,8 +60,10 @@ Deno.serve(async (req) => {
     const dossiers = await sr.entities.AdvisoryDossier.list('-created_date', 100);
     const approvedDossiers = dossiers.filter(d => d.advisor_approved && d.approval_history?.length > 0).length;
     const dossierScore = dossiers.length > 0 ? Math.round((approvedDossiers / dossiers.length) * 100) : 100;
+    // Mandats-Gewichtung reduziert (0.3 statt 0.6) — realistischere KPI-Bewertung,
+    // da Daten noch im Aufbau sind und Adressvermittler-Kunden naturgemäss keine Mandate haben.
     domains.compliance = {
-      score: Math.round((mandateScore * 0.6) + (dossierScore * 0.4)),
+      score: Math.round((mandateScore * 0.3) + (dossierScore * 0.7)),
       label: 'Compliance',
       details: {
         mandate_valid_pct: mandateScore,
