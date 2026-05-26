@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client'
 import { useParams, useNavigate } from 'react-router-dom'
 import html2pdf from 'html2pdf.js'
 import { useAccessControl } from '@/hooks/useAccessControl'
-import { Edit, Users, FileText, Clock, Shield, Bot, Tag, Building2, Calendar, Trash2, Plus } from 'lucide-react'
+import { Edit, Users, FileText, Clock, Shield, Bot, Tag, Building2, Calendar, Trash2, Plus, XCircle } from 'lucide-react'
 import AiInsightsPanel from '../components/customers/AiInsightsPanel'
 import ActivityTimeline from '../components/customers/ActivityTimeline'
 import HouseholdContractsCockpit from '../components/customers/HouseholdContractsCockpit'
@@ -29,6 +29,7 @@ import AddFamilyMemberDialog from '@/components/customers/AddFamilyMemberDialog'
 import AdvisorAssignmentPanel from '@/components/advisors/AdvisorAssignmentPanel'
 import DateQualityBadge from '@/components/contracts/DateQualityBadge'
 import ContractDocumentsPanel from '@/components/contracts/ContractDocumentsPanel'
+import CancellationPanel from '@/components/contracts/CancellationPanel'
 import ApplicationDocumentsPanel from '@/components/applications/ApplicationDocumentsPanel'
 import ApplicationForm from '@/components/applications/ApplicationForm'
 import { HouseholdPrintExport } from '@/components/customers/HouseholdPrintExport'
@@ -48,6 +49,7 @@ export default function CustomerDetail() {
   const [hasAccess, setHasAccess] = useState(false)
   const [activeSection, setActiveSection] = useState('uebersicht')
   const [expandedContractDocs, setExpandedContractDocs] = useState(null)
+  const [expandedContractCancellation, setExpandedContractCancellation] = useState(null)
   const [expandedApplicationDocs, setExpandedApplicationDocs] = useState(null)
   const [showAppForm, setShowAppForm] = useState(false)
   const [editingApp, setEditingApp] = useState(null)
@@ -365,6 +367,8 @@ export default function CustomerDetail() {
                 </div>
                 {relatedContracts.map((c, idx) => {
                   const docsOpen = expandedContractDocs === c.id
+                  const cancellationOpen = expandedContractCancellation === c.id
+                  const hasCancellation = c.cancellation_status && c.cancellation_status !== 'none'
                   return (
                     <div key={c.id} className={idx > 0 ? 'border-t border-border' : ''}>
                       <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-1.5 items-center hover:bg-muted/20 transition-colors">
@@ -424,6 +428,15 @@ export default function CustomerDetail() {
                         </div>
                         <div className="flex items-center gap-1">
                           <button
+                            onClick={() => setExpandedContractCancellation(cancellationOpen ? null : c.id)}
+                            className={`h-7 w-7 flex items-center justify-center rounded transition-colors ${
+                              hasCancellation ? 'text-red-500 hover:bg-red-50' : 'text-muted-foreground hover:bg-muted'
+                            }`}
+                            title="Kündigung"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                          <button
                             onClick={() => setExpandedContractDocs(docsOpen ? null : c.id)}
                             className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted transition-colors text-muted-foreground"
                             title="Dokumente"
@@ -436,6 +449,16 @@ export default function CustomerDetail() {
                           ]} />
                         </div>
                       </div>
+                      {cancellationOpen && (
+                        <div className="px-4 pb-4 border-t border-border bg-red-50/20">
+                          <div className="pt-3">
+                            <CancellationPanel
+                              contract={c}
+                              onUpdated={() => queryClient.invalidateQueries({ queryKey: ['contracts', id] })}
+                            />
+                          </div>
+                        </div>
+                      )}
                       {docsOpen && (
                         <div className="px-4 pb-4 border-t border-border bg-muted/20">
                           <ContractDocumentsPanel contract={c} />
