@@ -54,7 +54,7 @@
     },
     "organization_id": {
       "type": "string",
-      "description": "Tenant-ID \u2014 Pflichtfeld"
+      "description": "Tenant-ID"
     },
     "title": {
       "type": "string",
@@ -69,12 +69,10 @@
       "description": "Ursachenanalyse"
     },
     "technical_details": {
-      "type": "string",
-      "description": "Technische Details inkl. betroffener Datens\u00e4tze"
+      "type": "string"
     },
     "recommended_action": {
-      "type": "string",
-      "description": "Step-by-Step L\u00f6sung"
+      "type": "string"
     },
     "auto_fix_possible": {
       "type": "boolean",
@@ -89,14 +87,15 @@
     },
     "governance_block": {
       "type": "boolean",
-      "default": false,
-      "description": "Niemals automatisch beheben"
+      "default": false
     },
     "status": {
       "type": "string",
       "enum": [
         "open",
         "investigating",
+        "root_cause_identified",
+        "mitigation_active",
         "in_progress",
         "resolved",
         "closed",
@@ -104,7 +103,48 @@
         "accepted_risk",
         "auto_fixed"
       ],
-      "default": "open"
+      "default": "open",
+      "description": "Vollst\u00e4ndiger Incident-Lifecycle: open \u2192 investigating \u2192 root_cause_identified \u2192 mitigation_active \u2192 resolved/closed. accepted_risk = bekannt, bewertet, dokumentiert, toleriert, unter Beobachtung."
+    },
+    "root_cause_cluster": {
+      "type": "string",
+      "enum": [
+        "approval_metadata",
+        "audit_trail_integrity",
+        "storno_financial_audit",
+        "data_relationship_integrity",
+        "governance_architecture",
+        "ai_transparency",
+        "security_boundaries",
+        "incident_management",
+        "none"
+      ],
+      "default": "none",
+      "description": "Root-Cause-Cluster f\u00fcr Korrelation und Executive Reporting. Gruppiert verwandte Incidents f\u00fcr strategische Analyse."
+    },
+    "impact_governance": {
+      "type": "number",
+      "description": "Governance Impact Score 0\u2013100: Auswirkung auf FINMA-Compliance, Audit-F\u00e4higkeit, Regulatorik"
+    },
+    "impact_financial": {
+      "type": "number",
+      "description": "Financial Impact Score 0\u2013100: Auswirkung auf Buchf\u00fchrung, Provisionen, Finanzintegrit\u00e4t"
+    },
+    "impact_compliance": {
+      "type": "number",
+      "description": "Compliance Impact Score 0\u2013100: Verletzung regulatorischer Anforderungen, Auditierbarkeit"
+    },
+    "impact_operational": {
+      "type": "number",
+      "description": "Operational Impact Score 0\u2013100: Beeintr\u00e4chtigung des Tagesbetriebs, User-Workflows"
+    },
+    "impact_reputation": {
+      "type": "number",
+      "description": "Reputation Impact Score 0\u2013100: Auswirkung auf Kundenvertrauen, Beraterreputation"
+    },
+    "strategic_impact_score": {
+      "type": "number",
+      "description": "Gewichteter Gesamt-Impact Score 0\u2013100 (auto-berechnet aus den 5 Impact-Dimensionen)"
     },
     "assigned_to": {
       "type": "string"
@@ -128,8 +168,7 @@
     },
     "sla_due_at": {
       "type": "string",
-      "format": "date-time",
-      "description": "SLA-Frist f\u00fcr L\u00f6sung"
+      "format": "date-time"
     },
     "sla_status": {
       "type": "string",
@@ -138,13 +177,11 @@
         "warning",
         "breached"
       ],
-      "default": "ok",
-      "description": "SLA-Status: ok / warning (< 2h) / breached (\u00fcberschritten)"
+      "default": "ok"
     },
     "sla_escalated": {
       "type": "boolean",
-      "default": false,
-      "description": "SLA-Eskalation ausgel\u00f6st"
+      "default": false
     },
     "sla_escalated_at": {
       "type": "string",
@@ -152,7 +189,6 @@
     },
     "affected_entities": {
       "type": "array",
-      "description": "Betroffene Entit\u00e4ten (Typ + ID)",
       "items": {
         "type": "object",
         "properties": {
