@@ -6,7 +6,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { DialogFooter } from '@/components/ui/dialog'
 import { ALL_SPARTEN, getFieldsForSparte, FRANCHISE_OPTIONS } from '@/lib/insuranceSparten'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Brain, CheckCircle2 } from 'lucide-react'
+
+const NON_RENEWAL_REASONS = [
+  { value: 'better_conditions',    label: 'Bessere Konditionen beim Mitbewerber' },
+  { value: 'health_reasons',       label: 'Gesundheitsgründe / Risikoausschluss' },
+  { value: 'price',                label: 'Preis zu hoch' },
+  { value: 'competitive_offer',    label: 'Konkurrenzangebot angenommen' },
+  { value: 'customer_request',     label: 'Kundenwunsch (ohne Begründung)' },
+  { value: 'policy_ended_naturally', label: 'Natürlicher Ablauf / kein Bedarf' },
+  { value: 'other',                label: 'Andere Gründe' },
+]
 
 const grouped = ALL_SPARTEN.reduce((acc, s) => {
   if (!acc[s.group]) acc[s.group] = []
@@ -100,6 +110,8 @@ export default function ContractForm({ contract, customers = [], onSave, onCance
       custom_status: form.custom_status,
       commission_rate: form.commission_rate ? Number(form.commission_rate) : undefined,
       notes: form.notes || '',
+      non_renewal_reason: form.non_renewal_reason || null,
+      exclude_from_renewal_statistics: form.exclude_from_renewal_statistics === true,
     })
   }
 
@@ -251,6 +263,60 @@ export default function ContractForm({ contract, customers = [], onSave, onCance
       <div>
         <Label>Notizen</Label>
         <Textarea value={form.notes} onChange={e => set('notes', e.target.value)} className="mt-1" rows={2} />
+      </div>
+
+      {/* Nicht-Erneuerung */}
+      <div className="rounded-lg border border-border p-3 space-y-3 bg-muted/20">
+        <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+          <Brain className="w-3.5 h-3.5 text-primary" /> Nicht-Erneuerung
+        </p>
+
+        {form.ai_non_renewal_suggestion && !form.non_renewal_reason && (
+          <div className="flex items-start gap-2 px-3 py-2 rounded-md bg-blue-50 border border-blue-200 text-xs text-blue-800">
+            <Brain className="w-3.5 h-3.5 shrink-0 mt-0.5 text-blue-500" />
+            <div>
+              <p className="font-semibold mb-0.5">KI-Vorschlag (noch nicht bestätigt)</p>
+              <p>{form.ai_non_renewal_suggestion}</p>
+              <p className="text-blue-600 mt-1">Bitte Grund unten auswählen und bestätigen.</p>
+            </div>
+          </div>
+        )}
+
+        <div>
+          <Label className="text-xs">Grund für Nicht-Erneuerung</Label>
+          <Select value={form.non_renewal_reason || ''} onValueChange={v => set('non_renewal_reason', v || null)}>
+            <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue placeholder="Kein Grund erfasst" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={null}>– Kein Grund erfasst –</SelectItem>
+              {NON_RENEWAL_REASONS.map(r => (
+                <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <label className="flex items-start gap-2 cursor-pointer group">
+          <input
+            type="checkbox"
+            checked={!!form.exclude_from_renewal_statistics}
+            onChange={e => set('exclude_from_renewal_statistics', e.target.checked)}
+            className="mt-0.5 w-3.5 h-3.5 accent-primary"
+          />
+          <div>
+            <p className="text-xs font-medium text-foreground group-hover:text-primary transition-colors">
+              Aus Erneuerungsstatistik ausschliessen
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              Vertrag erscheint weiterhin in der Liste, wird aber nicht in der Erneuerungs-KPI gezählt.
+            </p>
+          </div>
+        </label>
+
+        {form.exclude_from_renewal_statistics && (
+          <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-1">
+            <CheckCircle2 className="w-3 h-3" /> Berater hat diesen Vertrag manuell ausgeschlossen.
+          </div>
+        )}
       </div>
 
       <DialogFooter>

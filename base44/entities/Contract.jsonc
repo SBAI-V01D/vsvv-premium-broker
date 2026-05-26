@@ -74,7 +74,7 @@
     "acceptance_date": {
       "type": "string",
       "format": "date",
-      "description": "Annahmedatum \u2013 Datum der Vertragsannahme"
+      "description": "Annahmedatum"
     },
     "renewal_date": {
       "type": "string",
@@ -343,8 +343,7 @@
     },
     "requires_review": {
       "type": "boolean",
-      "default": false,
-      "description": "Manuelle Datumspr\u00fcfung ausstehend"
+      "default": false
     },
     "date_quality_status": {
       "type": "string",
@@ -388,6 +387,28 @@
           }
         }
       }
+    },
+    "non_renewal_reason": {
+      "type": "string",
+      "enum": [
+        "better_conditions",
+        "health_reasons",
+        "price",
+        "competitive_offer",
+        "customer_request",
+        "policy_ended_naturally",
+        "other"
+      ],
+      "description": "Grund f\u00fcr Nicht-Erneuerung \u2014 vom Berater gesetzt oder KI-Vorschlag best\u00e4tigt"
+    },
+    "ai_non_renewal_suggestion": {
+      "type": "string",
+      "description": "KI-Vorschlag f\u00fcr Nicht-Erneuerungsgrund (aus Dokumentenanalyse) \u2014 muss vom Berater best\u00e4tigt werden"
+    },
+    "exclude_from_renewal_statistics": {
+      "type": "boolean",
+      "default": false,
+      "description": "Vertrag aus Erneuerungsstatistik ausschliessen \u2014 nur vom Berater manuell gesetzt"
     }
   },
   "required": [

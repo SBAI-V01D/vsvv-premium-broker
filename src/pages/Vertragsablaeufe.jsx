@@ -262,6 +262,7 @@ export default function Vertragsablaeufe() {
   const [filterSeverity, setFilterSeverity] = useState('all')
   const [filterProcessStatus, setFilterProcessStatus] = useState('all')
   const [search, setSearch] = useState('')
+  const [hideExcluded, setHideExcluded] = useState(false)
 
   const { data: contracts = [], isLoading } = useQuery({
     queryKey: ['contracts', 'ablaeufe'],
@@ -318,7 +319,10 @@ export default function Vertragsablaeufe() {
       })
   }, [contracts, filterProcessStatus])
 
+  const excludedCount = useMemo(() => actionableItems.filter(i => i.contract.exclude_from_renewal_statistics).length, [actionableItems])
+
   const filtered = useMemo(() => actionableItems.filter(item => {
+    if (hideExcluded && item.contract.exclude_from_renewal_statistics) return false
     if (filterSeverity !== 'all') {
       const sev = item.topAction?.severity
       if (filterSeverity === 'review_required' && sev !== 'review_required') return false
@@ -335,7 +339,7 @@ export default function Vertragsablaeufe() {
       if (!(c.customer_name?.toLowerCase().includes(q) || c.insurer?.toLowerCase().includes(q) || c.policy_number?.toLowerCase().includes(q))) return false
     }
     return true
-  }), [actionableItems, filterSeverity, filterProcessStatus, search])
+  }), [actionableItems, filterSeverity, filterProcessStatus, search, hideExcluded])
 
   const stats = useMemo(() => ({
     expired:         filtered.filter(i => i.topAction?.severity === 'expired').length,
@@ -495,6 +499,23 @@ export default function Vertragsablaeufe() {
               ))}
             </SelectContent>
           </Select>
+          <button
+            onClick={() => setHideExcluded(h => !h)}
+            className={cn(
+              'h-8 px-3 rounded-md border text-xs font-medium transition-colors gap-1.5 flex items-center',
+              hideExcluded
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+            )}
+          >
+            <Shield className="w-3 h-3" />
+            Statistikrelevant
+            {excludedCount > 0 && (
+              <span className={cn('ml-1 px-1.5 rounded-full text-[9px] font-bold', hideExcluded ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground')}>
+                {excludedCount} ausgeschl.
+              </span>
+            )}
+          </button>
           {hasFilters && (
             <Button variant="ghost" size="sm" onClick={() => { setSearch(''); setFilterSeverity('all'); setFilterProcessStatus('all') }} className="text-muted-foreground h-8 text-xs gap-1">
               <X className="w-3 h-3" /> Zurücksetzen
