@@ -282,15 +282,14 @@ export default function CustomerIntelligenceWorkspace() {
     [primaryCustomers, customers]
   );
 
-  // URL params for view mode
-  const urlParams = new URLSearchParams(window.location.search);
-  const urlView = urlParams.get('view');
-
+  // URL params for initial view mode
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlView = params.get('view');
     if (urlView && ['private', 'business'].includes(urlView)) {
       setWorkspaceMode(urlView);
     }
-  }, [urlView]);
+  }, []);
 
   // Harte Trennung: Private und Business werden komplett getrennt verarbeitet
   const privateCustomers = useMemo(() => 
@@ -382,16 +381,7 @@ export default function CustomerIntelligenceWorkspace() {
     a.click();
   };
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (['private', 'business'].includes(workspaceMode)) {
-      params.set('view', workspaceMode);
-    } else {
-      params.delete('view');
-    }
-    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
-    window.history.replaceState({}, '', newUrl);
-  }, [workspaceMode]);
+
 
 
 
@@ -501,11 +491,6 @@ export default function CustomerIntelligenceWorkspace() {
 
   const isIntelligenceMode = workspaceMode === 'kundenaktionen';
   const isCustomerListMode = ['private', 'business'].includes(workspaceMode);
-
-  // Keep-mounted architecture: Beide Listen immer rendern, nur Visibility wechseln
-  // Verhindert komplettes Unmount/Mount und damit das "Wackeln"
-  const showPrivate = workspaceMode === 'private';
-  const showBusiness = workspaceMode === 'business';
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -643,104 +628,97 @@ export default function CustomerIntelligenceWorkspace() {
             </div>
 
             <div className="p-0">
-              {/* Keep-mounted: Beide Listen immer im DOM, nur Visibility wechseln */}
               {isLoading ? (
                 <LoadingTable rows={8} className="py-12" />
-              ) : (
-                <>
-                  {/* Private Customers — always mounted, only visibility changes */}
-                  <div hidden={!showPrivate}>
-                    {displayed.filter(c => c.customer_type !== 'business').length === 0 ? (
-                      <div className="p-6">
-                        <EmptyState
-                          type={search ? 'empty' : 'customers'}
-                          title={search ? 'Keine Ergebnisse' : 'Keine Privatkunden'}
-                          description={search ? 'Passen Sie den Suchbegriff an oder ändern Sie das Filter.' : 'Fügen Sie Ihren ersten Privatkunden hinzu, um zu starten.'}
-                          action={
-                            !search && (
-                              <button
-                                onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}
-                                className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
-                              >
-                                <Plus className="w-4 h-4" /> Privatkunde hinzufügen
-                              </button>
-                            )
-                          }
-                          size="lg"
-                        />
-                      </div>
-                    ) : (
-                      <div className="border-t-2 border-[hsl(var(--primary))] bg-white">
-                        <div className="flex items-center gap-2 px-4 py-3 bg-[hsl(var(--surface-1))] border-b border-[hsl(var(--border-subtle))]">
-                          <User className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
-                          <h3 className="text-[11px] font-semibold uppercase tracking-widest text-[hsl(var(--text-heading))]">Privatkunden</h3>
-                          <span className="text-[10px] text-[hsl(var(--text-muted))]">({displayed.filter(c => c.customer_type !== 'business').length})</span>
-                        </div>
-                        <div className="p-4">
-                          <CustomerFeed
-                            displayed={displayed.filter(c => c.customer_type !== 'business')}
-                            customers={customers}
-                            segments={segments}
-                            matchedFamilyIds={matchedFamilyIds}
-                            onEdit={(c) => { setEditing(c); setShowForm(true); }}
-                            onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
-                            allContracts={contracts}
-                            allTasks={tasks}
-                            allDocuments={documents}
-                            workspaceMode="private"
-                          />
-                        </div>
-                      </div>
-                    )}
+              ) : workspaceMode === 'private' ? (
+                /* ── Privatkunden ── */
+                displayed.length === 0 ? (
+                  <div className="p-6">
+                    <EmptyState
+                      type={search ? 'empty' : 'customers'}
+                      title={search ? 'Keine Ergebnisse' : 'Keine Privatkunden'}
+                      description={search ? 'Passen Sie den Suchbegriff an.' : 'Fügen Sie Ihren ersten Privatkunden hinzu.'}
+                      action={
+                        !search && (
+                          <button
+                            onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}
+                            className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
+                          >
+                            <Plus className="w-4 h-4" /> Privatkunde hinzufügen
+                          </button>
+                        )
+                      }
+                      size="lg"
+                    />
                   </div>
-
-                  {/* Business Customers — always mounted, only visibility changes */}
-                  <div hidden={!showBusiness}>
-                    {displayed.filter(c => c.customer_type === 'business').length === 0 ? (
-                      <div className="p-6">
-                        <EmptyState
-                          type={search ? 'empty' : 'customers'}
-                          title={search ? 'Keine Ergebnisse' : 'Keine Firmenkunden'}
-                          description={search ? 'Passen Sie den Suchbegriff an oder ändern Sie das Filter.' : 'Fügen Sie Ihren ersten Firmenkunden hinzu, um zu starten.'}
-                          action={
-                            !search && (
-                              <button
-                                onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}
-                                className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
-                              >
-                                <Plus className="w-4 h-4" /> Firmenkunde hinzufügen
-                              </button>
-                            )
-                          }
-                          size="lg"
-                        />
-                      </div>
-                    ) : (
-                      <div className="border-t-2 border-[hsl(var(--primary))] bg-white">
-                        <div className="flex items-center gap-2 px-4 py-3 bg-[hsl(var(--surface-1))] border-b border-[hsl(var(--border-subtle))]">
-                          <Building2 className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
-                          <h3 className="text-[11px] font-semibold uppercase tracking-widest text-[hsl(var(--text-heading))]">Firmenkunden</h3>
-                          <span className="text-[10px] text-[hsl(var(--text-muted))]">({displayed.filter(c => c.customer_type === 'business').length})</span>
-                        </div>
-                        <div className="p-4">
-                          <CustomerFeed
-                            displayed={displayed.filter(c => c.customer_type === 'business')}
-                            customers={customers}
-                            segments={segments}
-                            matchedFamilyIds={matchedFamilyIds}
-                            onEdit={(c) => { setEditing(c); setShowForm(true); }}
-                            onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
-                            allContracts={contracts}
-                            allTasks={tasks}
-                            allDocuments={documents}
-                            workspaceMode="business"
-                          />
-                        </div>
-                      </div>
-                    )}
+                ) : (
+                  <div className="border-t-2 border-[hsl(var(--primary))] bg-white">
+                    <div className="flex items-center gap-2 px-4 py-3 bg-[hsl(var(--surface-1))] border-b border-[hsl(var(--border-subtle))]">
+                      <User className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
+                      <h3 className="text-[11px] font-semibold uppercase tracking-widest text-[hsl(var(--text-heading))]">Privatkunden</h3>
+                      <span className="text-[10px] text-[hsl(var(--text-muted))]">({displayed.length})</span>
+                    </div>
+                    <div className="p-4">
+                      <CustomerFeed
+                        displayed={displayed}
+                        customers={customers}
+                        segments={segments}
+                        matchedFamilyIds={matchedFamilyIds}
+                        onEdit={(c) => { setEditing(c); setShowForm(true); }}
+                        onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
+                        allContracts={contracts}
+                        allTasks={tasks}
+                        allDocuments={documents}
+                        workspaceMode="private"
+                      />
+                    </div>
                   </div>
-                </>
-              )}
+                )
+              ) : workspaceMode === 'business' ? (
+                /* ── Firmenkunden ── */
+                displayed.length === 0 ? (
+                  <div className="p-6">
+                    <EmptyState
+                      type={search ? 'empty' : 'customers'}
+                      title={search ? 'Keine Ergebnisse' : 'Keine Firmenkunden'}
+                      description={search ? 'Passen Sie den Suchbegriff an.' : 'Fügen Sie Ihren ersten Firmenkunden hinzu.'}
+                      action={
+                        !search && (
+                          <button
+                            onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}
+                            className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
+                          >
+                            <Plus className="w-4 h-4" /> Firmenkunde hinzufügen
+                          </button>
+                        )
+                      }
+                      size="lg"
+                    />
+                  </div>
+                ) : (
+                  <div className="border-t-2 border-[hsl(var(--primary))] bg-white">
+                    <div className="flex items-center gap-2 px-4 py-3 bg-[hsl(var(--surface-1))] border-b border-[hsl(var(--border-subtle))]">
+                      <Building2 className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
+                      <h3 className="text-[11px] font-semibold uppercase tracking-widest text-[hsl(var(--text-heading))]">Firmenkunden</h3>
+                      <span className="text-[10px] text-[hsl(var(--text-muted))]">({displayed.length})</span>
+                    </div>
+                    <div className="p-4">
+                      <CustomerFeed
+                        displayed={displayed}
+                        customers={customers}
+                        segments={segments}
+                        matchedFamilyIds={matchedFamilyIds}
+                        onEdit={(c) => { setEditing(c); setShowForm(true); }}
+                        onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
+                        allContracts={contracts}
+                        allTasks={tasks}
+                        allDocuments={documents}
+                        workspaceMode="business"
+                      />
+                    </div>
+                  </div>
+                )
+              ) : null}
             </div>
           </>
         )}
