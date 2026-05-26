@@ -511,46 +511,27 @@ export default function Customer360() {
               <KpiCard label="Aufgaben offen" value={metrics.openTasks.length} color={metrics.overdueTasks.length > 0 ? 'red' : 'amber'} onClick={() => setActiveSection('aufgaben')} />
             </div>
 
-            {/* Kontakt — inline editierbar */}
+            {/* Kontakt */}
             <Card>
-              <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="flex items-start gap-2">
-                  <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                  <EditableField
-                    value={customer.email}
-                    type="email"
-                    placeholder="E-Mail hinzufügen"
-                    onSave={v => updateCustomerMutation.mutate({ id: customer.id, data: { email: v } })}
-                    className="flex-1 min-w-0"
-                  />
-                </div>
-                <div className="flex items-start gap-2">
-                  <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                  <EditableField
-                    value={customer.phone}
-                    type="phone"
-                    placeholder="Telefon hinzufügen"
-                    onSave={v => updateCustomerMutation.mutate({ id: customer.id, data: { phone: v } })}
-                    className="flex-1 min-w-0"
-                  />
-                </div>
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0 grid grid-cols-2 gap-1">
-                    <EditableField
-                      value={customer.zip_code}
-                      type="text"
-                      placeholder="PLZ"
-                      onSave={v => updateCustomerMutation.mutate({ id: customer.id, data: { zip_code: v } })}
-                    />
-                    <EditableField
-                      value={customer.city}
-                      type="text"
-                      placeholder="Ort"
-                      onSave={v => updateCustomerMutation.mutate({ id: customer.id, data: { city: v } })}
-                    />
+              <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                {customer.email && (
+                  <a href={`mailto:${customer.email}`} className="flex items-center gap-2 hover:text-primary">
+                    <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <span className="truncate">{customer.email}</span>
+                  </a>
+                )}
+                {customer.phone && (
+                  <a href={`tel:${customer.phone}`} className="flex items-center gap-2 hover:text-primary">
+                    <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <span>{customer.phone}</span>
+                  </a>
+                )}
+                {customer.city && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <MapPin className="w-4 h-4 flex-shrink-0" />
+                    <span>{customer.zip_code} {customer.city}</span>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 
