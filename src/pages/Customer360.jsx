@@ -27,6 +27,7 @@ import VerkaufschanceForm from '@/components/verkaufschance/VerkaufschanceForm'
 import VerkaufschanceDetail from '@/components/verkaufschance/VerkaufschanceDetail'
 import CrossSellingPanel from '@/components/verkaufschance/CrossSellingPanel'
 import EditableField from '@/components/shared/EditableField'
+import BrokerWorkflowBar from '@/components/customers/BrokerWorkflowBar'
 import { parseISO, differenceInDays } from 'date-fns'
 
 const NEXT_STEP = {
@@ -49,6 +50,7 @@ export default function Customer360() {
   const [showVsForm, setShowVsForm] = useState(false)
   const [selectedVsId, setSelectedVsId] = useState(null)
   const [activeSection, setActiveSection] = useState('overview')
+  const [quickTaskTitle, setQuickTaskTitle] = useState('')
   const [editingContract, setEditingContract] = useState(null)
   const [expandedContractDocs, setExpandedContractDocs] = useState(null)
   const [expandedCancellation, setExpandedCancellation] = useState(null)
@@ -126,6 +128,11 @@ export default function Customer360() {
       queryClient.invalidateQueries({ queryKey: ['family-contracts', customerId] })
       setEditingContract(null)
     },
+  })
+
+  const createTaskMutation = useMutation({
+    mutationFn: d => base44.entities.Task.create(d),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks', customerId] }),
   })
 
   const createVsMutation = useMutation({
@@ -498,6 +505,18 @@ export default function Customer360() {
         </div>
       </div>
 
+      {/* ── BROKER WORKFLOW BAR ─────────────────────────────────── */}
+      <div className="px-0 pt-3">
+        <BrokerWorkflowBar
+          customer={customer}
+          customerId={customerId}
+          nextStep={nextStep}
+          metrics={metrics}
+          onNewChance={() => setShowVsForm(true)}
+          onRenewalStart={() => setActiveSection('verkaufschancen')}
+        />
+      </div>
+
       <div className="pt-4 space-y-4">
 
         {/* ── OVERVIEW ──────────────────────────────────────────────────── */}
@@ -733,7 +752,44 @@ export default function Customer360() {
 
         {/* ── AUFGABEN ─────────────────────────────────────────────────── */}
         {activeSection === 'aufgaben' && (
-          <div className="space-y-2">
+          <div className="space-y-3">
+            {/* Quick Task Creation */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Neue Aufgabe..."
+                value={quickTaskTitle}
+                onChange={e => setQuickTaskTitle(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && quickTaskTitle.trim()) {
+                    createTaskMutation.mutate({
+                      title: quickTaskTitle.trim(),
+                      customer_id: customerId,
+                      customer_name: `${customer.first_name} ${customer.last_name}`,
+                      task_type: 'general', priority: 'medium', status: 'open',
+                    })
+                    setQuickTaskTitle('')
+                  }
+                }}
+                className="flex-1 h-8 text-sm border border-border rounded-lg px-3 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+              <Button
+                size="sm"
+                disabled={!quickTaskTitle.trim() || createTaskMutation.isPending}
+                onClick={() => {
+                  createTaskMutation.mutate({
+                    title: quickTaskTitle.trim(),
+                    customer_id: customerId,
+                    customer_name: `${customer.first_name} ${customer.last_name}`,
+                    task_type: 'general', priority: 'medium', status: 'open',
+                  })
+                  setQuickTaskTitle('')
+                }}
+                className="h-8 px-3 text-xs gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" /> Erstellen
+              </Button>
+            </div>
             {tasks.length === 0 ? (
               <EmptyState icon={CheckCircle2} title="Keine Aufgaben" />
             ) : (
