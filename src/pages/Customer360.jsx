@@ -59,8 +59,7 @@ export default function Customer360() {
 
   const { data: contracts = [] } = useQuery({
     queryKey: ['contracts', customerId],
-    queryFn: () => base44.entities.Contract.list(),
-    select: d => d.filter(c => c.customer_id === customerId),
+    queryFn: () => base44.entities.Contract.filter({ customer_id: customerId, archived: false }),
   })
 
   const { data: verkaufschancen = [] } = useQuery({
@@ -84,8 +83,10 @@ export default function Customer360() {
     queryFn: async () => {
       const members = await base44.entities.Customer.filter({ primary_customer_id: customerId })
       if (!members.length) return []
-      const all = await base44.entities.Contract.list()
-      return all.filter(c => members.some(m => m.id === c.customer_id))
+      const results = await Promise.all(
+        members.map(m => base44.entities.Contract.filter({ customer_id: m.id, archived: false }))
+      )
+      return results.flat()
     },
     enabled: !!customerId,
   })
