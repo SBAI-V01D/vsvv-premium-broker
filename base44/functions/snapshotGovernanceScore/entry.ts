@@ -185,38 +185,49 @@ Deno.serve(async (req) => {
       return 0;
     };
 
-    // Incidents nach Severity trennen (nur nicht-geschlossene)
+    // 4-Klassen-Kategorisierung (Production / Governance / Technical Debt / Advisory)
+    const PROD_CATS = new Set(['export_gate', 'tenant_isolation', 'security', 'data_integrity', 'recovery']);
+    const GOV_CATS  = new Set(['approval', 'audit_trail', 'snapshots', 'pdf_integrity', 'document_integrity']);
+    const TECH_CATS = new Set(['performance', 'sla_breach']);
+    const getIncidentClass = (inc) => {
+      if (PROD_CATS.has(inc.category))  return 'production';
+      if (GOV_CATS.has(inc.category))   return 'governance';
+      if (TECH_CATS.has(inc.category))  return 'technical_debt';
+      if (['low', 'info'].includes(inc.severity)) return 'advisory';
+      return 'technical_debt';
+    };
+    const CLASS_CONFIG = {
+      production:    { weight: 12, cap: 50, dr: [3, 6] },
+      governance:    { weight:  5, cap: 25, dr: [4, 8] },
+      technical_debt:{ weight:  2, cap: 10, dr: [3, 6] },
+      advisory:      { weight:  0.8, cap: 3, dr: [2, 4] },
+    };
     const openIncidents = incidents.filter(i => !['resolved', 'closed', 'rejected'].includes(i.status));
-    const critItems   = openIncidents.filter(i => ['critical', 'blocking'].includes(i.severity));
-    const highItems   = openIncidents.filter(i => i.severity === 'high');
-    const medItems    = openIncidents.filter(i => ['medium', 'warning'].includes(i.severity));
-    const lowItems    = openIncidents.filter(i => ['low', 'info'].includes(i.severity));
-
-    const weightedSum = (items, basePts) =>
-      items.reduce((sum, inc) => {
-        const conf = (inc.ai_confidence != null && inc.ai_confidence > 0) ? inc.ai_confidence : 0.8;
-        return sum + basePts * agingFactor(inc.detected_at) * statusWeight(inc.status) * conf;
+    const byClass = { production: [], governance: [], technical_debt: [], advisory: [] };
+    openIncidents.forEach(inc => byClass[getIncidentClass(inc)].push(inc));
+    const calcDeduction = (items, cls) => {
+      const { weight, dr } = CLASS_CONFIG[cls];
+      return items.reduce((sum, inc, idx) => {
+        const conf   = (inc.ai_confidence != null && inc.ai_confidence > 0) ? inc.ai_confidence : 0.8;
+        const factor = idx < dr[0] ? 1.0 : idx < dr[1] ? 0.55 : 0.20;
+        return sum + weight * agingFactor(inc.detected_at) * statusWeight(inc.status) * conf * factor;
       }, 0);
+    };
+    const productionDeduction   = Math.min(CLASS_CONFIG.production.cap,     calcDeduction(byClass.production,     'production'));
+    const governanceDeduction   = Math.min(CLASS_CONFIG.governance.cap,     calcDeduction(byClass.governance,     'governance'));
+    const techDebtDeduction     = Math.min(CLASS_CONFIG.technical_debt.cap, calcDeduction(byClass.technical_debt, 'technical_debt'));
+    const advisoryDeduction     = Math.min(CLASS_CONFIG.advisory.cap,       calcDeduction(byClass.advisory,       'advisory'));
 
-    // Harte Caps mit Diminishing Returns für viele Criticals (bekannte Backlog-Situation)
-    // Erste 3 criticals voll, 4-6 mit 60%, 7+ mit 25% — verhindert Abstrafung bei bekannten Issues
-    const critWeighted = critItems.reduce((sum, inc, idx) => {
-      const conf   = (inc.ai_confidence != null && inc.ai_confidence > 0) ? inc.ai_confidence : 0.8;
-      const factor = idx < 3 ? 1.0 : idx < 6 ? 0.60 : 0.25;
-      return sum + 12 * agingFactor(inc.detected_at) * statusWeight(inc.status) * conf * factor;
-    }, 0);
-    const critDeduction = Math.min(50, critWeighted);
-    const highDeduction = Math.min(20, weightedSum(highItems, 7));
-    const medDeduction  = Math.min(10, weightedSum(medItems, 2.5));
-    const lowDeduction  = Math.min(3,  weightedSum(lowItems, 0.8));
-
-    // SLA-Breach — ebenfalls mit Diminishing Returns (viele SLA-Breaches = bekanntes Backlog)
-    let criticalOpen = critItems.filter(i => statusWeight(i.status) >= 1.0).length;
-    let slaBreached  = openIncidents.filter(i => i.sla_status === 'breached' && statusWeight(i.status) >= 1.0 && ['critical','blocking','high'].includes(i.severity)).length;
-    // Erste 3 SLA-Breaches voll, danach Diminishing Returns
+    // SLA-Breach (nur production + governance Incidents)
+    const criticalOpen = [...byClass.production, ...byClass.governance]
+      .filter(i => statusWeight(i.status) >= 1.0 && ['critical','blocking'].includes(i.severity)).length;
+    const slaBreached = openIncidents.filter(i =>
+      i.sla_status === 'breached' && statusWeight(i.status) >= 1.0 &&
+      ['critical','blocking','high'].includes(i.severity)
+    ).length;
     const slaDeduction = Math.min(12, slaBreached <= 3 ? slaBreached * 4 : 12 + (slaBreached - 3) * 1);
 
-    const totalDeduction = critDeduction + highDeduction + medDeduction + lowDeduction + slaDeduction;
+    const totalDeduction = productionDeduction + governanceDeduction + techDebtDeduction + advisoryDeduction + slaDeduction;
 
     // Resolution velocity bonus (bis +12)
     const last30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -235,12 +246,18 @@ Deno.serve(async (req) => {
         active_incidents: openIncidents.length,
         critical_open: criticalOpen,
         sla_breached: slaBreached,
+        classes: {
+          production: byClass.production.length,
+          governance: byClass.governance.length,
+          technical_debt: byClass.technical_debt.length,
+          advisory: byClass.advisory.length,
+        },
         deduction_breakdown: {
-          critical: Math.round(critDeduction * 10) / 10,
-          high: Math.round(highDeduction * 10) / 10,
-          medium: Math.round(medDeduction * 10) / 10,
-          low: Math.round(lowDeduction * 10) / 10,
-          sla: slaDeduction,
+          production:    Math.round(productionDeduction   * 10) / 10,
+          governance:    Math.round(governanceDeduction   * 10) / 10,
+          technical_debt:Math.round(techDebtDeduction     * 10) / 10,
+          advisory:      Math.round(advisoryDeduction     * 10) / 10,
+          sla:           slaDeduction,
         },
         velocity_bonus: velocityBonus,
         recently_resolved_30d: recentlyResolved,

@@ -258,23 +258,44 @@ Deno.serve(async (req) => {
     // ══════════════════════════════════════════════════════════════════════════
     // 9. SYSTEM EXCELLENCE SCORE (inkl. Governance Snapshot)
     // ══════════════════════════════════════════════════════════════════════════
-    // Incident Management Score — Diminishing Returns + Kategorie-Unterscheidung
-    // Production/Security-Incidents (hard impact) vs. Governance/Audit-Incidents (soft impact)
-    const PRODUCTION_CATEGORIES = new Set(['export_gate', 'tenant_isolation', 'security', 'data_integrity', 'recovery']);
-    const incidentDeduction = openCriticalIncidents.reduce((sum, inc, idx) => {
-      const isProductionCritical = PRODUCTION_CATEGORIES.has(inc.category);
-      const baseDeduction = isProductionCritical ? 12 : 5; // Governance-Issues weniger bestrafend
-      const factor = idx < 3 ? 1.0 : idx < 6 ? 0.55 : 0.20; // Diminishing Returns
-      return sum + baseDeduction * factor;
-    }, 0);
+    // 4-Klassen-Incident-Score (Production / Governance / Technical Debt / Advisory)
+    const INC_PROD_CATS = new Set(['export_gate', 'tenant_isolation', 'security', 'data_integrity', 'recovery']);
+    const INC_GOV_CATS  = new Set(['approval', 'audit_trail', 'snapshots', 'pdf_integrity', 'document_integrity']);
+    const INC_TECH_CATS = new Set(['performance', 'sla_breach']);
+    const classifyInc = (inc) => {
+      if (INC_PROD_CATS.has(inc.category))  return 'production';
+      if (INC_GOV_CATS.has(inc.category))   return 'governance';
+      if (INC_TECH_CATS.has(inc.category))  return 'technical_debt';
+      if (['low', 'info'].includes(inc.severity)) return 'advisory';
+      return 'technical_debt';
+    };
+    const INC_CLASS_CFG = {
+      production:    { weight: 12, cap: 50, dr: [3, 6] },
+      governance:    { weight:  5, cap: 25, dr: [4, 8] },
+      technical_debt:{ weight:  2, cap: 10, dr: [3, 6] },
+      advisory:      { weight:  0.8, cap: 3, dr: [2, 4] },
+    };
+    const incByClass = { production: [], governance: [], technical_debt: [], advisory: [] };
+    openIncidents.forEach(inc => incByClass[classifyInc(inc)].push(inc));
+    const calcIncDeduction = (items, cls) => {
+      const { weight, dr } = INC_CLASS_CFG[cls];
+      return items.reduce((sum, inc, idx) => {
+        const factor = idx < dr[0] ? 1.0 : idx < dr[1] ? 0.55 : 0.20;
+        return sum + weight * factor;
+      }, 0);
+    };
+    const totalIncDeduction =
+      Math.min(INC_CLASS_CFG.production.cap,     calcIncDeduction(incByClass.production,     'production')) +
+      Math.min(INC_CLASS_CFG.governance.cap,     calcIncDeduction(incByClass.governance,     'governance')) +
+      Math.min(INC_CLASS_CFG.technical_debt.cap, calcIncDeduction(incByClass.technical_debt, 'technical_debt')) +
+      Math.min(INC_CLASS_CFG.advisory.cap,       calcIncDeduction(incByClass.advisory,       'advisory'));
     // Resolution Velocity Bonus (bis +15)
     const last30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const recentlyResolved = incidents.filter(i =>
-      ['resolved', 'closed'].includes(i.status) &&
-      new Date(i.resolved_at || 0) >= last30d
+      ['resolved', 'closed'].includes(i.status) && new Date(i.resolved_at || 0) >= last30d
     ).length;
     const incidentVelocityBonus = Math.min(15, recentlyResolved * 2);
-    const incidentMgmtScore = Math.max(0, Math.min(100, Math.round(100 - Math.min(65, incidentDeduction) + incidentVelocityBonus)));
+    const incidentMgmtScore = Math.max(0, Math.min(100, Math.round(100 - Math.min(70, totalIncDeduction) + incidentVelocityBonus)));
 
     const categoryScores = {
       incident_management: incidentMgmtScore,
@@ -643,6 +664,12 @@ Antworte auf Deutsch, technisch präzise, aber verständlich.`
         total: openCriticalIncidents.length,
         analysis: incidentAnalysis,
         top_priorities: incidentAnalysis.slice(0, 5),
+        by_class: {
+          production:    incByClass.production.length,
+          governance:    incByClass.governance.length,
+          technical_debt:incByClass.technical_debt.length,
+          advisory:      incByClass.advisory.length,
+        },
       },
 
       performance: performanceAnalysis,
