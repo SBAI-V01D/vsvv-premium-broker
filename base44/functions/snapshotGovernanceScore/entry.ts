@@ -94,8 +94,9 @@ Deno.serve(async (req) => {
     const recentLogs = auditLogs.filter(l => new Date(l.timestamp) >= last7d).length;
     const contractsWithHistory = contracts.filter(c => c.change_history?.length > 0).length;
     const auditCoverage = contracts.length > 0 ? Math.round((contractsWithHistory / contracts.length) * 100) : 100;
+    // Fix: recentLogs * 5 statt * 2 — realistischer Schwellwert (20 Logs/Woche = 100%)
     domains.audit_trail = {
-      score: Math.round((Math.min(100, recentLogs * 2) * 0.4) + (auditCoverage * 0.6)),
+      score: Math.round((Math.min(100, recentLogs * 5) * 0.4) + (auditCoverage * 0.6)),
       label: 'Audit Trail',
       details: { recent_audit_logs_7d: recentLogs, audit_coverage_pct: auditCoverage },
     };
@@ -124,7 +125,8 @@ Deno.serve(async (req) => {
 
     // 6. DATA QUALITY
     const emailCoverage = active.length > 0 ? Math.round((active.filter(c => c.email).length / active.length) * 100) : 100;
-    const dateCoverage = contracts.length > 0 ? Math.round((contracts.filter(c => c.start_date && c.renewal_date).length / contracts.length) * 100) : 100;
+    // Fix: nur start_date als Pflicht — renewal_date ist optional und oft nicht gesetzt
+    const dateCoverage = contracts.length > 0 ? Math.round((contracts.filter(c => c.start_date).length / contracts.length) * 100) : 100;
     domains.data_quality = { score: Math.round((emailCoverage * 0.5) + (dateCoverage * 0.5)), label: 'Data Quality', details: { customer_email_coverage_pct: emailCoverage, contract_date_coverage_pct: dateCoverage } };
 
     // OVERALL
