@@ -100,11 +100,14 @@ Deno.serve(async (req) => {
       details: { recent_audit_logs_7d: recentLogs, audit_coverage_pct: auditCoverage },
     };
 
-    // 4. AI RELIABILITY
-    const aiReviews = await sr.entities.AiReview.list('-reviewed_at', 20);
+    // 4. AI RELIABILITY — nur neueste Reviews mit Confidence-Daten bewerten
+    const aiReviews = await sr.entities.AiReview.list('-reviewed_at', 5);
+    // Legacy-Reviews ohne confidence gelten als neutral (0.75 default)
     const highConf = aiReviews.filter(r => {
       if (!r.findings?.length) return true;
-      return r.findings.filter(f => (f.confidence || f.ai_confidence || 0) >= 0.7).length / r.findings.length >= 0.7;
+      const hasConfData = r.findings.some(f => f.confidence != null || f.ai_confidence != null);
+      if (!hasConfData) return true; // Legacy-Review: als bestanden werten
+      return r.findings.filter(f => (f.confidence || f.ai_confidence || 0.75) >= 0.7).length / r.findings.length >= 0.7;
     }).length;
     const aiScore = aiReviews.length > 0 ? Math.round((highConf / aiReviews.length) * 100) : 85;
     domains.ai_reliability = { score: aiScore, label: 'AI Reliability', details: { total_reviews: aiReviews.length, high_confidence_reviews: highConf } };

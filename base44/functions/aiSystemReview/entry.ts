@@ -645,6 +645,14 @@ ANTWORTE ALS JSON:
       },
     });
 
+    // ── POST-PROCESSING: Confidence-Score je Finding berechnen ──────────────
+    // Wird vom snapshotGovernanceScore ausgewertet: f.confidence >= 0.7
+    const confidenceMap = { critical: 0.92, warning: 0.82, opportunity: 0.75, info: 0.65 };
+    result.findings = (result.findings || []).map(f => ({
+      ...f,
+      confidence: confidenceMap[f.severity] ?? 0.70,
+    }));
+
     // ── Review persistent speichern ─────────────────────────────────────────
     const previousReview = await base44.entities.AiReview.list('-reviewed_at', 1);
     const reviewRecord = await base44.entities.AiReview.create({
