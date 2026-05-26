@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client'
 import { useParams, useNavigate } from 'react-router-dom'
 import html2pdf from 'html2pdf.js'
 import { useAccessControl } from '@/hooks/useAccessControl'
-import { Edit, Users, FileText, Clock, Shield, Bot } from 'lucide-react'
+import { Edit, Users, FileText, Clock, Shield, Bot, Tag, Building2, Calendar, Trash2, Plus } from 'lucide-react'
 import AiInsightsPanel from '../components/customers/AiInsightsPanel'
 import ActivityTimeline from '../components/customers/ActivityTimeline'
 import HouseholdContractsCockpit from '../components/customers/HouseholdContractsCockpit'
@@ -27,6 +27,10 @@ import StatusBadge from '@/components/status/StatusBadge'
 import PortalActivationPanel from '@/components/customers/PortalActivationPanel'
 import AddFamilyMemberDialog from '@/components/customers/AddFamilyMemberDialog'
 import AdvisorAssignmentPanel from '@/components/advisors/AdvisorAssignmentPanel'
+import DateQualityBadge from '@/components/contracts/DateQualityBadge'
+import ContractDocumentsPanel from '@/components/contracts/ContractDocumentsPanel'
+import ApplicationDocumentsPanel from '@/components/applications/ApplicationDocumentsPanel'
+import ApplicationForm from '@/components/applications/ApplicationForm'
 import { HouseholdPrintExport } from '@/components/customers/HouseholdPrintExport'
 import { StickyNav, EnterpriseCard, EmptySection, SectionHeader } from '@/components/ui/ds'
 import EmailLink from '@/components/common/EmailLink'
@@ -43,6 +47,10 @@ export default function CustomerDetail() {
   const [accessChecked, setAccessChecked] = useState(false)
   const [hasAccess, setHasAccess] = useState(false)
   const [activeSection, setActiveSection] = useState('uebersicht')
+  const [expandedContractDocs, setExpandedContractDocs] = useState(null)
+  const [expandedApplicationDocs, setExpandedApplicationDocs] = useState(null)
+  const [showAppForm, setShowAppForm] = useState(false)
+  const [editingApp, setEditingApp] = useState(null)
   const queryClient = useQueryClient()
 
   useEffect(() => {
@@ -179,6 +187,16 @@ export default function CustomerDetail() {
         navigate('/kunden?filter=private', { replace: true })
       }
     },
+  })
+
+  const createAppMutation = useMutation({
+    mutationFn: (data) => base44.entities.Application.create(data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['applications', id] }); setShowAppForm(false); setEditingApp(null) },
+  })
+
+  const updateAppMutation = useMutation({
+    mutationFn: ({ id: aid, data }) => base44.entities.Application.update(aid, data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['applications', id] }); setShowAppForm(false); setEditingApp(null) },
   })
 
   const updateContractMutation = useMutation({
@@ -336,108 +354,216 @@ export default function CustomerDetail() {
 
         {/* ── Verträge ──────────────────────────────────────────────── */}
         {activeSection === 'vertraege' && (
-          relatedContracts.length === 0 ? (
-            <EnterpriseCard>
+          <EnterpriseCard noPad>
+            {relatedContracts.length === 0 ? (
               <EmptySection icon={FileText} title="Keine Verträge" subtitle="Noch keine Verträge für diesen Kunden erfasst." />
-            </EnterpriseCard>
-          ) : (
-            <EnterpriseCard noPad>
-              <div className="hidden md:grid grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-5 py-3 border-b border-[hsl(var(--border-subtle))] text-label">
-                <div>Versicherter</div><div>Versicherer / Sparte</div><div>Policen-Nr</div>
-                <div>Produkt</div><div>Laufzeit</div><div>Jahresprämie</div><div>Status</div><div className="w-16" />
-              </div>
-              {relatedContracts.map((c, idx) => (
-                <div key={c.id} className={idx > 0 ? 'border-t border-[hsl(var(--border-subtle))]' : ''}>
-                  <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr_auto] gap-3 px-5 py-4 items-center hover:bg-[hsl(var(--surface-2))]/40 transition-colors">
-                    <div className="min-w-0">
-                      <p className="text-body-sm font-semibold truncate">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</p>
-                      {customer.ahv_number && <p className="text-caption font-mono mt-0.5">{customer.ahv_number}</p>}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-body-sm font-medium truncate">{c.insurer}</p>
-                      {(c.sparte || c.insurance_type) && <p className="text-caption mt-0.5">{getSparteLabel(c.sparte || c.insurance_type)}</p>}
-                      {c.sparte_data?.franchise && <p className="text-caption mt-0.5">Fr. {c.sparte_data.franchise}</p>}
-                    </div>
-                    <div><p className="text-body-sm">{c.policy_number || '–'}</p></div>
-                    <div><p className="text-body-sm">{c.product || '–'}</p></div>
-                    <div>
-                      {c.start_date && <p className="text-caption text-emerald-600">{formatDate(c.start_date)}</p>}
-                      {c.end_date && <p className="text-caption text-slate-500">{formatDate(c.end_date)}</p>}
-                      {!c.start_date && !c.end_date && <span className="text-caption">–</span>}
-                    </div>
-                    <div>
-                      {c.premium_yearly && <p className="text-body-sm font-semibold">CHF {c.premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}</p>}
-                      {c.premium_monthly && <p className="text-caption">CHF {c.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}/M.</p>}
-                      {!c.premium_yearly && !c.premium_monthly && <span className="text-caption">–</span>}
-                    </div>
-                    <div>
-                      <button onClick={() => setStatusChangingContract(c)} className="hover:opacity-80 transition-opacity">
-                        <StatusBadge
-                          statusDef={statusDefs.find(s => s.key === (c.custom_status || '').toLowerCase().trim()) || statusDefs.find(s => s.key === (c.status || '').toLowerCase().trim())}
-                          label={c.custom_status || c.status}
-                        />
-                      </button>
-                    </div>
-                    <ActionMenu items={[
-                      { label: 'Bearbeiten', icon: Edit, onClick: () => setEditingContract(c) },
-                      { label: 'Status ändern', onClick: () => setStatusChangingContract(c) },
-                    ]} />
-                  </div>
+            ) : (
+              <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="hidden md:grid grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/30 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-wide">
+                  <div>Kunde</div><div>Sparte / Versicherer</div><div>Produkt / Tarif</div>
+                  <div>Vertragsdaten</div><div>Jahresprämie</div><div>Status</div><div className="w-20" />
                 </div>
-              ))}
-            </EnterpriseCard>
-          )
+                {relatedContracts.map((c, idx) => {
+                  const docsOpen = expandedContractDocs === c.id
+                  return (
+                    <div key={c.id} className={idx > 0 ? 'border-t border-border' : ''}>
+                      <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-1.5 items-center hover:bg-muted/20 transition-colors">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-xs truncate">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</p>
+                          {customer.ahv_number && <p className="text-xs font-mono text-muted-foreground mt-0.5">{customer.ahv_number}</p>}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <Tag className="w-3 h-3 text-primary flex-shrink-0" />
+                            <p className="text-xs font-medium truncate">{getSparteLabel(c.sparte || c.insurance_type)}</p>
+                          </div>
+                          {c.insurer && (
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <Building2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                              <p className="text-xs text-muted-foreground truncate">{c.insurer}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          {c.policy_number && <p className="text-xs font-mono text-muted-foreground">{c.policy_number}</p>}
+                          {c.product && <p className="text-xs font-medium truncate">{c.product}</p>}
+                          {c.sparte_data?.franchise && <p className="text-xs text-muted-foreground">Franchise: CHF {c.sparte_data.franchise}</p>}
+                          {c.sparte_data?.model && <p className="text-xs text-muted-foreground">Modell: {c.sparte_data.model}</p>}
+                          {!c.product && !c.policy_number && <span className="text-xs text-muted-foreground">–</span>}
+                        </div>
+                        <div>
+                          {c.start_date && (
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <Calendar className="w-3 h-3 text-green-600 flex-shrink-0" />
+                              <span className="text-xs text-green-600 font-medium">{formatDate(c.start_date)}</span>
+                            </div>
+                          )}
+                          {c.end_date && (
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className="w-3 h-3 text-green-600 flex-shrink-0" />
+                              <span className="text-xs text-green-600 font-medium">{formatDate(c.end_date)}</span>
+                            </div>
+                          )}
+                          {!c.start_date && !c.end_date && <span className="text-xs text-muted-foreground">–</span>}
+                        </div>
+                        <div>
+                          {c.premium_yearly ? <p className="text-xs font-semibold">CHF {c.premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/J.</p> : null}
+                          {c.premium_monthly ? <p className="text-xs text-muted-foreground">CHF {c.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/M.</p> : null}
+                          {!c.premium_yearly && !c.premium_monthly && <span className="text-xs text-muted-foreground">–</span>}
+                        </div>
+                        <div>
+                          <button onClick={() => setStatusChangingContract(c)} className="hover:opacity-80 transition-opacity mb-1">
+                            <StatusBadge
+                              statusDef={statusDefs.find(s => s.key === (c.custom_status || '').toLowerCase().trim()) || statusDefs.find(s => s.key === (c.status || '').toLowerCase().trim())}
+                              label={c.custom_status || c.status}
+                            />
+                          </button>
+                          {c.requires_review && (
+                            <DateQualityBadge dateQualityStatus={c.date_quality_status} requiresReview={c.requires_review} variant="compact" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setExpandedContractDocs(docsOpen ? null : c.id)}
+                            className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted transition-colors text-muted-foreground"
+                            title="Dokumente"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+                          <ActionMenu items={[
+                            { label: 'Bearbeiten', icon: Edit, onClick: () => setEditingContract(c) },
+                            { label: 'Status ändern', onClick: () => setStatusChangingContract(c) },
+                          ]} />
+                        </div>
+                      </div>
+                      {docsOpen && (
+                        <div className="px-4 pb-4 border-t border-border bg-muted/20">
+                          <ContractDocumentsPanel contract={c} />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </EnterpriseCard>
         )}
 
         {/* ── Anträge ───────────────────────────────────────────────── */}
         {activeSection === 'antraege' && (
-          relatedApplications.length === 0 ? (
-            <EnterpriseCard>
+          <EnterpriseCard noPad>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[hsl(var(--border-subtle))]">
+              <p className="text-label">{relatedApplications.length} Anträge</p>
+              <button
+                onClick={() => { setEditingApp(null); setShowAppForm(true); }}
+                className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80"
+              >
+                <Plus className="w-3.5 h-3.5" /> Neuer Antrag
+              </button>
+            </div>
+            {relatedApplications.length === 0 ? (
               <EmptySection icon={FileText} title="Keine Anträge" subtitle="Noch keine Anträge für diesen Kunden vorhanden." />
-            </EnterpriseCard>
-          ) : (
-            <EnterpriseCard noPad>
-              <div className="hidden md:grid grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-5 py-3 border-b border-[hsl(var(--border-subtle))] text-label">
-                <div>Versicherter</div><div>Versicherer / Sparte</div><div>Policen-Nr</div>
-                <div>Produkt</div><div>Laufzeit</div><div>Jahresprämie</div><div>Status</div>
-              </div>
-              {relatedApplications.map((a, idx) => {
-                const premiumYearly = a.estimated_premium_yearly || (a.estimated_premium_monthly ? Math.round(a.estimated_premium_monthly * 12) : null)
-                const statusColors = {
-                  approved: 'bg-emerald-50 text-emerald-700', angenommen: 'bg-emerald-50 text-emerald-700',
-                  in_progress: 'bg-blue-50 text-blue-700', waiting: 'bg-amber-50 text-amber-700',
-                  rejected: 'bg-rose-50 text-rose-600',
-                }
-                const sk = a.custom_status || a.status
-                return (
-                  <div key={a.id} className={idx > 0 ? 'border-t border-[hsl(var(--border-subtle))]' : ''}>
-                    <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.2fr_1.2fr_1.2fr_1fr_1fr] gap-3 px-5 py-4 items-center hover:bg-[hsl(var(--surface-2))]/40 transition-colors">
-                      <div><p className="text-body-sm font-semibold truncate">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</p></div>
-                      <div>
-                        <p className="text-body-sm font-medium truncate">{a.insurer || '–'}</p>
-                        {(a.sparte || a.insurance_type) && <p className="text-caption mt-0.5">{getSparteLabel(a.sparte || a.insurance_type)}</p>}
-                        {a.sparte_data?.franchise && <p className="text-caption mt-0.5">Fr. {a.sparte_data.franchise}</p>}
+            ) : (
+              <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="hidden md:grid grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/30 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-wide">
+                  <div>Kunde / Berater</div><div>Sparte / Versicherer</div><div>Produkt / Tarif</div>
+                  <div>Vertragsdaten</div><div>Jahresprämie</div><div>Status</div><div className="w-20" />
+                </div>
+                {relatedApplications.map((a, idx) => {
+                  const docsOpen = expandedApplicationDocs === a.id
+                  const appStatus = (a.custom_status || a.status || '').toLowerCase().trim()
+                  const appStatusDef = statusDefs.find(s => s.key === appStatus)
+                  const ACCEPTED_KEYS = ['angenommen', 'policiert', 'approved', 'angenommen_vorbehalt', 'bewilligung_erteilt']
+                  const OPEN_KEYS = ['neu', 'new', 'eingereicht', 'in_pruefung', 'rueckfrage', 'vorbehalt', 'risikopruefung', 'under_review', 'in_progress']
+                  return (
+                    <div key={a.id} className={idx > 0 ? 'border-t border-border' : ''}>
+                      <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-1.5 items-center hover:bg-muted/20 transition-colors">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-xs truncate">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</p>
+                          {customer.ahv_number && <p className="text-xs font-mono text-muted-foreground mt-0.5">{customer.ahv_number}</p>}
+                          {a.assigned_broker && <p className="text-xs text-muted-foreground mt-0.5 truncate">{a.assigned_broker}</p>}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <Tag className="w-3 h-3 text-primary flex-shrink-0" />
+                            <p className="text-xs font-medium truncate">{getSparteLabel(a.sparte || a.insurance_type)}</p>
+                          </div>
+                          {a.insurer && (
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <Building2 className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                              <p className="text-xs text-muted-foreground truncate">{a.insurer}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          {a.product && <p className="text-xs font-medium truncate">{a.product}</p>}
+                          {a.policy_number && <p className="text-xs font-mono text-muted-foreground">Police: {a.policy_number}</p>}
+                          {a.sparte_data?.franchise && <p className="text-xs text-muted-foreground">Fr. {a.sparte_data.franchise}</p>}
+                          {!a.product && !a.policy_number && <span className="text-xs text-muted-foreground">–</span>}
+                        </div>
+                        <div>
+                          {(a.contract_start_date || a.requested_start_date) && (
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <Calendar className="w-3 h-3 text-green-600 flex-shrink-0" />
+                              <span className="text-xs text-green-600 font-medium">{formatDate(a.contract_start_date || a.requested_start_date)}</span>
+                            </div>
+                          )}
+                          {a.contract_end_date && (
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className="w-3 h-3 text-green-600 flex-shrink-0" />
+                              <span className="text-xs text-green-600 font-medium">{formatDate(a.contract_end_date)}</span>
+                            </div>
+                          )}
+                          {!a.contract_start_date && !a.requested_start_date && !a.contract_end_date && <span className="text-xs text-muted-foreground">–</span>}
+                        </div>
+                        <div>
+                          {a.estimated_premium_yearly ? <p className="text-xs font-semibold">CHF {a.estimated_premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/J.</p> : null}
+                          {a.estimated_premium_monthly ? <p className="text-xs text-muted-foreground">CHF {a.estimated_premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/M.</p> : null}
+                          {!a.estimated_premium_yearly && !a.estimated_premium_monthly && <span className="text-xs text-muted-foreground">–</span>}
+                        </div>
+                        <div>
+                          <button onClick={() => setStatusChangingContract(null)} className="hover:opacity-80 transition-opacity mb-1">
+                            <StatusBadge statusDef={appStatusDef} label={appStatusDef?.label || appStatus} />
+                          </button>
+                          {OPEN_KEYS.includes(appStatus) && (
+                            <button
+                              onClick={async () => {
+                                const result = await base44.functions.invoke('acceptApplicationAndCreateContract', { application_id: a.id })
+                                if (result.data?.success) {
+                                  queryClient.invalidateQueries({ queryKey: ['applications', id] })
+                                  queryClient.invalidateQueries({ queryKey: ['contracts', id] })
+                                }
+                              }}
+                              className="text-xs px-2 py-0.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-semibold"
+                            >
+                              ✓ Annehmen
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setExpandedApplicationDocs(docsOpen ? null : a.id)}
+                            className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted transition-colors text-muted-foreground"
+                            title="Dokumente"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+                          <ActionMenu items={[
+                            { label: 'Bearbeiten', icon: Edit, onClick: () => { setEditingApp(a); setShowAppForm(true) } },
+                          ]} />
+                        </div>
                       </div>
-                      <div><p className="text-body-sm">{a.policy_number || '–'}</p></div>
-                      <div><p className="text-body-sm">{a.product || '–'}</p></div>
-                      <div>
-                        {a.contract_start_date && <p className="text-caption text-emerald-600">{formatDate(a.contract_start_date)}</p>}
-                        {a.contract_end_date && <p className="text-caption text-slate-500">{formatDate(a.contract_end_date)}</p>}
-                        {!a.contract_start_date && !a.contract_end_date && <span className="text-caption">–</span>}
-                      </div>
-                      <div>
-                        {premiumYearly ? <p className="text-body-sm font-semibold">CHF {premiumYearly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}</p> : <span className="text-caption">–</span>}
-                        {a.estimated_premium_monthly ? <p className="text-caption">CHF {a.estimated_premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 0 })}/M.</p> : null}
-                      </div>
-                      <div>
-                        <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${statusColors[sk] || 'bg-slate-100 text-slate-600'}`}>{sk}</span>
-                      </div>
+                      {docsOpen && (
+                        <div className="px-4 pb-4 border-t border-border bg-muted/20">
+                          <ApplicationDocumentsPanel application={a} />
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )
-              })}
-            </EnterpriseCard>
-          )
+                  )
+                })}
+              </div>
+            )}
+          </EnterpriseCard>
         )}
 
         {/* ── Dokumente ─────────────────────────────────────────────── */}
@@ -528,6 +654,20 @@ export default function CustomerDetail() {
           onSave={(data) => updateContractMutation.mutate({ id: editingContract.id, data })}
           onCancel={() => setEditingContract(null)}
           saving={updateContractMutation.isPending}
+        />
+      </StandardModal>
+
+      <StandardModal open={showAppForm} onOpenChange={setShowAppForm} title={editingApp ? 'Antrag bearbeiten' : 'Neuer Antrag'} size="lg" hideFooter>
+        <ApplicationForm
+          application={editingApp}
+          customers={allCustomers}
+          brokers={[]}
+          onSave={(data) => {
+            if (editingApp) updateAppMutation.mutate({ id: editingApp.id, data })
+            else createAppMutation.mutate({ ...data, customer_id: id, customer_name: `${customer?.first_name} ${customer?.last_name}` })
+          }}
+          onCancel={() => { setShowAppForm(false); setEditingApp(null) }}
+          saving={createAppMutation.isPending || updateAppMutation.isPending}
         />
       </StandardModal>
 
