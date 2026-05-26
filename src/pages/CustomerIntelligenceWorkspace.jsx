@@ -104,6 +104,12 @@ const WORKSPACE_MODES = [
   { id: 'business', label: 'Unternehmen', icon: Building2 },
 ];
 
+const NAV_LINKS = [
+  { label: 'Vertragsabläufe', path: '/vertragsablaeufe', icon: Calendar },
+  { label: 'Verkaufschancen', path: '/verkaufschancen', icon: TrendingUp },
+  { label: 'Leads', path: '/leads', icon: Target },
+];
+
 // ── Grouped customer feed ─────────────────────────────────────────────────
 function CustomerFeed({ displayed, customers, segments, matchedFamilyIds, onEdit, onDelete, allContracts, allTasks, allDocuments, workspaceMode }) {
   const renderCard = (customer) => (
@@ -521,7 +527,7 @@ export default function CustomerIntelligenceWorkspace() {
             </p>
           </div>
 
-          {/* Workspace Modes */}
+          {/* Workspace Modes + Nav Links */}
           <div className="flex items-center gap-1 overflow-x-auto pb-1">
             {WORKSPACE_MODES.map(mode => {
               const Icon = mode.icon;
@@ -541,12 +547,72 @@ export default function CustomerIntelligenceWorkspace() {
                 </button>
               );
             })}
+            <div className="w-px h-5 bg-[hsl(var(--border-subtle))] mx-1 shrink-0" />
+            {NAV_LINKS.map(link => {
+              const Icon = link.icon;
+              return (
+                <button
+                  key={link.path}
+                  onClick={() => navigate(link.path)}
+                  className="flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-lg transition-all whitespace-nowrap text-[hsl(var(--text-muted))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))]"
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {link.label}
+                </button>
+              );
+            })}
           </div>
 
           {isCustomerListMode && (
-            <>
-              {/* Search */}
-              <div className="flex-1 min-w-[280px] max-w-xl">
+            <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+              <button onClick={handleExport} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Export">
+                <Download className="w-4 h-4" />
+              </button>
+              <button onClick={() => setShowMerge(true)} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Zusammenführen">
+                <Users className="w-4 h-4" />
+              </button>
+              <button onClick={() => setShowImport(true)} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Import">
+                <Upload className="w-4 h-4" />
+              </button>
+              <div className="w-px h-4 bg-[hsl(var(--border-subtle))] mx-0.5" />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" className="rounded-md h-8 text-[12.5px]">
+                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Neuer Kunde
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}>
+                    <User className="w-4 h-4 mr-2 text-[hsl(var(--text-muted))]" /> Privatkunde
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}>
+                    <Building2 className="w-4 h-4 mr-2 text-[hsl(var(--text-muted))]" /> Firmenkunde
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Main Content Area — Stable Container with min-height ─────────────────── */}
+      <div className="flex-1 overflow-y-auto bg-[hsl(var(--surface-1))] min-h-[70vh]">
+        {isIntelligenceMode ? (
+          renderIntelligenceView()
+        ) : (
+          <>
+            {/* Mode Indicator Strip mit Suchfeld auf Höhe des Titels */}
+            <div className="sticky top-0 z-10 px-6 py-3 bg-white/95 backdrop-blur-sm border-b border-[hsl(var(--border-subtle))] flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="text-[13px] font-semibold text-[hsl(var(--text-heading))]">
+                  {workspaceMode === 'private' ? 'Privatkunden' : 'Unternehmen'}
+                </span>
+                <span className="text-[11px] text-[hsl(var(--text-muted))]">
+                  {displayed.length} Kunden{search ? ` · "${search}"` : ''}
+                </span>
+              </div>
+              {/* Suchfeld — auf Höhe des Titels */}
+              <div className="flex-1 min-w-[240px] max-w-md">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--text-subtle))]" />
                   <input
@@ -562,57 +628,7 @@ export default function CustomerIntelligenceWorkspace() {
                   )}
                 </div>
               </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-                <button onClick={handleExport} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Export">
-                  <Download className="w-4 h-4" />
-                </button>
-                <button onClick={() => setShowMerge(true)} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Zusammenführen">
-                  <Users className="w-4 h-4" />
-                </button>
-                <button onClick={() => setShowImport(true)} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Import">
-                  <Upload className="w-4 h-4" />
-                </button>
-                <div className="w-px h-4 bg-[hsl(var(--border-subtle))] mx-0.5" />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="sm" className="rounded-md h-8 text-[12.5px]">
-                      <Plus className="w-3.5 h-3.5 mr-1.5" /> Neuer Kunde
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}>
-                      <User className="w-4 h-4 mr-2 text-[hsl(var(--text-muted))]" /> Privatkunde
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}>
-                      <Building2 className="w-4 h-4 mr-2 text-[hsl(var(--text-muted))]" /> Firmenkunde
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* ── Main Content Area — Stable Container with min-height ─────────────────── */}
-      <div className="flex-1 overflow-y-auto bg-[hsl(var(--surface-1))] min-h-[70vh]">
-        {isIntelligenceMode ? (
-          renderIntelligenceView()
-        ) : (
-          <>
-            {/* Mode Indicator Strip */}
-            <div className="sticky top-0 z-10 px-6 py-3 bg-white/95 backdrop-blur-sm border-b border-[hsl(var(--border-subtle))] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-[13px] font-semibold text-[hsl(var(--text-heading))]">
-                  {workspaceMode === 'private' ? 'Privatkunden' : 'Unternehmen'}
-                </span>
-                <span className="text-[11px] text-[hsl(var(--text-muted))]">
-                  {displayed.length} Kunden{search ? ` · "${search}"` : ''}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 ml-auto shrink-0">
                 <select
                   value={sortBy}
                   onChange={e => setSortBy(e.target.value)}
