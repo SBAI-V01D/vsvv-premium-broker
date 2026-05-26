@@ -120,18 +120,27 @@ export default function Sidebar({ onNavigate }) {
         boxShadow: '2px 0 24px 0 rgba(59,130,246,0.08), 4px 0 12px 0 rgba(0,0,0,0.06)',
       }}
     >
-      {/* ── Logo / VSV Management GmbH ────────────────────────────────── */}
+      {/* ── Header: Angemeldeter Benutzer ─────────────────────────────── */}
       <div className={cn(
         'flex items-center h-[58px] border-b border-[hsl(var(--border-subtle))]/50 flex-shrink-0',
         collapsed ? 'justify-center' : 'gap-3 px-4'
       )}>
         <div className="w-7 h-7 rounded-[8px] bg-[hsl(var(--primary))] flex items-center justify-center flex-shrink-0 shadow-sm">
-          <Shield className="w-3.5 h-3.5 text-white" />
+          <User className="w-3.5 h-3.5 text-white" />
         </div>
-        {!collapsed && (
-          <div className="min-w-0 text-center">
-            <p className="text-[13px] font-bold text-[hsl(var(--primary))] tracking-tight leading-none">VSV Management GmbH</p>
-            <p className="text-[8px] text-[hsl(var(--text-subtle))] font-medium tracking-[0.14em] uppercase mt-0.5">Swiss Premium Broker</p>
+        {!collapsed && currentUser && (
+          <div className="min-w-0">
+            <p className="text-[13px] font-bold text-[hsl(var(--primary))] tracking-tight leading-none truncate">
+              {currentUser.full_name || currentUser.email}
+            </p>
+            <p className="text-[8px] text-[hsl(var(--text-subtle))] font-medium tracking-[0.14em] uppercase mt-0.5">
+              {roleLabel || 'Swiss Premium Broker'}
+            </p>
+          </div>
+        )}
+        {!collapsed && !currentUser && (
+          <div className="min-w-0">
+            <p className="text-[13px] font-bold text-[hsl(var(--primary))] tracking-tight leading-none">Swiss Premium Broker</p>
           </div>
         )}
       </div>
