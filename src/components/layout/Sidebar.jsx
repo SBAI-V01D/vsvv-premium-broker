@@ -109,17 +109,19 @@ export default function Sidebar({ onNavigate }) {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 h-screen flex flex-col z-50 transition-all duration-300',
-        // Enterprise stone/graphite — warm neutral surface (architectural material, not SaaS)
-        'bg-[#f7f7f6]',
-        'border-r border-[hsl(var(--border-subtle))]',
-        collapsed ? 'w-[60px]' : 'w-[243px]'
+        'flex flex-col z-50 transition-all duration-300',
+        // Floating sidebar — inset from viewport edges, rounded
+        'my-2 ml-2 rounded-2xl overflow-hidden',
+        'h-[calc(100vh-16px)]',
+        'bg-[hsl(var(--sidebar-surface))]',
+        'border border-[hsl(var(--border-subtle))]/60',
+        collapsed ? 'w-[60px]' : 'w-[244px]'
       )}
-      style={{ boxShadow: '4px 0 32px 0 rgba(0,0,0,0.08)' }}
+      style={{ boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10), 0 1px 4px 0 rgba(0,0,0,0.06)' }}
     >
       {/* ── Logo / VSV Management GmbH ────────────────────────────────── */}
       <div className={cn(
-        'flex items-center h-[60px] border-b border-[hsl(var(--border-default))] flex-shrink-0',
+        'flex items-center h-[58px] border-b border-[hsl(var(--border-subtle))]/50 flex-shrink-0',
         collapsed ? 'justify-center' : 'gap-3 px-4'
       )}>
         <div className="w-7 h-7 rounded-[8px] bg-[hsl(var(--primary))] flex items-center justify-center flex-shrink-0 shadow-sm">
@@ -138,11 +140,11 @@ export default function Sidebar({ onNavigate }) {
         {navGroups.map((group) => (
           <div key={group.label} className="mb-0.5">
             {!collapsed ? (
-              <p className="px-4 pt-6 pb-2 text-xs font-bold uppercase tracking-wide text-black select-none">
+              <p className="px-4 pt-5 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-[hsl(var(--sidebar-label))] select-none">
                 {group.label}
               </p>
             ) : (
-              <div className="mx-3 my-3 h-px bg-[hsl(var(--border-subtle))]" />
+              <div className="mx-3 my-3 h-px bg-[hsl(var(--border-subtle))]/50" />
             )}
 
             <div className={cn('space-y-1', collapsed ? 'px-2' : 'px-2')}>
@@ -160,13 +162,11 @@ export default function Sidebar({ onNavigate }) {
                       onClick={onNavigate}
                       title={collapsed ? item.label : undefined}
                       className={cn(
-                        'relative flex items-center rounded-md transition-all duration-200 group',
-                        collapsed ? 'justify-center h-9 w-9 mx-auto' : 'gap-2.5 px-3 py-[9px]',
+                        'relative flex items-center rounded-xl transition-all duration-200 group',
+                        collapsed ? 'justify-center h-9 w-9 mx-auto' : 'gap-2.5 px-3 py-[8px]',
                         isActive
-                          ? 'bg-[hsl(var(--primary))] border border-[hsl(var(--primary))]'
-                          : item.color === 'primary'
-                            ? 'bg-[hsl(var(--primary))/0.08] border border-[hsl(var(--border-subtle))]/40 text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))/0.12]'
-                            : 'text-[hsl(var(--text-muted))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))]/60 border border-transparent'
+                          ? 'bg-[hsl(var(--primary))] shadow-sm'
+                          : 'text-[hsl(var(--sidebar-item-fg))] hover:bg-[hsl(var(--sidebar-item-hover))] hover:text-[hsl(var(--sidebar-item-fg-active))]'
                       )}
                     >
                       {/* Active left indicator */}
@@ -176,13 +176,9 @@ export default function Sidebar({ onNavigate }) {
 
                       <item.icon
                         className={cn(
-                          'flex-shrink-0 transition-opacity duration-200',
+                          'flex-shrink-0 transition-colors duration-200',
                           collapsed ? 'w-[17px] h-[17px]' : 'w-[14px] h-[14px]',
-                          isActive
-                            ? 'text-white'
-                            : item.color === 'primary'
-                              ? 'text-[hsl(var(--primary))]'
-                              : 'text-[hsl(var(--text-muted))] opacity-70 group-hover:opacity-100'
+                          isActive ? 'text-white' : 'text-[hsl(var(--sidebar-item-icon))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]'
                         )}
                         strokeWidth={isActive ? 2.2 : 1.8}
                       />
@@ -190,11 +186,7 @@ export default function Sidebar({ onNavigate }) {
                       {!collapsed && (
                         <span className={cn(
                           'text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em]',
-                          isActive
-                            ? 'text-white font-semibold'
-                            : item.color === 'primary'
-                              ? 'text-[hsl(var(--primary))] font-semibold'
-                              : 'text-[hsl(var(--text-muted))] group-hover:text-[hsl(var(--text-heading))]'
+                          isActive ? 'text-white font-semibold' : 'text-[hsl(var(--sidebar-item-fg))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]'
                         )}>
                           {item.label}
                         </span>
@@ -226,29 +218,27 @@ export default function Sidebar({ onNavigate }) {
 
       {/* ── Kundenportal Section ──────────────────────────────────────── */}
       <div className="mb-0.5">
-        {!collapsed ? (
-          <p className="px-4 pt-6 pb-2 text-xs font-bold uppercase tracking-wide text-black select-none">
+        <div className="mx-3 my-2 h-px bg-[hsl(var(--border-subtle))]/50" />
+        {!collapsed && (
+          <p className="px-4 pt-2 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-[hsl(var(--sidebar-label))] select-none">
             Kundenportal
           </p>
-        ) : (
-          <div className="mx-3 my-3 h-px bg-[hsl(var(--border-subtle))]" />
         )}
-
-        <div className={cn('space-y-1', collapsed ? 'px-2' : 'px-2')}>
+        <div className={cn('space-y-0.5', collapsed ? 'px-2' : 'px-2')}>
           <a
             href="/portal"
             target="_blank"
             rel="noopener noreferrer"
             title={collapsed ? 'Kundenportal' : undefined}
             className={cn(
-              'relative flex items-center rounded-md transition-all duration-200 group',
-              collapsed ? 'justify-center h-9 w-9 mx-auto' : 'gap-2.5 px-3 py-[9px]',
-              'bg-[hsl(var(--primary))/0.08] border border-[hsl(var(--border-subtle))]/40 text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))/0.12]'
+              'relative flex items-center rounded-xl transition-all duration-200 group',
+              collapsed ? 'justify-center h-9 w-9 mx-auto' : 'gap-2.5 px-3 py-[8px]',
+              'text-[hsl(var(--sidebar-item-fg))] hover:bg-[hsl(var(--sidebar-item-hover))] hover:text-[hsl(var(--sidebar-item-fg-active))]'
             )}
           >
-            <ExternalLink className="w-[14px] h-[14px] flex-shrink-0 text-[hsl(var(--primary))]" strokeWidth={1.8} />
+            <ExternalLink className="w-[14px] h-[14px] flex-shrink-0 text-[hsl(var(--sidebar-item-icon))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]" strokeWidth={1.8} />
             {!collapsed && (
-              <span className="text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em] text-[hsl(var(--primary))] font-semibold">
+              <span className="text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em] text-[hsl(var(--sidebar-item-fg))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]">
                 Portal öffnen
               </span>
             )}
@@ -258,16 +248,16 @@ export default function Sidebar({ onNavigate }) {
 
       {/* ── User card — embedded surface with subtle date ───────────────── */}
       {!collapsed && currentUser && (
-        <div className="mx-2 mb-2 px-3 py-2.5 rounded-md bg-[hsl(var(--primary))/0.06] border border-[hsl(var(--border-subtle))]/50">
+        <div className="mx-2 mb-2 px-3 py-2.5 rounded-xl bg-[hsl(var(--sidebar-user-bg))] border border-[hsl(var(--border-subtle))]/40">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-6 h-6 rounded-full bg-[hsl(var(--primary))/0.15] flex items-center justify-center flex-shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-[hsl(var(--primary))]/15 flex items-center justify-center flex-shrink-0">
               <User className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[11.5px] font-semibold text-[hsl(var(--text-heading))] truncate leading-tight">
+              <p className="text-[11.5px] font-semibold text-[hsl(var(--sidebar-item-fg-active))] truncate leading-tight">
                 {currentUser.full_name || currentUser.email}
               </p>
-              <p className="text-[9px] text-[hsl(var(--text-subtle))] font-medium truncate">
+              <p className="text-[9px] text-[hsl(var(--sidebar-label))] font-medium truncate">
                 {roleLabel} · {new Date().toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' })}
               </p>
             </div>
@@ -277,14 +267,14 @@ export default function Sidebar({ onNavigate }) {
 
       {/* ── Footer ────────────────────────────────────────────────────── */}
       <div className={cn(
-        'border-t border-[hsl(var(--border-default))] flex items-center pb-3 pt-2',
+        'border-t border-[hsl(var(--border-subtle))]/50 flex items-center pb-3 pt-2',
         collapsed ? 'flex-col gap-1 px-1' : 'gap-1 px-1'
       )}>
         <button
           onClick={() => base44.auth.logout()}
           title="Abmelden"
           className={cn(
-            'flex items-center gap-2 rounded-md text-[12px] font-medium text-[hsl(var(--text-muted))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] border border-transparent hover:border-[hsl(var(--border-subtle))] transition-all duration-200',
+            'flex items-center gap-2 rounded-xl text-[12px] font-medium text-[hsl(var(--sidebar-item-fg))] hover:text-[hsl(var(--sidebar-item-fg-active))] hover:bg-[hsl(var(--sidebar-item-hover))] transition-all duration-200',
             collapsed ? 'justify-center h-9 w-9 mx-auto' : 'flex-1 px-3 py-2'
           )}
         >
@@ -294,7 +284,7 @@ export default function Sidebar({ onNavigate }) {
 
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex items-center justify-center h-9 w-9 rounded-md text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] border border-transparent hover:border-[hsl(var(--border-subtle))] transition-all duration-200 flex-shrink-0"
+          className="flex items-center justify-center h-9 w-9 rounded-xl text-[hsl(var(--sidebar-item-fg))] hover:text-[hsl(var(--sidebar-item-fg-active))] hover:bg-[hsl(var(--sidebar-item-hover))] transition-all duration-200 flex-shrink-0"
           title={collapsed ? 'Erweitern' : 'Einklappen'}
         >
           {collapsed

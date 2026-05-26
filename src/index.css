@@ -8,10 +8,9 @@
   :root {
     --font-inter: 'Inter', system-ui, sans-serif;
 
-    /* ── Swiss Financial Blue — Light, Trust, Energy ────────────────── */
-    /* Background: Blue Mist — extremely light, desaturated, calming */
-    --background:        210 40% 97%;      /* #f4f7fb — soft blue mist */
-    --foreground:        215 30% 18%;      /* soft navy text */
+    /* ── Swiss Enterprise — Premium Soft Blue ─────────────────────── */
+    --background:        216 38% 95%;      /* #edf2f8 — premium blue-white */
+    --foreground:        215 32% 17%;      /* deep navy text */
 
     /* ── Surfaces / Cards — Translucent Light ─────────────────────── */
     --card:              0 0% 100%;        /* pure white with translucency */
@@ -55,15 +54,27 @@
 
     --radius: 0.55rem;
 
-    /* ── Sidebar — Merged with Content (same light world) ─────────── */
-    --sidebar-background:      210 40% 96%;  /* nearly identical to --background */
-    --sidebar-foreground:      215 24% 32%;
-    --sidebar-primary:         210 45% 52%;
+    /* ── App Shell ─────────────────────────────────────────────────── */
+    --app-shell:               216 30% 91%;  /* slightly deeper than background */
+
+    /* ── Sidebar — Premium slate surface, floating ───────────────── */
+    --sidebar-surface:         220 36% 19%;  /* #1e2a3d — deep slate navy */
+    --sidebar-label:           218 24% 55%;  /* muted label text */
+    --sidebar-item-fg:         218 20% 68%;  /* default nav item text */
+    --sidebar-item-fg-active:  0 0% 100%;    /* active/hover text */
+    --sidebar-item-icon:       218 20% 58%;  /* icon tint */
+    --sidebar-item-hover:      220 30% 26%;  /* hover bg */
+    --sidebar-user-bg:         220 30% 24%;  /* user card bg */
+
+    /* Legacy sidebar vars (used by shadcn sidebar) */
+    --sidebar-background:      220 36% 19%;
+    --sidebar-foreground:      218 20% 68%;
+    --sidebar-primary:         210 70% 62%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent:          210 35% 94%;  /* minimal difference */
-    --sidebar-accent-foreground: 215 24% 28%;
-    --sidebar-border:          210 20% 91%;  /* almost invisible */
-    --sidebar-ring:            210 45% 52%;
+    --sidebar-accent:          220 30% 26%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border:          220 25% 26%;
+    --sidebar-ring:            210 70% 62%;
 
     /* ── Semantic helpers ─────────────────────────────────────────── */
     --success:     152 48% 38%;

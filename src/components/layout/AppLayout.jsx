@@ -9,16 +9,16 @@ export default function AppLayout() {
   const location = useLocation()
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-[hsl(var(--app-shell))] flex">
       {/* Mobile overlay */}
       {mobileSidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
           onClick={() => setMobileSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar — always visible on desktop, drawer on mobile */}
+      {/* Sidebar — floating on desktop, drawer on mobile */}
       <div className={cn(
         'fixed left-0 top-0 h-screen z-50 transition-transform duration-300',
         'lg:translate-x-0',
@@ -27,10 +27,8 @@ export default function AppLayout() {
         <Sidebar onNavigate={() => setMobileSidebarOpen(false)} />
       </div>
 
-      {/* Main content — offset by sidebar width */}
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-[224px]">
-        {/* Desktop topbar — eliminated for architectural silence */}
-        {/* Date/time moved to User card in Sidebar (bottom) */}
+      {/* Main content — offset by floating sidebar */}
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-[260px]">
 
         {/* Mobile topbar */}
         <div className="lg:hidden flex items-center gap-3 px-4 h-14 border-b border-border bg-card sticky top-0 z-30">
@@ -43,9 +41,9 @@ export default function AppLayout() {
           <span className="font-semibold text-sm">Swiss Premium Broker</span>
         </div>
 
-        {/* Page content — unified spatial rhythm */}
-        <main className="flex-1 overflow-auto bg-[hsl(var(--background))]">
-          <div className="mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-12 w-full max-w-[1920px]">
+        {/* Page content */}
+        <main className="flex-1 overflow-auto">
+          <div className="mx-auto px-5 sm:px-6 lg:px-8 py-6 lg:py-7 pb-12 w-full max-w-[1920px]">
             <Outlet />
           </div>
         </main>
