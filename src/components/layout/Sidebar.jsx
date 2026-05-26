@@ -61,9 +61,7 @@ const navGroups = [
     label: 'Kunden',
     items: [
       { label: 'Kundenübersicht',  icon: Users,      path: '/kunden',           color: 'primary' },
-      { label: 'Vertragsabläufe',  icon: Clock,      path: '/vertragsablaeufe', color: 'primary' },
-      { label: 'Verkaufschancen',  icon: TrendingUp, path: '/verkaufschancen',  color: 'primary' },
-      { label: 'Leads',            icon: UserPlus,   path: '/leads',            color: 'primary' },
+      { label: 'Kundenportal',      icon: ExternalLink, path: '/portal',         color: 'primary', external: true },
       { label: 'Beratungsdossiers',icon: BookOpen,   path: '/beratungsdossier', color: 'primary' },
     ],
   },
@@ -166,6 +164,23 @@ export default function Sidebar({ onNavigate }) {
                     (item.path !== '/' && location.pathname.startsWith(item.path));
 
                   return (
+                    {item.external ? (
+                      <a
+                        key={item.path}
+                        href={item.path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={collapsed ? item.label : undefined}
+                        className={cn(
+                          'relative flex items-center rounded-xl transition-all duration-200 group',
+                          collapsed ? 'justify-center h-9 w-9 mx-auto' : 'gap-2.5 px-3 py-[8px]',
+                          'text-[hsl(var(--sidebar-item-fg))] hover:bg-[hsl(var(--sidebar-item-hover))] hover:text-[hsl(var(--sidebar-item-fg-active))]'
+                        )}
+                      >
+                        <item.icon className={cn('flex-shrink-0 transition-colors duration-200', collapsed ? 'w-[17px] h-[17px]' : 'w-[14px] h-[14px]', 'text-[hsl(var(--sidebar-item-icon))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]')} strokeWidth={1.8} />
+                        {!collapsed && <span className="text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em] text-[hsl(var(--sidebar-item-fg))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]">{item.label}</span>}
+                      </a>
+                    ) : (
                     <Link
                       key={item.path}
                       to={item.path}
@@ -219,6 +234,7 @@ export default function Sidebar({ onNavigate }) {
                         </span>
                       )}
                     </Link>
+                    )}
                   );
               })}
             </div>
@@ -226,54 +242,9 @@ export default function Sidebar({ onNavigate }) {
         ))}
       </nav>
 
-      {/* ── Kundenportal Section ──────────────────────────────────────── */}
-      <div className="mb-0.5">
-        <div className="mx-3 my-2 h-px bg-[hsl(var(--border-subtle))]/50" />
-        {!collapsed && (
-          <p className="px-4 pt-2 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-[hsl(var(--sidebar-label))] select-none">
-            Kundenportal
-          </p>
-        )}
-        <div className={cn('space-y-0.5', collapsed ? 'px-2' : 'px-2')}>
-          <a
-            href="/portal"
-            target="_blank"
-            rel="noopener noreferrer"
-            title={collapsed ? 'Kundenportal' : undefined}
-            className={cn(
-              'relative flex items-center rounded-xl transition-all duration-200 group',
-              collapsed ? 'justify-center h-9 w-9 mx-auto' : 'gap-2.5 px-3 py-[8px]',
-              'text-[hsl(var(--sidebar-item-fg))] hover:bg-[hsl(var(--sidebar-item-hover))] hover:text-[hsl(var(--sidebar-item-fg-active))]'
-            )}
-          >
-            <ExternalLink className="w-[14px] h-[14px] flex-shrink-0 text-[hsl(var(--sidebar-item-icon))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]" strokeWidth={1.8} />
-            {!collapsed && (
-              <span className="text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em] text-[hsl(var(--sidebar-item-fg))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]">
-                Portal öffnen
-              </span>
-            )}
-          </a>
-        </div>
-      </div>
 
-      {/* ── User card — embedded surface with subtle date ───────────────── */}
-      {!collapsed && currentUser && (
-        <div className="mx-2 mb-2 px-3 py-2.5 rounded-xl bg-[hsl(var(--sidebar-user-bg))] border border-[hsl(var(--border-subtle))]/40">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-lg bg-[hsl(var(--primary))]/15 flex items-center justify-center flex-shrink-0">
-              <User className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[11.5px] font-semibold text-[hsl(var(--sidebar-item-fg-active))] truncate leading-tight">
-                {currentUser.full_name || currentUser.email}
-              </p>
-              <p className="text-[9px] text-[hsl(var(--sidebar-label))] font-medium truncate">
-                {roleLabel} · {new Date().toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit' })}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+
+
 
       {/* ── Footer ────────────────────────────────────────────────────── */}
       <div className={cn(
