@@ -115,48 +115,52 @@ Deno.serve(async (req) => {
     const aiScore = aiReviews.length > 0 ? Math.round((highConf / aiReviews.length) * 100) : 85;
     domains.ai_reliability = { score: aiScore, label: 'AI Reliability', details: { total_reviews: aiReviews.length, high_confidence_reviews: highConf } };
 
-    // 5. INCIDENT HEALTH — Severity-gewichtet, Aging-adjustiert, Confidence-modifiziert
+    // 5. INCIDENT HEALTH — Severity-gewichtet mit harten Caps pro Klasse
     const incidents = await sr.entities.EnterpriseIncident.list('-detected_at', 200);
 
-    // Severity base deduction points
-    const SEV_POINTS = { blocking: 15, critical: 15, high: 9, medium: 3, low: 1, warning: 1, info: 0 };
-
-    // Aging factor: newer incidents weigh more
+    // Aging factor: neuere Incidents zählen mehr
     const agingFactor = (detectedAt) => {
       const days = (now - new Date(detectedAt || now)) / 86400000;
       if (days < 7)  return 1.0;
-      if (days < 30) return 0.70;
-      if (days < 90) return 0.35;
-      return 0.12;
+      if (days < 30) return 0.65;
+      if (days < 90) return 0.30;
+      return 0.10;
     };
 
-    // Status weight: accepted_risk/ignored barely count, resolved = 0
+    // Nur wirklich aktive Incidents zählen voll (accepted_risk kaum)
     const statusWeight = (status) => {
       if (['open', 'investigating', 'in_progress'].includes(status)) return 1.0;
-      if (status === 'accepted_risk') return 0.05;
-      return 0; // resolved, closed, rejected
+      if (status === 'accepted_risk') return 0.03; // fast ignorieren
+      return 0;
     };
 
-    let totalDeduction = 0;
-    let criticalOpen = 0;
-    let slaBreached = 0;
-    const activeIncidents = incidents.filter(i => !['resolved', 'closed', 'rejected'].includes(i.status));
+    // Incidents nach Severity trennen (nur nicht-geschlossene)
+    const openIncidents = incidents.filter(i => !['resolved', 'closed', 'rejected'].includes(i.status));
+    const critItems   = openIncidents.filter(i => ['critical', 'blocking'].includes(i.severity));
+    const highItems   = openIncidents.filter(i => i.severity === 'high');
+    const medItems    = openIncidents.filter(i => ['medium', 'warning'].includes(i.severity));
+    const lowItems    = openIncidents.filter(i => ['low', 'info'].includes(i.severity));
 
-    for (const inc of activeIncidents) {
-      const sevPts = SEV_POINTS[inc.severity] || 0;
-      const aging  = agingFactor(inc.detected_at);
-      const statW  = statusWeight(inc.status);
-      // AI confidence modifier: uncertain findings count less (default 0.8 if not set)
-      const confidence = (inc.ai_confidence != null && inc.ai_confidence > 0) ? inc.ai_confidence : 0.8;
-      totalDeduction += sevPts * aging * statW * confidence;
-      if (['critical', 'blocking'].includes(inc.severity) && statW > 0) criticalOpen++;
-      if (inc.sla_status === 'breached' && statW >= 1.0) slaBreached++;
-    }
+    const weightedSum = (items, basePts) =>
+      items.reduce((sum, inc) => {
+        const conf = (inc.ai_confidence != null && inc.ai_confidence > 0) ? inc.ai_confidence : 0.8;
+        return sum + basePts * agingFactor(inc.detected_at) * statusWeight(inc.status) * conf;
+      }, 0);
 
-    // SLA breach additional penalty (only truly open critical SLAs)
-    totalDeduction += slaBreached * 5;
+    // Harte Caps: viele kleine Issues dürfen den Score nicht zerstören
+    const critDeduction = Math.min(55, weightedSum(critItems, 15));
+    const highDeduction = Math.min(22, weightedSum(highItems, 8));
+    const medDeduction  = Math.min(10, weightedSum(medItems, 2.5));
+    const lowDeduction  = Math.min(3,  weightedSum(lowItems, 0.8));
 
-    // Resolution velocity bonus: reward active incident resolution (up to +12)
+    // SLA-Breach nur für echte kritische Incidents
+    let criticalOpen = critItems.filter(i => statusWeight(i.status) >= 1.0).length;
+    let slaBreached  = openIncidents.filter(i => i.sla_status === 'breached' && statusWeight(i.status) >= 1.0 && ['critical','blocking','high'].includes(i.severity)).length;
+    const slaDeduction = Math.min(12, slaBreached * 4);
+
+    const totalDeduction = critDeduction + highDeduction + medDeduction + lowDeduction + slaDeduction;
+
+    // Resolution velocity bonus (bis +12)
     const last30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const recentlyResolved = incidents.filter(i =>
       ['resolved', 'closed'].includes(i.status) &&
@@ -170,17 +174,23 @@ Deno.serve(async (req) => {
       score: incidentScore,
       label: 'Incident Health',
       details: {
-        active_incidents: activeIncidents.length,
+        active_incidents: openIncidents.length,
         critical_open: criticalOpen,
         sla_breached: slaBreached,
-        total_deduction: Math.round(totalDeduction * 10) / 10,
+        deduction_breakdown: {
+          critical: Math.round(critDeduction * 10) / 10,
+          high: Math.round(highDeduction * 10) / 10,
+          medium: Math.round(medDeduction * 10) / 10,
+          low: Math.round(lowDeduction * 10) / 10,
+          sla: slaDeduction,
+        },
         velocity_bonus: velocityBonus,
         recently_resolved_30d: recentlyResolved,
       },
     };
     if (slaBreached > 0) alerts.push({ domain: 'incident_health', message: `${slaBreached} kritische Incidents mit SLA-Breach`, severity: 'critical' });
     if (criticalOpen > 0) alerts.push({ domain: 'incident_health', message: `${criticalOpen} kritische offene Incidents`, severity: 'critical' });
-    if (incidentScore < 60) alerts.push({ domain: 'incident_health', message: `Incident Health niedrig (${incidentScore}/100) — aktive Bearbeitung empfohlen`, severity: 'warning' });
+    if (incidentScore < 50) alerts.push({ domain: 'incident_health', message: `Incident Health niedrig (${incidentScore}/100)`, severity: 'warning' });
 
     // 6. DATA QUALITY
     const emailCoverage = active.length > 0 ? Math.round((active.filter(c => c.email).length / active.length) * 100) : 100;
