@@ -27,8 +27,41 @@ Deno.serve(async (req) => {
     // Auth optional für Scheduler/Automationen
     const actor = user || { email: 'system', full_name: 'System' };
 
-    const body = await req.json();
-    
+    const rawBody = await req.json();
+
+    // === ENTITY AUTOMATION ADAPTER ===
+    // Entity-Automations liefern: { event: {type, entity_name, entity_id}, data, old_data, changed_fields }
+    // Direkte API-Aufrufe liefern: { entity_type, entity_id, action, ... }
+    let body = rawBody;
+    if (rawBody.event && rawBody.event.entity_name) {
+      const ev = rawBody.event;
+      const newData  = rawBody.data || {};
+      const oldData  = rawBody.old_data || {};
+      // Felder berechnen die sich geändert haben
+      const autoChangedFields = rawBody.changed_fields ||
+        Object.keys(newData).filter(k => JSON.stringify(newData[k]) !== JSON.stringify(oldData[k]));
+      body = {
+        entity_type:    ev.entity_name,
+        entity_id:      ev.entity_id,
+        action:         ev.type,
+        event_type:     ev.type,
+        trigger_type:   'automation',
+        trigger_source: 'entity_automation',
+        actor_type:     'automation',
+        new_values:     newData,
+        old_values:     oldData,
+        changed_fields: autoChangedFields,
+        // Tenant aus Entity-Daten extrahieren
+        tenant_id:      newData.organization_id || oldData.organization_id || null,
+        // Approval-Metadaten falls vorhanden
+        approval_metadata: (newData.approved_at || newData.approved_by) ? {
+          approved_by:   newData.approved_by || null,
+          approved_at:   newData.approved_at || null,
+          approved_by_id:newData.approved_by_user_id || null,
+        } : undefined,
+      };
+    }
+
     // === CORE FIELDS (Required) ===
     const {
       entity_type,
@@ -42,6 +75,11 @@ Deno.serve(async (req) => {
       event_type,
       correlation_id,
     } = body;
+
+    // Governance-Erweiterungen v1.1
+    const tenant_id      = body.tenant_id || null;
+    const changed_fields = body.changed_fields || [];
+    const approval_metadata = body.approval_metadata || null;
 
     // === ACTOR (Human vs System) ===
     const actor_type = body.actor_type || (user ? 'user' : 'automation');
@@ -222,6 +260,12 @@ Deno.serve(async (req) => {
       duration_ms: Date.now() - startTime,
       error_message,
       metadata,
+
+      // === GOVERNANCE EXTENSIONS v1.1 ===
+      tenant_id,
+      changed_fields,
+      approval_metadata,
+      change_source: body.change_source || actor_type,
     };
 
     // === ASYNC WRITE (Non-Blocking) ===
