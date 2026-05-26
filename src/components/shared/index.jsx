@@ -35,6 +35,9 @@ export {
   FormSection,
 } from './FormField'
 
+// Inline Editing
+export { default as EditableField }  from './EditableField'
+
 // Modal + Detail
 export { default as StandardModal }  from './StandardModal'
 export { default as DetailLayout }   from './DetailLayout'
