@@ -90,18 +90,61 @@ Deno.serve(async (req) => {
     domains.tenant_integrity = { score: tenantScore, label: 'Tenant Integrity', details: { total_violations: missingOrg } };
     if (missingOrg > 0) alerts.push({ domain: 'tenant_integrity', message: `${missingOrg} Records ohne organization_id`, severity: missingOrg > 10 ? 'critical' : 'warning' });
 
-    // 3. AUDIT TRAIL
+    // 3. AUDIT TRAIL — Multi-Dimension: Änderungsabdeckung, Aktivität, KI-Transparenz
     const auditLogs = await sr.entities.AuditLog.list('-timestamp', 500);
-    const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const recentLogs = auditLogs.filter(l => new Date(l.timestamp) >= last7d).length;
+    const last7dAudit = new Date(now.getTime() - 7  * 24 * 60 * 60 * 1000);
+    const last30dAudit = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const recentLogs7d  = auditLogs.filter(l => new Date(l.timestamp || l.created_date) >= last7dAudit).length;
+    const recentLogs30d = auditLogs.filter(l => new Date(l.timestamp || l.created_date) >= last30dAudit).length;
+
+    // Änderungsabdeckung Verträge (nur aktive, max. 100 für Normalisierung)
     const contractsWithHistory = contracts.filter(c => c.change_history?.length > 0).length;
-    const auditCoverage = contracts.length > 0 ? Math.round((contractsWithHistory / contracts.length) * 100) : 100;
-    // Fix: recentLogs * 5 statt * 2 — realistischer Schwellwert (20 Logs/Woche = 100%)
+    const contractSample = Math.min(contracts.length, 100);
+    const contractCoverage = contractSample > 0 ? Math.round((Math.min(contractsWithHistory, contractSample) / contractSample) * 100) : 100;
+
+    // Änderungsabdeckung Kunden (sample 100)
+    const customersWithHistory = active.filter(c => c.change_history?.length > 0).length;
+    const customerSample = Math.min(active.length, 100);
+    const customerCoverage = customerSample > 0 ? Math.round((Math.min(customersWithHistory, customerSample) / customerSample) * 100) : 100;
+
+    // Aktivitätsscore: 50 Logs/Woche = 100% (realistischer Schwellwert für aktives System)
+    const activityScore = Math.min(100, recentLogs7d * 2);
+
+    // KI-Transparenz: Dossiers mit Confidence-Score = nachvollziehbare KI-Aktion
+    const dossiersWithConf = dossiers.filter(d => d.extraction_confidence != null).length;
+    const aiTransparencyScore = dossiers.length > 0 ? Math.round((dossiersWithConf / dossiers.length) * 100) : 85;
+
+    // Dokument-Audit: Dokumente mit uploaded_by (Pflichtfeld für Nachvollziehbarkeit)
+    const documents = await sr.entities.Document.list('-uploaded_at', 200);
+    const docsWithUploader = documents.filter(d => d.uploaded_by).length;
+    const docAuditScore = documents.length > 0 ? Math.round((docsWithUploader / documents.length) * 100) : 100;
+
+    const auditScore = Math.round(
+      contractCoverage    * 0.25 +
+      customerCoverage    * 0.20 +
+      activityScore       * 0.25 +
+      aiTransparencyScore * 0.15 +
+      docAuditScore       * 0.15
+    );
+
     domains.audit_trail = {
-      score: Math.round((Math.min(100, recentLogs * 5) * 0.4) + (auditCoverage * 0.6)),
+      score: auditScore,
       label: 'Audit Trail',
-      details: { recent_audit_logs_7d: recentLogs, audit_coverage_pct: auditCoverage },
+      details: {
+        recent_logs_7d:           recentLogs7d,
+        recent_logs_30d:          recentLogs30d,
+        contract_history_pct:     contractCoverage,
+        customer_history_pct:     customerCoverage,
+        activity_score:           activityScore,
+        ai_transparency_pct:      aiTransparencyScore,
+        doc_audit_pct:            docAuditScore,
+        dossiers_with_confidence: dossiersWithConf,
+        total_dossiers:           dossiers.length,
+      },
     };
+    if (activityScore < 30) alerts.push({ domain: 'audit_trail', message: 'Wenig Audit-Aktivität in den letzten 7 Tagen', severity: 'warning' });
+    if (contractCoverage < 50) alerts.push({ domain: 'audit_trail', message: `Nur ${contractCoverage}% der Verträge haben Änderungshistorie`, severity: 'warning' });
 
     // 4. AI RELIABILITY — nur neueste Reviews mit Confidence-Daten bewerten
     const aiReviews = await sr.entities.AiReview.list('-reviewed_at', 5);
