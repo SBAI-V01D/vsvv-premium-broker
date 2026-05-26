@@ -11,8 +11,9 @@ import { cn } from '@/lib/utils'
 import {
   Repeat2, CheckCircle2, RefreshCw, AlertTriangle, Clock,
   TrendingUp, Zap, Target, Shield, X, CalendarClock,
-  User, ArrowRight, ClipboardCheck
+  User, ArrowRight, ClipboardCheck, Loader2
 } from 'lucide-react'
+import { format, addDays } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
@@ -78,7 +79,7 @@ function CountdownBar({ days, maxDays = 180, color }) {
   )
 }
 
-function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange }) {
+function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange, onFollowup, followupPending }) {
   const { contract, topAction, actions } = item
   const cfg = SEV[topAction.severity] || SEV.process
   const endDays    = daysUntil(contract.end_date)
@@ -163,6 +164,14 @@ function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange }) {
           className="text-[9px] px-2 py-1 border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors whitespace-nowrap"
         >
           <User className="w-2.5 h-2.5 inline mr-0.5" />360°
+        </button>
+        <button
+          onClick={() => onFollowup(contract)}
+          disabled={followupPending}
+          className="text-[9px] px-2 py-1 border border-border rounded text-blue-600 hover:bg-blue-50 transition-colors whitespace-nowrap disabled:opacity-40"
+          title="Follow-up Aufgabe erstellen"
+        >
+          {followupPending ? <Loader2 className="w-2.5 h-2.5 inline animate-spin" /> : <Zap className="w-2.5 h-2.5 inline mr-0.5" />}Task
         </button>
         <button
           onClick={() => onCreateVs(contract)}
@@ -286,6 +295,24 @@ export default function Vertragsablaeufe() {
     mutationFn: (data) => base44.entities.Verkaufschance.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['verkaufschancen'] }); navigate('/verkaufschancen') },
   })
+  const [followupPendingId, setFollowupPendingId] = useState(null)
+  const createFollowupMutation = useMutation({
+    mutationFn: (contract) => base44.entities.Task.create({
+      title: `Follow-up Verlängerung: ${contract.customer_name} – ${contract.insurer}`,
+      customer_id: contract.customer_id,
+      customer_name: contract.customer_name,
+      contract_id: contract.id,
+      task_type: 'renewal',
+      priority: 'high',
+      status: 'open',
+      due_date: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'open'] })
+      setFollowupPendingId(null)
+    },
+    onError: () => setFollowupPendingId(null),
+  })
   const updateContractMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Contract.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contracts'] }),
@@ -367,25 +394,23 @@ export default function Vertragsablaeufe() {
       v.linked_contract_id === contract.id && !['gewonnen', 'verloren'].includes(v.status)
     )
     if (existingVs) { navigate(`/verkaufschancen?detail=${existingVs.id}`); return }
-
-    const hasOpenTasks = tasks?.some(t => t.contract_id === contract.id && t.status !== 'completed')
     const lastContact = contract.renewal_last_activity ? fmtDate(contract.renewal_last_activity) : 'Kein Kontakt'
+    createVsMutation.mutate({
+      customer_id: contract.customer_id,
+      customer_name: contract.customer_name,
+      organization_id: contract.organization_id,
+      sparte: contract.sparte || contract.insurance_type,
+      status: 'neu',
+      linked_contract_id: contract.id,
+      title: `Verlängerung ${contract.insurer} – ${getSparteLabel(contract.sparte || contract.insurance_type) || ''}`,
+      estimated_value: contract.premium_yearly || 0,
+      notes: `Aus Vertragsablauf erstellt. Ablauf: ${fmtDate(contract.end_date)}. Letzter Kontakt: ${lastContact}`,
+    })
+  }
 
-    if (confirm(
-      `Verkaufschance erstellen für:\n${contract.customer_name} · ${contract.insurer}\n\nKontext:\n• Ablauf: ${fmtDate(contract.end_date)}\n• Kündigung bis: ${fmtDate(contract.cancellation_deadline)}\n• Prozess-Status: ${PROCESS_STATUS[contract.process_status]?.label || contract.process_status}\n• Letzter Kontakt: ${lastContact}\n• Offene Aufgaben: ${hasOpenTasks ? 'Ja' : 'Nein'}\n\nMöchten Sie diese Verkaufschance erstellen?`
-    )) {
-      createVsMutation.mutate({
-        customer_id: contract.customer_id,
-        customer_name: contract.customer_name,
-        organization_id: contract.organization_id,
-        sparte: contract.sparte || contract.insurance_type,
-        status: 'neu',
-        linked_contract_id: contract.id,
-        title: `Verlängerung ${contract.insurer} – ${getSparteLabel(contract.sparte || contract.insurance_type) || ''}`,
-        estimated_value: contract.premium_yearly || 0,
-        notes: `Aus Vertragsablauf erstellt. Ablauf: ${fmtDate(contract.end_date)}. Letzter Kontakt: ${lastContact}`,
-      })
-    }
+  const handleFollowup = (contract) => {
+    setFollowupPendingId(contract.id)
+    createFollowupMutation.mutate(contract)
   }
 
   const handleStatusChange = (contractId, newStatus) => {
@@ -418,6 +443,8 @@ export default function Vertragsablaeufe() {
             onNavigate={navigate}
             onCreateVs={handleCreateVs}
             onStatusChange={handleStatusChange}
+            onFollowup={handleFollowup}
+            followupPending={followupPendingId === item.contract.id}
           />
         ))}
       </div>

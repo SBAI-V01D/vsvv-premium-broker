@@ -205,7 +205,7 @@ export default function Tasks() {
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">
                       {task.customer_id ? (
-                        <Link to={`/kunden/${task.customer_id}`} className="hover:text-primary transition-colors flex items-center gap-1">
+                        <Link to={`/kunden/${task.customer_id}/360`} className="hover:text-primary transition-colors flex items-center gap-1">
                           {task.customer_name || '—'}
                           <ChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-60" />
                         </Link>
