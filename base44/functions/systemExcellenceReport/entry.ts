@@ -258,8 +258,26 @@ Deno.serve(async (req) => {
     // ══════════════════════════════════════════════════════════════════════════
     // 9. SYSTEM EXCELLENCE SCORE (inkl. Governance Snapshot)
     // ══════════════════════════════════════════════════════════════════════════
+    // Incident Management Score — Diminishing Returns + Kategorie-Unterscheidung
+    // Production/Security-Incidents (hard impact) vs. Governance/Audit-Incidents (soft impact)
+    const PRODUCTION_CATEGORIES = new Set(['export_gate', 'tenant_isolation', 'security', 'data_integrity', 'recovery']);
+    const incidentDeduction = openCriticalIncidents.reduce((sum, inc, idx) => {
+      const isProductionCritical = PRODUCTION_CATEGORIES.has(inc.category);
+      const baseDeduction = isProductionCritical ? 12 : 5; // Governance-Issues weniger bestrafend
+      const factor = idx < 3 ? 1.0 : idx < 6 ? 0.55 : 0.20; // Diminishing Returns
+      return sum + baseDeduction * factor;
+    }, 0);
+    // Resolution Velocity Bonus (bis +15)
+    const last30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const recentlyResolved = incidents.filter(i =>
+      ['resolved', 'closed'].includes(i.status) &&
+      new Date(i.resolved_at || 0) >= last30d
+    ).length;
+    const incidentVelocityBonus = Math.min(15, recentlyResolved * 2);
+    const incidentMgmtScore = Math.max(0, Math.min(100, Math.round(100 - Math.min(65, incidentDeduction) + incidentVelocityBonus)));
+
     const categoryScores = {
-      incident_management: Math.max(0, 100 - (openCriticalIncidents.length * 10)),
+      incident_management: incidentMgmtScore,
       performance: performanceAnalysis.react_rerenders.status === 'pass' ? 90 : 60,
       ai_quality: parseFloat(aiAnalysis.finding_quality.success_rate) || 50,
       broker_operations: brokerOperationsAnalysis.task_management.status === 'pass' ? 90 : 60,
