@@ -60,17 +60,17 @@ const navGroups = [
   {
     label: 'Kunden',
     items: [
-      { label: 'Kundenübersicht',  icon: Users,      path: '/kunden',           color: 'primary' },
-      { label: 'Kundenportal',      icon: ExternalLink, path: '/portal',         color: 'primary', external: true },
-      { label: 'Beratungsdossiers',icon: BookOpen,   path: '/beratungsdossier', color: 'primary' },
+      { label: 'Kundenübersicht',   icon: Users,        path: '/kunden',           color: 'primary' },
+      { label: 'Kundenportal',      icon: ExternalLink, path: '/portal',           color: 'primary', external: true },
+      { label: 'Beratungsdossiers', icon: BookOpen,     path: '/beratungsdossier', color: 'primary' },
     ],
   },
   {
     label: 'Administration',
     items: [
-      { label: 'Verträge',  icon: FileText,   path: '/vertraege',        color: 'primary' },
-      { label: 'Anträge',   icon: CheckSquare, path: '/antraege',         color: 'primary' },
-      { label: 'Dokumente', icon: BookOpen,   path: '/dokumente',        color: 'primary' },
+      { label: 'Verträge',  icon: FileText,    path: '/vertraege', color: 'primary' },
+      { label: 'Anträge',   icon: CheckSquare, path: '/antraege',  color: 'primary' },
+      { label: 'Dokumente', icon: BookOpen,    path: '/dokumente', color: 'primary' },
     ],
   },
   {
@@ -84,8 +84,8 @@ const navGroups = [
   {
     label: 'Enterprise',
     items: [
-      { label: 'Enterprise Überwachung',    icon: Shield,      path: '/admin/enterprise-control-center', adminOnly: true, color: 'primary' },
-      { label: 'KI Analyse & Verbesserungen', icon: Brain,    path: '/ai-review',                       adminOnly: true, color: 'primary' },
+      { label: 'Enterprise Überwachung',      icon: Shield, path: '/admin/enterprise-control-center', adminOnly: true, color: 'primary' },
+      { label: 'KI Analyse & Verbesserungen', icon: Brain,  path: '/ai-review',                       adminOnly: true, color: 'primary' },
     ],
   },
 ];
@@ -118,7 +118,7 @@ export default function Sidebar({ onNavigate }) {
         boxShadow: '2px 0 24px 0 rgba(59,130,246,0.08), 4px 0 12px 0 rgba(0,0,0,0.06)',
       }}
     >
-      {/* ── Header: Angemeldeter Benutzer ─────────────────────────────── */}
+      {/* ── Header ─────────────────────────────── */}
       <div className={cn(
         'flex items-center h-[58px] border-b border-[hsl(var(--border-subtle))]/50 flex-shrink-0',
         collapsed ? 'justify-center' : 'gap-3 px-4'
@@ -163,8 +163,8 @@ export default function Sidebar({ onNavigate }) {
                     location.pathname === item.path ||
                     (item.path !== '/' && location.pathname.startsWith(item.path));
 
-                  return (
-                    {item.external ? (
+                  if (item.external) {
+                    return (
                       <a
                         key={item.path}
                         href={item.path}
@@ -177,10 +177,24 @@ export default function Sidebar({ onNavigate }) {
                           'text-[hsl(var(--sidebar-item-fg))] hover:bg-[hsl(var(--sidebar-item-hover))] hover:text-[hsl(var(--sidebar-item-fg-active))]'
                         )}
                       >
-                        <item.icon className={cn('flex-shrink-0 transition-colors duration-200', collapsed ? 'w-[17px] h-[17px]' : 'w-[14px] h-[14px]', 'text-[hsl(var(--sidebar-item-icon))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]')} strokeWidth={1.8} />
-                        {!collapsed && <span className="text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em] text-[hsl(var(--sidebar-item-fg))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]">{item.label}</span>}
+                        <item.icon
+                          className={cn(
+                            'flex-shrink-0 transition-colors duration-200',
+                            collapsed ? 'w-[17px] h-[17px]' : 'w-[14px] h-[14px]',
+                            'text-[hsl(var(--sidebar-item-icon))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]'
+                          )}
+                          strokeWidth={1.8}
+                        />
+                        {!collapsed && (
+                          <span className="text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em] text-[hsl(var(--sidebar-item-fg))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]">
+                            {item.label}
+                          </span>
+                        )}
                       </a>
-                    ) : (
+                    );
+                  }
+
+                  return (
                     <Link
                       key={item.path}
                       to={item.path}
@@ -194,11 +208,9 @@ export default function Sidebar({ onNavigate }) {
                           : 'text-[hsl(var(--sidebar-item-fg))] hover:bg-[hsl(var(--sidebar-item-hover))] hover:text-[hsl(var(--sidebar-item-fg-active))]'
                       )}
                     >
-                      {/* Active left indicator */}
                       {isActive && !collapsed && (
                         <span className="absolute left-0 w-[3px] h-5 rounded-r-full bg-white" />
                       )}
-
                       <item.icon
                         className={cn(
                           'flex-shrink-0 transition-colors duration-200',
@@ -207,7 +219,6 @@ export default function Sidebar({ onNavigate }) {
                         )}
                         strokeWidth={isActive ? 2.2 : 1.8}
                       />
-
                       {!collapsed && (
                         <span className={cn(
                           'text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em]',
@@ -216,8 +227,6 @@ export default function Sidebar({ onNavigate }) {
                           {item.label}
                         </span>
                       )}
-
-                      {/* Badge */}
                       {badges[item.path] && (
                         <span className={cn(
                           'text-[9px] font-bold rounded-full flex items-center justify-center flex-shrink-0 leading-none',
@@ -234,17 +243,12 @@ export default function Sidebar({ onNavigate }) {
                         </span>
                       )}
                     </Link>
-                    )}
                   );
               })}
             </div>
           </div>
         ))}
       </nav>
-
-
-
-
 
       {/* ── Footer ────────────────────────────────────────────────────── */}
       <div className={cn(
