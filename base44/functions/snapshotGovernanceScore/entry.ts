@@ -115,15 +115,72 @@ Deno.serve(async (req) => {
     const aiScore = aiReviews.length > 0 ? Math.round((highConf / aiReviews.length) * 100) : 85;
     domains.ai_reliability = { score: aiScore, label: 'AI Reliability', details: { total_reviews: aiReviews.length, high_confidence_reviews: highConf } };
 
-    // 5. INCIDENT HEALTH
-    const incidents = await sr.entities.EnterpriseIncident.list('-detected_at', 100);
-    const open = incidents.filter(i => ['open', 'investigating', 'in_progress'].includes(i.status));
-    const slaBreached = open.filter(i => i.sla_status === 'breached').length;
-    const criticalOpen = open.filter(i => ['critical', 'blocking'].includes(i.severity)).length;
-    const incidentScore = Math.max(0, 100 - criticalOpen * 15 - slaBreached * 20 - Math.max(0, open.length - 5) * 5);
-    domains.incident_health = { score: incidentScore, label: 'Incident Health', details: { open_incidents: open.length, critical_open: criticalOpen, sla_breached: slaBreached } };
-    if (slaBreached > 0) alerts.push({ domain: 'incident_health', message: `${slaBreached} Incidents mit SLA-Breach`, severity: 'critical' });
+    // 5. INCIDENT HEALTH — Severity-gewichtet, Aging-adjustiert, Confidence-modifiziert
+    const incidents = await sr.entities.EnterpriseIncident.list('-detected_at', 200);
+
+    // Severity base deduction points
+    const SEV_POINTS = { blocking: 15, critical: 15, high: 9, medium: 3, low: 1, warning: 1, info: 0 };
+
+    // Aging factor: newer incidents weigh more
+    const agingFactor = (detectedAt) => {
+      const days = (now - new Date(detectedAt || now)) / 86400000;
+      if (days < 7)  return 1.0;
+      if (days < 30) return 0.70;
+      if (days < 90) return 0.35;
+      return 0.12;
+    };
+
+    // Status weight: accepted_risk/ignored barely count, resolved = 0
+    const statusWeight = (status) => {
+      if (['open', 'investigating', 'in_progress'].includes(status)) return 1.0;
+      if (status === 'accepted_risk') return 0.05;
+      return 0; // resolved, closed, rejected
+    };
+
+    let totalDeduction = 0;
+    let criticalOpen = 0;
+    let slaBreached = 0;
+    const activeIncidents = incidents.filter(i => !['resolved', 'closed', 'rejected'].includes(i.status));
+
+    for (const inc of activeIncidents) {
+      const sevPts = SEV_POINTS[inc.severity] || 0;
+      const aging  = agingFactor(inc.detected_at);
+      const statW  = statusWeight(inc.status);
+      // AI confidence modifier: uncertain findings count less (default 0.8 if not set)
+      const confidence = (inc.ai_confidence != null && inc.ai_confidence > 0) ? inc.ai_confidence : 0.8;
+      totalDeduction += sevPts * aging * statW * confidence;
+      if (['critical', 'blocking'].includes(inc.severity) && statW > 0) criticalOpen++;
+      if (inc.sla_status === 'breached' && statW >= 1.0) slaBreached++;
+    }
+
+    // SLA breach additional penalty (only truly open critical SLAs)
+    totalDeduction += slaBreached * 5;
+
+    // Resolution velocity bonus: reward active incident resolution (up to +12)
+    const last30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const recentlyResolved = incidents.filter(i =>
+      ['resolved', 'closed'].includes(i.status) &&
+      new Date(i.resolved_at || 0) >= last30d
+    ).length;
+    const velocityBonus = Math.min(12, recentlyResolved * 2);
+
+    const incidentScore = Math.max(0, Math.min(100, Math.round(100 - totalDeduction + velocityBonus)));
+
+    domains.incident_health = {
+      score: incidentScore,
+      label: 'Incident Health',
+      details: {
+        active_incidents: activeIncidents.length,
+        critical_open: criticalOpen,
+        sla_breached: slaBreached,
+        total_deduction: Math.round(totalDeduction * 10) / 10,
+        velocity_bonus: velocityBonus,
+        recently_resolved_30d: recentlyResolved,
+      },
+    };
+    if (slaBreached > 0) alerts.push({ domain: 'incident_health', message: `${slaBreached} kritische Incidents mit SLA-Breach`, severity: 'critical' });
     if (criticalOpen > 0) alerts.push({ domain: 'incident_health', message: `${criticalOpen} kritische offene Incidents`, severity: 'critical' });
+    if (incidentScore < 60) alerts.push({ domain: 'incident_health', message: `Incident Health niedrig (${incidentScore}/100) — aktive Bearbeitung empfohlen`, severity: 'warning' });
 
     // 6. DATA QUALITY
     const emailCoverage = active.length > 0 ? Math.round((active.filter(c => c.email).length / active.length) * 100) : 100;
