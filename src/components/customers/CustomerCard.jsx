@@ -3,8 +3,11 @@
  * Premium Financial Platform Aesthetic: whitespace · typography · monochrome
  */
 import React, { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { format, addDays } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertTriangle, Edit, Trash2, Phone, Mail, FileText, TrendingUp, Upload, User } from 'lucide-react';
+import { AlertTriangle, Edit, Trash2, Phone, Mail, FileText, TrendingUp, Zap, CheckSquare, Loader2 } from 'lucide-react';
 import ActionMenu from '@/components/shared/ActionMenu';
 import { FAMILY_ROLE_LABELS, label } from '@/lib/labels';
 import HealthScoreRing, { calculateHealthScore } from '@/components/customers/HealthScoreRing';
@@ -37,6 +40,7 @@ export default function CustomerCard({
 }) {
   const hasFamilyMatch = familyMembers.some(m => matchedFamilyIds.has(m.id));
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const status = getStatus(customer);
   const isCompany = customer.customer_type === 'business';
   
@@ -45,6 +49,19 @@ export default function CustomerCard({
   const customerTasks = (allTasks || []).filter(t => t.customer_id === customer.id)
   const customerDocs = (allDocuments || []).filter(d => d.customer_id === customer.id)
   const healthScore = calculateHealthScore(customer, customerContracts, customerTasks, customerDocs)
+
+  const followUpMutation = useMutation({
+    mutationFn: () => base44.entities.Task.create({
+      title: `Follow-up: ${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
+      customer_id: customer.id,
+      customer_name: `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
+      task_type: 'follow_up',
+      priority: 'medium',
+      status: 'open',
+      due_date: format(addDays(new Date(), 1), 'yyyy-MM-dd'),
+    }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['customers_tasks'] }),
+  })
 
   const displayName = isCompany
     ? (customer.company_name || `${customer.last_name} ${customer.first_name}`)
@@ -150,9 +167,11 @@ export default function CustomerCard({
             {/* Quick Actions */}
             <div className="flex items-center gap-3 shrink-0">
               <div className="flex items-center gap-1.5 border-r border-border/40 pr-3">
-                <button className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors" title="Anrufen">
-                  <Phone className="w-4 h-4" />
-                </button>
+                {customer.phone && (
+                  <a href={`tel:${customer.phone}`} className="p-1.5 text-slate-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Anrufen">
+                    <Phone className="w-4 h-4" />
+                  </a>
+                )}
                 {customer.email && (
                   <a href={`mailto:${customer.email}`} className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors" title="E-Mail">
                     <Mail className="w-4 h-4" />
@@ -164,6 +183,18 @@ export default function CustomerCard({
                 <Link to={`/verkaufschancen?customer_id=${customer.id}`} className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Verkaufschance">
                   <TrendingUp className="w-4 h-4" />
                 </Link>
+                <button
+                  onClick={() => followUpMutation.mutate()}
+                  disabled={followUpMutation.isPending}
+                  className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+                  title="Follow-up erstellen"
+                >
+                  {followUpMutation.isPending
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : followUpMutation.isSuccess
+                    ? <CheckSquare className="w-4 h-4 text-green-600" />
+                    : <Zap className="w-4 h-4" />}
+                </button>
               </div>
               
               <div className="flex items-center gap-2">

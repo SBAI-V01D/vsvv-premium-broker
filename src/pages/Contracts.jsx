@@ -2,13 +2,14 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Edit, Trash2, FileText, Calendar, Building2, Tag, Download, Upload, User, AlertTriangle } from 'lucide-react'
+import { Plus, Edit, Trash2, FileText, Calendar, Building2, Tag, Download, Upload, User, AlertTriangle, XCircle, Zap, ExternalLink } from 'lucide-react'
 import DateQualityBadge from '@/components/contracts/DateQualityBadge'
 
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import ContractForm from '../components/contracts/ContractForm'
 import ContractDocumentsPanel from '../components/contracts/ContractDocumentsPanel'
+import CancellationPanel from '../components/contracts/CancellationPanel'
 import PolicyUploadWizard from '../components/contracts/PolicyUploadWizard'
 import { getSparteLabel } from '@/lib/insuranceSparten'
 import StatusBadge from '@/components/status/StatusBadge'
@@ -28,6 +29,7 @@ export default function Contracts() {
   const [filterReviewOnly, setFilterReviewOnly] = useState(false)
   const [statusChanging, setStatusChanging] = useState(null)
   const [expandedDocs, setExpandedDocs] = useState(null)
+  const [expandedCancellation, setExpandedCancellation] = useState(null)
   const [importFile, setImportFile] = useState(null)
   const [importProgress, setImportProgress] = useState(null)
   const queryClient = useQueryClient()
@@ -228,6 +230,8 @@ export default function Contracts() {
           ) : (
             filtered.map((contract, idx) => {
               const docsOpen = expandedDocs === contract.id
+              const cancellationOpen = expandedCancellation === contract.id
+              const hasCancellation = contract.cancellation_status && contract.cancellation_status !== 'none'
               const customer = getCustomer(contract.customer_id)
               return (
                 <div key={contract.id} className={idx > 0 ? 'border-t border-border' : ''}>
@@ -343,6 +347,15 @@ export default function Contracts() {
 
                     {/* Actions */}
                     <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setExpandedCancellation(cancellationOpen ? null : contract.id)}
+                        className={`h-7 w-7 flex items-center justify-center rounded hover:bg-red-50 transition-colors ${
+                          hasCancellation ? 'text-red-500' : 'text-muted-foreground hover:text-red-500'
+                        }`}
+                        title="Kündigung"
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -353,13 +366,28 @@ export default function Contracts() {
                         <FileText className="w-4 h-4" />
                       </Button>
                       <ActionMenu items={[
-                        ...(contract.customer_id ? [{ label: 'Kunde öffnen', icon: User, onClick: () => navigate(`/kunden/${contract.customer_id}`) }] : []),
+                        ...(contract.customer_id ? [
+                      { label: 'Kunde 360°', icon: ExternalLink, onClick: () => navigate(`/kunden/${contract.customer_id}/360`) },
+                      { label: 'Kunde öffnen', icon: User, onClick: () => navigate(`/kunden/${contract.customer_id}`) },
+                    ] : []),
                         { label: 'Status ändern', onClick: () => setStatusChanging(contract) },
                         { label: 'Bearbeiten', icon: Edit, onClick: () => { setEditing(contract); setShowForm(true) } },
                         { label: 'Löschen', icon: Trash2, variant: 'destructive', separator: true, onClick: () => { if (confirm('Vertrag wirklich löschen?')) deleteMutation.mutate(contract.id) } },
                       ]} />
                     </div>
                   </div>
+
+                  {/* Cancellation Panel */}
+                  {cancellationOpen && (
+                    <div className="px-4 pb-4 border-t border-border bg-red-50/20">
+                      <div className="pt-3">
+                        <CancellationPanel
+                          contract={contract}
+                          onUpdated={() => queryClient.invalidateQueries({ queryKey: ['contracts'] })}
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Documents panel */}
                   <div className={`px-4 pb-4 border-t border-border bg-muted/20 ${docsOpen ? '' : 'hidden'}`}>
