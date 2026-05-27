@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Gift, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { base44 } from '@/api/base44Client';
 
 
 
@@ -43,7 +45,15 @@ function getDaysUntilBirthday(birthdate, referenceDate = new Date()) {
   return diffDays;
 }
 
-export default function BirthdaySection({ customers }) {
+export default function BirthdaySection({ customers: customersProp }) {
+  const { data: fetchedCustomers = [] } = useQuery({
+    queryKey: ['birthday_customers'],
+    queryFn: () => base44.entities.Customer.filter({ archived: false }, 'birthdate', 200),
+    staleTime: 10 * 60 * 1000,
+    enabled: !customersProp,
+  });
+
+  const customers = customersProp ?? fetchedCustomers;
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
 
   const birthdaysByTimeframe = useMemo(() => {
