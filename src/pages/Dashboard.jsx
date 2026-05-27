@@ -230,8 +230,8 @@ export default function Dashboard() {
 
   return (
     <div className="page-enter flex flex-col h-full">
-      <div className="px-6 py-5 border-b border-border bg-card shrink-0">
-        <div className="flex items-center justify-between">
+      <div className="px-6 py-4 border-b border-border bg-card shrink-0">
+        <div className="grid grid-cols-3 items-center gap-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
               <BarChart2 className="w-5 h-5 text-primary" />
@@ -241,10 +241,12 @@ export default function Dashboard() {
               <p className="text-xs text-muted-foreground">{openTasks.length} offene Aufgaben · {hotLeads.length} heiße Leads</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 flex-1 justify-end">
-            <div className="w-64 hidden sm:block">
-              <GlobalSearch collapsed={false} />
+          <div className="flex justify-center">
+            <div className="w-full max-w-xs">
+              <GlobalSearch collapsed={false} light={true} />
             </div>
+          </div>
+          <div className="flex justify-end">
             <button
               onClick={() => navigate('/kunden')}
               className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex-shrink-0"
