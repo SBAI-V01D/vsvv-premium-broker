@@ -27,6 +27,22 @@ Deno.serve(async (req) => {
     // Pass file URL directly to LLM (Gemini supports external PDF URLs)
     const fileInput = file_url;
     console.log(`[extractPolicyData] Using file_url for LLM: ${file_url.substring(0, 80)}...`);
+
+    // Load learned patterns from knowledge base to boost extraction accuracy
+    let learnedPatternsText = '';
+    try {
+      const patterns = await base44.asServiceRole.entities.InsuranceKnowledgePattern.filter({ is_active: true }, '-correction_count', 30);
+      if (patterns.length > 0) {
+        learnedPatternsText = '\n\n═══════════════════════════════════════════════════════\nGELERNTE MUSTER (aus echten Broker-Korrekturen — höchste Priorität!):\n═══════════════════════════════════════════════════════\n';
+        for (const p of patterns) {
+          const val = p.maps_to_value ? ` = "${p.maps_to_value}"` : '';
+          learnedPatternsText += `- [${p.insurer}] Signal "${p.signal}" → Feld "${p.maps_to}"${val} (bestätigt ${p.correction_count}x)\n`;
+        }
+        console.log(`[extractPolicyData] Injecting ${patterns.length} learned patterns into prompt`);
+      }
+    } catch (patternErr) {
+      console.warn(`[extractPolicyData] Pattern fetch failed (non-fatal): ${patternErr.message}`);
+    }
     
     try {
       // OPTIMIZED for Swiss insurance documents
@@ -34,7 +50,7 @@ Deno.serve(async (req) => {
         model: 'gemini_3_flash',
         prompt: `Sie sind ein Experte für Schweizer Versicherungspolicen.
 
-Extrahieren Sie alle Kundendaten und Vertragsinformationen aus diesem Dokument.
+Extrahieren Sie alle Kundendaten und Vertragsinformationen aus diesem Dokument.${learnedPatternsText}
 
 ═══════════════════════════════════════════════════════
 KRITISCH: ROLLEN PRÄZISE UNTERSCHEIDEN

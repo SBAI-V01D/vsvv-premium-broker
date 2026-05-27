@@ -1,0 +1,91 @@
+{
+  "name": "InsuranceKnowledgePattern",
+  "type": "object",
+  "properties": {
+    "insurer": {
+      "type": "string",
+      "description": "Versicherungsgesellschaft (z.B. CSS, Helsana)"
+    },
+    "document_type": {
+      "type": "string",
+      "description": "Dokumenttyp (Police/Offerte/...)"
+    },
+    "pattern_type": {
+      "type": "string",
+      "enum": [
+        "field_signal",
+        "role_mapping",
+        "product_indicator",
+        "layout_rule",
+        "date_format",
+        "premium_location"
+      ],
+      "description": "Art des Musters"
+    },
+    "signal": {
+      "type": "string",
+      "description": "Signal-Begriff im Dokument (z.B. 'Pr\u00e4mienzahler', 'Total VVG')"
+    },
+    "maps_to": {
+      "type": "string",
+      "description": "Zielfeld (z.B. 'policy_holder_name', 'insurance_type')"
+    },
+    "maps_to_value": {
+      "type": "string",
+      "description": "Fester Zielwert wenn anwendbar (z.B. 'Krankenzusatz VVG')"
+    },
+    "confidence_boost": {
+      "type": "number",
+      "description": "Konfidenz-Boost 0.0-0.3 wenn Signal gefunden"
+    },
+    "correction_count": {
+      "type": "number",
+      "default": 1,
+      "description": "Anzahl Korrekturen die dieses Muster bestaetigen"
+    },
+    "first_seen_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "last_confirmed_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "description": {
+      "type": "string",
+      "description": "Menschenlesbare Erkl\u00e4rung des Musters"
+    },
+    "example": {
+      "type": "string",
+      "description": "Konkretes Beispiel aus einem Dokument"
+    },
+    "source_correction_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs der zugrunde liegenden Korrekturen"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "version": {
+      "type": "number",
+      "default": 1
+    },
+    "validated_by_admin": {
+      "type": "boolean",
+      "default": false
+    },
+    "admin_notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "insurer",
+    "pattern_type",
+    "signal",
+    "maps_to"
+  ]
+}

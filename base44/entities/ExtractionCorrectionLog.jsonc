@@ -1,0 +1,115 @@
+{
+  "name": "ExtractionCorrectionLog",
+  "type": "object",
+  "properties": {
+    "insurer": {
+      "type": "string",
+      "description": "Versicherungsgesellschaft (aus Extraktion)"
+    },
+    "document_type": {
+      "type": "string",
+      "description": "Erkannter Dokumenttyp (Police/Offerte/...)"
+    },
+    "file_name": {
+      "type": "string"
+    },
+    "file_url": {
+      "type": "string"
+    },
+    "original_extraction": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Was die KI original extrahiert hat"
+    },
+    "corrected_values": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Was der Benutzer korrigiert hat (nur ge\u00e4nderte Felder)"
+    },
+    "field_corrections": {
+      "type": "array",
+      "description": "Detaillierte Felddifferenzen",
+      "items": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "original_value": {
+            "type": "string"
+          },
+          "corrected_value": {
+            "type": "string"
+          },
+          "error_type": {
+            "type": "string",
+            "enum": [
+              "role_error",
+              "ocr_error",
+              "product_error",
+              "date_error",
+              "premium_error",
+              "address_error",
+              "coverage_error",
+              "unknown"
+            ]
+          }
+        }
+      }
+    },
+    "error_categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Zusammenfassung der Fehlertypen"
+    },
+    "correction_count": {
+      "type": "number",
+      "description": "Anzahl korrigierter Felder"
+    },
+    "ai_analysis": {
+      "type": "string",
+      "description": "LLM Analyse: Warum lag die KI falsch?"
+    },
+    "patterns_extracted": {
+      "type": "array",
+      "description": "Aus dieser Korrektur gelernte Muster",
+      "items": {
+        "type": "object",
+        "properties": {
+          "signal": {
+            "type": "string"
+          },
+          "maps_to": {
+            "type": "string"
+          },
+          "confidence_boost": {
+            "type": "number"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "corrected_by_user_id": {
+      "type": "string"
+    },
+    "corrected_by_email": {
+      "type": "string"
+    },
+    "reviewed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Vom Admin gepr\u00fcft"
+    },
+    "review_notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "insurer",
+    "document_type"
+  ]
+}

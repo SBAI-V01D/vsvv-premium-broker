@@ -407,6 +407,27 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
       city: (d.city || '').trim(), zip_code: (d.zip_code || '').trim(), canton: (d.canton || '').trim(),
     }
 
+    // Fire-and-forget: learn from corrections (non-blocking)
+    const corrections = {}
+    const WATCH_FIELDS = ['policy_holder_name','first_name','last_name','insurance_type','product','policy_number','premium_monthly','end_date','insurer']
+    for (const f of WATCH_FIELDS) {
+      const orig = (extractedRaw || {})[f]
+      const corr = d[f]
+      const os = orig != null ? String(orig) : ''
+      const cs = corr != null ? String(corr) : ''
+      if (os !== cs) corrections[f] = corr
+    }
+    if (Object.keys(corrections).length > 0) {
+      base44.functions.invoke('learnFromExtractionCorrection', {
+        original_extraction: extractedRaw || {},
+        corrected_extraction: d,
+        insurer: d.insurer || extractedRaw?.insurer || '',
+        document_type: d.document_type || extractedRaw?.document_type || 'Unbekannt',
+        file_name: fileName,
+        file_url: fileUrl,
+      }).catch(e => console.warn('[Learning] non-fatal:', e.message))
+    }
+
     setShowAiReview(false)
 
     if (isChildOfPolicyHolder && policyHolderCustomer) {

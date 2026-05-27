@@ -45,6 +45,7 @@ import KiAnalyseVerbesserungen from './pages/KiAnalyseVerbesserungen'
 import BrokerReporting from './pages/BrokerReporting'
 import EnterpriseAudit from './pages/EnterpriseAudit'
 import EnterpriseSystemCheck from './pages/EnterpriseSystemCheck'
+import InsuranceLearningCenter from './pages/InsuranceLearningCenter'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -139,6 +140,7 @@ const AuthenticatedApp = () => {
         <Route path="/reporting" element={<BrokerReporting />} />
         <Route path="/admin/enterprise-audit" element={<EnterpriseAudit />} />
         <Route path="/admin/system-check" element={<EnterpriseSystemCheck />} />
+        <Route path="/admin/insurance-learning" element={<InsuranceLearningCenter />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
