@@ -25,7 +25,7 @@ export default function GlobalSearch({ collapsed, light = false }) {
 
   const { data: customers = [] } = useQuery({
     queryKey: ['sidebar_customers_slim'],
-    queryFn: () => base44.entities.Customer.filter({ archived: false }, 'last_name', 500),
+    queryFn: () => base44.entities.Customer.filter({ archived: false }, 'last_name', 2000),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -42,14 +42,11 @@ export default function GlobalSearch({ collapsed, light = false }) {
         const email = (c.email || '').toLowerCase();
         const phone = ((c.phone || '') + (c.mobile || '')).replace(/\s/g, '');
         const num = (c.customer_number || '').toLowerCase();
-        const nameMatch =
-          firstName.startsWith(q) ||
-          lastName.startsWith(q) ||
-          fullName.startsWith(q) ||
-          (q.includes(' ') && fullName.includes(q));
         return (
-          nameMatch ||
-          company.startsWith(q) ||
+          firstName.includes(q) ||
+          lastName.includes(q) ||
+          company.includes(q) ||
+          fullName.includes(q) ||
           email.startsWith(q) ||
           phone.includes(q) ||
           num.startsWith(q)
