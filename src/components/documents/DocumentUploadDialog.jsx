@@ -22,7 +22,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
   const [uploadMode, setUploadMode] = useState(null)
   const [file, setFile] = useState(null)
   const [fileError, setFileError] = useState('')
-  const [form, setForm] = useState({ name: '', notes: '', customer_id: '', contract_id: '', primary_customer_id: '', is_family_member: false })
+  const [form, setForm] = useState({ name: '', notes: '', customer_id: '', contract_id: '', primary_customer_id: '', is_family_member: false, end_date: '' })
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0) // 0-100
   const [uploadError, setUploadError] = useState('')
@@ -50,7 +50,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
     setUploadMode(null)
     setFile(null)
     setFileError('')
-    setForm({ name: '', notes: '', customer_id: '', contract_id: '', primary_customer_id: '', is_family_member: false })
+    setForm({ name: '', notes: '', customer_id: '', contract_id: '', primary_customer_id: '', is_family_member: false, end_date: '' })
     setUploading(false)
     setUploadProgress(0)
     setUploadError('')
@@ -99,6 +99,14 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
     // Police muss immer einem Vertrag zugeordnet sein
     if (uploadMode === 'police' && !form.contract_id) {
       setUploadError('Eine Police muss immer einem Vertrag zugeordnet werden. Bitte Vertrag auswählen.')
+      return
+    }
+    if (uploadMode === 'police' && !form.end_date) {
+      setUploadError('Eine Police muss immer einem Vertrag zugeordnet werden. Bitte Vertrag auswählen.')
+      return
+    }
+    if (uploadMode === 'police' && !form.end_date) {
+      setUploadError('Bitte Vertragsende eingeben — erforderlich für Vertragsablauf-Statistik.')
       return
     }
 
@@ -156,6 +164,17 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
           is_family_member: form.is_family_member,
         })
         setUploadProgress(90)
+        // Police: Vertragsende auf verknüpftem Vertrag aktualisieren wenn noch leer/Platzhalter
+        if (uploadMode === 'police' && form.contract_id && form.end_date) {
+          const linked = contracts.find(c => c.id === form.contract_id)
+          if (!linked?.end_date || linked.end_date.startsWith('9999')) {
+            base44.entities.Contract.update(form.contract_id, {
+              end_date: form.end_date,
+              date_quality_status: 'estimated',
+              requires_review: false,
+            }).catch(() => {})
+          }
+        }
       }
 
       setUploadProgress(100)
@@ -395,7 +414,11 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
                     {uploadMode === 'police' && (
                       <p className="text-[11px] text-muted-foreground mt-0.5 mb-1">Police-Dokumente müssen immer einem Vertrag zugeordnet werden.</p>
                     )}
-                    <Select value={form.contract_id} onValueChange={v => setForm(p => ({ ...p, contract_id: v }))}>
+                    <Select value={form.contract_id} onValueChange={v => {
+                      const c = contracts.find(x => x.id === v)
+                      const existingEnd = c?.end_date && !c.end_date.startsWith('9999') ? c.end_date : ''
+                      setForm(p => ({ ...p, contract_id: v, end_date: existingEnd }))
+                    }}>
                       <SelectTrigger className="mt-1"><SelectValue placeholder="Vertrag auswählen..." /></SelectTrigger>
                       <SelectContent>
                         {customerContracts.map(c => (
@@ -406,6 +429,25 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                )}
+
+                {/* Police: Vertragsende Pflichtfeld */}
+                {uploadMode === 'police' && form.contract_id && (
+                  <div>
+                    <Label>Vertragsende <span className="text-red-500">*</span></Label>
+                    {form.end_date ? (
+                      <p className="text-[11px] text-emerald-700 mt-0.5 mb-1">Aus Vertrag übernommen — bei Bedarf anpassen.</p>
+                    ) : (
+                      <p className="text-[11px] text-amber-700 mt-0.5 mb-1">Kein Datum im Vertrag hinterlegt — bitte aus Dokument eintragen.</p>
+                    )}
+                    <Input
+                      type="date"
+                      value={form.end_date}
+                      onChange={e => setForm(p => ({ ...p, end_date: e.target.value }))}
+                      className="mt-1"
+                      required
+                    />
                   </div>
                 )}
               </>

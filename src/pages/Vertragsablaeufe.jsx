@@ -89,14 +89,21 @@ function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange, onFollowup, 
   const isExpired = contract.status === 'expired' || (endDays !== null && endDays < 0)
   const isReview  = topAction.severity === 'review_required'
 
+  const isExcluded = contract.exclude_from_renewal_statistics
+
   return (
     <div
-      className={cn('grid items-center border-b border-border/40 transition-colors cursor-pointer border-l-[3px]', cfg.rowBg, cfg.borderL)}
+      className={cn('grid items-center border-b border-border/40 transition-colors cursor-pointer border-l-[3px]', cfg.rowBg, cfg.borderL, isExcluded && 'opacity-50')}
       style={{ gridTemplateColumns: '200px 140px 1fr 100px 100px 100px 160px 110px' }}
     >
       <div className="py-2.5 px-3 min-w-0" onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}/360`)}>
         <p className="text-[12px] font-semibold truncate hover:text-primary transition-colors leading-tight">{contract.customer_name || '–'}</p>
         <p className="text-[10px] text-muted-foreground truncate">{contract.insurer || '–'} · {getSparteLabel(contract.sparte || contract.insurance_type) || '–'}</p>
+        {isExcluded && (
+          <span className="inline-block text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-500 font-semibold mt-0.5" title={contract.renewal_statistics_note || 'Aus Statistik ausgeschlossen'}>
+            Statistik ausgeschl.
+          </span>
+        )}
       </div>
       <div className="py-2.5 px-2 min-w-0">
         <p className="text-[10px] text-muted-foreground font-mono truncate">{contract.policy_number || '–'}</p>

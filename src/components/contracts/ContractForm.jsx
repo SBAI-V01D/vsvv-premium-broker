@@ -52,6 +52,7 @@ export default function ContractForm({ contract, customers = [], onSave, onCance
       status: 'active',
       commission_rate: '',
       notes: '',
+      renewal_statistics_note: '',
       sparte_data: {},
     }
   })
@@ -112,6 +113,7 @@ export default function ContractForm({ contract, customers = [], onSave, onCance
       notes: form.notes || '',
       non_renewal_reason: form.non_renewal_reason || null,
       exclude_from_renewal_statistics: form.exclude_from_renewal_statistics === true,
+      renewal_statistics_note: form.renewal_statistics_note || '',
     })
   }
 
@@ -313,8 +315,21 @@ export default function ContractForm({ contract, customers = [], onSave, onCance
         </label>
 
         {form.exclude_from_renewal_statistics && (
-          <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-1">
-            <CheckCircle2 className="w-3 h-3" /> Berater hat diesen Vertrag manuell ausgeschlossen.
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5 text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-1">
+              <CheckCircle2 className="w-3 h-3" /> Berater hat diesen Vertrag manuell ausgeschlossen.
+            </div>
+            <div>
+              <Label className="text-xs">Begründung für Ausschluss <span className="text-red-500">*</span></Label>
+              <Textarea
+                value={form.renewal_statistics_note || ''}
+                onChange={e => set('renewal_statistics_note', e.target.value)}
+                placeholder="z.B. Vertrag wird aus gesundheitlichen Gründen weitergeführt, kein regulärer Ablauf erwartet..."
+                className="mt-1 text-xs"
+                rows={2}
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">Erscheint als Tooltip im Renewal-Center.</p>
+            </div>
           </div>
         )}
       </div>

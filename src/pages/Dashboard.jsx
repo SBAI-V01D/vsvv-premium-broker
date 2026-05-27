@@ -149,6 +149,7 @@ export default function Dashboard() {
   const expiredContracts = useMemo(() =>
     contracts.filter(c => {
       if (!c.end_date || c.end_date.startsWith('9999')) return false
+      if (c.exclude_from_renewal_statistics) return false
       const d = new Date(c.end_date + 'T00:00:00')
       return d < today && !['cancelled', 'archived'].includes(c.status)
     }), [contracts])

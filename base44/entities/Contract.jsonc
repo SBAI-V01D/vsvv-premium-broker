@@ -410,6 +410,10 @@
       "default": false,
       "description": "Vertrag aus Erneuerungsstatistik ausschliessen \u2014 nur vom Berater manuell gesetzt"
     },
+    "renewal_statistics_note": {
+      "type": "string",
+      "description": "Begr\u00fcndung f\u00fcr Ausschluss aus Vertragsablauf-Statistik (z.B. 'Vertrag wird aus gesundheitlichen Gr\u00fcnden weitergef\u00fchrt')"
+    },
     "cancellation_status": {
       "type": "string",
       "enum": [
@@ -420,8 +424,7 @@
         "completed",
         "switch_planned"
       ],
-      "default": "none",
-      "description": "K\u00fcndigungsstatus \u2014 aktive Vertragsbeendigung (\u2260 Nicht-Erneuerung)"
+      "default": "none"
     },
     "cancellation_type": {
       "type": "string",
@@ -432,8 +435,7 @@
         "legal",
         "death",
         "internal_switch"
-      ],
-      "description": "K\u00fcndigungsart: Wer hat gek\u00fcndigt?"
+      ]
     },
     "cancellation_structured_reason": {
       "type": "string",
@@ -449,54 +451,43 @@
         "financial_hardship",
         "coverage_not_needed",
         "other"
-      ],
-      "description": "Strukturierter K\u00fcndigungsgrund f\u00fcr BI / Churn-Analyse / Retention-KPIs"
+      ]
     },
     "cancellation_submitted_at": {
       "type": "string",
-      "format": "date",
-      "description": "Datum: K\u00fcndigung eingereicht / empfangen"
+      "format": "date"
     },
     "cancellation_effective_date": {
       "type": "string",
-      "format": "date",
-      "description": "Datum: K\u00fcndigung g\u00fcltig per (Vertragsendedatum durch K\u00fcndigung)"
+      "format": "date"
     },
     "cancellation_notice_period_days": {
-      "type": "number",
-      "description": "K\u00fcndigungsfrist in Tagen (gem\u00e4ss Vertragsbedingungen)"
+      "type": "number"
     },
     "cancellation_deadline_ok": {
-      "type": "boolean",
-      "description": "Wurde die K\u00fcndigungsfrist eingehalten? (auto-berechenbar)"
+      "type": "boolean"
     },
     "cancellation_confirmed_by_insurer": {
       "type": "boolean",
-      "default": false,
-      "description": "K\u00fcndigung durch Gesellschaft best\u00e4tigt?"
+      "default": false
     },
     "cancellation_confirmation_date": {
       "type": "string",
-      "format": "date",
-      "description": "Datum der Best\u00e4tigung durch Versicherungsgesellschaft"
+      "format": "date"
     },
     "cancellation_doc_url": {
-      "type": "string",
-      "description": "K\u00fcndigungsdokument-URL (K\u00fcndigungsschreiben, Best\u00e4tigung, E-Mail, PDF)"
+      "type": "string"
     },
     "cancellation_notes": {
-      "type": "string",
-      "description": "Freitextnotizen zur K\u00fcndigung (interne Bemerkungen, Sonderf\u00e4lle)"
+      "type": "string"
     },
     "retention_attempted": {
       "type": "boolean",
-      "default": false,
-      "description": "Wurde ein Retention-Versuch unternommen?"
+      "default": false
     },
     "retention_counter_offer_created": {
       "type": "boolean",
-      "default": false,
-      "description": "Wurde ein Gegenangebot erstellt?"
+      "default": false
     },
     "retention_result": {
       "type": "string",
@@ -507,16 +498,13 @@
         "lost_external",
         "lost_no_replacement"
       ],
-      "default": "none",
-      "description": "Ergebnis des Retention-Versuchs"
+      "default": "none"
     },
     "retention_notes": {
-      "type": "string",
-      "description": "Notizen zum Retention-Versuch"
+      "type": "string"
     },
     "successor_contract_id": {
-      "type": "string",
-      "description": "ID des Nachfolgevertrags (bei internem Wechsel oder Retention)"
+      "type": "string"
     }
   },
   "required": [
