@@ -34,5 +34,11 @@
       "type": "string",
       "description": "Abteilung / Funktion (z.B. Krankenversicherungen, Motorfahrzeuge)"
     }
-  }
+  },
+  "required": [
+    "team_id",
+    "phone",
+    "mobile",
+    "department"
+  ]
 }

@@ -338,7 +338,7 @@ export default function Vertragsablaeufe() {
       })
       .filter(item => item.actions.length > 0)
       .sort((a, b) => {
-        const order = { review_required: 0, expired: 1, critical: 2, urgent: 3, warning: 4, process: 5, early: 6 }
+        const order = { expired: 0, critical: 1, urgent: 2, warning: 3, process: 4, early: 5, review_required: 6 }
         const ao = order[a.topAction?.severity] ?? 9
         const bo = order[b.topAction?.severity] ?? 9
         if (ao !== bo) return ao - bo
@@ -570,7 +570,7 @@ export default function Vertragsablaeufe() {
           <div className="rounded-xl border border-border overflow-hidden bg-card shadow-xs overflow-x-auto">
             <TableHeader />
             <div>
-              {['review_required', 'expired', 'critical', 'urgent', 'warning', 'process', 'early'].map(renderGroup)}
+              {['expired', 'critical', 'urgent', 'warning', 'process', 'early', 'review_required'].map(renderGroup)}
             </div>
           </div>
         )}

@@ -87,44 +87,5 @@
     "customer_id",
     "title",
     "incident_date"
-  ],
-  "rls": {
-    "create": {
-      "user_condition": {
-        "$ne": "anonymous"
-      }
-    },
-    "read": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "data.customer_id": "{{user.id}}"
-        },
-        {
-          "data.assigned_broker": "{{user.email}}"
-        }
-      ]
-    },
-    "update": {
-      "$or": [
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        },
-        {
-          "data.assigned_broker": "{{user.email}}"
-        }
-      ]
-    },
-    "delete": {
-      "user_condition": {
-        "role": "admin"
-      }
-    }
-  }
+  ]
 }
