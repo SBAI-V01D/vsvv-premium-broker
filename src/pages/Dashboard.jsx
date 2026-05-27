@@ -184,7 +184,11 @@ export default function Dashboard() {
 
   const createTaskMutation = useMutation({
     mutationFn: (title) => base44.entities.Task.create({ title, task_type: 'general', priority: 'medium', status: 'open' }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['dashboard_tasks'] }); setQuickTask('') },
+    onSuccess: (newTask) => {
+      queryClient.setQueryData(['dashboard_tasks'], (old = []) => [newTask, ...old]);
+      queryClient.setQueryData(['tasks'], (old = []) => old ? [newTask, ...old] : undefined);
+      setQuickTask('');
+    },
   })
 
   const updateMutation = useMutation({
@@ -193,11 +197,24 @@ export default function Dashboard() {
       notes: data.notes ?? selectedTask.notes,
       due_date: data.due_date ?? selectedTask.due_date,
     }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tasks'] }); setSelectedTask(null) },
+    onSuccess: (updated) => {
+      const updater = (old = []) => old.map(t => t.id === updated.id ? updated : t);
+      queryClient.setQueryData(['dashboard_tasks'], (old = []) =>
+        updated.status === 'completed'
+          ? old.filter(t => t.id !== updated.id)
+          : updater(old)
+      );
+      queryClient.setQueryData(['tasks'], (old) => old ? updater(old) : undefined);
+      setSelectedTask(null);
+    },
   })
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Task.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tasks'] }); setSelectedTask(null) },
+    onSuccess: (_, id) => {
+      queryClient.setQueryData(['dashboard_tasks'], (old = []) => old.filter(t => t.id !== id));
+      queryClient.setQueryData(['tasks'], (old) => old ? old.filter(t => t.id !== id) : undefined);
+      setSelectedTask(null);
+    },
   })
 
   const handleTaskClick = (task) => {
@@ -206,7 +223,8 @@ export default function Dashboard() {
   }
   const handleTaskComplete = async (taskId) => {
     await base44.entities.Task.update(taskId, { status: 'completed', completion_date: new Date().toISOString().split('T')[0] })
-    queryClient.invalidateQueries({ queryKey: ['tasks'] })
+    queryClient.setQueryData(['dashboard_tasks'], (old = []) => old.filter(t => t.id !== taskId));
+    queryClient.setQueryData(['tasks'], (old) => old ? old.map(t => t.id === taskId ? { ...t, status: 'completed' } : t) : undefined);
   }
 
   return (
