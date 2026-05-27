@@ -62,6 +62,17 @@ export default function UniversalDocumentIntake({ open, onClose, customers = [],
   const [analysisResult, setAnalysisResult] = useState(null)
   const [validationAnswers, setValidationAnswers] = useState({})
   
+  // Reset state when dialog closes
+  const handleClose = () => {
+    setStep('upload')
+    setError(null)
+    setFileUrl(null)
+    setFileName('')
+    setAnalysisResult(null)
+    setValidationAnswers({})
+    onClose?.()
+  }
+  
   // ── Step 1: Upload ─────────────────────────────────────────────────────
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0]
@@ -110,7 +121,7 @@ export default function UniversalDocumentIntake({ open, onClose, customers = [],
   
   // ── Render ────────────────────────────────────────────────────────────
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -203,7 +214,7 @@ export default function UniversalDocumentIntake({ open, onClose, customers = [],
             ))}
             
             <div className="flex justify-between pt-4">
-              <Button variant="outline" onClick={() => setStep('upload')}>Zurück</Button>
+              <Button variant="outline" onClick={() => { setStep('upload'); setAnalysisResult(null); }}>Zurück</Button>
               <Button onClick={handleValidationComplete}>
                 Weiter <CheckCircle2 className="w-4 h-4 ml-2" />
               </Button>
@@ -221,7 +232,7 @@ export default function UniversalDocumentIntake({ open, onClose, customers = [],
                 {analysisResult?.extractedData?.document_type || 'Dokument'} wurde erfolgreich analysiert und gespeichert.
               </p>
             </div>
-            <Button onClick={onClose}>Schliessen</Button>
+            <Button onClick={handleClose}>Schliessen</Button>
           </div>
         )}
       </DialogContent>
