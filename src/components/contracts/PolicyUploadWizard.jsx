@@ -430,6 +430,22 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
 
     setShowAiReview(false)
 
+    // Two-person case: Versicherungsnehmer (Hauptkontakt) differs from versicherte Person
+    // Handle REGARDLESS of whether policy holder is already in CRM
+    const insuredFullName = `${d.first_name || ''} ${d.last_name || ''}`.trim()
+    const holderFullName  = (d.policy_holder_name || '').trim()
+    const hasTwoRoles = holderFullName && insuredFullName && holderFullName.toLowerCase() !== insuredFullName.toLowerCase()
+
+    if (hasTwoRoles) {
+      setContractList([baseContract, ...additionalContracts])
+      setActiveContractIdx(0)
+      setNewCustomerData(extractedCustomerData)   // insured person (Thomas)
+      setSelectedCustomer(policyHolderCustomer || null)  // pre-select if found in CRM
+      setCustomerMode('policy_holder_main')       // Daniela = Hauptkontakt
+      setStep(2)
+      return
+    }
+
     if (isChildOfPolicyHolder && policyHolderCustomer) {
       setSelectedCustomer(policyHolderCustomer)
       setCustomerMode('policy_holder_main')

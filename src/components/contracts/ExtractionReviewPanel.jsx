@@ -91,7 +91,10 @@ export default function ExtractionReviewPanel({ data, confidences = {}, document
 
   const lowCount  = Object.entries(confidences).filter(([, v]) => v != null && v < 0.65).length
   const warnCount = Object.entries(confidences).filter(([, v]) => v != null && v >= 0.65 && v < 0.85).length
-  const missingRequired = !data?.first_name || !data?.last_name || !data?.insurer
+  const insuredName = `${data?.first_name || ''} ${data?.last_name || ''}`.trim()
+  const holderName  = (data?.policy_holder_name || '').trim()
+  const hasTwoRoles = holderName && insuredName && holderName.toLowerCase() !== insuredName.toLowerCase()
+  const missingRequired = !insuredName && !holderName || !data?.insurer
   const docCls = DOC_COLORS[documentType] || 'bg-slate-50 border-slate-200 text-slate-800'
 
   return (
@@ -120,6 +123,42 @@ export default function ExtractionReviewPanel({ data, confidences = {}, document
           müssen kontrolliert werden — KI-Fehler werden <strong>nicht automatisch</strong> korrigiert.
         </span>
       </div>
+
+      {/* Role Assignment — critical visual for two-person policies */}
+      {(holderName || insuredName) && (
+        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+          <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Rollenzuordnung (kritisch!)</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="p-2 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-[10px] text-blue-600 font-semibold mb-1">Versicherungsnehmer</p>
+              <p className="text-sm font-bold text-blue-900 min-h-[1.2rem]">{holderName || insuredName || '–'}</p>
+              <p className="text-[10px] text-blue-400">wird Hauptkontakt</p>
+            </div>
+            <div className="p-2 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-[10px] text-green-600 font-semibold mb-1">Versicherte Person</p>
+              <p className="text-sm font-bold text-green-900 min-h-[1.2rem]">{insuredName || holderName || '–'}</p>
+              {hasTwoRoles && <p className="text-[10px] text-green-400">wird Familienmitglied</p>}
+            </div>
+          </div>
+          {hasTwoRoles && (
+            <button
+              type="button"
+              onClick={() => {
+                const parts = holderName.split(' ')
+                const hFirst = parts[0] || ''
+                const hLast = parts.slice(1).join(' ') || ''
+                onChange({ ...data, policy_holder_name: insuredName, first_name: hFirst, last_name: hLast })
+              }}
+              className="text-xs text-amber-600 hover:text-amber-700 font-medium underline flex items-center gap-1"
+            >
+              Rollen tauschen — KI hat Versicherungsnehmer und versicherte Person vertauscht?
+            </button>
+          )}
+          {!hasTwoRoles && (
+            <p className="text-[10px] text-slate-500">Versicherungsnehmer = versicherte Person (kein Familienmitglied)</p>
+          )}
+        </div>
+      )}
 
       {/* Personendaten */}
       <div>
