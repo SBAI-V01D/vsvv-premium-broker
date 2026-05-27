@@ -31,7 +31,7 @@ export default function GlobalSearch({ collapsed }) {
   });
 
   const results = useMemo(() => {
-    if (!debouncedQuery || debouncedQuery.length < 2) return [];
+    if (!debouncedQuery || debouncedQuery.length < 3) return [];
     const q = debouncedQuery.toLowerCase();
     return customers
       .filter(c => {

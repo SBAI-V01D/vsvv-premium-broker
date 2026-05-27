@@ -3,8 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
   ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink,
-  Target, User, Briefcase, TrendingUp, Lock, Menu, BookOpen, Activity,
-  Building2, AlertCircle, Brain, BarChart2, Calendar, Clock, UserPlus
+  User, Briefcase, TrendingUp, Lock, BookOpen, Activity,
+  Brain, BarChart2, UserPlus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -153,9 +153,6 @@ export default function Sidebar({ onNavigate }) {
         )}
       </div>
 
-      {/* ── Global Search ─────────────────────────────────────────── */}
-      <GlobalSearch collapsed={collapsed} />
-
       {/* ── Navigation ───────────────────────────────────────────────── */}
       <nav className="flex-1 overflow-y-auto py-3 scrollbar-none" style={{ scrollbarWidth: 'none' }}>
         {navGroups.map((group) => (
@@ -175,6 +172,7 @@ export default function Sidebar({ onNavigate }) {
                   const isActive =
                     location.pathname === item.path ||
                     (item.path !== '/' && location.pathname.startsWith(item.path));
+                  const isKundenItem = item.path === '/kunden';
 
                   if (item.external) {
                     return (
@@ -208,56 +206,58 @@ export default function Sidebar({ onNavigate }) {
                   }
 
                   return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={onNavigate}
-                      title={collapsed ? item.label : undefined}
-                      className={cn(
-                        'relative flex items-center rounded-xl transition-all duration-200 group',
-                        collapsed ? 'justify-center h-9 w-9 mx-auto' : 'gap-2.5 px-3 py-[8px]',
-                        isActive
-                          ? 'bg-[hsl(var(--primary))] shadow-sm'
-                          : 'text-[hsl(var(--sidebar-item-fg))] hover:bg-[hsl(var(--sidebar-item-hover))] hover:text-[hsl(var(--sidebar-item-fg-active))]'
-                      )}
-                    >
-                      {isActive && !collapsed && (
-                        <span className="absolute left-0 w-[3px] h-5 rounded-r-full bg-white" />
-                      )}
-                      <item.icon
+                    <React.Fragment key={item.path}>
+                      <Link
+                        to={item.path}
+                        onClick={onNavigate}
+                        title={collapsed ? item.label : undefined}
                         className={cn(
-                          'flex-shrink-0 transition-colors duration-200',
-                          collapsed ? 'w-[17px] h-[17px]' : 'w-[14px] h-[14px]',
-                          isActive ? 'text-white' : 'text-[hsl(var(--sidebar-item-icon))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]'
-                        )}
-                        strokeWidth={isActive ? 2.2 : 1.8}
-                      />
-                      {!collapsed && (
-                        <span className={cn(
-                          'text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em]',
-                          isActive ? 'text-white font-semibold' : 'text-[hsl(var(--sidebar-item-fg))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]'
-                        )}>
-                          {item.label}
-                        </span>
-                      )}
-                      {badges[item.path] && (
-                        <span className={cn(
-                          'text-[9px] font-bold rounded-full flex items-center justify-center flex-shrink-0 leading-none',
-                          collapsed
-                            ? 'absolute top-0.5 right-0.5 min-w-[13px] h-[13px] px-[3px]'
-                            : 'min-w-[16px] h-[16px] px-[4px]',
+                          'relative flex items-center rounded-xl transition-all duration-200 group',
+                          collapsed ? 'justify-center h-9 w-9 mx-auto' : 'gap-2.5 px-3 py-[8px]',
                           isActive
-                            ? 'bg-white text-[hsl(var(--primary))]'
-                            : item.color === 'primary'
-                              ? 'bg-[hsl(var(--primary))] text-white'
-                              : 'bg-[hsl(var(--warning))] text-white'
-                        )}>
-                          {badges[item.path]}
-                        </span>
-                      )}
-                    </Link>
+                            ? 'bg-[hsl(var(--primary))] shadow-sm'
+                            : 'text-[hsl(var(--sidebar-item-fg))] hover:bg-[hsl(var(--sidebar-item-hover))] hover:text-[hsl(var(--sidebar-item-fg-active))]'
+                        )}
+                      >
+                        {isActive && !collapsed && (
+                          <span className="absolute left-0 w-[3px] h-5 rounded-r-full bg-white" />
+                        )}
+                        <item.icon
+                          className={cn(
+                            'flex-shrink-0 transition-colors duration-200',
+                            collapsed ? 'w-[17px] h-[17px]' : 'w-[14px] h-[14px]',
+                            isActive ? 'text-white' : 'text-[hsl(var(--sidebar-item-icon))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]'
+                          )}
+                          strokeWidth={isActive ? 2.2 : 1.8}
+                        />
+                        {!collapsed && (
+                          <span className={cn(
+                            'text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em]',
+                            isActive ? 'text-white font-semibold' : 'text-[hsl(var(--sidebar-item-fg))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]'
+                          )}>
+                            {item.label}
+                          </span>
+                        )}
+                        {badges[item.path] && (
+                          <span className={cn(
+                            'text-[9px] font-bold rounded-full flex items-center justify-center flex-shrink-0 leading-none',
+                            collapsed
+                              ? 'absolute top-0.5 right-0.5 min-w-[13px] h-[13px] px-[3px]'
+                              : 'min-w-[16px] h-[16px] px-[4px]',
+                            isActive
+                              ? 'bg-white text-[hsl(var(--primary))]'
+                              : item.color === 'primary'
+                                ? 'bg-[hsl(var(--primary))] text-white'
+                                : 'bg-[hsl(var(--warning))] text-white'
+                          )}>
+                            {badges[item.path]}
+                          </span>
+                        )}
+                      </Link>
+                      {isKundenItem && <GlobalSearch collapsed={collapsed} />}
+                    </React.Fragment>
                   );
-              })}
+                })}
             </div>
           </div>
         ))}
