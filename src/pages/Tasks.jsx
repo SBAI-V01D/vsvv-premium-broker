@@ -50,7 +50,7 @@ export default function Tasks() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('open');
+  const [filterStatus, setFilterStatus] = useState('active');
   const [filterPriority, setFilterPriority] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -101,9 +101,16 @@ export default function Tasks() {
     updateMutation.mutate({ id: task.id, data: { ...task, status: next } });
   };
 
+  const activeTasks = tasks.filter(t => ['open', 'in_progress'].includes(t.status));
+  const archivedTasks = tasks.filter(t => t.status === 'completed');
+
   const filtered = tasks.filter(t => {
     const matchSearch = !search || t.title?.toLowerCase().includes(search.toLowerCase()) || t.customer_name?.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = filterStatus === 'all' || t.status === filterStatus;
+    const matchStatus =
+      filterStatus === 'active' ? ['open', 'in_progress'].includes(t.status) :
+      filterStatus === 'archive' ? t.status === 'completed' :
+      filterStatus === 'all' ? true :
+      t.status === filterStatus;
     const matchPriority = filterPriority === 'all' || t.priority === filterPriority;
     return matchSearch && matchStatus && matchPriority;
   });
@@ -117,18 +124,30 @@ export default function Tasks() {
   };
 
   const extraFilters = (
-    <div className="flex items-center gap-2">
-      <Select value={filterStatus} onValueChange={setFilterStatus}>
-        <SelectTrigger className="h-8 text-xs w-36 border-border/60">
-          <SelectValue placeholder="Status" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Alle Status</SelectItem>
-          <SelectItem value="open">Offen</SelectItem>
-          <SelectItem value="in_progress">In Bearbeitung</SelectItem>
-          <SelectItem value="completed">Erledigt</SelectItem>
-        </SelectContent>
-      </Select>
+    <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex rounded-lg border border-border/60 overflow-hidden">
+        {[
+          { key: 'active',  label: `Aktiv (${activeTasks.length})` },
+          { key: 'open',    label: 'Offen' },
+          { key: 'in_progress', label: 'In Bearb.' },
+          { key: 'archive', label: `Archiv (${archivedTasks.length})` },
+          { key: 'all',     label: 'Alle' },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setFilterStatus(tab.key)}
+            className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              filterStatus === tab.key
+                ? tab.key === 'archive'
+                  ? 'bg-slate-600 text-white'
+                  : 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-muted'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
       <Select value={filterPriority} onValueChange={setFilterPriority}>
         <SelectTrigger className="h-8 text-xs w-36 border-border/60">
           <SelectValue placeholder="Priorität" />
@@ -154,7 +173,11 @@ export default function Tasks() {
             </div>
             <div>
               <h1 className="text-lg font-bold text-[hsl(var(--primary))] tracking-tight">Aufgaben</h1>
-              <p className="text-xs text-muted-foreground">{filtered.length} Aufgabe{filtered.length !== 1 ? 'n' : ''}</p>
+              <p className="text-xs text-muted-foreground">
+                {filterStatus === 'archive'
+                  ? `${filtered.length} erledigte Aufgabe${filtered.length !== 1 ? 'n' : ''} (Archiv)`
+                  : `${filtered.length} Aufgabe${filtered.length !== 1 ? 'n' : ''}`}
+              </p>
             </div>
           </div>
           <Button size="sm" onClick={openCreate} className="gap-1.5">
