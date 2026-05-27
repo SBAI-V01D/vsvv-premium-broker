@@ -35,17 +35,25 @@ export default function GlobalSearch({ collapsed }) {
     const q = debouncedQuery.toLowerCase();
     return customers
       .filter(c => {
-        const fullName = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
+        const firstName = (c.first_name || '').toLowerCase();
+        const lastName = (c.last_name || '').toLowerCase();
+        const fullName = `${firstName} ${lastName}`;
         const company = (c.company_name || '').toLowerCase();
         const email = (c.email || '').toLowerCase();
-        const phone = (c.phone || '') + (c.mobile || '');
+        const phone = ((c.phone || '') + (c.mobile || '')).replace(/\s/g, '');
         const num = (c.customer_number || '').toLowerCase();
+        // Name: startsWith for first/last name, or fullName contains for "Vorname Name" combos
+        const nameMatch =
+          firstName.startsWith(q) ||
+          lastName.startsWith(q) ||
+          fullName.startsWith(q) ||
+          (q.includes(' ') && fullName.includes(q));
         return (
-          fullName.includes(q) ||
-          company.includes(q) ||
-          email.includes(q) ||
+          nameMatch ||
+          company.startsWith(q) ||
+          email.startsWith(q) ||
           phone.includes(q) ||
-          num.includes(q)
+          num.startsWith(q)
         );
       })
       .slice(0, 12);
@@ -111,7 +119,7 @@ export default function GlobalSearch({ collapsed }) {
     return c.email || c.phone || '';
   };
 
-  const showDropdown = open && debouncedQuery.length >= 2;
+  const showDropdown = open && debouncedQuery.length >= 3;
 
   return (
     <div className="px-3 py-2 relative" ref={dropdownRef}>
