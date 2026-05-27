@@ -47,7 +47,6 @@ Deno.serve(async (req) => {
     try {
       // OPTIMIZED for Swiss insurance documents
       const response = await base44.integrations.Core.InvokeLLM({
-        model: 'gemini_3_flash',
         prompt: `Sie sind ein Experte für Schweizer Versicherungspolicen.
 
 Extrahieren Sie alle Kundendaten und Vertragsinformationen aus diesem Dokument.${learnedPatternsText}
@@ -212,6 +211,7 @@ Rückgabe EXAKT als JSON:
     "street": 0.0
   }
 }`,
+        model: 'claude_sonnet_4_6',
         add_context_from_internet: false,
         file_urls: [fileInput],
         response_json_schema: {
