@@ -96,6 +96,11 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
     e.preventDefault()
     const err = validateFile(file, uploadMode)
     if (err) { setFileError(err); return }
+    // Police muss immer einem Vertrag zugeordnet sein
+    if (uploadMode === 'police' && !form.contract_id) {
+      setUploadError('Eine Police muss immer einem Vertrag zugeordnet werden. Bitte Vertrag auswählen.')
+      return
+    }
 
     setUploading(true)
     setUploadError('')
@@ -369,9 +374,27 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
                   </div>
                 )}
                 
+                {/* Police: Vertrag ist PFLICHTFELD — kein Schaden-Bezug erlaubt */}
+                {uploadMode === 'police' && form.customer_id && customerContracts.length === 0 && (
+                  <div className="px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700">
+                    Dieser Kunde hat noch keine Verträge. Bitte zuerst einen Vertrag erfassen.
+                  </div>
+                )}
+                {uploadMode === 'police' && !form.customer_id && (
+                  <div className="px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-700">
+                    Bitte zuerst einen Kunden auswählen, um den zugehörigen Vertrag zu verknüpfen.
+                  </div>
+                )}
                 {form.customer_id && customerContracts.length > 0 && (
                   <div>
-                    <Label>Verknüpfter Vertrag (optional)</Label>
+                    <Label>
+                      Vertrag (Police)
+                      {uploadMode === 'police' && <span className="text-red-500 ml-1">*</span>}
+                      {uploadMode !== 'police' && <span className="text-muted-foreground text-xs ml-1">(optional)</span>}
+                    </Label>
+                    {uploadMode === 'police' && (
+                      <p className="text-[11px] text-muted-foreground mt-0.5 mb-1">Police-Dokumente müssen immer einem Vertrag zugeordnet werden.</p>
+                    )}
                     <Select value={form.contract_id} onValueChange={v => setForm(p => ({ ...p, contract_id: v }))}>
                       <SelectTrigger className="mt-1"><SelectValue placeholder="Vertrag auswählen..." /></SelectTrigger>
                       <SelectContent>
