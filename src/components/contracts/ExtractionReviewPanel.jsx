@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { CheckCircle2, AlertTriangle, Edit3, ChevronLeft, FileText } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, Edit3, ChevronLeft, FileText, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 function getLevel(score) {
@@ -95,6 +95,10 @@ export default function ExtractionReviewPanel({ data, confidences = {}, document
   const holderName  = (data?.policy_holder_name || '').trim()
   const hasTwoRoles = holderName && insuredName && holderName.toLowerCase() !== insuredName.toLowerCase()
   const missingRequired = !insuredName && !holderName || !data?.insurer
+  
+  // DECKUNGS-ANALYSE: Alle erkannten Deckungen anzeigen
+  const coverages = data?.additional_products || []
+  const hasCoverages = coverages.length > 0
   const docCls = DOC_COLORS[documentType] || 'bg-slate-50 border-slate-200 text-slate-800'
 
   return (
@@ -200,6 +204,60 @@ export default function ExtractionReviewPanel({ data, confidences = {}, document
           <ReviewField label="Vertragsende" value={data?.end_date} confidence={confidences.end_date} onChange={v => set('end_date', v)} type="date" />
         </div>
       </div>
+
+      {/* ZUSATZVERSICHERUNGEN / DECKUNGEN — EDITIERBAR */}
+      {hasCoverages && (
+        <div>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-1.5">
+            <FileText className="w-3 h-3" /> Zusatzversicherungen ({coverages.length})
+          </p>
+          <div className="space-y-2">
+            {coverages.map((cov, idx) => (
+              <div key={idx} className="p-3 bg-amber-50/50 border border-amber-200 rounded-lg space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-xs font-semibold text-amber-900">Deckung #{idx + 1}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newCoverages = coverages.filter((_, i) => i !== idx)
+                      onChange({ ...data, additional_products: newCoverages })
+                    }}
+                    className="text-xs text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
+                  >
+                    <X className="w-3 h-3" /> Löschen
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <ReviewField
+                    label="Produkt"
+                    value={cov.product || ''}
+                    confidence={cov.confidence || 0.5}
+                    onChange={v => {
+                      const newCoverages = [...coverages]
+                      newCoverages[idx] = { ...cov, product: v }
+                      onChange({ ...data, additional_products: newCoverages })
+                    }}
+                  />
+                  <ReviewField
+                    label="Monatsprämie"
+                    value={cov.premium_monthly != null ? String(cov.premium_monthly) : ''}
+                    confidence={cov.confidence || 0.5}
+                    onChange={v => {
+                      const newCoverages = [...coverages]
+                      newCoverages[idx] = { ...cov, premium_monthly: v ? parseFloat(v) : null }
+                      onChange({ ...data, additional_products: newCoverages })
+                    }}
+                    type="number"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-amber-700 mt-2">
+            ⚠️ KI hat {coverages.length} Zusatzdeckung(en) erkannt. Bitte jede Deckung prüfen und bei Bedarf löschen (Phantomdeckungen kommen vor).
+          </p>
+        </div>
+      )}
 
       {missingRequired && (
         <div className="flex items-center gap-2 p-2.5 bg-red-50 border border-red-300 rounded-lg text-xs text-red-700 font-medium">
