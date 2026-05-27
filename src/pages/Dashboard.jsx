@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 
 import TodayDashboard from '@/components/dashboard/TodayDashboard'
+import GlobalSearch from '@/components/layout/GlobalSearch'
 import MoneyDashboard from '@/components/dashboard/MoneyDashboard'
 import AiInsightsPanel from '@/components/intelligence/AiInsightsPanel'
 import BirthdaySection from '@/components/customers/BirthdaySection'
@@ -240,12 +241,17 @@ export default function Dashboard() {
               <p className="text-xs text-muted-foreground">{openTasks.length} offene Aufgaben · {hotLeads.length} heiße Leads</p>
             </div>
           </div>
-          <button
-            onClick={() => navigate('/kunden')}
-            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            <Building2 className="w-3.5 h-3.5" /> Neuer Kunde
-          </button>
+          <div className="flex items-center gap-3 flex-1 justify-end">
+            <div className="w-64 hidden sm:block">
+              <GlobalSearch collapsed={false} />
+            </div>
+            <button
+              onClick={() => navigate('/kunden')}
+              className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex-shrink-0"
+            >
+              <Building2 className="w-3.5 h-3.5" /> Neuer Kunde
+            </button>
+          </div>
         </div>
       </div>
 
