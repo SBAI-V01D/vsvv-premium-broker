@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import ContractForm from '../components/contracts/ContractForm'
 import ContractDocumentsPanel from '../components/contracts/ContractDocumentsPanel'
 import CancellationPanel from '../components/contracts/CancellationPanel'
-import PolicyUploadWizard from '../components/contracts/PolicyUploadWizard'
 import { getSparteLabel } from '@/lib/insuranceSparten'
 import StatusBadge from '@/components/status/StatusBadge'
 import StatusChangeDialog from '@/components/status/StatusChangeDialog'
@@ -22,7 +21,6 @@ import ActionMenu from '@/components/shared/ActionMenu'
 export default function Contracts() {
   const navigate = useNavigate()
   const [showForm, setShowForm] = useState(false)
-  const [showUploadWizard, setShowUploadWizard] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
@@ -195,7 +193,6 @@ export default function Contracts() {
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleExport}><Download className="w-4 h-4 mr-1.5" /> Export</Button>
             <Button variant="outline" size="sm" onClick={() => setShowImport(true)}><Upload className="w-4 h-4 mr-1.5" /> Import</Button>
-            <Button variant="outline" size="sm" onClick={() => setShowUploadWizard(true)}><FileText className="w-4 h-4 mr-1.5" /> Police</Button>
             <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }}><Plus className="w-4 h-4 mr-1.5" /> Neuer Vertrag</Button>
           </div>
         </div>
@@ -427,18 +424,6 @@ export default function Contracts() {
         currentStatus={statusChanging ? (statusChanging.custom_status || statusChanging.status || '').toLowerCase().trim() : ''}
         onSave={handleStatusChange}
         title="Vertragsstatus ändern"
-      />
-
-      <PolicyUploadWizard
-        open={showUploadWizard}
-        onClose={() => setShowUploadWizard(false)}
-        customers={customers}
-        organizations={organizations}
-        onContractCreated={() => {
-          queryClient.invalidateQueries({ queryKey: ['contracts'] })
-          queryClient.invalidateQueries({ queryKey: ['customers'] })
-          queryClient.invalidateQueries({ queryKey: ['documents'] })
-        }}
       />
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
