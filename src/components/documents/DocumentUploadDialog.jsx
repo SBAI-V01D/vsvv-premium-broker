@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Upload, Zap, Paperclip, Loader2, CheckCircle2, AlertCircle, FileText, Shield, ClipboardList, Scale, ScrollText } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
 
 const MAX_FILE_SIZE_MB = 50
 const MAX_ANTRAG_SIZE_MB = 10 // LLM-Limit für KI-Extraktion
@@ -22,7 +23,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
   const [uploadMode, setUploadMode] = useState(null)
   const [file, setFile] = useState(null)
   const [fileError, setFileError] = useState('')
-  const [form, setForm] = useState({ name: '', notes: '', customer_id: '', contract_id: '', primary_customer_id: '', is_family_member: false, end_date: '' })
+  const [form, setForm] = useState({ name: '', notes: '', customer_id: '', contract_id: '', primary_customer_id: '', is_family_member: false, end_date: '', excludeFromStats: false, statsNote: '' })
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0) // 0-100
   const [uploadError, setUploadError] = useState('')
@@ -50,7 +51,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
     setUploadMode(null)
     setFile(null)
     setFileError('')
-    setForm({ name: '', notes: '', customer_id: '', contract_id: '', primary_customer_id: '', is_family_member: false, end_date: '' })
+    setForm({ name: '', notes: '', customer_id: '', contract_id: '', primary_customer_id: '', is_family_member: false, end_date: '', excludeFromStats: false, statsNote: '' })
     setUploading(false)
     setUploadProgress(0)
     setUploadError('')
@@ -165,14 +166,20 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
         })
         setUploadProgress(90)
         // Police: Vertragsende auf verknüpftem Vertrag aktualisieren wenn noch leer/Platzhalter
-        if (uploadMode === 'police' && form.contract_id && form.end_date) {
+        if (uploadMode === 'police' && form.contract_id) {
           const linked = contracts.find(c => c.id === form.contract_id)
-          if (!linked?.end_date || linked.end_date.startsWith('9999')) {
-            base44.entities.Contract.update(form.contract_id, {
-              end_date: form.end_date,
-              date_quality_status: 'estimated',
-              requires_review: false,
-            }).catch(() => {})
+          const updates = {}
+          if (form.end_date && (!linked?.end_date || linked.end_date.startsWith('9999'))) {
+            updates.end_date = form.end_date
+            updates.date_quality_status = 'estimated'
+            updates.requires_review = false
+          }
+          if (form.excludeFromStats) {
+            updates.exclude_from_renewal_statistics = true
+            if (form.statsNote) updates.renewal_statistics_note = form.statsNote
+          }
+          if (Object.keys(updates).length > 0) {
+            base44.entities.Contract.update(form.contract_id, updates).catch(() => {})
           }
         }
       }
@@ -429,6 +436,37 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                )}
+
+                {/* Police: Aus Ablaufstatistik ausschliessen */}
+                {uploadMode === 'police' && form.contract_id && (
+                  <div className="px-3 py-3 rounded-lg border border-slate-200 bg-slate-50 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="exclude-stats"
+                        checked={form.excludeFromStats}
+                        onCheckedChange={v => setForm(p => ({ ...p, excludeFromStats: !!v }))}
+                      />
+                      <label htmlFor="exclude-stats" className="text-sm font-medium text-slate-700 cursor-pointer">
+                        Aus Vertragsablauf-Statistik ausschliessen
+                      </label>
+                    </div>
+                    <p className="text-[11px] text-slate-500 ml-6">
+                      Vertrag erscheint weiterhin unter Verträge, wird aber nicht mehr in der Ablaufpipeline bearbeitet.
+                    </p>
+                    {form.excludeFromStats && (
+                      <div className="ml-6">
+                        <label className="text-xs text-slate-600 font-medium">Begründung (optional)</label>
+                        <input
+                          type="text"
+                          value={form.statsNote}
+                          onChange={e => setForm(p => ({ ...p, statsNote: e.target.value }))}
+                          placeholder="z.B. Wird aus gesundheitlichen Gründen weitergeführt"
+                          className="mt-1 w-full text-xs border border-input rounded-md px-3 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
 
