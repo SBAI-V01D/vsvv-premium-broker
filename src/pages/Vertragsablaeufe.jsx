@@ -338,7 +338,8 @@ export default function Vertragsablaeufe() {
       })
       .filter(item => item.actions.length > 0)
       .sort((a, b) => {
-        const order = { expired: 0, critical: 1, urgent: 2, warning: 3, process: 4, early: 5, review_required: 6 }
+        // Aktionierbare zuerst — abgelaufene zuletzt (kann nicht mehr gehandelt werden)
+        const order = { critical: 0, urgent: 1, warning: 2, process: 3, early: 4, expired: 5, review_required: 6 }
         const ao = order[a.topAction?.severity] ?? 9
         const bo = order[b.topAction?.severity] ?? 9
         if (ao !== bo) return ao - bo
@@ -380,7 +381,7 @@ export default function Vertragsablaeufe() {
     early:           filtered.filter(i => i.topAction?.severity === 'early').length,
     review_required: filtered.filter(i => i.topAction?.severity === 'review_required').length,
     totalPremium:    filtered.filter(i => i.topAction?.severity !== 'review_required').reduce((s, i) => s + (i.contract.premium_yearly || 0), 0),
-  }), [filtered, actionableItems])
+  }), [filtered])
 
   const groups = {
     review_required: filtered.filter(i => i.topAction?.severity === 'review_required'),
@@ -481,12 +482,12 @@ export default function Vertragsablaeufe() {
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {/* KPI Strip */}
         <div className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
-          <KpiCard label="Abgelaufen"   sublabel="Sofort handeln" value={stats.expired}         icon={AlertTriangle} cfg={SEV.expired}         active={filterSeverity === 'expired'}         onClick={() => setFilterSeverity(f => f === 'expired' ? 'all' : 'expired')} />
           <KpiCard label="Kritisch"     sublabel="≤ 30 Tage"      value={stats.critical}        icon={Zap}           cfg={SEV.critical}        active={filterSeverity === 'critical'}        onClick={() => setFilterSeverity(f => f === 'critical' ? 'all' : 'critical')} />
           <KpiCard label="Dringend"     sublabel="30–60 Tage"     value={stats.urgent}          icon={Clock}         cfg={SEV.urgent}          active={filterSeverity === 'urgent'}          onClick={() => setFilterSeverity(f => f === 'urgent' ? 'all' : 'urgent')} />
           <KpiCard label="Bald fällig"  sublabel="60–90 Tage"     value={stats.warning}         icon={CalendarClock} cfg={SEV.warning}         active={filterSeverity === 'warning'}         onClick={() => setFilterSeverity(f => f === 'warning' ? 'all' : 'warning')} />
           <KpiCard label="Vorbereitung" sublabel="90–150 Tage"    value={stats.process}         icon={TrendingUp}    cfg={SEV.process}         active={filterSeverity === 'process'}         onClick={() => setFilterSeverity(f => f === 'process' ? 'all' : 'process')} />
           <KpiCard label="Früh"         sublabel="150–180 Tage"   value={stats.early}           icon={CalendarClock} cfg={SEV.early}           active={filterSeverity === 'early'}           onClick={() => setFilterSeverity(f => f === 'early' ? 'all' : 'early')} />
+          <KpiCard label="Abgelaufen"   sublabel="Sofort handeln" value={stats.expired}         icon={AlertTriangle} cfg={SEV.expired}         active={filterSeverity === 'expired'}         onClick={() => setFilterSeverity(f => f === 'expired' ? 'all' : 'expired')} />
           {stats.review_required > 0 && (
             <KpiCard label="Datumsprüfung" sublabel="Platzhalter gesetzt" value={stats.review_required} icon={ClipboardCheck} cfg={SEV.review_required} active={filterSeverity === 'review_required'} onClick={() => setFilterSeverity(f => f === 'review_required' ? 'all' : 'review_required')} />
           )}
@@ -573,7 +574,7 @@ export default function Vertragsablaeufe() {
           <div className="rounded-xl border border-border overflow-hidden bg-card shadow-xs overflow-x-auto">
             <TableHeader />
             <div>
-              {['expired', 'critical', 'urgent', 'warning', 'process', 'early', 'review_required'].map(renderGroup)}
+              {['critical', 'urgent', 'warning', 'process', 'early', 'expired', 'review_required'].map(renderGroup)}
             </div>
           </div>
         )}

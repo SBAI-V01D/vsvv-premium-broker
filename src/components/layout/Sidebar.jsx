@@ -53,8 +53,9 @@ const navGroups = [
   {
     label: 'Cockpit',
     items: [
-      { label: 'Dashboard',        icon: LayoutDashboard, path: '/',          color: 'primary' },
-      { label: 'Broker Reporting', icon: BarChart2,       path: '/reporting', color: 'primary' },
+      { label: 'Dashboard',        icon: LayoutDashboard, path: '/',                  color: 'primary' },
+      { label: 'Vertragsabläufe',  icon: Activity,        path: '/vertragsablaeufe', color: 'primary' },
+      { label: 'Broker Reporting', icon: BarChart2,        path: '/reporting',        color: 'primary' },
     ],
   },
   {
