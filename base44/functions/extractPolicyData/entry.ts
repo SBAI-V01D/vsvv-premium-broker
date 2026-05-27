@@ -309,7 +309,59 @@ Rückgabe EXAKT als JSON:
     if (extractedData.age_group) sparteData.age_group = extractedData.age_group;
     if (extractedData.payment_frequency) sparteData.zahlungsintervall = extractedData.payment_frequency;
 
-    console.log(`[extractPolicyData] SUCCESS: insurer=${insurer}, product=${product}, name=${firstName} ${lastName}, zip=${zipCode}, role=${role}`);
+    // ── VALIDATION ENGINE: Intelligente Fragen nur bei Unsicherheit ─────────
+    const validationQuestions = [];
+    const confidences = extractedData.field_confidences || {};
+    
+    // Frage 1: Rollen-Unsicherheit (policy_holder_name vs first_name/last_name)
+    if (extractedData.policy_holder_name && firstName && lastName) {
+      const holderLower = extractedData.policy_holder_name.toLowerCase();
+      const insuredLower = `${firstName} ${lastName}`.toLowerCase();
+      if (holderLower !== insuredLower && (confidences.policy_holder_name || 0) < 0.7) {
+        validationQuestions.push({
+          field: 'primary_customer_role',
+          question: `${extractedData.policy_holder_name} wurde als Prämiemzahler erkannt. Soll diese Person Hauptkontakt sein?`,
+          options: [
+            { label: 'Ja, Hauptkontakt', value: 'policy_holder' },
+            { label: 'Nein, versicherte Person', value: 'insured_person' }
+          ]
+        });
+      }
+    }
+    
+    // Frage 2: Familienmitglied vs Hauptkontakt
+    if (extractedData.role && ['Kind', 'Ehepartner'].includes(extractedData.role)) {
+      validationQuestions.push({
+        field: 'family_role_confirmation',
+        question: `${firstName} ${lastName} wurde als ${extractedData.role.toLowerCase()} erkannt. Korrekt?`,
+        options: [
+          { label: 'Ja', value: 'confirmed' },
+          { label: 'Nein, Hauptkontakt', value: 'primary' }
+        ]
+      });
+    }
+    
+    // Frage 3: Niedrige Confidence bei kritischen Feldern
+    const criticalFields = ['insurer', 'policy_number', 'insurance_type', 'premium_monthly'];
+    const lowConfidenceFields = criticalFields.filter(f => (confidences[f] || 1) < 0.6);
+    if (lowConfidenceFields.length > 0) {
+      validationQuestions.push({
+        field: 'low_confidence_warning',
+        question: `Folgende Daten wurden mit niedriger Konfidenz erkannt. Bitte prüfen:`,
+        options: [
+          { label: 'Ich prüfe manuell', value: 'manual_review' }
+        ]
+      });
+    }
+    
+    // Gesamte Confidence berechnen
+    const avgConfidence = Object.values(confidences).length > 0
+      ? Object.values(confidences).reduce((a, b) => a + b, 0) / Object.values(confidences).length
+      : 0.5;
+    
+    const requiresValidation = validationQuestions.length > 0 || avgConfidence < 0.6;
+    
+    console.log(`[extractPolicyData] Validation: ${validationQuestions.length} questions, confidence=${avgConfidence.toFixed(2)}`);
 
     return Response.json({
       success: true,
@@ -342,7 +394,11 @@ Rückgabe EXAKT als JSON:
         additional_products: [],
         notes: null,
         document_type: (extractedData.document_type || 'Unbekannt'),
-        field_confidences: extractedData.field_confidences || {}
+        field_confidences: confidences,
+        confidence_score: avgConfidence,
+        requires_validation: requiresValidation,
+        validation_questions: validationQuestions,
+        low_confidence_fields: lowConfidenceFields
       }
     });
 
