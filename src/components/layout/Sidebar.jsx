@@ -9,6 +9,7 @@ import {
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
 import { resolveRole, ROLE_LABELS } from '@/lib/rbac';
+import GlobalSearch from './GlobalSearch';
 
 function useSidebarBadges() {
   const [badges, setBadges] = useState({});
@@ -151,6 +152,9 @@ export default function Sidebar({ onNavigate }) {
           </div>
         )}
       </div>
+
+      {/* ── Global Search ─────────────────────────────────────────── */}
+      <GlobalSearch collapsed={collapsed} />
 
       {/* ── Navigation ───────────────────────────────────────────────── */}
       <nav className="flex-1 overflow-y-auto py-3 scrollbar-none" style={{ scrollbarWidth: 'none' }}>
