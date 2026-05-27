@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils'
 import {
   ChevronDown, ChevronUp, ChevronRight,
   TrendingUp, Target, RefreshCw,
-  AlertTriangle, Zap, BarChart2, Building2, User
+  AlertTriangle, Zap, BarChart2, Building2, User, Plus, Loader2
 } from 'lucide-react'
 
 import TodayDashboard from '@/components/dashboard/TodayDashboard'
@@ -76,6 +76,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [selectedTask, setSelectedTask] = useState(null)
   const [formData, setFormData] = useState({ title: '', status: '', notes: '', due_date: '' })
+  const [quickTask, setQuickTask] = useState('')
   const queryClient = useQueryClient()
 
   const { data: tasks = [] } = useQuery({
@@ -172,6 +173,11 @@ export default function Dashboard() {
     const d = Math.ceil((new Date(c.end_date) - today) / 86400000)
     return d <= 7
   }).length
+
+  const createTaskMutation = useMutation({
+    mutationFn: (title) => base44.entities.Task.create({ title, task_type: 'general', priority: 'medium', status: 'open' }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['dashboard_tasks'] }); setQuickTask('') },
+  })
 
   const updateMutation = useMutation({
     mutationFn: (data) => base44.entities.Task.update(selectedTask.id, {
@@ -300,6 +306,27 @@ export default function Dashboard() {
           />
         </div>
 
+        {/* Quick Task Creation */}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={quickTask}
+            onChange={e => setQuickTask(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && quickTask.trim()) createTaskMutation.mutate(quickTask.trim()) }}
+            placeholder="Schnellaufgabe erstellen... (Enter)"
+            className="flex-1 h-9 text-sm border border-border rounded-lg px-3 bg-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+          <Button
+            size="sm"
+            disabled={!quickTask.trim() || createTaskMutation.isPending}
+            onClick={() => createTaskMutation.mutate(quickTask.trim())}
+            className="h-9 gap-1.5"
+          >
+            {createTaskMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+            Aufgabe
+          </Button>
+        </div>
+
         {/* Operative Content */}
         <TodayDashboard
           openTasks={openTasks}
@@ -337,7 +364,7 @@ export default function Dashboard() {
               {newCustomers.map(customer => (
                 <button
                   key={customer.id}
-                  onClick={() => navigate(`/kunden/${customer.id}`)}
+                  onClick={() => navigate(`/kunden/${customer.id}/360`)}
                   className="flex items-center gap-3 p-3 rounded-lg border border-[hsl(var(--border-subtle))]/30 bg-[hsl(var(--surface-1))] hover:bg-[hsl(var(--surface-2))] hover:border-[hsl(var(--border-subtle))]/50 transition-all text-left group"
                 >
                   <div className={cn(
@@ -379,6 +406,9 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Geburtstage */}
+        <BirthdaySection />
+
         {/* AI Intelligence Panel */}
         <AiInsightsPanel />
 
@@ -418,7 +448,7 @@ export default function Dashboard() {
             )}
             <DialogFooter className="flex justify-between">
               {selectedTask?.id && (
-                <Button variant="destructive" size="sm" onClick={() => { if (confirm('Aufgabe löschen?')) deleteMutation.mutate(selectedTask.id) }}>
+                <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(selectedTask.id)}>
                   Löschen
                 </Button>
               )}
