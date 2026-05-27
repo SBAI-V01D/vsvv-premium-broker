@@ -342,7 +342,10 @@ export default function Vertragsablaeufe() {
         const ao = order[a.topAction?.severity] ?? 9
         const bo = order[b.topAction?.severity] ?? 9
         if (ao !== bo) return ao - bo
-        return (a.topAction?.days ?? 999) - (b.topAction?.days ?? 999)
+        // Innerhalb derselben Gruppe: nach tatsächlichem Ablaufdatum sortieren (zuerst fällig = zuerst angezeigt)
+        const aDays = daysUntil(a.contract.end_date) ?? 999
+        const bDays = daysUntil(b.contract.end_date) ?? 999
+        return aDays - bDays
       })
   }, [contracts, filterProcessStatus])
 
