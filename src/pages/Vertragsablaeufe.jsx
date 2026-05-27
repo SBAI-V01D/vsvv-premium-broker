@@ -46,7 +46,7 @@ function analyzeContract(contract) {
     actions.push({ type: 'ablauf', severity: sev, days: endDays })
   }
 
-  const order = { critical: 0, urgent: 1, warning: 2, process: 3, early: 4, expired: 5, review_required: 6 }
+  const order = { critical: 0, urgent: 1, warning: 2, expired: 3, process: 4, early: 5, review_required: 6 }
   actions.sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9))
   return actions
 }
@@ -346,7 +346,7 @@ export default function Vertragsablaeufe() {
       .filter(item => item.actions.length > 0)
       .sort((a, b) => {
         // Aktionierbare zuerst — abgelaufene zuletzt (kann nicht mehr gehandelt werden)
-        const order = { critical: 0, urgent: 1, warning: 2, process: 3, early: 4, expired: 5, review_required: 6 }
+        const order = { critical: 0, urgent: 1, warning: 2, expired: 3, process: 4, early: 5, review_required: 6 }
         const ao = order[a.topAction?.severity] ?? 9
         const bo = order[b.topAction?.severity] ?? 9
         if (ao !== bo) return ao - bo
@@ -581,7 +581,7 @@ export default function Vertragsablaeufe() {
           <div className="rounded-xl border border-border overflow-hidden bg-card shadow-xs overflow-x-auto">
             <TableHeader />
             <div>
-              {['critical', 'urgent', 'warning', 'process', 'early', 'expired', 'review_required'].map(renderGroup)}
+              {['critical', 'urgent', 'warning', 'expired', 'process', 'early', 'review_required'].map(renderGroup)}
             </div>
           </div>
         )}

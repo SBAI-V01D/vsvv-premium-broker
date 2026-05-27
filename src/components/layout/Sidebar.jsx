@@ -77,7 +77,6 @@ const navGroups = [
   {
     label: 'Administration',
     items: [
-      { label: 'Vertragsabläufe', icon: Activity,    path: '/vertragsablaeufe', color: 'primary' },
       { label: 'Verträge',        icon: FileText,    path: '/vertraege',        color: 'primary' },
       { label: 'Anträge',         icon: CheckSquare, path: '/antraege',         color: 'primary' },
       { label: 'Dokumente',       icon: BookOpen,    path: '/dokumente',        color: 'primary' },
