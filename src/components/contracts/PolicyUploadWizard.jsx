@@ -384,10 +384,17 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     let policyHolderCustomer = null
     let isChildOfPolicyHolder = false
     if (d.policy_holder_name) {
-      const phName = d.policy_holder_name.trim().toLowerCase()
-      policyHolderCustomer = customers.find(c => `${c.first_name} ${c.last_name}`.trim().toLowerCase() === phName)
+      const phRaw = d.policy_holder_name.trim()
+      const phLower = phRaw.toLowerCase()
+      // Try both "Vorname Nachname" and "Nachname Vorname" (Swiss docs often reverse)
+      const phReversed = phRaw.split(' ').reverse().join(' ').toLowerCase()
+      policyHolderCustomer = customers.find(c => {
+        const cName = `${c.first_name || ''} ${c.last_name || ''}`.trim().toLowerCase()
+        const cNameRev = `${c.last_name || ''} ${c.first_name || ''}`.trim().toLowerCase()
+        return cName === phLower || cName === phReversed || cNameRev === phLower || cNameRev === phReversed
+      })
       const insuredName = `${d.first_name} ${d.last_name}`.trim().toLowerCase()
-      if (policyHolderCustomer && insuredName !== phName) isChildOfPolicyHolder = true
+      if (policyHolderCustomer && insuredName !== phLower && insuredName !== phReversed) isChildOfPolicyHolder = true
     }
 
     const sparteKey = mapInsuranceType(d.insurance_type) || d.insurance_type || ''
