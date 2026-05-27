@@ -64,17 +64,27 @@ export default function Contracts() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Contract.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contracts'] }); setShowForm(false); setEditing(null) },
+    onSuccess: (newContract) => {
+      queryClient.setQueryData(['contracts'], (old = []) => [newContract, ...old]);
+      setShowForm(false); setEditing(null);
+    },
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Contract.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['contracts'] }); setShowForm(false); setEditing(null) },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['contracts'], (old = []) =>
+        old.map(c => c.id === updated.id ? updated : c)
+      );
+      setShowForm(false); setEditing(null);
+    },
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Contract.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contracts'] }),
+    onSuccess: (_, id) => {
+      queryClient.setQueryData(['contracts'], (old = []) => old.filter(c => c.id !== id));
+    },
   })
 
   const getCustomer = (id) => customers.find(c => c.id === id)
@@ -112,8 +122,10 @@ export default function Contracts() {
       note,
       metadata: JSON.stringify(metadata),
     })
-    await base44.entities.Contract.update(contract.id, { custom_status: status })
-    queryClient.invalidateQueries({ queryKey: ['contracts'] })
+    const updated = await base44.entities.Contract.update(contract.id, { custom_status: status })
+    queryClient.setQueryData(['contracts'], (old = []) =>
+      old.map(c => c.id === contract.id ? { ...c, custom_status: status } : c)
+    )
     setStatusChanging(null)
   }
 
@@ -383,7 +395,15 @@ export default function Contracts() {
                       <div className="pt-3">
                         <CancellationPanel
                           contract={contract}
-                          onUpdated={() => queryClient.invalidateQueries({ queryKey: ['contracts'] })}
+                          onUpdated={(updated) => {
+                            if (updated) {
+                              queryClient.setQueryData(['contracts'], (old = []) =>
+                                old.map(c => c.id === updated.id ? updated : c)
+                              );
+                            } else {
+                              queryClient.invalidateQueries({ queryKey: ['contracts'] });
+                            }
+                          }}
                         />
                       </div>
                     </div>

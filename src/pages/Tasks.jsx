@@ -63,17 +63,27 @@ export default function Tasks() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Task.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tasks'] }); closeForm(); },
+    onSuccess: (newTask) => {
+      queryClient.setQueryData(['tasks'], (old = []) => [newTask, ...old]);
+      closeForm();
+    },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Task.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['tasks'] }); closeForm(); },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['tasks'], (old = []) =>
+        old.map(t => t.id === updated.id ? updated : t)
+      );
+      closeForm();
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Task.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+    onSuccess: (_, id) => {
+      queryClient.setQueryData(['tasks'], (old = []) => old.filter(t => t.id !== id));
+    },
   });
 
   const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setShowForm(true); };

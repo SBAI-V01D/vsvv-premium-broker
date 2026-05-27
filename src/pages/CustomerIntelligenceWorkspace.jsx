@@ -253,15 +253,25 @@ export default function CustomerIntelligenceWorkspace() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Customer.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setShowForm(false); setEditing(null); },
+    onSuccess: (newCustomer) => {
+      queryClient.setQueryData(['customers'], (old = []) => [newCustomer, ...old]);
+      setShowForm(false); setEditing(null);
+    },
   });
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Customer.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customers'] }); setShowForm(false); setEditing(null); },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['customers'], (old = []) =>
+        old.map(c => c.id === updated.id ? updated : c)
+      );
+      setShowForm(false); setEditing(null);
+    },
   });
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Customer.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['customers'] }),
+    onSuccess: (_, id) => {
+      queryClient.setQueryData(['customers'], (old = []) => old.filter(c => c.id !== id));
+    },
   });
 
   const segments = useMemo(() => buildSegments(customers, tasks, contracts, documents), [customers, tasks, contracts, documents]);
