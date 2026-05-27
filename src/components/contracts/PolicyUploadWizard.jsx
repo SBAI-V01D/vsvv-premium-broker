@@ -10,6 +10,7 @@ import {
   FileText, Search, X, ChevronRight, MapPin
 } from 'lucide-react'
 import { base44 } from '@/api/base44Client'
+import ExtractionReviewPanel from './ExtractionReviewPanel'
 import { lookupPostalCode, fixOcrPostalCode } from '@/lib/swissPostalCodes'
 import { useMemo } from 'react'
 import { ALL_SPARTEN, getFieldsForSparte, FRANCHISE_OPTIONS } from '@/lib/insuranceSparten'
@@ -246,6 +247,8 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [extractedRaw, setExtractedRaw] = useState(null)
+  const [showAiReview, setShowAiReview] = useState(false)
+  const [reviewedData, setReviewedData] = useState(null)
 
   const [fileUrl, setFileUrl] = useState(null)
   const [fileName, setFileName] = useState('')
@@ -365,148 +368,73 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
     }
     
     setExtractedRaw(d)
-
-      // CRITICAL: Check if extracted person is the POLICY HOLDER (Versicherungsnehmer)
-      // If policy_holder_name matches a customer → that customer is the Hauptkontakt
-      let policyHolderCustomer = null;
-      let isChildOfPolicyHolder = false;
-      
-      if (d.policy_holder_name) {
-        const phName = d.policy_holder_name.trim().toLowerCase();
-        policyHolderCustomer = customers.find(c => {
-          const fullName = `${c.first_name} ${c.last_name}`.trim().toLowerCase();
-          return fullName === phName;
-        });
-        
-        // Check if versicherte Person is DIFFERENT from Versicherungsnehmer
-        const insuredName = `${d.first_name} ${d.last_name}`.trim().toLowerCase();
-        if (policyHolderCustomer && insuredName !== phName) {
-          isChildOfPolicyHolder = true;
-        }
-      }
-
-      // Call automatic customer matching for VERSICHERTE PERSON (extracted first_name/last_name)
-      let matchingResult = { decision: { action: 'new_customer' }, all_matches: [] };
-      try {
-        const matchRes = await base44.functions.invoke('matchCustomerAndFamily', {
-          extractedData: d,
-          organization_id: organizations[0]?.id || '',
-          policyHolderCustomerId: policyHolderCustomer?.id || null
-        });
-        if (matchRes?.data?.success) {
-          matchingResult = matchRes.data;
-        }
-      } catch (matchErr) {
-        console.warn('[PolicyUploadWizard] Matching error (non-fatal):', matchErr.message);
-      }
-
-      // Build contracts from extracted data
-      const sparteKey = mapInsuranceType(d.insurance_type) || d.insurance_type || ''
-      // Merge sparte_data: backend already builds it, but also check top-level fields as fallback
-      const sparteData = {
-        ...(d.sparte_data || {}),
-        ...(d.model ? { model: d.model } : {}),
-        ...(d.franchise ? { franchise: d.franchise } : {}),
-        ...(d.age_group ? { age_group: d.age_group } : {}),
-        ...(d.payment_frequency ? { zahlungsintervall: d.payment_frequency } : {}),
-      }
-
-      const baseContract = {
-        insurer: d.insurer || d.provider || '',
-        policy_number: d.policy_number || '',
-        sparte: sparteKey,
-        product: d.product || '',
-        premium_monthly: d.premium_monthly || '',
-        premium_yearly: d.premium_yearly || '',
-        start_date: d.start_date || '',
-        end_date: d.end_date || '',
-        cancellation_deadline: d.cancellation_deadline || '',
-        renewal_date: d.renewal_date || '',
-        notes: d.notes || '',
-        sparte_data: sparteData,
-        status: 'active',
-      }
-
-      const additionalContracts = (d.additional_products || []).map(ap => ({
-        ...baseContract,
-        sparte: 'vvg_zusatz',
-        product: ap.product || '',
-        premium_monthly: ap.premium_monthly || '',
-        premium_yearly: ap.premium_yearly || '',
-        policy_number: ap.policy_number || baseContract.policy_number,
-        notes: '',
-        sparte_data: {},
-      }))
-
-      // AUTO-SKIP TO STEP 3 if policy holder found and child detected
-      if (isChildOfPolicyHolder && policyHolderCustomer) {
-        const insuredFirstName = (d.first_name || '').trim();
-        const insuredLastName = (d.last_name || '').trim();
-        setSelectedCustomer(policyHolderCustomer);
-        setCustomerMode('policy_holder_main');
-        setNewCustomerData({
-          first_name: insuredFirstName,
-          last_name: insuredLastName,
-          birthdate: d.birthdate || '',
-          email: policyHolderCustomer.email || '', // Inherit from policy holder
-          phone: (d.phone || '').trim(),
-          mobile: (d.mobile || '').trim(),
-          street: (d.street || '').trim(),
-          city: (d.city || '').trim(),
-          zip_code: (d.zip_code || '').trim(),
-          canton: (d.canton || '').trim(),
-          family_role: d.role === 'Kind' ? 'child' : d.role === 'Ehepartner' ? 'spouse' : 'other'
-        });
-        setContractList([baseContract, ...additionalContracts]);
-        setActiveContractIdx(0);
-        setStep(3);
-        return;
-      }
-
-      setContractList([baseContract, ...additionalContracts])
-      setActiveContractIdx(0)
-
-      // Setze versicherte Person Daten (IMMER mit Extraktion füllen)
-      const extractedCustomerData = {
-        first_name: (d.first_name || '').trim(),
-        last_name: (d.last_name || '').trim(),
-        birthdate: d.birthdate || '',
-        email: (d.email || '').trim(),
-        phone: (d.phone || '').trim(),
-        mobile: (d.mobile || '').trim(),
-        street: (d.street || '').trim(),
-        city: (d.city || '').trim(),
-        zip_code: (d.zip_code || '').trim(),
-        canton: (d.canton || '').trim(),
-      }
-      setNewCustomerData(extractedCustomerData)
-
-      // Entscheidungslogik: AUTO-SKIP zu Step 3 wenn neuer Kunde?
-      const insuredFirstName = (d.first_name || '').trim();
-      const insuredLastName = (d.last_name || '').trim();
-      const insuredFullName = `${insuredFirstName} ${insuredLastName}`.trim();
-      const policyHolderMatches = policyHolderCustomer !== null;
-      const familyMemberMatches = isChildOfPolicyHolder;
-      const isNewCustomer = !policyHolderMatches && !familyMemberMatches;
-
-      if (isNewCustomer && insuredFirstName && insuredLastName) {
-        // ✓ Neuer Kunde: Direkt zu Step 3 mit Pre-Filled Daten
-        setSelectedCustomer(null);
-        setCustomerMode('new');
-        setStep(3);
-      } else {
-        // Broker-Entscheidung nötig: Go to Step 2
-        setCustomerMode('existing_structure');
-        setSelectedCustomer(null);
-        setStep(2);
-      }
+    setReviewedData(d)
+    setShowAiReview(true)
       } catch (err) {
         setExtracting(false)
         setError(`Fehler: ${err.message || 'Unbekannter Fehler beim Upload'}`)
       }
       }
 
-       // ── Step 3: Save ─────────────────────────────────────────────────────────────
+  // Step 1.5: confirm review and run matching
+  const handleReviewConfirm = async () => {
+    const d = reviewedData
+    if (!d) return
+
+    let policyHolderCustomer = null
+    let isChildOfPolicyHolder = false
+    if (d.policy_holder_name) {
+      const phName = d.policy_holder_name.trim().toLowerCase()
+      policyHolderCustomer = customers.find(c => `${c.first_name} ${c.last_name}`.trim().toLowerCase() === phName)
+      const insuredName = `${d.first_name} ${d.last_name}`.trim().toLowerCase()
+      if (policyHolderCustomer && insuredName !== phName) isChildOfPolicyHolder = true
+    }
+
+    const sparteKey = mapInsuranceType(d.insurance_type) || d.insurance_type || ''
+    const sparteData = { ...(d.sparte_data || {}), ...(d.model ? { model: d.model } : {}), ...(d.franchise ? { franchise: d.franchise } : {}), ...(d.payment_frequency ? { zahlungsintervall: d.payment_frequency } : {}) }
+    const baseContract = {
+      insurer: d.insurer || '', policy_number: d.policy_number || '', sparte: sparteKey,
+      product: d.product || '', premium_monthly: d.premium_monthly || '', premium_yearly: d.premium_yearly || '',
+      start_date: d.start_date || '', end_date: d.end_date || '', cancellation_deadline: d.cancellation_deadline || '',
+      renewal_date: d.renewal_date || '', notes: d.notes || '', sparte_data: sparteData, status: 'active',
+    }
+    const additionalContracts = (d.additional_products || []).map(ap => ({ ...baseContract, sparte: 'vvg_zusatz', product: ap.product || '', premium_monthly: ap.premium_monthly || '', premium_yearly: ap.premium_yearly || '', policy_number: ap.policy_number || baseContract.policy_number, notes: '', sparte_data: {} }))
+
+    const extractedCustomerData = {
+      first_name: (d.first_name || '').trim(), last_name: (d.last_name || '').trim(),
+      birthdate: d.birthdate || '', email: (d.email || '').trim(), phone: (d.phone || '').trim(),
+      mobile: (d.mobile || '').trim(), street: (d.street || '').trim(),
+      city: (d.city || '').trim(), zip_code: (d.zip_code || '').trim(), canton: (d.canton || '').trim(),
+    }
+
+    setShowAiReview(false)
+
+    if (isChildOfPolicyHolder && policyHolderCustomer) {
+      setSelectedCustomer(policyHolderCustomer)
+      setCustomerMode('policy_holder_main')
+      setNewCustomerData({ ...extractedCustomerData, family_role: d.role === 'Kind' ? 'child' : d.role === 'Ehepartner' ? 'spouse' : 'other' })
+      setContractList([baseContract, ...additionalContracts])
+      setActiveContractIdx(0)
+      setStep(3)
+      return
+    }
+
+    setContractList([baseContract, ...additionalContracts])
+    setActiveContractIdx(0)
+    setNewCustomerData(extractedCustomerData)
+
+    if (extractedCustomerData.first_name && extractedCustomerData.last_name && !policyHolderCustomer) {
+      setSelectedCustomer(null)
+      setCustomerMode('new')
+      setStep(3)
+    } else {
+      setCustomerMode('existing_structure')
+      setSelectedCustomer(null)
+      setStep(2)
+    }
+  }
+
+       // Step 3: Save
   const handleSave = async () => {
     setSaving(true)
     setError(null)
@@ -737,6 +665,7 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
 
   const handleClose = () => {
     setStep(1); setFileUrl(null); setFileName(''); setError(null); setExtractedRaw(null)
+    setShowAiReview(false); setReviewedData(null)
     setContractList([{ insurer: '', policy_number: '', sparte: '', product: '', premium_monthly: '', premium_yearly: '', start_date: '', end_date: '', cancellation_deadline: '', status: 'active', notes: '', sparte_data: {} }])
     setActiveContractIdx(0)
     setSelectedCustomer(null); setCustomerMode('search'); setMatchCandidates([]); setNewCustomerData({})
@@ -749,15 +678,17 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg font-bold">
             <FileText className="w-5 h-5 text-primary" />
-            Police hochladen & Vertrag erfassen
+            Police hochladen
           </DialogTitle>
         </DialogHeader>
 
         {/* Step indicator */}
         <div className="flex items-center gap-2 py-2 border-b flex-wrap">
-          <StepBadge n={1} label="Upload" active={step === 1} done={step > 1} />
+          <StepBadge n={1} label="Upload" active={step === 1 && !showAiReview} done={step > 1 || showAiReview} />
           <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-          <StepBadge n={2} label="Kunde" active={step === 2} done={step > 2} />
+          <StepBadge n={2} label="KI Prüfen" active={showAiReview} done={!showAiReview && step > 1} />
+          <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+          <StepBadge n={3} label="Kunde" active={step === 2} done={step > 2} />
           <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
           <StepBadge n={3} label="Vertragsdaten" active={step === 3} done={step > 3} />
           <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
@@ -770,8 +701,17 @@ export default function PolicyUploadWizard({ open, onClose, customers = [], orga
           </div>
         )}
 
-        {/* ── STEP 1: Upload ── */}
-        {step === 1 && (
+        {step === 1 && showAiReview && reviewedData && (
+          <ExtractionReviewPanel
+            data={reviewedData}
+            confidences={reviewedData.field_confidences || {}}
+            documentType={reviewedData.document_type}
+            onChange={setReviewedData}
+            onConfirm={handleReviewConfirm}
+            onBack={() => { setShowAiReview(false); setReviewedData(null); setFileUrl(null); setFileName(''); }}
+          />
+        )}
+        {step === 1 && !showAiReview && (
           <div className="py-8 flex flex-col items-center gap-4">
             {uploading || extracting ? (
               <div className="text-center space-y-3">

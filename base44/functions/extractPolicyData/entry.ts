@@ -128,13 +128,28 @@ ALLGEMEINE ERKENNUNGSREGELN:
 4. Leerzeichen trimmen
 5. KEINE Erfindung von Daten — bei Unsicherheit null setzen
 
+DOKUMENTTYP (document_type):
+Erkenne den Typ anhand des Inhalts:
+- "Police" = aktiver Versicherungsvertrag / Policendokument
+- "Offerte" = Angebot / Offerte
+- "Rechnung" = Prämienrechnung
+- "Schaden" = Schadensmeldung
+- "Kündigung" = Kündigungsschreiben
+- "Leistungsabrechnung" = Abrechnungsdokument
+- "Unbekannt" = nicht zuordbar
+
+CONFIDENCE SCORES (field_confidences):
+Für jedes extrahierte Feld einen Wert 0.0–1.0 zurückgeben:
+- 0.95–1.0: explizit und eindeutig im Dokument
+- 0.80–0.94: klar ableitbar, keine Ambiguität
+- 0.65–0.79: plausibel, aber mehrere Interpretationen möglich
+- 0.40–0.64: unsicher, nur Annahme
+- < 0.40: nicht gefunden oder sehr unsicher → Feld = null
+
 AUSGABE:
 - Rückgabe ein vollständiges JSON-Objekt
 - Leere Werte als null (nicht als leerer String)
-- Daten verfügbar? → Feld mit echtem Wert füllen
-- Daten nicht verfügbar? → null setzen
 - KEINE Erfindung von Daten
-- KEINE Annahmen wenn nicht eindeutig
 
 Rückgabe EXAKT als JSON:
 {
@@ -164,8 +179,24 @@ Rückgabe EXAKT als JSON:
   "payment_frequency": "monatlich" oder "jährlich" oder null,
   "model": "Hausarztmodell" oder "HMO" oder "Telmed" oder null,
   "franchise": "300" oder "1500" oder null,
-  "age_group": "Erwachsener" oder "Kind (0–18 Jahre)" oder null
+  "age_group": "Erwachsener" oder "Kind (0–18 Jahre)" oder null,
+  "document_type": "Police" oder "Offerte" oder "Rechnung" oder "Schaden" oder "Kündigung" oder "Leistungsabrechnung" oder "Unbekannt",
+  "field_confidences": {
+    "policy_holder_name": 0.0,
+    "first_name": 0.0,
+    "last_name": 0.0,
+    "birthdate": 0.0,
+    "insurer": 0.0,
+    "policy_number": 0.0,
+    "insurance_type": 0.0,
+    "product": 0.0,
+    "premium_monthly": 0.0,
+    "start_date": 0.0,
+    "end_date": 0.0,
+    "street": 0.0
+  }
 }`,
+        add_context_from_internet: false,
         file_urls: [fileInput],
         response_json_schema: {
           type: 'object',
@@ -196,7 +227,9 @@ Rückgabe EXAKT als JSON:
             payment_frequency: { type: ['string', 'null'] },
             model: { type: ['string', 'null'] },
             franchise: { type: ['string', 'null'] },
-            age_group: { type: ['string', 'null'] }
+            age_group: { type: ['string', 'null'] },
+            document_type: { type: ['string', 'null'] },
+            field_confidences: { type: ['object', 'null'], additionalProperties: { type: 'number' } }
           }
         }
       });
@@ -291,7 +324,9 @@ Rückgabe EXAKT als JSON:
         payment_frequency: extractedData.payment_frequency || null,
         sparte_data: sparteData,
         additional_products: [],
-        notes: null
+        notes: null,
+        document_type: (extractedData.document_type || 'Unbekannt'),
+        field_confidences: extractedData.field_confidences || {}
       }
     });
 
