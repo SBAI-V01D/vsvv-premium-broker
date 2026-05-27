@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import UniversalDocumentIntake from '@/components/documents/UniversalDocumentIntake'
+import PolicyUploadWizard from '@/components/contracts/PolicyUploadWizard'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,6 +46,7 @@ export default function Documents() {
   const [search, setSearch] = useState('')
   const [tab, setTab] = useState('all')
   const [smartUploadOpen, setSmartUploadOpen] = useState(false)
+  const [policyWizardOpen, setPolicyWizardOpen] = useState(false)
   const [reviewDoc, setReviewDoc] = useState(null)
   const [smartReviewDoc, setSmartReviewDoc] = useState(null)
   const [smartReviewResult, setSmartReviewResult] = useState(null)
@@ -55,6 +56,17 @@ export default function Documents() {
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ['documents'],
     queryFn: () => base44.entities.Document.list('-created_date'),
+  })
+
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers_for_wizard'],
+    queryFn: () => base44.entities.Customer.list('-created_date', 1000),
+    enabled: policyWizardOpen,
+  })
+  const { data: organizations = [] } = useQuery({
+    queryKey: ['organizations'],
+    queryFn: () => base44.entities.Organization.list(),
+    enabled: policyWizardOpen,
   })
 
 
@@ -240,6 +252,12 @@ export default function Documents() {
                 </Button>
               </>
             )}
+            <Button
+              onClick={() => setPolicyWizardOpen(true)}
+              className="gap-2 bg-primary"
+            >
+              <Zap className="w-4 h-4" /> Police erfassen
+            </Button>
             <Button onClick={() => setSmartUploadOpen(true)} variant="outline" className="gap-2">
               <Plus className="w-4 h-4" /> Dokument hochladen
             </Button>
@@ -482,11 +500,23 @@ export default function Documents() {
           </DialogContent>
         </Dialog>
 
-        <UniversalDocumentIntake
+        <SmartDocumentUpload
           open={smartUploadOpen}
-          onClose={setSmartUploadOpen}
-          customers={[]}
-          onProcessed={() => queryClient.invalidateQueries({ queryKey: ['documents'] })}
+          onOpenChange={setSmartUploadOpen}
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ['documents'] })}
+        />
+
+        <PolicyUploadWizard
+          open={policyWizardOpen}
+          onClose={() => setPolicyWizardOpen(false)}
+          customers={customers}
+          organizations={organizations}
+          onContractCreated={() => {
+            setPolicyWizardOpen(false)
+            queryClient.invalidateQueries({ queryKey: ['documents'] })
+            queryClient.invalidateQueries({ queryKey: ['contracts'] })
+            queryClient.invalidateQueries({ queryKey: ['customers'] })
+          }}
         />
       </div>
     </div>
