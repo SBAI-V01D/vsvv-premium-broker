@@ -23,11 +23,15 @@ Deno.serve(async (req) => {
     console.log(`[extractPolicyData] START file=${file_name}`);
 
     let extractedData = {};
+
+    // Pass file URL directly to LLM (Gemini supports external PDF URLs)
+    const fileInput = file_url;
+    console.log(`[extractPolicyData] Using file_url for LLM: ${file_url.substring(0, 80)}...`);
     
     try {
       // OPTIMIZED for Swiss insurance documents
       const response = await base44.integrations.Core.InvokeLLM({
-        model: 'automatic',
+        model: 'gemini_3_flash',
         prompt: `Sie sind ein Experte für Schweizer Versicherungspolicen.
 
 Extrahieren Sie alle Kundendaten und Vertragsinformationen aus diesem Dokument.
@@ -162,7 +166,7 @@ Rückgabe EXAKT als JSON:
   "franchise": "300" oder "1500" oder null,
   "age_group": "Erwachsener" oder "Kind (0–18 Jahre)" oder null
 }`,
-        file_urls: [file_url],
+        file_urls: [fileInput],
         response_json_schema: {
           type: 'object',
           properties: {
