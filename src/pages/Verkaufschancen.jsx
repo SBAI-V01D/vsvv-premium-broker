@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   Plus, Search, TrendingUp, Trophy, Target, BarChart3,
   Filter, CalendarClock, Wallet,
-  ArrowRight, RefreshCw, Star, AlertTriangle, ChevronDown
+  ArrowRight, RefreshCw, Star, AlertTriangle, ChevronDown, Archive
 } from 'lucide-react'
 import VerkaufschanceStatusBadge, { ALLE_STATUS } from '@/components/verkaufschance/VerkaufschanceStatusBadge'
 import VerkaufschanceDetail from '@/components/verkaufschance/VerkaufschanceDetail'
@@ -35,6 +35,7 @@ export default function Verkaufschancen() {
   const [showNewForm, setShowNewForm] = useState(false)
   const [newFormCustomer, setNewFormCustomer] = useState(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [showArchiv, setShowArchiv] = useState(false)
 
   const { data: verkaufschancen = [] } = useQuery({
     queryKey: ['verkaufschancen'],
@@ -104,7 +105,18 @@ export default function Verkaufschancen() {
     const matchSearch = !search.trim() || s.includes(search.toLowerCase())
     const matchStatus = filterStatus === 'all' || v.status === filterStatus
     const matchSparte = filterSparte === 'all' || v.sparte === filterSparte
+    // Wenn kein expliziter Filter auf 'verloren', verloren ins Archiv
+    const isVerloren = v.status === 'verloren'
+    if (filterStatus === 'all' && isVerloren) return false
     return matchSearch && matchStatus && matchSparte
+  }), [verkaufschancen, search, filterStatus, filterSparte])
+
+  const archiviert = useMemo(() => verkaufschancen.filter(v => {
+    if (filterStatus !== 'all') return false // bei explizitem Filter kein separates Archiv
+    const s = `${v.customer_name} ${v.title} ${v.sparte}`.toLowerCase()
+    const matchSearch = !search.trim() || s.includes(search.toLowerCase())
+    const matchSparte = filterSparte === 'all' || v.sparte === filterSparte
+    return v.status === 'verloren' && matchSearch && matchSparte
   }), [verkaufschancen, search, filterStatus, filterSparte])
 
   const selectedVs = selectedId ? verkaufschancen.find(v => v.id === selectedId) : null
@@ -325,6 +337,75 @@ export default function Verkaufschancen() {
             })}
           </CardContent>
         </Card>
+
+      {/* ── Archiv: Verlorene Chancen ────────────────────────────────────── */}
+      {archiviert.length > 0 && (
+        <div>
+          <button
+            onClick={() => setShowArchiv(!showArchiv)}
+            className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 transition-colors text-sm font-medium text-slate-600"
+          >
+            <Archive className="w-4 h-4" />
+            Archiv — Verlorene Chancen
+            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-700 text-xs font-bold">{archiviert.length}</span>
+            <ChevronDown className={cn('w-4 h-4 ml-auto transition-transform', showArchiv && 'rotate-180')} />
+          </button>
+
+          {showArchiv && (
+            <Card className="mt-2 opacity-70">
+              <CardContent className="p-0">
+                <div className="hidden md:grid grid-cols-[2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-2 px-4 py-2.5 border-b bg-muted/40 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                  <div>Kunde / Bezeichnung</div>
+                  <div>Sparte</div>
+                  <div>Status</div>
+                  <div>Gesellschaften</div>
+                  <div className="text-right">Volumen/J.</div>
+                  <div className="w-8"></div>
+                </div>
+                {archiviert.map((v, idx) => {
+                  const gesellschaften = v.gesellschaften || []
+                  const offerten = gesellschaften.filter(g => g.praemie_yearly).length
+                  return (
+                    <div
+                      key={v.id}
+                      className={cn('grid grid-cols-1 md:grid-cols-[2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-2 px-4 py-3 items-center cursor-pointer hover:bg-muted/30 transition-colors group',
+                        idx > 0 && 'border-t border-border'
+                      )}
+                      onClick={() => setSelectedId(v.id)}
+                    >
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm truncate text-slate-500">{v.customer_name || '–'}</p>
+                        <p className="text-xs text-muted-foreground truncate">{v.title || '–'}</p>
+                        {v.lost_reason && <p className="text-[10px] text-red-500 truncate">Grund: {v.lost_reason}</p>}
+                      </div>
+                      <div><p className="text-sm text-slate-500">{getSparteLabel(v.sparte) || v.sparte || '–'}</p></div>
+                      <div><VerkaufschanceStatusBadge status={v.status} /></div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          {gesellschaften.length > 0
+                            ? `${gesellschaften.length} angefragt${offerten > 0 ? `, ${offerten} Offerte(n)` : ''}`
+                            : <span className="italic">Keine</span>}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        {v.estimated_value
+                          ? <span className="text-sm font-semibold text-slate-400">CHF {v.estimated_value.toLocaleString('de-CH')}</span>
+                          : <span className="text-sm text-muted-foreground">–</span>}
+                      </div>
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={e => { e.stopPropagation(); if (confirm('Löschen?')) deleteMutation.mutate(v.id) }}
+                          className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"
+                        >×</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* ── Detail Dialog ────────────────────────────────────────────────── */}
       <Dialog open={!!selectedVs} onOpenChange={(o) => { if (!o) setSelectedId(null) }}>
