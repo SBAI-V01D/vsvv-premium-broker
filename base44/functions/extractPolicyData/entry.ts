@@ -32,36 +32,63 @@ Deno.serve(async (req) => {
 
 Extrahieren Sie alle Kundendaten und Vertragsinformationen aus diesem Dokument.
 
-KRITISCH – ROLLEN MÜSSEN STRENG GETRENNT WERDEN:
+═══════════════════════════════════════════════════════
+KRITISCH: ROLLEN PRÄZISE UNTERSCHEIDEN
+═══════════════════════════════════════════════════════
 
-**VERSICHERUNGSNEHMER (policy_holder_name)**
-= MUSS auf Seite 1 oben unter "Frau / Herr ... Strasse PLZ Stadt" stehen
-= ODER: Name in "Ihre Adresse" / "Versicherungsnehmer"
-= Der Vertragspartner / Zahler
-= Beispiel: "Samanta Albertin, Mühlesteigstrasse 30, 4125 Riehen"
+**SCHRITT 1 — VERSICHERTE PERSON (first_name, last_name) ZUERST:**
+= Die Person, FÜR DIE die Police gilt
+= Suche: "VERSICHERUNGSPOLICE für [Name]", "für [Vorname Nachname]", Info-Box mit Geburtsdatum
+= Oder: Abschnitt "Versicherte Person" / "Versicherter"
+= DIESE PERSON ist der Hauptkunde → first_name + last_name
+= Beispiel CSS: "VERSICHERUNGSPOLICE für Thomas Leuenberger" → first_name=Thomas, last_name=Leuenberger
+= Beispiel: Infobox "Thomas Leuenberger / Geburtsdatum: 05.02.1966" → Thomas Leuenberger
 
-**WICHTIG:** GANZ OBEN auf dem Dokument ZUERST nach Adressblock suchen!
-Die Adresse ist IMMER am Anfang (z.B. "Frau Samanta Albertin ...")
+**SCHRITT 2 — PRÄMIENZAHLER / ADRESSEMPFÄNGER (policy_holder_name):**
+= Die Person im ADRESSBLOCK oben links/rechts ("Frau/Herr Name, Strasse, PLZ Ort")
+= ODER: Abschnitt "Prämienzahler" / "Rechnungsempfänger"
+= Kann IDENTISCH mit versicherter Person sein → dann policy_holder_name = null
+= Kann UNTERSCHIEDLICH sein (z.B. Mutter zahlt für Kind, Frau zahlt für Mann)
+= Beispiel CSS: Adressblock zeigt "Daniela Leuenberger" → policy_holder_name="Daniela Leuenberger"
 
-**VERSICHERTE PERSON (first_name, last_name)**
-= Name in "Versicherte Person" / "Versicherte Personen" 
-= ODER: In Info-Box rechts oben "Versicherte Person: Joana Albertin"
-= Die Person auf der Police (kann Kind sein!)
-= Beispiel: "Joana Albertin" oder "Kyllian Adolf Albertin"
+**ADRESSE (street, zip_code, city):**
+= IMMER die Adresse der VERSICHERTEN PERSON verwenden
+= Falls versicherte Person keine eigene Adresse hat → Adresse des Prämienzahlers
 
-**WICHTIG:**
-- Diese KÖNNEN unterschiedlich sein (z.B. Eltern als Versicherungsnehmer, Kind als Versicherte Person)
-- ZUERST Adressblock (Versicherungsnehmer) extrahieren
-- DANN Info-Box oder "Versicherte Person" extrahieren
-- Nur echte Personen (keine "Baby" Placeholder)
+═══════════════════════════════════════════════════════
+KRITISCH: VERSICHERUNGSART KORREKT KLASSIFIZIEREN
+═══════════════════════════════════════════════════════
+
+**insurance_type REGELN — DIESE REGELN HABEN HÖCHSTE PRIORITÄT:**
+
+REGEL 1: Suche nach den Abschnittsüberschriften im Dokument:
+- Gibt es "Versicherungen nach Versicherungsvertragsgesetz (VVG)" OHNE KVG-Abschnitt? → "Krankenzusatz VVG"
+- Gibt es "Versicherungen nach KVG" / "Grundversicherung" / "Obligatorische Krankenversicherung"? → "Krankenversicherung KVG"
+- Gibt es BEIDE Abschnitte? → "Krankenversicherung KVG" (für KVG-Hauptprodukt)
+
+REGEL 2: Produktname als Indikator:
+- "Spitalversicherung" (egal welche Variante: myFlex, mySelect, Balance, Halbprivat, Privat) = IMMER VVG!
+- "Zusatzversicherung" = IMMER VVG!
+- "Grundversicherung" / "Obligatorische KV" = IMMER KVG!
+- "Unfallausschluss" allein ändert die Klassifizierung NICHT
+
+REGEL 3: Total-Zeile als Kontrollcheck:
+- Steht nur "Total Nettoprämie VVG" (kein KVG)? → zwingend "Krankenzusatz VVG"
+- Steht "Total Nettoprämie KVG"? → zwingend "Krankenversicherung KVG"
+
+KONKRETES BEISPIEL CSS SPITALVERSICHERUNG:
+Dokument zeigt: "VVG Spitalversicherung myFlex", "Total Nettoprämie VVG: 63.10"
+→ insurance_type = "Krankenzusatz VVG" (NICHT KVG!)
+→ product = "Spitalversicherung myFlex"
+→ premium_monthly = 63.10 (Nettobetrag nach Rabatt)
 
 PERSONENDATEN:
-- policy_holder_name: VERSICHERUNGSNEHMER (Vertragspartner)
+- policy_holder_name: PRÄMIENZAHLER (nur wenn ABWEICHEND von versicherter Person, sonst null)
 - first_name: VERSICHERTE PERSON (Person auf Police)
 - last_name: VERSICHERTE PERSON
 - birthdate: VERSICHERTE PERSON Geburtsdatum (YYYY-MM-DD)
 
-ADRESSDATEN:
+ADRESSDATEN (der versicherten Person):
 - street: Straßenname und Nummer (z.B. "Musterstrasse 42")
 - zip_code: Postleitzahl (4-stellig)
 - city: Ortschaft
@@ -75,33 +102,27 @@ KONTAKTDATEN:
 VERSICHERUNGSDATEN:
 - insurer: Versicherungsgesellschaft (z.B. "Allianz", "CSS", "Generali", "Helsana", "Swica", "Sanitas", "KPT", "Concordia", "ÖKK")
 - policy_number: Policen-Nummer / Vertragsnummer (WICHTIG: vollständige Nummer extrahieren)
-- insurance_type: Versicherungsart (z.B. "Krankenversicherung KVG", "Krankenzusatz VVG", "Motorfahrzeug", "Hausrat", "Haftpflicht", "Leben", "BVG")
-- product: Produkt/Tarif-Bezeichnung (SEHR WICHTIG! z.B. "COMPACT", "STANDARD", "HMO", "Telmed", "TOP", "BASIC", "Comfort", "Vollkasko", "OPTIMA", "Natura", "SanaTel", "myFlex", "easy sana", "Smile")
-  * Steht oft in GROSSBUCHSTABEN direkt neben oder unter dem Versicherungsnamen
-  * Ist der Name des Versicherungsmodells, nicht die Sparte
-  * Bei Gruppenversicherungen: Produkt-/Tarifname aus der Police extrahieren (z.B. "SanaTel", "HOSPITAL", "GLOBAL Care")
-  * Beispiele: "CSS COMPACT", "Helsana TOP", "Swica OPTIMA", "Sanitas CASAMED HMO", "Groupe Mutuel SanaTel", "Mutuel OPTIMA"
-  * IMMER aus dem Dokument extrahieren — nicht "KVG" oder "VVG" als Produkt verwenden, das ist die Versicherungsart
-- model: Versicherungsmodell / Tarifmodell wenn vorhanden (z.B. "Hausarztmodell", "HMO", "Telmed", "freie Arztwahl", "Standardmodell")
-- franchise: Franchise-Betrag falls vorhanden (z.B. "300", "500", "1000", "1500", "2000", "2500")
-- age_group: Altersgruppe wenn erkennbar (z.B. "Erwachsener", "Kind (0–18 Jahre)", "jung (19–25 Jahre)")
+- insurance_type: Versicherungsart — siehe REGELN oben
+- product: Produkt/Tarif-Bezeichnung (SEHR WICHTIG!)
+  * z.B. "Spitalversicherung myFlex", "COMPACT", "HMO", "TOP", "myFlex Balance"
+  * IMMER aus dem Dokument extrahieren — nicht "KVG" oder "VVG" als Produkt verwenden
+- model: Tarifmodell wenn vorhanden (z.B. "Hausarztmodell", "HMO", "Telmed", "Balance")
+- franchise: Franchise-Betrag falls vorhanden (z.B. "300", "500", "1000", "2500")
+- age_group: Altersgruppe wenn erkennbar (z.B. "Erwachsener", "56 - 60 Jahre", "Kind")
 - start_date: Versicherungsbeginn / Gültig ab (YYYY-MM-DD)
-- end_date: Vertragsablauf / Gültig bis / Ende (YYYY-MM-DD)
+- end_date: Vertragsablauf / Gültig bis (YYYY-MM-DD)
 - cancellation_deadline: Kündigungsfrist / Kündigung bis (YYYY-MM-DD) falls vorhanden
 - renewal_date: Nächster Erneuerungstermin falls vorhanden (YYYY-MM-DD)
-- premium_monthly: Monatsprämie (nur Zahl, kein CHF-Zeichen)
-- premium_yearly: Jahresprämie (nur Zahl, kein CHF-Zeichen). Falls nur Monatsprämie: null setzen.
+- premium_monthly: NETTO Monatsprämie nach allen Rabatten (nur Zahl, kein CHF-Zeichen)
+- premium_yearly: Jahresprämie (nur Zahl). Falls nur Monatsprämie vorhanden: null setzen.
 - payment_frequency: Zahlungsintervall ("monatlich", "jährlich", "halbjährlich", "vierteljährlich")
 
-ERKENNUNGSREGELN FÜR SCHWEIZER POLICEN:
-1. Achte auf typische Schweizer Formatierung (CHF, 4-stellige PLZ)
-2. "Versicherungsnehmer" = Hauptkunde
-3. "versicherte Person" kann anders sein als Versicherungsnehmer
-4. Mehrere Personen? → Nur Hauptperson extrahieren
-5. Adresse kann mehrzeilig sein → zusammenfassen
-6. OCR Fehler (z.B. "O" statt "0") korrigieren
-7. Sonderzeichen (ä, ö, ü) korrekt verarbeiten
-8. Leerzeichen trimmen
+ALLGEMEINE ERKENNUNGSREGELN:
+1. Schweizer Formatierung: CHF, 4-stellige PLZ
+2. OCR-Fehler (z.B. "O" statt "0") korrigieren
+3. Sonderzeichen (ä, ö, ü) korrekt verarbeiten
+4. Leerzeichen trimmen
+5. KEINE Erfindung von Daten — bei Unsicherheit null setzen
 
 AUSGABE:
 - Rückgabe ein vollständiges JSON-Objekt
