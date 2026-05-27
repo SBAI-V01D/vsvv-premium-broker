@@ -37,7 +37,7 @@ function analyzeContract(contract) {
     actions.push({ type: 'ablauf', label: `Ablauf in ${endDays}d`, severity: sev, days: endDays })
   }
 
-  const order = { early: 0, process: 1, warning: 2, urgent: 3, critical: 4, expired: 5 }
+  const order = { expired: 0, critical: 1, urgent: 2, warning: 3, process: 4, early: 5 }
   actions.sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9))
   return actions
 }
@@ -219,7 +219,7 @@ export default function BestandsmanagementPanel({ contracts = [] }) {
       })
       .filter(i => i.actions.length > 0)
       .sort((a, b) => {
-        const ord = { early: 0, process: 1, warning: 2, urgent: 3, critical: 4, expired: 5 }
+        const ord = { expired: 0, critical: 1, urgent: 2, warning: 3, process: 4, early: 5 }
         const ao = ord[a.topAction?.severity] ?? 9
         const bo = ord[b.topAction?.severity] ?? 9
         if (ao !== bo) return ao - bo
