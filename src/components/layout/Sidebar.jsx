@@ -66,11 +66,20 @@ const navGroups = [
     ],
   },
   {
+    label: 'Vertrieb',
+    items: [
+      { label: 'Leads',             icon: UserPlus,    path: '/leads',            color: 'primary' },
+      { label: 'Verkaufschancen',   icon: TrendingUp,  path: '/verkaufschancen',  color: 'primary' },
+      { label: 'Aufgaben',          icon: CheckSquare, path: '/aufgaben',         color: 'primary' },
+    ],
+  },
+  {
     label: 'Administration',
     items: [
-      { label: 'Verträge',  icon: FileText,    path: '/vertraege', color: 'primary' },
-      { label: 'Anträge',   icon: CheckSquare, path: '/antraege',  color: 'primary' },
-      { label: 'Dokumente', icon: BookOpen,    path: '/dokumente', color: 'primary' },
+      { label: 'Vertragsabläufe', icon: Activity,    path: '/vertragsablaeufe', color: 'primary' },
+      { label: 'Verträge',        icon: FileText,    path: '/vertraege',        color: 'primary' },
+      { label: 'Anträge',         icon: CheckSquare, path: '/antraege',         color: 'primary' },
+      { label: 'Dokumente',       icon: BookOpen,    path: '/dokumente',        color: 'primary' },
     ],
   },
   {

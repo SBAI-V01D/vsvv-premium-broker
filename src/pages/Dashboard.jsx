@@ -146,6 +146,13 @@ export default function Dashboard() {
 
   const openTasks = tasks
 
+  const expiredContracts = useMemo(() =>
+    contracts.filter(c => {
+      if (!c.end_date || c.end_date.startsWith('9999')) return false
+      const d = new Date(c.end_date + 'T00:00:00')
+      return d < today && !['cancelled', 'archived'].includes(c.status)
+    }), [contracts])
+
   const expiringContracts = useMemo(() =>
     contracts.filter(c => {
       if (!c.end_date) return false
@@ -252,7 +259,18 @@ export default function Dashboard() {
         )}
 
         {/* KPI Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <KpiTile
+            label="Abgelaufen"
+            value={expiredContracts.length}
+            sub={expiredContracts.length > 0 ? 'sofort handeln' : 'keine'}
+            icon={AlertTriangle}
+            colorClass={expiredContracts.length > 0 ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--text-muted))]'}
+            bgClass={expiredContracts.length > 0 ? 'bg-rose-50' : 'bg-[hsl(var(--surface-0))]'}
+            borderClass={expiredContracts.length > 0 ? 'border-rose-200' : 'border-[hsl(var(--border-subtle))]'}
+            urgent={expiredContracts.length > 0}
+            onClick={() => navigate('/vertragsablaeufe')}
+          />
           <KpiTile
             label="30d Renewal"
             value={renewalIn30.length}
