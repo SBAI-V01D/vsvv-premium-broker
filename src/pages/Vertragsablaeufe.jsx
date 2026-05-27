@@ -46,7 +46,7 @@ function analyzeContract(contract) {
     actions.push({ type: 'ablauf', severity: sev, days: endDays })
   }
 
-  const order = { expired: 0, critical: 1, urgent: 2, warning: 3, process: 4, early: 5 }
+  const order = { critical: 0, urgent: 1, warning: 2, process: 3, early: 4, expired: 5, review_required: 6 }
   actions.sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9))
   return actions
 }
