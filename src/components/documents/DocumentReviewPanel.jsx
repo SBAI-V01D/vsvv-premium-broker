@@ -103,22 +103,40 @@ function CustomerTypeahead({ customers, onSelect }) {
   )
 }
 
-// ─── Debug panel ───────────────────────────────────────────────────────────────
-function DebugPanel({ raw, candidates, totalCustomers, missingFields }) {
+// ─── Debug panel (4-Stage Pipeline Trace) ──────────────────────────────────────
+function DebugPanel({ structured, normalized, afterLearned, produkte, form, candidates, totalCustomers, missingFields }) {
+  const [activeStage, setActiveStage] = useState('stage1')
+  const stages = [
+    { id: 'stage1', label: '1: RAW LLM', data: structured, color: 'text-blue-300' },
+    { id: 'stage2', label: '2: normalizeData', data: normalized, color: 'text-green-300' },
+    { id: 'stage3', label: '3: applyLearned', data: afterLearned, color: 'text-yellow-300' },
+    { id: 'stage4', label: '4: UI State', data: { form, produkte }, color: 'text-pink-300' },
+  ]
+  const active = stages.find(s => s.id === activeStage)
   return (
-    <div className="mx-3 my-2 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-xs overflow-auto max-h-72">
-      <div className="px-3 py-1.5 border-b border-slate-700 font-semibold flex items-center gap-2">
-        <Bug className="w-3 h-3" /> Debug
+    <div className="mx-3 my-2 rounded-lg border border-slate-700 bg-slate-900 text-slate-100 text-xs overflow-auto max-h-96">
+      <div className="px-3 py-1.5 border-b border-slate-700 font-semibold flex items-center gap-2 flex-wrap">
+        <Bug className="w-3 h-3" /> Pipeline Trace
+        {stages.map(s => (
+          <button key={s.id} onClick={() => setActiveStage(s.id)}
+            className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${activeStage === s.id ? 'bg-slate-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}>
+            {s.label}
+          </button>
+        ))}
       </div>
       <div className="p-3 space-y-2">
-        <div><span className="text-slate-400">Kunden geladen: </span><span>{totalCustomers}</span></div>
-        {missingFields?.length > 0 && <div className="text-red-400">⚠ Fehlend: {missingFields.join(', ')}</div>}
-        {candidates?.length > 0 && candidates.map(({ customer: c, score }) => (
-          <div key={c.id} className={`px-2 py-1 rounded ${score >= 90 ? 'bg-green-900 text-green-300' : score >= 70 ? 'bg-amber-900 text-amber-300' : 'bg-slate-800 text-slate-400'}`}>
-            {score}/100 – {c.first_name} {c.last_name}{c.birthdate ? ` | ${c.birthdate}` : ''}
+        <div className="text-slate-400 text-[10px]">Kunden: {totalCustomers} | Fehlend: {missingFields?.join(', ') || 'keine'}</div>
+        {candidates?.length > 0 && (
+          <div className="space-y-1">
+            {candidates.slice(0,3).map(({ customer: c, score }) => (
+              <div key={c.id} className={`px-2 py-1 rounded text-[10px] ${score >= 90 ? 'bg-green-900 text-green-300' : score >= 70 ? 'bg-amber-900 text-amber-300' : 'bg-slate-800 text-slate-400'}`}>
+                Match {score}/100 – {c.first_name} {c.last_name}{c.birthdate ? ` | ${c.birthdate}` : ''}
+              </div>
+            ))}
           </div>
-        ))}
-        <pre className="whitespace-pre-wrap text-green-300 text-xs">{JSON.stringify(raw, null, 2)}</pre>
+        )}
+        <div className={`text-[10px] font-bold uppercase tracking-wider ${active?.color}`}>{active?.label}</div>
+        <pre className={`whitespace-pre-wrap text-xs ${active?.color}`}>{JSON.stringify(active?.data, null, 2)}</pre>
       </div>
     </div>
   )
@@ -151,6 +169,8 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const [showDebug, setShowDebug] = useState(false)
 
   const [extraction, setExtraction] = useState(null)
+  const [normalizedRaw, setNormalizedRaw] = useState(null)   // STAGE 2: after normalizeData
+  const [normalizedAfterLearned, setNormalizedAfterLearned] = useState(null)  // STAGE 3: after applyLearned
   const [form, setForm] = useState(null)
   const [produkte, setProdukte] = useState([])
   const originalRef = useRef(null)
@@ -229,7 +249,16 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     }
 
     const data = res.data
-    const normalized = applyLearned(data.normalized || {})
+    // PIPELINE TRACE: Log each transformation stage
+    const normalizedStage2 = data.normalized || {}
+    const normalized = applyLearned(normalizedStage2)
+    console.log('[PIPELINE STAGE 1] RAW LLM:', JSON.stringify(data.structured, null, 2))
+    console.log('[PIPELINE STAGE 2] normalizeData output:', JSON.stringify(normalizedStage2, null, 2))
+    console.log('[PIPELINE STAGE 3] applyLearned output:', JSON.stringify(normalized, null, 2))
+    console.log('[PIPELINE DIFF] produkte BEFORE applyLearned:', JSON.stringify(normalizedStage2.produkte))
+    console.log('[PIPELINE DIFF] produkte AFTER  applyLearned:', JSON.stringify(normalized.produkte))
+    setNormalizedRaw(normalizedStage2)
+    setNormalizedAfterLearned(normalized)
     setExtraction({ ...data, normalized })
 
     if (normalized.sparte) {
@@ -259,7 +288,9 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     }
     setForm(flat)
     originalRef.current = { ...flat }
-    setProdukte(normalized.produkte || [])
+    const finalProdukte = normalized.produkte || []
+    console.log('[PIPELINE STAGE 4] UI produkte state:', JSON.stringify(finalProdukte))
+    setProdukte(finalProdukte)
     setStep('extract', 'ok', `Konfidenz: ${data.confidence}% · ${data.status}`)
 
     // STEP 2: Match
@@ -773,7 +804,11 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
               {/* Debug */}
               {showDebug && (
                 <DebugPanel
-                  raw={extraction.structured}
+                  structured={extraction.structured}
+                  normalized={normalizedRaw}
+                  afterLearned={normalizedAfterLearned}
+                  produkte={produkte}
+                  form={form}
                   candidates={matchCandidates}
                   totalCustomers={customers.length}
                   missingFields={missingFields}

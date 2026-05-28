@@ -391,7 +391,10 @@ VERSICHERUNGSNEHMER vs. ROLLEN (ABSOLUT KRITISCH):
 Das Dokument kann verschiedene Personen/Entitäten enthalten. Du MUSST die ROLLEN unterscheiden!
 
 SCHRITT 1 – VERSICHERUNGSNEHMER (= Kunde, höchste Priorität):
-Suche im Dokument nach: "Versicherungsnehmer", "Ihre Adresse", "Antragsteller", "Police für", "Versicherte Person"
+Suche im Dokument nach: "Versicherungsnehmer", "Ihre Adresse", "Antragsteller", "Prämienzahler", "Rechnungsempfänger"
+→ Der ADRESSBLOCK (Brief-Adresse oben auf dem Dokument) ist der Versicherungsnehmer/Prämienzahler.
+→ "VERSICHERUNGSPOLICE für [Name]" = VERSICHERTE PERSON (NOT Versicherungsnehmer!) → person.vorname/nachname = diese Person, ABER nur wenn kein separater Adressblock vorhanden.
+→ Wenn Adressblock UNGLEICH "für [Name]": Adressblock-Person = person.*, "für [Name]" = rollen.versicherte_person
 → Diese Entität ist der KUNDE. Trage sie in person.* ein.
 → Falls Firma (GmbH, AG, Genossenschaft, etc.) → person.firma setzen, vorname/nachname = null (oder Kontaktperson)
 → Falls Privatperson → person.vorname + person.nachname setzen, firma = null
@@ -418,12 +421,15 @@ PRODUKTE (KRITISCH – EXAKT SO EXTRAHIEREN):
     [{typ:"Grundversicherung", name:"BeneFit PLUS"}, {typ:"Zusatz", name:"TOP"}, {typ:"Zusatz", name:"HOSPITAL ECO"}]
 - Wenn keine Produkte erkennbar: []
 
-SPITAL/ZUSATZ-TYPEN erkennen:
-- "Spital privat" / "privat" → Spitalversicherung privat
-- "Spital halbprivat" / "halbprivat" → Spitalversicherung halbprivat
-- "Spital allgemein" / "Hospital" / "allgemein" → Spitalversicherung allgemein
-- "Ambulant" / "TOP" / "SANA" → ambulante Zusatzversicherung
-- "Denta" / "Dental" / "Zahn" → Zahnversicherung
+SPITAL/ZUSATZ-TYPEN erkennen (NUR explizit genannte, KEINE Ergaenzungen!):
+- "Spital privat" in Produktname = Spitalversicherung privat
+- "Spital halbprivat" / "halbprivat" in Produktname = Spitalversicherung halbprivat
+- "Spital allgemein" / "Hospital" / "allgemein" in Produktname = Spitalversicherung allgemein
+- "Ambulant" explizit in Produktname = ambulante Zusatzversicherung
+- "Denta" / "Dental" / "Zahn" in Produktname = Zahnversicherung
+- myFlex, myFlexHospital, FLEX-Produkte = Spitalversicherung (VVG, typ="Zusatz")
+- NIEMALS TOP, SANA oder Ambulant erganzen wenn nicht explizit im Dokument!
+- Gesundheitskonto mit "inklusive" = KEIN eigenstaendiges Produkt, NICHT in produkte aufnehmen!
 
 VERSICHERUNGS-FELDER:
 - gesellschaft: Name der Versicherungsgesellschaft
@@ -447,7 +453,8 @@ Extrahiere in EXAKT dieser Struktur:`,
               firma:        { type: ['string','null'] },
               vorname:      { type: ['string','null'] },
               nachname:     { type: ['string','null'] },
-              geburtsdatum: { type: ['string','null'] }
+              geburtsdatum: { type: ['string','null'] },
+              ist_praemienzahler: { type: ['boolean','null'] }
             },
             required: ['firma','vorname','nachname','geburtsdatum']
           },
@@ -499,9 +506,10 @@ Extrahiere in EXAKT dieser Struktur:`,
           rollen: {
             type: 'object',
             properties: {
-              lenker_name:    { type: ['string','null'] },
-              fahrer_name:    { type: ['string','null'] },
-              beguenstigter:  { type: ['string','null'] }
+              lenker_name:        { type: ['string','null'] },
+              fahrer_name:        { type: ['string','null'] },
+              beguenstigter:      { type: ['string','null'] },
+              versicherte_person: { type: ['string','null'] }
             },
             required: ['lenker_name','fahrer_name','beguenstigter']
           },
