@@ -104,9 +104,10 @@ function CustomerTypeahead({ customers, onSelect }) {
 }
 
 // ─── Debug panel (4-Stage Pipeline Trace) ──────────────────────────────────────
-function DebugPanel({ structured, normalized, afterLearned, produkte, form, candidates, totalCustomers, missingFields }) {
-  const [activeStage, setActiveStage] = useState('stage1')
+function DebugPanel({ rawOcrText, structured, normalized, afterLearned, produkte, form, candidates, totalCustomers, missingFields }) {
+  const [activeStage, setActiveStage] = useState('stage0')
   const stages = [
+    { id: 'stage0', label: '0: OCR INPUT (Gemini liest)', data: rawOcrText, color: 'text-red-300', isText: true },
     { id: 'stage1', label: '1: RAW LLM', data: structured, color: 'text-blue-300' },
     { id: 'stage2', label: '2: normalizeData', data: normalized, color: 'text-green-300' },
     { id: 'stage3', label: '3: applyLearned', data: afterLearned, color: 'text-yellow-300' },
@@ -136,7 +137,14 @@ function DebugPanel({ structured, normalized, afterLearned, produkte, form, cand
           </div>
         )}
         <div className={`text-[10px] font-bold uppercase tracking-wider ${active?.color}`}>{active?.label}</div>
-        <pre className={`whitespace-pre-wrap text-xs ${active?.color}`}>{JSON.stringify(active?.data, null, 2)}</pre>
+        {active?.id === 'stage0' && (
+          <div className="mb-1 text-[10px] text-red-400 font-bold">
+            ⚠ DIES IST DER EXAKTE TEXT DEN GEMINI LIEST. Phantom-Produkte hier = PDF-Layer / OCR-Artefakt.
+          </div>
+        )}
+        <pre className={`whitespace-pre-wrap text-xs ${active?.color}`}>
+          {active?.isText ? (active?.data || '(kein OCR-Text verfügbar)') : JSON.stringify(active?.data, null, 2)}
+        </pre>
       </div>
     </div>
   )
@@ -169,7 +177,8 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
   const [showDebug, setShowDebug] = useState(false)
 
   const [extraction, setExtraction] = useState(null)
-  const [normalizedRaw, setNormalizedRaw] = useState(null)   // STAGE 2: after normalizeData
+  const [rawOcrText, setRawOcrText] = useState(null)           // STAGE 0: raw OCR text Gemini reads
+  const [normalizedRaw, setNormalizedRaw] = useState(null)     // STAGE 2: after normalizeData
   const [normalizedAfterLearned, setNormalizedAfterLearned] = useState(null)  // STAGE 3: after applyLearned
   const [form, setForm] = useState(null)
   const [produkte, setProdukte] = useState([])
@@ -257,6 +266,7 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     console.log('[PIPELINE STAGE 2] normalized.produkte:', JSON.stringify(normalizedStage2.produkte))
     console.log('[PIPELINE STAGE 3] after applyLearned produkte:', JSON.stringify(normalized.produkte))
     console.log('[PIPELINE pure_mode]:', data.pure_mode, '| status:', data.status)
+    setRawOcrText(data.raw_ocr_text || null)
     setNormalizedRaw(normalizedStage2)
     setNormalizedAfterLearned(normalized)
     setExtraction({ ...data, normalized })
@@ -804,14 +814,15 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
               {/* Debug */}
               {showDebug && (
                 <DebugPanel
-                  structured={extraction.structured}
-                  normalized={normalizedRaw}
-                  afterLearned={normalizedAfterLearned}
-                  produkte={produkte}
-                  form={form}
-                  candidates={matchCandidates}
-                  totalCustomers={customers.length}
-                  missingFields={missingFields}
+                 rawOcrText={rawOcrText}
+                 structured={extraction.structured}
+                 normalized={normalizedRaw}
+                 afterLearned={normalizedAfterLearned}
+                 produkte={produkte}
+                 form={form}
+                 candidates={matchCandidates}
+                 totalCustomers={customers.length}
+                 missingFields={missingFields}
                 />
               )}
 

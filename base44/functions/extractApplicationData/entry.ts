@@ -379,6 +379,33 @@ Deno.serve(async (req) => {
       console.warn(`[extractApplicationData] Size check failed (non-fatal): ${sizeCheckErr.message}`);
     }
 
+    // ─── STAGE 0: RAW OCR TEXT DUMP ──────────────────────────────────────
+    // Purpose: Reveal EXACTLY what Gemini reads from the PDF.
+    // This is the ground truth input. If phantom products appear here,
+    // they come from hidden PDF layers or OCR artifacts — not LLM hallucination.
+    let rawOcrText = null;
+    try {
+      const ocrDump = await base44.integrations.Core.InvokeLLM({
+        model: 'gemini_3_flash',
+        file_urls: [file_url],
+        prompt: 'Extract ALL visible text from this document EXACTLY as it appears. Copy word for word. Include every section, table, header, footer, number, and label. Do NOT interpret, summarize, or modify anything. Return as plain readable text.',
+      });
+      rawOcrText = typeof ocrDump === 'string' ? ocrDump : JSON.stringify(ocrDump);
+      console.log('[STAGE 0] RAW OCR TEXT DUMP START ============================');
+      console.log(rawOcrText);
+      console.log('[STAGE 0] RAW OCR TEXT DUMP END ==============================');
+      // Check for suspicious product names in raw text
+      const phantomCheck = ['TOP', 'SANA', 'ambulant', 'Ambulant', 'BeneFit', 'CasaMed'];
+      const found = phantomCheck.filter(p => rawOcrText.includes(p));
+      if (found.length > 0) {
+        console.warn('[STAGE 0] PHANTOM CANDIDATES IN RAW TEXT:', found.join(', '));
+      } else {
+        console.log('[STAGE 0] No phantom product keywords in raw text.');
+      }
+    } catch (ocrErr) {
+      console.warn('[STAGE 0] OCR dump failed (non-fatal):', ocrErr.message);
+    }
+
     // STEP 1: Extract raw data via LLM
     const raw = await base44.integrations.Core.InvokeLLM({
       prompt: `Du bist ein Experte für Schweizer Versicherungsformulare (KVG, VVG, KK, Leben, Sach).
@@ -585,6 +612,7 @@ Extrahiere in EXAKT dieser Struktur:`,
         structured: raw,
         normalized: pureMapped,
         pure_mode: true,
+        raw_ocr_text: rawOcrText,
         confidence,
         status: `pure_mode (${rawProdukte.length} raw products, 0 derived)`,
         missing_fields: [],
