@@ -69,7 +69,7 @@ function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange, onFollowup, 
       className={cn('grid items-center border-b border-border/40 transition-colors cursor-pointer border-l-[3px]', cfg.rowBg, cfg.borderL, isExcluded && 'opacity-50')}
       style={{ gridTemplateColumns: '200px 140px 1fr 100px 100px 100px 160px 110px' }}
     >
-      <div className="py-2.5 px-3 min-w-0" onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}/360`)}>
+      <div className="py-2.5 px-3 min-w-0" onClick={() => contract.customer_id && onNavigate(isReview ? `/kunden/${contract.customer_id}` : `/kunden/${contract.customer_id}/360`)}>
         <p className="text-[12px] font-semibold truncate hover:text-primary transition-colors leading-tight">{contract.customer_name || '–'}</p>
         <p className="text-[10px] text-muted-foreground truncate">{contract.insurer || '–'} · {getSparteLabel(contract.sparte || contract.insurance_type) || '–'}</p>
         {isExcluded && (
@@ -140,10 +140,10 @@ function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange, onFollowup, 
       </div>
       <div className="py-2 px-2 flex items-center gap-1 justify-end" onClick={e => e.stopPropagation()}>
         <button
-          onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}/360`)}
+          onClick={() => contract.customer_id && onNavigate(isReview ? `/kunden/${contract.customer_id}` : `/kunden/${contract.customer_id}/360`)}
           className="text-[9px] px-2 py-1 border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors whitespace-nowrap"
         >
-          <User className="w-2.5 h-2.5 inline mr-0.5" />360°
+          <User className="w-2.5 h-2.5 inline mr-0.5" />{isReview ? 'Daten' : '360°'}
         </button>
         <button
           onClick={() => onFollowup(contract)}
