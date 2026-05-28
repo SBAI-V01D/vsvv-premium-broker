@@ -408,65 +408,58 @@ Deno.serve(async (req) => {
 
     // STEP 1: Extract raw data via LLM
     const raw = await base44.integrations.Core.InvokeLLM({
-      prompt: `Du bist ein Experte für Schweizer Versicherungsformulare (KVG, VVG, KK, Leben, Sach).
-Analysiere dieses Dokument und extrahiere ALLE Daten in exakt der vorgegebenen JSON-Struktur.
+      prompt: `Du bist eine deterministische Versicherungs-Extraktionsengine im STRICT MODE.
 
-KRITISCHE REGELN:
-- KEIN Feld leer lassen: wenn nicht vorhanden → null
-- Datumsformat: YYYY-MM-DD
-- Prämie: nur Zahl ohne Währungssymbol (z.B. 142.05) – NUR Monatsprämie
-- Telefon: internationales Format +41...
-- E-Mail: validieren, bei ungültig → null
-- confidence: 0-100 (Gesamtkonfidenz der Extraktion)
+Deine einzige Aufgabe: strukturierte Daten aus diesem Versicherungsdokument extrahieren.
+OHNE Interpretation. OHNE Annahmen. OHNE Ergänzungen. OHNE Halluzinationen.
 
-VERSICHERUNGSNEHMER vs. ROLLEN (ABSOLUT KRITISCH):
-Das Dokument kann verschiedene Personen/Entitäten enthalten. Du MUSST die ROLLEN unterscheiden!
+## ABSOLUTE VERBOTE
+- NIEMALS Produkte ergänzen, ableiten, erraten, erfinden oder aus Erfahrung hinzufügen
+- NIEMALS typische Versicherungsprodukte annehmen (z.B. "CSS hat oft Grundversicherung")
+- NIEMALS ähnliche Produkte inferieren oder Standarddeckungen ergänzen
+- NIEMALS fehlende Felder kreativ ausfüllen
+- Wenn Unsicherheit besteht: NULL zurückgeben, NICHT raten
 
-SCHRITT 1 – VERSICHERUNGSNEHMER (= Kunde, höchste Priorität):
-Suche im Dokument nach: "Versicherungsnehmer", "Ihre Adresse", "Antragsteller", "Prämienzahler", "Rechnungsempfänger"
-→ Der ADRESSBLOCK (Brief-Adresse oben auf dem Dokument) ist der Versicherungsnehmer/Prämienzahler.
-→ "VERSICHERUNGSPOLICE für [Name]" = VERSICHERTE PERSON (NOT Versicherungsnehmer!) → person.vorname/nachname = diese Person, ABER nur wenn kein separater Adressblock vorhanden.
-→ Wenn Adressblock UNGLEICH "für [Name]": Adressblock-Person = person.*, "für [Name]" = rollen.versicherte_person
-→ Diese Entität ist der KUNDE. Trage sie in person.* ein.
-→ Falls Firma (GmbH, AG, Genossenschaft, etc.) → person.firma setzen, vorname/nachname = null (oder Kontaktperson)
-→ Falls Privatperson → person.vorname + person.nachname setzen, firma = null
+## PRODUKT-DEFINITION (STRENG)
+Ein Produkt DARF NUR extrahiert werden wenn ALLE drei Bedingungen erfüllt sind:
+1. Eigener Produktname explizit im Dokument vorhanden
+2. Eigener CHF-Betrag (nicht "inklusive", nicht "kostenfrei") neben dem Produkt
+3. Eigenständige Produktposition in der Police
 
-SCHRITT 2 – ANDERE ROLLEN (NIEMALS als Kunde verwenden):
-Suche nach: "Lenker", "Fahrer", "Fahrzeughalter", "versicherte Person" (wenn ≠ VN), "Begünstigter"
-→ Diese Personen sind NICHT der Versicherungsnehmer/Kunde!
-→ Trage sie in rollen.* ein (lenker, fahrer, etc.)
-→ NIEMALS einen Lenker/Fahrer als person.vorname/nachname setzen!
+NICHT als Produkte extrahieren:
+- "inklusive", "kostenfrei", "Bonus" = KEIN Produkt
+- Gesundheitskonto / Gesundheitskonto-Bonus = KEIN Produkt (auch wenn erwähnt)
+- 24h Notfall / medizinische Beratung = KEIN Produkt
+- Kostenbeteiligungsvarianten ("Allgemeine Abteilung", "Halbprivate Abteilung", "Private Abteilung") = KEINE Produkte
+- Varianten / Abteilungen / Bonusprogramme / Rabatte = KEINE Produkte
+- Leistungsbestandteile = KEINE eigenständigen Produkte
+HALLUCINATION POLICY: Lieber leere Produktliste als ein falsches Produkt.
+BEISPIEL KORREKT: "Spitalversicherung myFlex CHF 63.10" → [{typ:"Zusatz", name:"Spitalversicherung myFlex"}]
+BEISPIEL FALSCH: TOP, SANA, Ambulant, Balance, Grundversicherung ergänzen wenn NICHT mit eigenem CHF-Betrag im Dokument
 
-BEISPIEL (Motorfahrzeugversicherung):
-- "Versicherungsnehmer: VSV Management GmbH" → person.firma = "VSV Management GmbH"
-- "Lenker: Peter Martin Adam" → rollen.lenker_name = "Peter Martin Adam"
-- person.vorname/nachname = null (kein Privatname des VN)
+## PERSONENROLLEN (STRENG)
+Schritt 1 - VERSICHERUNGSNEHMER (höchste Priorität, Pflicht):
+- Adressblock oben im Dokument ("Frau/Herr [Name]", Strassenadresse) = Versicherungsnehmer/Prämienzahler
+- Dieser Name in person.vorname / person.nachname
+- Falls Firma (GmbH, AG etc.): person.firma
+Schritt 2 - VERSICHERTE PERSON:
+- "VERSICHERUNGSPOLICE für [Name]" oder "für [Name]" = versicherte Person, NICHT Versicherungsnehmer
+- Wenn Adressblock-Person ≠ "für [Name]": Adressblock = person.*, "für [Name]" = rollen.versicherte_person
+Schritt 3 - ANDERE ROLLEN:
+- Lenker / Fahrer / Begünstigter in rollen.* — NIEMALS als Versicherungsnehmer verwenden
+
+## VERSICHERUNGSFELDER
+- gesellschaft: Name der Versicherungsgesellschaft
+- sparte: Versicherungssparte direkt vom Dokument (z.B. "Hausratversicherung", "Krankenversicherung")
+- beginn: Vertragsbeginn (YYYY-MM-DD) — "Police gültig ab", "Beginn", "gültig ab", "ab"
+- ende: Vertragsablauf (YYYY-MM-DD) — "Vertragsablauf", "Ablauf", "Ende". Bei jährlicher Erneuerung ohne explizites Datum: berechne aus Beginn (z.B. 01.01.2026 → 31.12.2026)
+- praemie_monat: Total Nettomämie als Zahl (CHF-Symbol weglassen). NUR die Nettopämie (nach Rabatten)
+- franchise: nur Zahl als String z.B. "300" oder null
+- kassenmodell: Standard/Standardmodell/Hausarzt/HMO/Telemed oder null
+- zahlungsintervall: "monatlich"/"vierteljährlich"/"halbjährlich"/"jährlich" oder null
+- gesundheitsdeklaration: true wenn "Gesundheitsdeklaration", "Gesundheitsfragen", "ärztliche Untersuchung" erwähnt
 
 Dateiname: "${file_name || ''}"
-
-PRODUKTE (ABSOLUT KRITISCH – NUR MIT EIGENEM CHF-BETRAG):
-- produkte: ARRAY mit {typ, name}
-- EINZIGE REGEL: Ein Produkt wird NUR aufgenommen wenn es eine EIGENE CHF-Prämie in der Police hat.
-- "inklusive", "kostenfrei", kein eigener CHF-Betrag = KEIN PRODUKT, niemals aufnehmen!
-- Kostenbeteiligung / Varianten / Abteilungen ("Allgemeine Abteilung", "Halbprivate Abteilung") = KEINE Produkte!
-- typ: "Grundversicherung" für KVG | "Zusatz" für VVG
-- Konkretes Beispiel aus dieser Police:
-    Spitalversicherung myFlex CHF 63.10 → [{typ:"Zusatz", name:"Spitalversicherung myFlex"}]
-    Gesundheitskonto inklusive → NICHT aufnehmen (kein CHF-Betrag)
-    Gesundheitskonto-Bonus inklusive → NICHT aufnehmen (kein CHF-Betrag)
-- Wenn keine Produkte mit eigenem CHF-Betrag: []
-- ABSOLUT VERBOTEN: TOP, SANA, Ambulant, Balance, Standard ergänzen wenn nicht explizit mit eigenem CHF-Betrag im Dokument!
-
-VERSICHERUNGS-FELDER:
-- gesellschaft: Name der Versicherungsgesellschaft
-- sparte: Versicherungssparte direkt vom Dokument (z.B. "Hausratversicherung", "Krankenversicherung", "Motorfahrzeugversicherung") – dies ist das wichtigste Feld!
-- beginn: Vertragsbeginn (YYYY-MM-DD) – Felder: "Versicherungsbeginn", "Beginn", "gültig ab", "Eintritt", "ab"
-- ende: Vertragsablauf / Vertragsende (YYYY-MM-DD) – Felder: "Vertragsende", "Ablauf", "Ablaufdatum", "Ende", "Kündigung zum", "Kündigungstermin", "kündbar auf", "läuft ab am", "Laufzeit bis", "Ablauf der Versicherung", "Ende des Versicherungsjahres" – bei jährlicher Erneuerung: berechne das nächste Ablaufdatum aus dem Beginn (z.B. Beginn 01.01.2025 → Ablauf 31.12.2025) – sonst null
-- praemie_monat: Monatsprämie als Zahl (z.B. 142.05), null wenn nicht vorhanden
-- franchise: nur Zahl als String, z.B. "300", "2500" oder null
-- kassenmodell: Standard / Standardmodell / Hausarzt / HMO / Telemed / Flexmed oder null
-- zahlungsintervall: "monatlich" / "vierteljährlich" / "halbjährlich" / "jährlich" oder null
-- gesundheitsdeklaration: true wenn "Gesundheitsdeklaration erforderlich", "Gesundheitsfragen", "ärztliche Untersuchung" oder ähnliches steht, sonst false
 
 Extrahiere in EXAKT dieser Struktur:`,
       file_urls: [file_url],
