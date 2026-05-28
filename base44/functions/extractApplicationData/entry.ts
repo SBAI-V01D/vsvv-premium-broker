@@ -543,41 +543,43 @@ Extrahiere in EXAKT dieser Struktur:`,
         },
         required: ['person','kontaktperson','adresse','versicherung','rollen','meta']
       },
-      model: 'gemini_3_flash'
+      model: 'claude_sonnet_4_6'
     });
 
-    const confidence = raw?.meta?.confidence ?? 0;
+    // Claude sometimes wraps response in { response: { ... } } — unwrap if needed
+    const data = raw?.response ? raw.response : raw;
+    const confidence = data?.meta?.confidence ?? 0;
 
     // ─── PURE MODE: bypass ALL normalization ─────────────────────────────────
     if (PURE_EXTRACTION_MODE) {
       console.log('[extractApplicationData] *** PURE MODE *** skipping normalizeData + all enrichment');
-      console.log('[PURE LLM] person:', JSON.stringify(raw?.person));
-      console.log('[PURE LLM] versicherung.produkte:', JSON.stringify(raw?.versicherung?.produkte));
-      console.log('[PURE LLM] versicherung.praemie_monat:', raw?.versicherung?.praemie_monat);
-      console.log('[PURE LLM] rollen:', JSON.stringify(raw?.rollen));
-      console.log('[PURE LLM] adresse:', JSON.stringify(raw?.adresse));
+      console.log('[PURE LLM] person:', JSON.stringify(data?.person));
+      console.log('[PURE LLM] versicherung.produkte:', JSON.stringify(data?.versicherung?.produkte));
+      console.log('[PURE LLM] versicherung.praemie_monat:', data?.versicherung?.praemie_monat);
+      console.log('[PURE LLM] rollen:', JSON.stringify(data?.rollen));
+      console.log('[PURE LLM] adresse:', JSON.stringify(data?.adresse));
 
-      const rawProdukte = (raw?.versicherung?.produkte || []).map(p => ({ name: p.name, typ: p.typ, source: 'raw_llm' }));
+      const rawProdukte = (data?.versicherung?.produkte || []).map(p => ({ name: p.name, typ: p.typ, source: 'raw_llm' }));
 
       const pureMapped = {
-        company_name:        raw?.person?.firma ?? null,
-        first_name:          raw?.person?.vorname ?? null,
-        last_name:           raw?.person?.nachname ?? null,
-        birthdate:           raw?.person?.geburtsdatum ?? null,
-        phone:               raw?.kontaktperson?.telefon ?? null,
-        email:               raw?.kontaktperson?.email ?? null,
-        street:              raw?.adresse?.strasse ?? null,
-        zip_code:            raw?.adresse?.plz ?? null,
-        city:                raw?.adresse?.ort ?? null,
-        canton:              raw?.adresse?.kanton ?? null,
-        insurer:             raw?.versicherung?.gesellschaft ?? null,
-        contract_start_date: raw?.versicherung?.beginn ?? null,
-        contract_end_date:   raw?.versicherung?.ende ?? null,
-        franchise:           raw?.versicherung?.franchise ?? null,
-        kassenmodell:        raw?.versicherung?.kassenmodell ?? null,
-        zahlungsintervall:   raw?.versicherung?.zahlungsintervall ?? null,
-        premium_monthly:     raw?.versicherung?.praemie_monat ?? null,
-        premium_yearly:      raw?.versicherung?.praemie_monat ? Math.round(raw.versicherung.praemie_monat * 12 * 100) / 100 : null,
+        company_name:        data?.person?.firma ?? null,
+        first_name:          data?.person?.vorname ?? null,
+        last_name:           data?.person?.nachname ?? null,
+        birthdate:           data?.person?.geburtsdatum ?? null,
+        phone:               data?.kontaktperson?.telefon ?? null,
+        email:               data?.kontaktperson?.email ?? null,
+        street:              data?.adresse?.strasse ?? null,
+        zip_code:            data?.adresse?.plz ?? null,
+        city:                data?.adresse?.ort ?? null,
+        canton:              data?.adresse?.kanton ?? null,
+        insurer:             data?.versicherung?.gesellschaft ?? null,
+        contract_start_date: data?.versicherung?.beginn ?? null,
+        contract_end_date:   data?.versicherung?.ende ?? null,
+        franchise:           data?.versicherung?.franchise ?? null,
+        kassenmodell:        data?.versicherung?.kassenmodell ?? null,
+        zahlungsintervall:   data?.versicherung?.zahlungsintervall ?? null,
+        premium_monthly:     data?.versicherung?.praemie_monat ?? null,
+        premium_yearly:      data?.versicherung?.praemie_monat ? Math.round(data.versicherung.praemie_monat * 12 * 100) / 100 : null,
         produkte:            rawProdukte,
         product_label:       rawProdukte.map(p => p.name).filter(Boolean).join(', ') || null,
         product_type:        null,
@@ -585,18 +587,18 @@ Extrahiere in EXAKT dieser Struktur:`,
         zusatz_type:         null,
         age_group:           null,
         gesundheitsdeklaration: false,
-        lenker_name:         raw?.rollen?.lenker_name ?? null,
-        versicherte_person:  raw?.rollen?.versicherte_person ?? null,
+        lenker_name:         data?.rollen?.lenker_name ?? null,
+        versicherte_person:  data?.rollen?.versicherte_person ?? null,
         role_classification: {
-          policy_holder: { name: `${raw?.person?.vorname || ''} ${raw?.person?.nachname || ''}`.trim() || raw?.person?.firma, source: 'raw_person_field' },
-          driver:        { name: raw?.rollen?.lenker_name ?? null, source: 'raw_rollen' },
-          insured_person:{ name: raw?.rollen?.versicherte_person ?? null, source: 'raw_rollen' },
+          policy_holder: { name: `${data?.person?.vorname || ''} ${data?.person?.nachname || ''}`.trim() || data?.person?.firma, source: 'raw_person_field' },
+          driver:        { name: data?.rollen?.lenker_name ?? null, source: 'raw_rollen' },
+          insured_person:{ name: data?.rollen?.versicherte_person ?? null, source: 'raw_rollen' },
         }
       };
 
       return Response.json({
         success: true,
-        structured: raw,
+        structured: data,
         normalized: pureMapped,
         pure_mode: true,
         raw_ocr_text: rawOcrText,
@@ -611,7 +613,7 @@ Extrahiere in EXAKT dieser Struktur:`,
     }
 
     // ─── STEP 2: normalizeData (only when PURE_EXTRACTION_MODE = false) ─────────────
-    const normalized = normalizeData(raw);
+    const normalized = normalizeData(data);
     const missingFields = validateNormalized(normalized);
     console.log(`[normalizeData] produkte=${JSON.stringify(normalized.produkte)}`);
     console.log(`[normalizeData] sparte=${normalized.sparte} product_type=${normalized.product_type}`);
