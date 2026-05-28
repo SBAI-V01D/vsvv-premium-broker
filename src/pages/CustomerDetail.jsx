@@ -69,9 +69,21 @@ export default function CustomerDetail() {
     return unsubscribe
   }, [queryClient])
 
+  // Fast: nur aktuellen Kunden laden
+  const { data: customerDirect } = useQuery({
+    queryKey: ['customer', id],
+    queryFn: () => base44.entities.Customer.filter({ id }, null, 1).then(r => r?.[0]),
+    enabled: !!id,
+    staleTime: 2 * 60 * 1000,
+  })
+
+  // Alle Kunden nur laden wenn ein Formular geöffnet wird
+  const [needAllCustomers, setNeedAllCustomers] = useState(false)
   const { data: allCustomers = [] } = useQuery({
     queryKey: ['customers'],
-    queryFn: () => base44.entities.Customer.list(),
+    queryFn: () => base44.entities.Customer.list('-created_date', 500),
+    enabled: needAllCustomers,
+    staleTime: 5 * 60 * 1000,
   })
 
   const { data: allAdvisors = [] } = useQuery({
@@ -91,7 +103,7 @@ export default function CustomerDetail() {
     enabled: !!id,
   })
 
-  const customer = allCustomers.find(x => x.id === id)
+  const customer = customerDirect || allCustomers.find(x => x.id === id)
 
   const { data: relatedContracts = [] } = useQuery({
     queryKey: ['contracts', id],
@@ -272,8 +284,8 @@ export default function CustomerDetail() {
         tasks={custTasks}
         documents={relatedDocuments}
         advisors={allAdvisors}
-        onEdit={() => setShowEdit(true)}
-        onAddFamilyMember={() => setShowAddFamilyMember(true)}
+        onEdit={() => { setNeedAllCustomers(true); setShowEdit(true) }}
+        onAddFamilyMember={() => { setNeedAllCustomers(true); setShowAddFamilyMember(true) }}
         onDownloadPDF={() => downloadPDFMutation.mutate()}
         isDownloading={downloadPDFMutation.isPending}
       />
@@ -440,7 +452,7 @@ export default function CustomerDetail() {
                             <FileText className="w-4 h-4" />
                           </button>
                           <ActionMenu items={[
-                            { label: 'Bearbeiten', icon: Edit, onClick: () => setEditingContract(c) },
+                            { label: 'Bearbeiten', icon: Edit, onClick: () => { setNeedAllCustomers(true); setEditingContract(c) } },
                             { label: 'Status ändern', onClick: () => setStatusChangingContract(c) },
                           ]} />
                         </div>
@@ -568,7 +580,7 @@ export default function CustomerDetail() {
                             <FileText className="w-4 h-4" />
                           </button>
                           <ActionMenu items={[
-                            { label: 'Bearbeiten', icon: Edit, onClick: () => { setEditingApp(a); setShowAppForm(true) } },
+                            { label: 'Bearbeiten', icon: Edit, onClick: () => { setNeedAllCustomers(true); setEditingApp(a); setShowAppForm(true) } },
                           ]} />
                         </div>
                       </div>
