@@ -1,12 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-
-/**
- * SMART DOCUMENT ANALYSIS — Strict Mode v3
- * Model: claude_sonnet_4_6 (hallucination-free)
- * - Nur Produkte mit explizitem CHF-Betrag werden extrahiert
- * - Versicherungsnehmer (Adressblock) vs. versicherte Person klar getrennt
- * - Kundenzuordnung sucht BEIDE: Versicherungsnehmer UND versicherte Person
- */
+// v4 — direkt Claude, kein Stage0 OCR
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
@@ -17,101 +10,54 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'file_url erforderlich' }, { status: 400 });
     }
 
-    // Auth required — InvokeLLM muss user-scoped sein damit file_url korrekt aufgeloest wird
     const user = await base44.auth.me();
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('[smartDocumentAnalysis] START model=claude_sonnet_4_6 user=' + user.email);
+    console.log('[smartDocumentAnalysis] START user=' + user.email + ' file=' + file_url.slice(-30));
 
     // ================================================================
-    // SCHRITT 1: KI-EXTRAKTION — STRICT MODE mit Claude
+    // DIREKTE PDF-EXTRAKTION mit Claude (liest PDF nativ)
     // ================================================================
     let extracted = null;
     try {
       extracted = await base44.integrations.Core.InvokeLLM({
-        model: 'claude_sonnet_4_6',
+        model: 'gemini_3_flash',
         file_urls: [file_url],
-        prompt: `Du bist eine deterministische Schweizer Versicherungs-Extraktionsengine. STRICT MODE aktiv.
-Dokumenttyp-Hinweis: "${document_type || 'unbekannt'}"
-
-## ABSOLUTE VERBOTE — Null Toleranz
-- NIEMALS Produkte ergänzen, ableiten, erfinden oder aus Erfahrung hinzufügen
-- NIEMALS Standardprodukte annehmen ("KVG hat immer Grundversicherung", "CSS hat Ambulant")
-- NIEMALS fehlende Werte mit Strings füllen — nur null zurückgeben
-- NIEMALS "unknown", "n/a", "nicht angegeben" schreiben — immer null
-
-## PRODUKTE — Eiserne Regel
-Ein Eintrag im policies-Array ist NUR erlaubt wenn GLEICHZEITIG gilt:
-  1. Ein Produktname steht explizit im Dokument
-  2. Daneben steht ein CHF-Betrag (Zahl) — nicht "inklusive", nicht "kostenfrei"
-  3. Es ist eine eigenständige Position, kein Unterpunkt / keine Variante
-
-NICHT extrahieren (auch wenn erwähnt):
-- Gesundheitskonto, Gesundheitskonto-Bonus
-- 24h Notfallservice, medizinische Beratung
-- "Allgemeine Abteilung", "Halbprivate Abteilung" (das sind Optionen, keine Produkte)
-- Inklusivleistungen, Boni, Rabatte
-- Alles ohne eigenen CHF-Betrag
-
-BEISPIEL KORREKT: Nur "Spitalversicherung myFlex CHF 63.10" im Dokument → 1 Eintrag mit product="Spitalversicherung myFlex", premium_monthly=63.10
-BEISPIEL FALSCH: Zusätzlich Grundversicherung/Ambulant hinzufügen weil "CSS typischerweise..."
-
-## PERSONENROLLEN — Strikte Priorität
-
-SCHRITT 1 — VERSICHERUNGSNEHMER (= Adressblock oben rechts / Briefkopf):
-  Der Name und die Adresse oben auf dem Dokument = Versicherungsnehmer / Prämienzahler
-  → policy_holder_first_name, policy_holder_last_name, policy_holder_street/zip/city
-
-SCHRITT 2 — VERSICHERTE PERSON (= wer tatsächlich versichert ist):
-  Steht als "VERSICHERUNGSPOLICE für [Name]" oder "Versicherter:" oder in der Deckungstabelle
-  → insured_first_name, insured_last_name, insured_birthdate
-  → insured_is_different = true wenn NICHT identisch mit Versicherungsnehmer
-
-WICHTIG: Adressblock-Person ≠ versicherte Person ist häufig (z.B. Ehefrau zahlt, Ehemann versichert)
-
-## ZU EXTRAHIERENDE FELDER
-
-DOKUMENTINFO:
-- document_subtype: "neuantrag" / "aenderungsantrag" / "erneuerungsantrag" / "police" / "kuendigung" / "offerte" / "rechnung" / "korrespondenz"
-- document_confidence: 0.0–1.0
-- summary: 1–2 Sätze auf Deutsch
-
-VERSICHERUNGSNEHMER (aus Adressblock/Briefkopf):
-- policy_holder_first_name, policy_holder_last_name
-- policy_holder_birthdate: YYYY-MM-DD (falls im Adressblock angegeben)
-- policy_holder_street, policy_holder_zip_code, policy_holder_city
-- policy_holder_email, policy_holder_phone
-
-VERSICHERTE PERSON (wer versichert ist):
-- insured_first_name, insured_last_name
-- insured_birthdate: YYYY-MM-DD — aus Deckungsblock oder Policenzeile
-- insured_ahv_number
-- insured_is_different: true wenn ≠ Versicherungsnehmer, sonst false
-
-POLICEN (nur mit eigenem CHF-Betrag):
-Für jeden Eintrag:
-- insurer: Voller Firmenname der Versicherung
-- policy_number: Policennummer als String, oder null (NIEMALS "unknown")
-- insurance_type: "health" / "life" / "property" / "liability" / "motor" / "other"
-- sparte: "kvg" / "vvg_zusatz" / "kvg_vvg_kombi" / "motorfahrzeug" / "haftpflicht_privat" / "hausrat" / "leben_3a" / "unfall_privat"
-- product: Exakter Produktname aus dem Dokument
-- product_short: Max 2 Wörter (z.B. "Spital", "Zahn", "Hausrat", "Grundversicherung")
-- franchise: Zahl CHF, nur bei KVG, sonst null
-- model: Modellname oder null
-- coverage_type: Altersgruppe (z.B. "Erwachsene") oder null
-- premium_monthly: NETTO Monatsprämie CHF nach Rabatten
-- premium_yearly: Jahresprämie CHF
-- start_date: YYYY-MM-DD
-- end_date: YYYY-MM-DD
-- health_declaration_required: true/false
-- coverage_summary: Wichtigste Deckungsdetails
-
-VERMITTLER:
-- broker_name, broker_number (null falls nicht angegeben)
-
-Antworte NUR mit JSON. Fehlende Felder = null. Lieber 0 Policen als halluzinierte Produkte.`,
+        prompt: [
+          'Du bist eine deterministische Schweizer Versicherungs-Extraktionsengine.',
+          'Dokumenttyp-Hinweis: "' + (document_type || 'unbekannt') + '"',
+          '',
+          '=== SCHWEIZER ROLLEN-UNTERSCHEIDUNG (WICHTIG) ===',
+          '',
+          'ROLLE 1: PRAEMIENZAHLER / VERSICHERUNGSNEHMER',
+          '- Die Person im Adressblock oben rechts (an wen der Brief adressiert ist)',
+          '- Erkennbar an: Name + Strasse + PLZ + Ort im oberen Bereich',
+          '- Hat oft eine eigene Kundennummer unter "Praemienzahler [Name] [Kundennr]"',
+          '- DIESE Person = policy_holder_first_name / policy_holder_last_name',
+          '',
+          'ROLLE 2: VERSICHERTE PERSON',
+          '- Die Person die tatsaechlich versichert ist',
+          '- Erkennbar an: "VERSICHERUNGSPOLICE fuer [Name]" oder "fuer [Vorname Nachname]"',
+          '- Hat Geburtsdatum, eigene Kundennummer im Policenblock',
+          '- DIESE Person = insured_first_name / insured_last_name',
+          '',
+          'KONKRETES BEISPIEL:',
+          '  Adressblock: "Frau Daniela Leuenberger, Hoernliallee 107, 4125 Riehen"',
+          '  => policy_holder_first_name="Daniela", policy_holder_last_name="Leuenberger"',
+          '  => policy_holder_street="Hoernliallee 107", policy_holder_zip_code="4125", policy_holder_city="Riehen"',
+          '  Policenzeile: "VERSICHERUNGSPOLICE fuer Thomas Leuenberger, Geburtsdatum: 05.02.1966"',
+          '  => insured_first_name="Thomas", insured_last_name="Leuenberger", insured_birthdate="1966-02-05"',
+          '  => insured_is_different=true',
+          '',
+          '=== PRODUKT-REGEL (STRICT) ===',
+          'Nur erfassen wenn expliziter Produktname + eigener CHF-Betrag im Dokument.',
+          'NICHT: Gesundheitskonto, 24h-Service, Boni, Rabatte, Inklusivleistungen.',
+          'policies=[] ist besser als halluzinierte Produkte.',
+          '',
+          'Extrahiere alle Felder gemaess Schema. Fehlende Felder = null.',
+        ].join('\n'),
         response_json_schema: {
           type: 'object',
           properties: {
@@ -163,15 +109,13 @@ Antworte NUR mit JSON. Fehlende Felder = null. Lieber 0 Policen als halluziniert
       });
 
       if (!extracted || typeof extracted !== 'object') {
-        throw new Error('Leere Antwort von KI');
+        throw new Error('Leere Antwort von KI: ' + typeof extracted);
       }
 
-      console.log('[smartDocumentAnalysis] Extraktion OK:', JSON.stringify({
-        policyholder: `${extracted.policy_holder_first_name} ${extracted.policy_holder_last_name}`,
-        insured: extracted.insured_is_different ? `${extracted.insured_first_name} ${extracted.insured_last_name}` : 'identisch',
-        policies_count: (extracted.policies || []).length,
-        policy_numbers: (extracted.policies || []).map(p => p.policy_number),
-      }));
+      console.log('[smartDocumentAnalysis] Extraktion OK: policyholder=' +
+        extracted.policy_holder_first_name + ' ' + extracted.policy_holder_last_name +
+        ' insured=' + (extracted.insured_is_different ? extracted.insured_first_name + ' ' + extracted.insured_last_name : 'identisch') +
+        ' policies=' + (extracted.policies || []).length);
 
     } catch (aiErr) {
       console.error('[smartDocumentAnalysis] KI-Extraktion fehlgeschlagen:', aiErr.message);
@@ -184,15 +128,20 @@ Antworte NUR mit JSON. Fehlende Felder = null. Lieber 0 Policen als halluziniert
       });
     }
 
-    // Kein Inhalt extrahiert? Klare Fehlermeldung statt leere Felder
+    // Kein Inhalt extrahiert?
     const hasAnyData = extracted.policy_holder_last_name || extracted.insured_last_name ||
       (extracted.policies && extracted.policies.length > 0);
     if (!hasAnyData) {
-      console.warn('[smartDocumentAnalysis] Keine Versicherungsdaten gefunden — kein Versicherungsdokument?');
+      const summary = extracted.summary || null;
+      const confidence = extracted.document_confidence || 0;
+      console.warn('[smartDocumentAnalysis] Keine Versicherungsdaten — confidence=' + confidence);
+      const errorMsg = summary
+        ? 'Kein Versicherungsdokument erkannt. KI-Beschreibung: "' + summary + '"'
+        : 'In diesem Dokument konnten keine Versicherungsdaten gefunden werden. Bitte pruefen Sie ob das korrekte PDF hochgeladen wurde.';
       return Response.json({
         success: false,
-        error: 'In diesem Dokument konnten keine Versicherungsdaten gefunden werden. Bitte prüfen Sie ob das korrekte PDF hochgeladen wurde.',
-        extracted: null,
+        error: errorMsg,
+        extracted: { summary, document_confidence: confidence },
         customerMatches: [],
         detectionPhase: 'no_insurance_data',
       });
@@ -202,8 +151,7 @@ Antworte NUR mit JSON. Fehlende Felder = null. Lieber 0 Policen als halluziniert
     const firstPolicy = policies[0] || {};
 
     // ================================================================
-    // SCHRITT 2: KUNDENERKENNUNG
-    // Sucht nach BEIDEN: Versicherungsnehmer UND versicherte Person
+    // KUNDENERKENNUNG — sucht Versicherungsnehmer UND versicherte Person
     // ================================================================
     const hasPoliceNumber = policies.some(p => p.policy_number);
     const [allCustomers, allContracts] = await Promise.all([
@@ -243,7 +191,7 @@ Antworte NUR mit JSON. Fehlende Felder = null. Lieber 0 Policen als halluziniert
       }
     };
 
-    // P1: Policennummer → Vertrag → Kunde
+    // P1: Policennummer -> Vertrag -> Kunde
     for (const pol of policies) {
       if (pol.policy_number) {
         const contractMatch = allContracts.find(c =>
@@ -252,7 +200,7 @@ Antworte NUR mit JSON. Fehlende Felder = null. Lieber 0 Policen als halluziniert
         if (contractMatch) {
           const customer = allCustomers.find(c => c.id === contractMatch.customer_id);
           if (customer) {
-            addMatch(customer, 'policy_number', 99, `Policennummer ${pol.policy_number} → Vertrag gefunden`);
+            addMatch(customer, 'policy_number', 99, 'Policennummer ' + pol.policy_number + ' -> Vertrag gefunden');
             detectionPhase = 'matched_via_policy_number';
           }
         }
@@ -264,89 +212,65 @@ Antworte NUR mit JSON. Fehlende Felder = null. Lieber 0 Policen als halluziniert
       const emailMatches = allCustomers.filter(c =>
         c.email && c.email.toLowerCase() === extracted.policy_holder_email.toLowerCase()
       );
-      emailMatches.forEach(c => addMatch(c, 'email', 97, `E-Mail: ${extracted.policy_holder_email}`));
+      emailMatches.forEach(c => addMatch(c, 'email', 97, 'E-Mail: ' + extracted.policy_holder_email));
       if (emailMatches.length > 0 && detectionPhase === 'no_match') detectionPhase = 'matched_via_email';
     }
 
-    // P3: Adresse (Strasse + PLZ) — höhere Priorität als Fuzzy-Name
+    // P3: Adresse (Strasse + PLZ)
     if (extracted.policy_holder_zip_code && extracted.policy_holder_street) {
       const addressMatches = allCustomers.filter(c => {
         if (!c.zip_code || !c.street) return false;
-        const zipMatch = c.zip_code === extracted.policy_holder_zip_code;
-        const streetSim = similarity(c.street, extracted.policy_holder_street);
-        return zipMatch && streetSim > 0.70;
+        return c.zip_code === extracted.policy_holder_zip_code && similarity(c.street, extracted.policy_holder_street) > 0.70;
       });
-      addressMatches.forEach(c => addMatch(c, 'address', 85, `Adresse: ${extracted.policy_holder_street}, ${extracted.policy_holder_zip_code}`));
+      addressMatches.forEach(c => addMatch(c, 'address', 85, 'Adresse: ' + extracted.policy_holder_street + ', ' + extracted.policy_holder_zip_code));
       if (addressMatches.length > 0 && detectionPhase === 'no_match') detectionPhase = 'matched_via_address';
     }
 
-    // P4: Versicherungsnehmer Name + GD (direkte Übereinstimmung)
+    // P4: Versicherungsnehmer Name (Fuzzy)
     const phFirst = extracted.policy_holder_first_name;
     const phLast = extracted.policy_holder_last_name;
     const phBirth = extracted.policy_holder_birthdate;
 
     if (phFirst && phLast) {
-      // Mit Geburtsdatum
       if (phBirth) {
         const nameGdMatches = allCustomers.filter(c => {
-          const fnSim = similarity(c.first_name, phFirst);
-          const lnSim = similarity(c.last_name, phLast);
-          return fnSim > 0.85 && lnSim > 0.85 && c.birthdate === phBirth;
+          return similarity(c.first_name, phFirst) > 0.85 && similarity(c.last_name, phLast) > 0.85 && c.birthdate === phBirth;
         });
-        nameGdMatches.forEach(c => {
-          addMatch(c, 'name_birthdate', 95, `VN Name+GD: ${phFirst} ${phLast}`);
-        });
+        nameGdMatches.forEach(c => addMatch(c, 'name_birthdate', 95, 'VN Name+GD: ' + phFirst + ' ' + phLast));
         if (nameGdMatches.length > 0 && detectionPhase === 'no_match') detectionPhase = 'matched_via_name_birthdate';
       }
-      // Nur Name (Fuzzy)
       if (customerMatches.length === 0) {
         const fuzzyPH = allCustomers
-          .map(c => ({
-            customer: c,
-            score: similarity(c.first_name, phFirst) * 0.5 + similarity(c.last_name, phLast) * 0.5,
-          }))
+          .map(c => ({ customer: c, score: similarity(c.first_name, phFirst) * 0.5 + similarity(c.last_name, phLast) * 0.5 }))
           .filter(x => x.score > 0.85)
           .sort((a, b) => b.score - a.score)
           .slice(0, 2);
-        fuzzyPH.forEach(({ customer, score }) => {
-          addMatch(customer, 'fuzzy_name', Math.round(score * 80), `VN Name: ${phFirst} ${phLast}`);
-        });
+        fuzzyPH.forEach(({ customer, score }) => addMatch(customer, 'fuzzy_name', Math.round(score * 80), 'VN Name: ' + phFirst + ' ' + phLast));
         if (fuzzyPH.length > 0 && detectionPhase === 'no_match') detectionPhase = 'fuzzy_policyholder';
       }
     }
 
-    // P5: Versicherte Person (falls abweichend) — sucht als Familienmitglied
+    // P5: Versicherte Person (falls abweichend)
     if (extracted.insured_is_different && extracted.insured_first_name && extracted.insured_last_name) {
       const insFirst = extracted.insured_first_name;
       const insLast = extracted.insured_last_name;
       const insBirth = extracted.insured_birthdate;
 
-      // Mit Geburtsdatum
       if (insBirth) {
-        const insuredMatches = allCustomers.filter(c => {
-          const fnSim = similarity(c.first_name, insFirst);
-          const lnSim = similarity(c.last_name, insLast);
-          return fnSim > 0.85 && lnSim > 0.85 && c.birthdate === insBirth;
-        });
-        insuredMatches.forEach(c => {
-          addMatch(c, 'insured_name_birthdate', 92, `Versicherte Person Name+GD: ${insFirst} ${insLast}`);
-        });
+        const insuredMatches = allCustomers.filter(c =>
+          similarity(c.first_name, insFirst) > 0.85 && similarity(c.last_name, insLast) > 0.85 && c.birthdate === insBirth
+        );
+        insuredMatches.forEach(c => addMatch(c, 'insured_name_birthdate', 92, 'VP Name+GD: ' + insFirst + ' ' + insLast));
         if (insuredMatches.length > 0 && detectionPhase === 'no_match') detectionPhase = 'matched_insured_birthdate';
       }
 
-      // Fuzzy Name versicherte Person
       if (customerMatches.length === 0) {
         const fuzzyIns = allCustomers
-          .map(c => ({
-            customer: c,
-            score: similarity(c.first_name, insFirst) * 0.5 + similarity(c.last_name, insLast) * 0.5,
-          }))
+          .map(c => ({ customer: c, score: similarity(c.first_name, insFirst) * 0.5 + similarity(c.last_name, insLast) * 0.5 }))
           .filter(x => x.score > 0.85)
           .sort((a, b) => b.score - a.score)
           .slice(0, 2);
-        fuzzyIns.forEach(({ customer, score }) => {
-          addMatch(customer, 'fuzzy_insured', Math.round(score * 75), `VP Name: ${insFirst} ${insLast}`);
-        });
+        fuzzyIns.forEach(({ customer, score }) => addMatch(customer, 'fuzzy_insured', Math.round(score * 75), 'VP Name: ' + insFirst + ' ' + insLast));
         if (fuzzyIns.length > 0 && detectionPhase === 'no_match') detectionPhase = 'fuzzy_insured';
       }
     }
@@ -354,7 +278,7 @@ Antworte NUR mit JSON. Fehlende Felder = null. Lieber 0 Policen als halluziniert
     console.log('[smartDocumentAnalysis] Matches:', customerMatches.length, 'phase:', detectionPhase);
 
     // ================================================================
-    // SCHRITT 3: FAMILIENSTRUKTUR
+    // FAMILIENSTRUKTUR
     // ================================================================
     const primaryCustomers = allCustomers.filter(c => !c.is_family_member);
     const primarySlice = primaryCustomers.slice(0, 300);
@@ -405,7 +329,7 @@ Antworte NUR mit JSON. Fehlende Felder = null. Lieber 0 Policen als halluziniert
     }
 
     // ================================================================
-    // SCHRITT 4: NORMALISIEREN & ANTWORT
+    // NORMALISIEREN & ANTWORT
     // ================================================================
     const subtypeMap = {
       neuantrag: 'neuantrag', 'neuer antrag': 'neuantrag', antrag: 'neuantrag',
@@ -441,7 +365,6 @@ Antworte NUR mit JSON. Fehlende Felder = null. Lieber 0 Policen als halluziniert
         document_subtype: normalizedSubtype,
         document_confidence: extracted.document_confidence || 0.8,
         summary: extracted.summary || null,
-        // Versicherungsnehmer
         policy_holder_first_name: extracted.policy_holder_first_name || null,
         policy_holder_last_name: extracted.policy_holder_last_name || null,
         policy_holder_birthdate: extracted.policy_holder_birthdate || null,
@@ -450,15 +373,12 @@ Antworte NUR mit JSON. Fehlende Felder = null. Lieber 0 Policen als halluziniert
         policy_holder_street: extracted.policy_holder_street || null,
         policy_holder_zip_code: extracted.policy_holder_zip_code || null,
         policy_holder_city: extracted.policy_holder_city || null,
-        // Versicherte Person
         insured_first_name: extracted.insured_first_name || null,
         insured_last_name: extracted.insured_last_name || null,
         insured_birthdate: extracted.insured_birthdate || null,
         insured_ahv_number: extracted.insured_ahv_number || null,
         insured_is_different: extracted.insured_is_different || false,
-        // Policen
         policies: normalizedPolicies,
-        // Erste Police als Hauptfelder (Rückwärtskompatibilität)
         insurer: firstPolicy.insurer || null,
         policy_number: firstPolicy.policy_number || null,
         insurance_type: firstPolicy.insurance_type || 'other',
