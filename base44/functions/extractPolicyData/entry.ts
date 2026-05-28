@@ -68,21 +68,10 @@ Deno.serve(async (req) => {
     const fileInput = file_url;
     console.log(`[extractPolicyData] Using file_url for LLM: ${file_url.substring(0, 80)}...`);
 
-    // Load learned patterns from knowledge base to boost extraction accuracy
-    let learnedPatternsText = '';
-    try {
-      const patterns = await base44.asServiceRole.entities.InsuranceKnowledgePattern.filter({ is_active: true }, '-correction_count', 30);
-      if (patterns.length > 0) {
-        learnedPatternsText = '\n\n═══════════════════════════════════════════════════════\nGELERNTE MUSTER (aus echten Broker-Korrekturen — höchste Priorität!):\n═══════════════════════════════════════════════════════\n';
-        for (const p of patterns) {
-          const val = p.maps_to_value ? ` = "${p.maps_to_value}"` : '';
-          learnedPatternsText += `- [${p.insurer}] Signal "${p.signal}" → Feld "${p.maps_to}"${val} (bestätigt ${p.correction_count}x)\n`;
-        }
-        console.log(`[extractPolicyData] Injecting ${patterns.length} learned patterns into prompt`);
-      }
-    } catch (patternErr) {
-      console.warn(`[extractPolicyData] Pattern fetch failed (non-fatal): ${patternErr.message}`);
-    }
+    // LEARNED PATTERNS: Quarantined from extraction to prevent product leakage.
+    // Patterns are loaded for audit only — NOT injected into the LLM prompt.
+    // Reason: Injecting learned product patterns caused hallucinated coverages.
+    const learnedPatternsText = ''; // INTENTIONALLY EMPTY — do not restore without evidence-validation
     
     try {
       // STATELESS: Each call is a fresh analysis. The LLM receives NO prior context.
@@ -128,6 +117,17 @@ Deno.serve(async (req) => {
       });
 
       if (response && typeof response === 'object') {
+        // RAW LOG: Log before ANY post-processing to isolate KI vs pipeline errors
+        console.log('[extractPolicyData] RAW_LLM_OUTPUT:', JSON.stringify({
+          insurer: response.insurer,
+          insurance_type: response.insurance_type,
+          product: response.product,
+          products_evidence: response.products_evidence,
+          first_name: response.first_name,
+          last_name: response.last_name,
+          policy_holder_name: response.policy_holder_name,
+          premium_monthly: response.premium_monthly,
+        }));
         extractedData = response;
       }
     } catch (llmErr) {

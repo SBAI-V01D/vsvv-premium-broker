@@ -96,8 +96,9 @@ export default function ExtractionReviewPanel({ data, confidences = {}, document
   const hasTwoRoles = holderName && insuredName && holderName.toLowerCase() !== insuredName.toLowerCase()
   const missingRequired = !insuredName && !holderName || !data?.insurer
   
-  // DECKUNGS-ANALYSE: Alle erkannten Deckungen anzeigen
-  const coverages = data?.additional_products || []
+  // DECKUNGS-QUELLE: products_evidence (evidence-validiert, >=0.90 confidence)
+  // Fallback auf additional_products nur für Legacy-Daten
+  const coverages = data?.products_evidence || data?.additional_products || []
   const hasCoverages = coverages.length > 0
   const docCls = DOC_COLORS[documentType] || 'bg-slate-50 border-slate-200 text-slate-800'
 
@@ -220,7 +221,8 @@ export default function ExtractionReviewPanel({ data, confidences = {}, document
                     type="button"
                     onClick={() => {
                       const newCoverages = coverages.filter((_, i) => i !== idx)
-                      onChange({ ...data, additional_products: newCoverages })
+                      // Update products_evidence (primary source) and clear additional_products
+                      onChange({ ...data, products_evidence: newCoverages, additional_products: newCoverages })
                     }}
                     className="text-xs text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
                   >
@@ -235,17 +237,17 @@ export default function ExtractionReviewPanel({ data, confidences = {}, document
                     onChange={v => {
                       const newCoverages = [...coverages]
                       newCoverages[idx] = { ...cov, product: v }
-                      onChange({ ...data, additional_products: newCoverages })
+                      onChange({ ...data, products_evidence: newCoverages, additional_products: newCoverages })
                     }}
                   />
                   <ReviewField
-                    label="Monatsprämie"
+                    label="Monatstprämie"
                     value={cov.premium_monthly != null ? String(cov.premium_monthly) : ''}
                     confidence={cov.confidence || 0.5}
                     onChange={v => {
                       const newCoverages = [...coverages]
                       newCoverages[idx] = { ...cov, premium_monthly: v ? parseFloat(v) : null }
-                      onChange({ ...data, additional_products: newCoverages })
+                      onChange({ ...data, products_evidence: newCoverages, additional_products: newCoverages })
                     }}
                     type="number"
                   />
@@ -253,9 +255,14 @@ export default function ExtractionReviewPanel({ data, confidences = {}, document
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-amber-700 mt-2">
-            ⚠️ KI hat {coverages.length} Zusatzdeckung(en) erkannt. Bitte jede Deckung prüfen und bei Bedarf löschen (Phantomdeckungen kommen vor).
-          </p>
+          <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-[10px] text-amber-700 font-semibold mb-0.5">
+              ⚠️ {coverages.length} Deckung(en) aus Dokument extrahiert (Confidence ≥90%)
+            </p>
+            <p className="text-[10px] text-amber-600">
+              Alle Deckungen sind KI-Vorschläge. Nicht korrekte Deckungen bitte <strong>sofort löschen</strong>. Lieber leer als falsch.
+            </p>
+          </div>
         </div>
       )}
 
