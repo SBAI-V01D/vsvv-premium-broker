@@ -41,7 +41,8 @@ export default function CustomerDetail() {
   const navigate = useNavigate()
   const exportRef = useRef(null)
   const { checkCustomerAccess, isAdmin } = useAccessControl()
-  const [showEdit, setShowEdit] = useState(false)
+  const urlParams = new URLSearchParams(window.location.search)
+  const [showEdit, setShowEdit] = useState(urlParams.get('edit') === 'true')
   const [editingContract, setEditingContract] = useState(null)
   const [statusChangingContract, setStatusChangingContract] = useState(null)
   const [showAddFamilyMember, setShowAddFamilyMember] = useState(false)
@@ -182,12 +183,7 @@ export default function CustomerDetail() {
       queryClient.invalidateQueries({ queryKey: ['customers'] })
       queryClient.invalidateQueries({ queryKey: ['customer', id] })
       setShowEdit(false)
-      const customerType = data?.customer_type || customer?.customer_type
-      if (customerType === 'business') {
-        navigate('/kunden?filter=business', { replace: true })
-      } else {
-        navigate('/kunden?filter=private', { replace: true })
-      }
+      navigate(`/kunden/${id}/360`, { replace: true })
     },
   })
 

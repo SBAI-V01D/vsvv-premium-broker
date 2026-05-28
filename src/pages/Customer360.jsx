@@ -472,7 +472,7 @@ export default function Customer360() {
                 <Mail className="w-3.5 h-3.5 text-blue-700" />
               </a>
             )}
-            <Button size="sm" variant="outline" onClick={() => navigate(`/kunden/${customerId}`)} className="gap-1 h-8 px-3 text-xs">
+            <Button size="sm" variant="outline" onClick={() => navigate(`/kunden/${customerId}?edit=true`)} className="gap-1 h-8 px-3 text-xs">
               <Pencil className="w-3.5 h-3.5" /> Bearbeiten
             </Button>
             <Button size="sm" onClick={() => setShowVsForm(true)} className="gap-1 h-8 px-3 text-xs">
