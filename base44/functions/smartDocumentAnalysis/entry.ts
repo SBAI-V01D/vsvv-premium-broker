@@ -23,50 +23,82 @@ Deno.serve(async (req) => {
     let extracted = null;
     try {
       extracted = await base44.integrations.Core.InvokeLLM({
-        model: 'gemini_3_flash',
+        model: 'claude_sonnet_4_6',
         file_urls: [file_url],
-        prompt: [
-          'Du bist eine deterministische Schweizer Versicherungs-Extraktionsengine.',
-          'Dokumenttyp-Hinweis: "' + (document_type || 'unbekannt') + '"',
-          '',
-          '=== SCHWEIZER ROLLEN-UNTERSCHEIDUNG (WICHTIG) ===',
-          '',
-          'ROLLE 1: PRAEMIENZAHLER / VERSICHERUNGSNEHMER',
-          '- Die Person im Adressblock oben rechts (an wen der Brief adressiert ist)',
-          '- Erkennbar an: Name + Strasse + PLZ + Ort im oberen Bereich',
-          '- Hat oft eine eigene Kundennummer unter "Praemienzahler [Name] [Kundennr]"',
-          '- DIESE Person = policy_holder_first_name / policy_holder_last_name',
-          '',
-          'ROLLE 2: VERSICHERTE PERSON',
-          '- Die Person die tatsaechlich versichert ist',
-          '- Erkennbar an: "VERSICHERUNGSPOLICE fuer [Name]" oder "fuer [Vorname Nachname]"',
-          '- Hat Geburtsdatum, eigene Kundennummer im Policenblock',
-          '- DIESE Person = insured_first_name / insured_last_name',
-          '',
-          'KONKRETES BEISPIEL:',
-          '  Adressblock: "Frau Daniela Leuenberger, Hoernliallee 107, 4125 Riehen"',
-          '  => policy_holder_first_name="Daniela", policy_holder_last_name="Leuenberger"',
-          '  => policy_holder_street="Hoernliallee 107", policy_holder_zip_code="4125", policy_holder_city="Riehen"',
-          '  Policenzeile: "VERSICHERUNGSPOLICE fuer Thomas Leuenberger, Geburtsdatum: 05.02.1966"',
-          '  => insured_first_name="Thomas", insured_last_name="Leuenberger", insured_birthdate="1966-02-05"',
-          '  => insured_is_different=true',
-          '',
-          '=== PRODUKT-REGEL (ABSOLUT STRICT) ===',
-          'SCHRITT 1: Zaehle ALLE Zeilen im Dokument die einen expliziten CHF-Betrag fuer ein einzelnes Produkt zeigen.',
-          'SCHRITT 2: Erstelle GENAU so viele Policen. NICHT MEHR. Nie mehr Policen als explizite CHF-Zeilen.',
-          'VERBOTEN: KVG Grundversicherung wenn kein KVG-CHF-Betrag sichtbar, Produkte erfinden, Gesundheitskonto, 24h-Service.',
-          'WENN ZWEIFEL: Police NICHT erfassen. policies=[] ist BESSER als 1 falsche Police.',
-          'BEISPIEL RICHTIG: "myFlex Spitalversicherung Balance CHF 63.10/Mt" → eine Police',
-          'BEISPIEL FALSCH: KVG-Grundversicherung ohne eigene Prämienzeile im Dokument → nicht erfassen',
-          '',
-          'Extrahiere alle Felder gemaess Schema. Fehlende Felder = null.',
-        ].join('\n'),
+        prompt: `Du bist eine praezise Schweizer Versicherungs-Extraktionsengine. Dokumenttyp-Hinweis: "${document_type || 'unbekannt'}"
+
+=== SCHRITT 1: PERSONEN-ROLLEN IDENTIFIZIEREN ===
+
+ROLLE A — PRAEMIENZAHLER / VERSICHERUNGSNEHMER:
+- Person im ADRESSBLOCK oben rechts (an wen der Brief adressiert ist)
+- Erkennbar: Name + Strasse + PLZ + Ort im Adressfenster
+- Unter "Praemienzahler" oder "Versicherungsnehmer" mit eigener Kundennummer
+=> policy_holder_first_name / policy_holder_last_name / policy_holder_street / policy_holder_zip_code / policy_holder_city
+
+ROLLE B — VERSICHERTE PERSON:
+- Person die tatsaechlich versichert ist (kann abweichen!)
+- Erkennbar: "VERSICHERUNGSPOLICE fuer [Name]", "fuer [Vorname Nachname]", eigenes Geburtsdatum im Policenblock
+- Bei CSS: "fuer Thomas Leuenberger, Geburtsdatum: 05.02.1966" unter der Policenüberschrift
+=> insured_first_name / insured_last_name / insured_birthdate (Format YYYY-MM-DD)
+
+BEISPIEL:
+  Adressblock: "Frau Daniela Leuenberger, Hoernliallee 107, 4125 Riehen" => policy_holder
+  Policenzeile: "VERSICHERUNGSPOLICE fuer Thomas Leuenberger, 05.02.1966" => insured + insured_is_different=true
+
+=== SCHRITT 2: PRODUKT-EXTRAKTION (NUR EXPLIZITE CHF-ZEILEN) ===
+
+JEDE Police MUSS eine eigene CHF-Prämienzeile haben. VERBOTEN:
+- KVG Grundversicherung wenn KEIN KVG-CHF-Betrag explizit sichtbar
+- Produkte die nicht namentlich im Dokument stehen
+- Gesundheitskonto, 24h-Service, Boni, Rabatte, Inklusivleistungen
+- Subtotale / Gesamttotale als Produkt erfassen
+REGEL: Zaehle CHF-Produktzeilen -> erstelle GENAU so viele Policen.
+
+=== VERSICHERER-SPEZIFISCHES WISSEN ===
+
+GROUPE MUTUEL:
+  KVG (section: grundversicherung) — Seite 1 "Versicherungen gemäss KVG":
+    RT=SanaTel, RF=SanaFlex, RS=SanaStart, RM=SanaMed, RH=SanaHAM, RC=SanaCare
+    => modell aus Code ableiten (RT=TelMed, RF=FreieArztwahl, RH=Hausarzt, RC=HMO)
+  VVG (section: zusatzversicherung) — Seite 2+ "Versicherungen gemäss VVG":
+    BH=Taggeldversicherung, GO=Global Smart, KH=H-Capital, MU=Mundo, SP=Supra, HO=Hospi, CO=Complementa, DE=Denta
+  ACHTUNG: "Monatlicher Abzug"/"Kombinationsrabatt" = Rabatt, KEIN Produkt!
+  "Monatsprämie gemäss KVG/VVG" = Subtotal, KEIN Produkt!
+  Letztes Total = total_monthly_premium
+
+CSS / myFlex:
+  KVG: "CSS Kranken-Versicherung", Standard, HMO, Callmed, myDoc, Telmed
+  VVG: myFlex Spitalversicherung (Balance/Comfort/Premium), myFlex Ambulant, myFlex Dental
+  Produkte stehen unter "VERSICHERUNGSPOLICE fuer [Name]" mit eigenem CHF-Betrag
+  Polnummer-Format: X.XXX.XXX (z.B. 8.055.733)
+
+HELSANA / PROGRÈS:
+  KVG: Helsana Standard, Helsana BeneFit Plus HAM/HMO, Progrès HAM/HMO
+  VVG: Helsana TOP, OMNI (stationär), SANA (ambulant), DENTA, VITA (Unfall)
+
+SWICA / OEKK:
+  KVG: SWICA FAVORIT/OPTIMA HMO/HAM, OEKK Standard/Telklinik
+  VVG: SWICA HOSPITA (Spital), SWICA COMPLETA (ambulant), SWICA DENTA
+
+SANITAS:
+  KVG: Sanitas Standard, JumpStart, Callmed, Flexmed, HMO
+  VVG: Sanitas Hospital (Flex/Eco/Classic/Top), Sanitas Ambulant Plus
+
+=== KONFIDENZ-BEWERTUNG (0.0 - 1.0) ===
+1.00 = exakt lesbar im Dokument
+0.80-0.99 = klar ableitbar aus Kontext
+0.60-0.79 = wahrscheinlich korrekt, Berater pruefen
+0.00-0.59 = unsicher, nicht eindeutig lesbar
+
+Antworte NUR mit dem JSON-Objekt. Fehlende Felder = null.`,
         response_json_schema: {
           type: 'object',
           properties: {
             document_subtype: { type: ['string', 'null'] },
             document_confidence: { type: ['number', 'null'] },
             summary: { type: ['string', 'null'] },
+            total_monthly_premium: { type: ['number', 'null'], description: 'Gesamtprämie/Monat laut Dokument' },
+            discount_amount: { type: ['number', 'null'], description: 'Rabatt/Monat' },
             policy_holder_first_name: { type: ['string', 'null'] },
             policy_holder_last_name: { type: ['string', 'null'] },
             policy_holder_birthdate: { type: ['string', 'null'] },
@@ -80,6 +112,16 @@ Deno.serve(async (req) => {
             insured_birthdate: { type: ['string', 'null'] },
             insured_ahv_number: { type: ['string', 'null'] },
             insured_is_different: { type: ['boolean', 'null'] },
+            confidence_persons: {
+              type: 'object',
+              properties: {
+                policy_holder_name: { type: ['number', 'null'] },
+                policy_holder_address: { type: ['number', 'null'] },
+                insured_name: { type: ['number', 'null'] },
+                insured_birthdate: { type: ['number', 'null'] },
+                role_distinction: { type: ['number', 'null'], description: 'Sicherheit der Rollenunterscheidung VN vs VP' },
+              }
+            },
             policies: {
               type: 'array',
               items: {
@@ -88,7 +130,8 @@ Deno.serve(async (req) => {
                   insurer: { type: ['string', 'null'] },
                   policy_number: { type: ['string', 'null'] },
                   insurance_type: { type: ['string', 'null'] },
-                  sparte: { type: ['string', 'null'] },
+                  sparte: { type: ['string', 'null'], description: 'kvg oder vvg_zusatz' },
+                  section: { type: ['string', 'null'], description: 'grundversicherung oder zusatzversicherung' },
                   product: { type: ['string', 'null'] },
                   product_short: { type: ['string', 'null'] },
                   franchise: { type: ['number', 'null'] },
@@ -101,12 +144,24 @@ Deno.serve(async (req) => {
                   cancellation_deadline: { type: ['string', 'null'] },
                   health_declaration_required: { type: ['boolean', 'null'] },
                   coverage_summary: { type: ['string', 'null'] },
+                  confidence: {
+                    type: 'object',
+                    properties: {
+                      product: { type: ['number', 'null'] },
+                      premium_monthly: { type: ['number', 'null'] },
+                      franchise: { type: ['number', 'null'] },
+                      section: { type: ['number', 'null'] },
+                      policy_number: { type: ['number', 'null'] },
+                      dates: { type: ['number', 'null'] },
+                    }
+                  },
                 }
               }
             },
             broker_name: { type: ['string', 'null'] },
             broker_number: { type: ['string', 'null'] },
             commission_estimate: { type: ['number', 'null'] },
+            extraction_notes: { type: ['string', 'null'], description: 'Was war klar, was war unsicher' },
           }
         },
       });

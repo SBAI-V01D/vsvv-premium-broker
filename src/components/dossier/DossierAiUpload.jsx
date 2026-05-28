@@ -22,7 +22,7 @@
  *   - [Phase C] Anonymisiertes Feedback-Logging via aiCorrectionLogger
  */
 import React, { useState, useRef, useMemo } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
   Upload, Sparkles, AlertTriangle, Check, X,
@@ -323,48 +323,57 @@ function PersonTotal({ products, personName }) {
   );
 }
 
-// ── KI-Extraktions-Schema (Phase B+: Groupe-Mutuel-kompatibel) ───────────────
+// ── KI-Extraktions-Schema (Phase B+C: mit Personen-Extraktion) ───────────────
 const EXTRACTION_SCHEMA = {
   type: 'object',
   properties: {
     document_type: {
       type: 'string',
       enum: ['police', 'offerte', 'vergleich', 'unbekannt'],
-      description: 'Dokumenttyp',
+    },
+    // === PERSONEN ===
+    policy_holder_first_name: { type: 'string', description: 'Praemienzahler Vorname (Adressblock)' },
+    policy_holder_last_name: { type: 'string', description: 'Praemienzahler Nachname (Adressblock)' },
+    policy_holder_street: { type: 'string' },
+    policy_holder_zip_code: { type: 'string' },
+    policy_holder_city: { type: 'string' },
+    policy_holder_birthdate: { type: 'string', description: 'YYYY-MM-DD' },
+    insured_first_name: { type: 'string', description: 'Versicherte Person Vorname (falls abweichend)' },
+    insured_last_name: { type: 'string' },
+    insured_birthdate: { type: 'string', description: 'YYYY-MM-DD' },
+    insured_is_different: { type: 'boolean', description: 'true wenn VP != Prämeinzahler' },
+    confidence_persons: {
+      type: 'object',
+      properties: {
+        policy_holder_name: { type: 'number' },
+        policy_holder_address: { type: 'number' },
+        insured_name: { type: 'number' },
+        insured_birthdate: { type: 'number' },
+        role_distinction: { type: 'number' },
+      }
     },
     detected_persons: {
       type: 'array',
-      description: 'Erkannte Personen im Dokument (Versicherungsnehmer, mitversicherte)',
       items: { type: 'string' },
     },
-    insurer_name: {
-      type: 'string',
-      description: 'Hauptversicherer des Dokuments (z.B. "Groupe Mutuel")',
-    },
-    total_monthly_premium: {
-      type: 'number',
-      description: 'Gesamtmonatsprämie laut Dokument (nach Rabatten)',
-    },
-    discount_amount: {
-      type: 'number',
-      description: 'Rabattbetrag/Monat falls erkennbar',
-    },
+    insurer_name: { type: 'string' },
+    total_monthly_premium: { type: 'number' },
+    discount_amount: { type: 'number' },
     products: {
       type: 'array',
-      description: 'ALLE erkannten Versicherungsprodukte — jede Zeile/Block ist ein separates Produkt',
       items: {
         type: 'object',
         properties: {
-          gesellschaft:      { type: 'string', description: 'Versicherungsgesellschaft' },
-          product_name:      { type: 'string', description: 'Exakter Produktname aus dem Dokument' },
+          gesellschaft:      { type: 'string' },
+          product_name:      { type: 'string' },
           section:           { type: 'string', enum: ['grundversicherung', 'zusatzversicherung'] },
-          praemie_monatlich: { type: 'number', description: 'Monatsprämie CHF (nur Zahl)' },
-          praemie_jaehrlich: { type: 'number', description: 'Jahresprämie CHF falls angegeben' },
-          franchise:         { type: 'number', description: 'Franchise CHF (nur für KVG relevant)' },
-          modell:            { type: 'string', description: 'Versicherungsmodell (HMO, HAM, Standard, TelFirst, SanaTel, etc.)' },
-          deckung_details:   { type: 'string', description: 'Kurzbeschreibung Deckung max 120 Zeichen' },
-          person_name:       { type: 'string', description: 'Versicherte Person falls erkennbar' },
-          is_current:        { type: 'boolean', description: 'true = bestehende Police, false = Offerte' },
+          praemie_monatlich: { type: 'number' },
+          praemie_jaehrlich: { type: 'number' },
+          franchise:         { type: 'number' },
+          modell:            { type: 'string' },
+          deckung_details:   { type: 'string' },
+          person_name:       { type: 'string' },
+          is_current:        { type: 'boolean' },
           confidence: {
             type: 'object',
             properties: {
@@ -381,90 +390,62 @@ const EXTRACTION_SCHEMA = {
         },
       },
     },
-    extraction_notes: {
-      type: 'string',
-      description: 'Hinweise zur Extraktion: was war klar, was war unsicher, welche Seiten wurden berücksichtigt',
-    },
-    partial_extraction: {
-      type: 'boolean',
-      description: 'true wenn nur Teile des Dokuments erkannt wurden (trotzdem alle gefundenen Produkte zurückgeben)',
-    },
+    extraction_notes: { type: 'string' },
+    partial_extraction: { type: 'boolean' },
   },
 };
 
 const EXTRACTION_PROMPT = `
-Du bist ein erfahrener Schweizer Versicherungsberater. Analysiere das GESAMTE mehrseitige Dokument (alle Seiten) und extrahiere JEDES Versicherungsprodukt als separaten Eintrag.
+Du bist eine praezise Schweizer Versicherungs-Extraktionsengine. Analysiere das GESAMTE Dokument (alle Seiten).
 
 ═══════════════════════════════════════════════════════
-GROUPE MUTUEL POLICE-STRUKTUR (häufiges Format):
+SCHRITT 1: PERSONEN-ROLLEN IDENTIFIZIEREN
 ═══════════════════════════════════════════════════════
-Groupe Mutuel Policen sind typischerweise so aufgebaut:
+ROLLE A — PRAEMIENZAHLER / VERSICHERUNGSNEHMER:
+  Person im Adressblock oben (an wen der Brief geht)
+  => policy_holder_first_name / policy_holder_last_name / policy_holder_street / policy_holder_zip_code / policy_holder_city
+  => policy_holder_birthdate wenn sichtbar
 
-SEITE 1: "Versicherungsausweis" (KVG-Teil)
-  → Überschrift: "Versicherungen gemäss Bundesgesetz über die Krankenversicherung (KVG)"
-  → section: "grundversicherung"
-  → Produkte haben 2-Buchstaben-Code + Name, z.B.:
-    "RT  SanaTel - obligatorische Krankenpflegeversicherung   433.00"
-    "RF  SanaFlex..."  "RS  SanaStart..."
-  → "Monatlicher Abzug" = Rabatt/Abzug (KEIN Produkt, in discount_amount)
-  → "Monatsprämie der Versicherungen gemäss KVG" = KVG-Subtotal (KEIN Produkt)
+ROLLE B — VERSICHERTE PERSON (kann abweichen!):
+  Person fuer die die Police gilt
+  Bei CSS: "VERSICHERUNGSPOLICE fuer [Name], Geburtsdatum: TT.MM.JJJJ"
+  Bei Groupe Mutuel: Name im Policenheader oder "Versicherter:"
+  => insured_first_name / insured_last_name / insured_birthdate (YYYY-MM-DD)
+  => insured_is_different=true wenn NICHT identisch mit policy_holder
 
-SEITE 2+: "Versicherungspolice" (VVG-Teil)
-  → Überschrift: "Versicherungen gemäss Bundesgesetz über den Versicherungsvertrag (VVG)"
-  → section: "zusatzversicherung" (WICHTIG!)
-  → Produkte mit 2-Buchstaben-Code + Name:
-    "BH  Taggeldversicherung bei Spitalaufenthalt   20.00"
-    "GO  Global smart - Zusatzversicherung ...   28.20"
-    "KH  H-Capital - Kapitalversicherung ...   22.00"
-    "MU  Mundo - Zusatzversicherung für Auslandreisen   3.50"
-    "SP  Supra..." "HO  Hospi..." "CO  Complementa..." "DE  Denta..."
-  → "Ihr Kombinationsrabatt" = Rabatt (KEIN Produkt, in discount_amount)
-  → "Monatsprämie der Versicherungen gemäss VVG" = VVG-Subtotal (KEIN Produkt)
-
-LETZTE SEITE: Zusammenfassung
-  → "Monatsprämie zu Ihren Lasten" = GESAMTTOTAL → total_monthly_premium
-  → "Kombinationsrabatt" = Gesamtrabatt → discount_amount
+Auch: detected_persons = alle im Dokument erwaehnten Personen (Namen-Liste)
 
 ═══════════════════════════════════════════════════════
-ANDERE VERSICHERER (CSS, Helsana, SWICA, Sanitas, etc.)
+GROUPE MUTUEL POLICE-STRUKTUR:
 ═══════════════════════════════════════════════════════
-KVG (section: "grundversicherung"): Standard, HMO, HAM, Hausarzt, TelFirst, Medbase, Callmed, flexmed
-  → Produkte mit "Grundversicherung", "KVG", "obligatorisch" im Namen
-VVG (section: "zusatzversicherung"): Spital allg./halbprivat/privat, Ambulant, Dental, Komplementär, Reise, Taggeld, Global, Ausland
-  → Produkte mit "Zusatzversicherung", "VVG", "Spital", "Ambulant", "Dental", "Taggeld", "Reise" im Namen
-  → ALLE Produkte die NICHT explizit "Grundversicherung" oder "KVG" sind = zusatzversicherung
+Seite 1: "Versicherungen gemäss KVG" => section: grundversicherung
+  RT=SanaTel(TelMed), RF=SanaFlex(Freie Arztwahl), RS=SanaStart, RH=SanaHAM(Hausarzt), RC=SanaCare(HMO)
+  "Monatlicher Abzug" / "Kombinationsrabatt" = Rabatt (discount_amount), KEIN Produkt!
+  "Monatsprämie gemäss KVG" = Subtotal, KEIN Produkt!
+Seite 2+: "Versicherungen gemäss VVG" => section: zusatzversicherung
+  BH=Taggeldversicherung, GO=Global Smart, KH=H-Capital, MU=Mundo, SP=Supra, HO=Hospi, CO=Complementa, DE=Denta
+Letzte Seite: "Monatsprämie zu Ihren Lasten" = total_monthly_premium
 
 ═══════════════════════════════════════════════════════
-EXTRAKTIONSREGELN
+ANDERE VERSICHERER:
 ═══════════════════════════════════════════════════════
-1. JEDER Produktblock = 1 separater Eintrag im products-Array
-2. section: "grundversicherung" NUR für KVG (obligatorische Grundversicherung), "zusatzversicherung" für ALLE VVG-Produkte
-   → Wenn Produkt "Grundversicherung" oder "KVG" oder "obligatorisch" enthält = grundversicherung
-   → Wenn Produkt "Zusatzversicherung", "VVG", "Spital", "Ambulant", "Dental", "Taggeld", "Reise", "Global", "H-Capital", "Mundo" enthält = zusatzversicherung
-   → Im ZWEIFEL: lieber "zusatzversicherung" (VVG ist der häufigere Fall bei Zusatzprodukten)
-3. gesellschaft: Hauptversicherer (z.B. "Groupe Mutuel", "CSS", "Helsana")
-4. product_name: Exakter Produktname (z.B. "SanaTel", "Global Smart", "H-Capital", "Mundo", "Taggeldversicherung bei Spitalaufenthalt")
-5. praemie_monatlich: CHF-Betrag rechts neben dem Produktnamen (nur Zahl, z.B. 433.00)
-6. franchise: Nur KVG — aus "Jahresfranchise von CHF X" (z.B. 2500)
-7. modell: z.B. "SanaTel" = Telmed-Modell, "SanaFlex" = freie Arztwahl, "HMO" etc.
-8. is_current: true (Police = bestehende Versicherung)
-9. Prämien-Abzüge / Totale / Rabatte: NICHT als Produkt — in total_monthly_premium / discount_amount
-10. Falls Feld nicht lesbar: null (NIE Platzhalterwert)
+CSS/myFlex: KVG=Standard/HMO/Callmed/myDoc/Telmed, VVG=myFlex Spitalversicherung Balance/Comfort/Premium, myFlex Ambulant, myFlex Dental
+Helsana: KVG=Standard/BeneFit Plus HAM/HMO/Progrès, VVG=TOP/OMNI/SANA/DENTA/VITA
+SWICA: KVG=FAVORIT/OPTIMA HMO/HAM/OEKK, VVG=HOSPITA/COMPLETA/DENTA
+Sanitas: KVG=Standard/JumpStart/Callmed/Flexmed/HMO, VVG=Hospital Flex/Eco/Classic/Top, Ambulant Plus
 
 ═══════════════════════════════════════════════════════
-KONFIDENZ (für jedes Feld 0.0–1.0)
+PRODUKT-EXTRAKTION (NUR EXPLIZITE CHF-ZEILEN):
 ═══════════════════════════════════════════════════════
-1.00: Zahl/Text exakt im Dokument lesbar
-0.80–0.99: Aus Kontext klar ableitbar
-0.60–0.79: Wahrscheinlich korrekt, Berater sollte prüfen
-0.00–0.59: Unsicher oder nicht im Dokument
+- Jede Police MUSS eigene CHF-Prämienzeile haben
+- VERBOTEN: KVG ohne KVG-CHF-Betrag, Subtotale, Rabatte, Gesundheitskonto, 24h-Service als Produkt
+- section="grundversicherung" NUR fuer KVG/obligatorisch, alles andere = "zusatzversicherung"
+- Im Zweifel: Police NICHT erfassen. policies=[] besser als falsche Police.
 
 ═══════════════════════════════════════════════════════
-FEHLERTOLERANZ
+KONFIDENZ (0.0-1.0) pro Feld:
 ═══════════════════════════════════════════════════════
-- Alle erkennbaren Produkte IMMER zurückgeben (partial_extraction: true wenn unvollständig)
-- NIEMALS leeres products-Array wenn irgendein Produkt erkennbar ist
-- extraction_notes: Was erkannt / was unklar war
+1.00=exakt lesbar | 0.80-0.99=klar ableitbar | 0.60-0.79=wahrscheinlich | 0.00-0.59=unsicher
 
 Antworte NUR mit dem JSON-Objekt.
 `;
@@ -519,8 +500,68 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
   const [defaultGruppe, setDefaultGruppe] = useState(propDefaultGruppe);
   const [confirmedCount, setConfirmedCount] = useState(0);
   const [originalProducts, setOriginalProducts] = useState([]); // Phase C: Korrektur-Tracking
+  const [extractedPersons, setExtractedPersons] = useState(null); // Personen aus Extraktion
   const fileInputRef = useRef();
   const qc = useQueryClient();
+
+  // CRM-Kunden laden fuer Matching (nur im Review-Schritt)
+  const { data: allCustomers = [] } = useQuery({
+    queryKey: ['customers_dossier_match'],
+    queryFn: () => base44.entities.Customer.list(null, 500),
+    enabled: step === 'review',
+  });
+
+  // Fuzzy-Matching Hilfsfunktion
+  const similarity = (a, b) => {
+    if (!a || !b) return 0;
+    const s1 = a.toLowerCase().trim(), s2 = b.toLowerCase().trim();
+    if (s1 === s2) return 1;
+    const longer = s1.length > s2.length ? s1 : s2;
+    const shorter = s1.length > s2.length ? s2 : s1;
+    const costs = Array.from({ length: shorter.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= longer.length; i++) {
+      let prev = i;
+      for (let j = 1; j <= shorter.length; j++) {
+        const val = longer[i-1] === shorter[j-1] ? costs[j-1] : Math.min(costs[j-1], prev, costs[j]) + 1;
+        costs[j-1] = prev; prev = val;
+      }
+      costs[shorter.length] = prev;
+    }
+    return (longer.length - costs[shorter.length]) / longer.length;
+  };
+
+  // CRM-Matches berechnen aus extrahierten Personendaten
+  const crmMatches = React.useMemo(() => {
+    if (!extractedPersons || allCustomers.length === 0) return [];
+    const results = [];
+    const tryMatch = (firstName, lastName, birthdate, role) => {
+      if (!firstName || !lastName) return;
+      const matches = allCustomers
+        .map(c => ({
+          customer: c,
+          score: similarity(c.first_name, firstName) * 0.5 + similarity(c.last_name, lastName) * 0.5,
+          birthdateMatch: birthdate && c.birthdate === birthdate,
+        }))
+        .filter(x => x.score > 0.80)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 2);
+      matches.forEach(({ customer, score, birthdateMatch }) => {
+        if (!results.find(r => r.customer.id === customer.id)) {
+          results.push({
+            customer,
+            role,
+            confidence: birthdateMatch ? 95 : Math.round(score * 85),
+            label: `${firstName} ${lastName}${birthdate ? ' · ' + birthdate : ''}`,
+          });
+        }
+      });
+    };
+    tryMatch(extractedPersons.policy_holder_first_name, extractedPersons.policy_holder_last_name, extractedPersons.policy_holder_birthdate, 'Prämeinzahler');
+    if (extractedPersons.insured_is_different) {
+      tryMatch(extractedPersons.insured_first_name, extractedPersons.insured_last_name, extractedPersons.insured_birthdate, 'Versicherte Person');
+    }
+    return results;
+  }, [extractedPersons, allCustomers]);
 
   const allPersons = [...new Set([...knownPersons, ...detectedPersons, personName].filter(Boolean))];
 
@@ -540,6 +581,22 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
       const data = rawData?.response ?? rawData ?? {};
 
       setDocumentType(data.document_type || 'unbekannt');
+      // Personen-Daten speichern fuer CRM-Matching
+      if (data.policy_holder_last_name || data.insured_last_name) {
+        setExtractedPersons({
+          policy_holder_first_name: data.policy_holder_first_name || null,
+          policy_holder_last_name: data.policy_holder_last_name || null,
+          policy_holder_street: data.policy_holder_street || null,
+          policy_holder_zip_code: data.policy_holder_zip_code || null,
+          policy_holder_city: data.policy_holder_city || null,
+          policy_holder_birthdate: data.policy_holder_birthdate || null,
+          insured_first_name: data.insured_first_name || null,
+          insured_last_name: data.insured_last_name || null,
+          insured_birthdate: data.insured_birthdate || null,
+          insured_is_different: data.insured_is_different || false,
+          confidence_persons: data.confidence_persons || null,
+        });
+      }
       setDetectedPersons(data.detected_persons || []);
       // Notizen inkl. partial_extraction-Warnung
       const notes = [
@@ -874,6 +931,62 @@ export default function DossierAiUpload({ dossierId, personName, onEntryAdded, o
               )}
               <span className="text-muted-foreground">{sessionProducts.length} Produkt{sessionProducts.length !== 1 ? 'e' : ''} erkannt</span>
             </div>
+
+            {/* Erkannte Personen + CRM-Matching */}
+            {extractedPersons && (extractedPersons.policy_holder_last_name || extractedPersons.insured_last_name) && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-blue-700 flex items-center gap-1.5">
+                  <User className="w-3 h-3" /> Erkannte Personen
+                </p>
+                <div className="grid gap-1.5 text-xs">
+                  {extractedPersons.policy_holder_last_name && (
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="font-semibold text-blue-900">{extractedPersons.policy_holder_first_name} {extractedPersons.policy_holder_last_name}</span>
+                        <span className="ml-1.5 text-blue-600">(Prämeinzahler)</span>
+                        {extractedPersons.policy_holder_street && (
+                          <p className="text-blue-600/80">{extractedPersons.policy_holder_street}, {extractedPersons.policy_holder_zip_code} {extractedPersons.policy_holder_city}</p>
+                        )}
+                      </div>
+                      {extractedPersons.confidence_persons?.policy_holder_name != null && (
+                        <ConfidencePill confidence={extractedPersons.confidence_persons.policy_holder_name} />
+                      )}
+                    </div>
+                  )}
+                  {extractedPersons.insured_is_different && extractedPersons.insured_last_name && (
+                    <div className="flex items-start justify-between gap-2 pt-1 border-t border-blue-200">
+                      <div>
+                        <span className="font-semibold text-blue-900">{extractedPersons.insured_first_name} {extractedPersons.insured_last_name}</span>
+                        <span className="ml-1.5 text-blue-600">(Versicherte Person)</span>
+                        {extractedPersons.insured_birthdate && <p className="text-blue-600/80">GD: {extractedPersons.insured_birthdate}</p>}
+                      </div>
+                      {extractedPersons.confidence_persons?.insured_name != null && (
+                        <ConfidencePill confidence={extractedPersons.confidence_persons.insured_name} />
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* CRM-Matches */}
+                {crmMatches.length > 0 && (
+                  <div className="pt-2 border-t border-blue-200 space-y-1">
+                    <p className="text-[10px] font-semibold text-blue-700 uppercase tracking-wide">CRM-Treffer</p>
+                    {crmMatches.map(({ customer, role, confidence: conf, label }) => (
+                      <div key={customer.id} className="flex items-center justify-between gap-2 bg-white/70 rounded px-2 py-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <User className="w-3 h-3 text-blue-500" />
+                          <span className="font-medium text-slate-800 text-xs">{customer.first_name} {customer.last_name}</span>
+                          <span className="text-[10px] text-blue-600">({role})</span>
+                          {customer.birthdate && <span className="text-[10px] text-slate-500">GD: {customer.birthdate}</span>}
+                        </div>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                          conf >= 90 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                        }`}>{conf}%</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {extractionNotes && (
               <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg px-3 py-2 border border-border/40">
