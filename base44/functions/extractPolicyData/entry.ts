@@ -79,6 +79,31 @@ Deno.serve(async (req) => {
         model: 'claude_sonnet_4_6',
         add_context_from_internet: false,
         file_urls: [fileInput],
+        prompt: `Du bist ein Schweizer Versicherungsdokument-Analyse-Experte. Analysiere das beigefügte PDF exakt.
+
+ROLLEN-ZUWEISUNG (KRITISCH - STRENG BEFOLGEN):
+- policy_holder_name = Person im ADRESSBLOCK (oben rechts / Briefadresse). Oft "Frau/Herr [Name]". Dies ist der Korrespondenzempfänger und Prämienzahler.
+- first_name / last_name = Die VERSICHERTE Person. Steht im Policenblock als "VERSICHERUNGSPOLICE für [Name]" oder "Versicherter: [Name]" oder im Deckungsblock.
+- WENN Adressat UNGLEICH versicherte Person: policy_holder_name = Adressat, first_name/last_name = Versicherte Person.
+- street/zip_code/city = Adresse aus dem Adressblock (vom Prämienzahler/Korrespondenzempfänger).
+- birthdate/gender = Daten der VERSICHERTEN Person.
+
+PRODUKTE UND DECKUNGEN (NULL HALLUZINATIONEN):
+- products_evidence: NUR Produkte die WÖRTLICH im Dokument als eigenständige Versicherung mit Prämie stehen.
+- NIEMALS ergänzen, ableiten, oder "typische" Produkte hinzufügen.
+- "Gesundheitskonto" und "Gesundheitskonto-Bonus" mit Prämie "inklusive" sind KEINE eigenständigen Produkte mit Kosten.
+- evidence = exakter Textauszug aus dem Dokument als Beweis.
+- confidence: 0.95 = Produktname exakt im Text, 0.7 = abgeleitet, 0.5 = unsicher.
+- Wenn kein Produkt explizit: products_evidence = [].
+
+VERSICHERUNGSART:
+- "VVG" im Dokument = Zusatzversicherung. insurance_type = "health". KEIN KVG/Grundversicherung ergänzen.
+- Grundversicherung/KVG NUR wenn explizit "Grundversicherung" oder "KVG" im Dokument steht.
+
+PRÄMIE:
+- premium_monthly = Total Nettoprämie (nach Rabatten). NICHT die Bruttoprämie.
+
+Feld-Konfidenz: 1.0 = exakt im Text, 0.7 = hoch sicher abgeleitet, 0.5 = unsicher.`,
         response_json_schema: {
           type: 'object',
           properties: {

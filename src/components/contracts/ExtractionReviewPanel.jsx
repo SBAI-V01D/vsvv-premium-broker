@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { CheckCircle2, AlertTriangle, Edit3, ChevronLeft, FileText, X } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, Edit3, ChevronLeft, FileText, X, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 function getLevel(score) {
@@ -99,8 +99,12 @@ export default function ExtractionReviewPanel({ data, confidences = {}, document
   // DECKUNGS-QUELLE: products_evidence (evidence-validiert, >=0.90 confidence)
   // Fallback auf additional_products nur für Legacy-Daten
   const coverages = data?.products_evidence || data?.additional_products || []
-  const hasCoverages = coverages.length > 0
   const docCls = DOC_COLORS[documentType] || 'bg-slate-50 border-slate-200 text-slate-800'
+
+  const addCoverage = () => {
+    const newCoverages = [...coverages, { product: '', confidence: 1.0, evidence: ['manuell hinzugefügt'], manual: true }]
+    onChange({ ...data, products_evidence: newCoverages, additional_products: newCoverages })
+  }
 
   return (
     <div className="space-y-4 py-1">
@@ -206,22 +210,21 @@ export default function ExtractionReviewPanel({ data, confidences = {}, document
         </div>
       </div>
 
-      {/* ZUSATZVERSICHERUNGEN / DECKUNGEN — EDITIERBAR */}
-      {hasCoverages && (
-        <div>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-1.5">
-            <FileText className="w-3 h-3" /> Zusatzversicherungen ({coverages.length})
-          </p>
-          <div className="space-y-2">
+      {/* ZUSATZVERSICHERUNGEN / DECKUNGEN — IMMER SICHTBAR */}
+      <div>
+        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-1.5">
+          <FileText className="w-3 h-3" /> Deckungen / Produkte ({coverages.length})
+        </p>
+        {coverages.length > 0 && (
+          <div className="space-y-2 mb-2">
             {coverages.map((cov, idx) => (
               <div key={idx} className="p-3 bg-amber-50/50 border border-amber-200 rounded-lg space-y-2">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-xs font-semibold text-amber-900">Deckung #{idx + 1}</p>
+                  <p className="text-xs font-semibold text-amber-900">Deckung #{idx + 1}{cov.manual ? ' (manuell)' : ''}</p>
                   <button
                     type="button"
                     onClick={() => {
                       const newCoverages = coverages.filter((_, i) => i !== idx)
-                      // Update products_evidence (primary source) and clear additional_products
                       onChange({ ...data, products_evidence: newCoverages, additional_products: newCoverages })
                     }}
                     className="text-xs text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
@@ -241,7 +244,7 @@ export default function ExtractionReviewPanel({ data, confidences = {}, document
                     }}
                   />
                   <ReviewField
-                    label="Monatstprämie"
+                    label="Monatspämie (CHF)"
                     value={cov.premium_monthly != null ? String(cov.premium_monthly) : ''}
                     confidence={cov.confidence || 0.5}
                     onChange={v => {
@@ -255,16 +258,22 @@ export default function ExtractionReviewPanel({ data, confidences = {}, document
               </div>
             ))}
           </div>
-          <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
-            <p className="text-[10px] text-amber-700 font-semibold mb-0.5">
-              ⚠️ {coverages.length} Deckung(en) aus Dokument extrahiert (Confidence ≥90%)
-            </p>
-            <p className="text-[10px] text-amber-600">
-              Alle Deckungen sind KI-Vorschläge. Nicht korrekte Deckungen bitte <strong>sofort löschen</strong>. Lieber leer als falsch.
-            </p>
-          </div>
-        </div>
-      )}
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={addCoverage}
+          className="w-full gap-1.5 border-dashed text-muted-foreground hover:text-primary"
+        >
+          <Plus className="w-3.5 h-3.5" /> Deckung manuell hinzufügen
+        </Button>
+        {coverages.length > 0 && (
+          <p className="text-[10px] text-amber-700 mt-1.5">
+            ⚠️ KI-Vorschläge: Falsche Deckungen bitte <strong>löschen</strong>. Lieber leer als falsch.
+          </p>
+        )}
+      </div>
 
       {missingRequired && (
         <div className="flex items-center gap-2 p-2.5 bg-red-50 border border-red-300 rounded-lg text-xs text-red-700 font-medium">
