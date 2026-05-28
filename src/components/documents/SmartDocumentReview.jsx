@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card'
 import {
   CheckCircle2, AlertCircle, User, Users, UserPlus,
   ChevronRight, ChevronLeft, Loader2, FileText, Search,
-  Sparkles, Bot
+  Sparkles, Bot, X, Trash2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -47,8 +47,9 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedPolicyIndex, setSelectedPolicyIndex] = useState(0)
   const [done, setDone] = useState(false)
+  const [activePolicies, setActivePolicies] = useState(extracted?.policies || [])
 
-  const policies = extracted?.policies || []
+  const policies = activePolicies
 
   const buildProductLabel = (pol) => {
     if (!pol) return ''
@@ -61,6 +62,22 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
 
   const buildAllProductsLabel = (pols) => {
     return pols.map((pol) => pol.product_short || pol.product || '').filter(Boolean).join('\n')
+  }
+
+  const handleRemovePolicy = (index) => {
+    const next = activePolicies.filter((_, i) => i !== index)
+    setActivePolicies(next)
+    const newIndex = Math.min(selectedPolicyIndex, next.length - 1)
+    setSelectedPolicyIndex(Math.max(0, newIndex))
+    // Recalculate totals
+    const totalMonthly = next.reduce((s, p) => s + (p.premium_monthly || 0), 0)
+    const totalYearly = next.reduce((s, p) => s + (p.premium_yearly || p.premium_monthly * 12 || 0), 0)
+    setAppData(d => ({
+      ...d,
+      product: buildAllProductsLabel(next),
+      premium_monthly: totalMonthly > 0 ? Math.round(totalMonthly * 100) / 100 : d.premium_monthly,
+      premium_yearly: totalYearly > 0 ? Math.round(totalYearly * 100) / 100 : d.premium_yearly,
+    }))
   }
 
   const hasKvg = policies.some(p => p.sparte === 'kvg')
@@ -421,53 +438,51 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
         <StepIndicator current={1} />
         <AiBanner />
 
-        {/* Police wählen wenn mehrere vorhanden */}
-        {policies.length > 1 && (
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Police auswählen ({policies.length} erkannt)
-            </p>
-            <div className="grid gap-1">
-              {policies.map((pol, i) => (
+        {/* Erkannte Deckungen – immer anzeigen, einzeln löschbar */}
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            KI-erkannte Deckungen ({policies.length}) — falsche mit × entfernen
+          </p>
+          <div className="grid gap-1">
+            {policies.map((pol, i) => (
+              <div
+                key={i}
+                className={cn(
+                  'flex items-center gap-1.5 p-2.5 rounded-lg border text-xs transition-all',
+                  selectedPolicyIndex === i ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'border-border bg-muted/20'
+                )}
+              >
                 <button
-                  key={i}
                   type="button"
-                  onClick={() => {
-                    setSelectedPolicyIndex(i)
-                    setAppData(d => ({
-                      ...d,
-                      insurer: pol.insurer || '',
-                      policy_number: pol.policy_number || '',
-                      insurance_type: pol.insurance_type || 'health',
-                      sparte: pol.sparte || '',
-                      // product bleibt unverändert – enthält alle Deckungen
-                      franchise: pol.franchise ? String(pol.franchise) : '',
-                      model: pol.model || '',
-                      coverage_type: pol.coverage_type || '',
-                      premium_monthly: pol.premium_monthly || '',
-                      premium_yearly: pol.premium_yearly || '',
-                      start_date: pol.start_date || '',
-                      end_date: pol.end_date || '',
-                    }))
-                  }}
-                  className={cn(
-                    'w-full text-left p-2.5 rounded-lg border text-xs transition-all',
-                    selectedPolicyIndex === i ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'border-border hover:bg-muted/40'
-                  )}
+                  className="flex-1 text-left min-w-0"
+                  onClick={() => setSelectedPolicyIndex(i)}
                 >
                   <div className="flex justify-between items-center gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-slate-800 truncate">{pol.product || pol.insurer || '–'}</p>
-                      <p className="text-muted-foreground">{pol.insurer}{pol.coverage_type ? ` · ${pol.coverage_type}` : ''}{pol.model ? ` · ${pol.model}` : ''}</p>
+                      <p className="text-muted-foreground">{pol.insurer}{pol.coverage_type ? ` · ${pol.coverage_type}` : ''}{pol.sparte ? ` · ${pol.sparte}` : ''}</p>
                     </div>
                     {pol.premium_monthly && <span className="text-emerald-700 font-bold whitespace-nowrap">CHF {Number(pol.premium_monthly).toLocaleString('de-CH')}/M.</span>}
                   </div>
                   {pol.policy_number && <p className="text-muted-foreground mt-0.5">Police: {pol.policy_number}</p>}
                 </button>
-              ))}
-            </div>
+                <button
+                  type="button"
+                  title="Deckung entfernen"
+                  onClick={() => handleRemovePolicy(i)}
+                  className="ml-1 p-1 rounded hover:bg-red-100 hover:text-red-600 text-muted-foreground transition-colors flex-shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
           </div>
-        )}
+          {policies.length === 0 && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded p-2">
+              Alle Deckungen entfernt — bitte Produktfeld unten manuell ausfüllen.
+            </p>
+          )}
+        </div>
 
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
