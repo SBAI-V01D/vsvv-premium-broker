@@ -146,7 +146,7 @@ export default function SmartDocumentUpload({ open, onOpenChange, onSuccess }) {
       })
 
       if (!result?.success) {
-        throw new Error(result?.error || 'Analyse fehlgeschlagen')
+        throw new Error(result?.error || 'KI-Analyse fehlgeschlagen. Bitte prüfen Sie das Dokument.')
       }
 
       setAnalysisResult(result)

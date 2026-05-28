@@ -1,14 +1,11 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 /**
- * SMART DOCUMENT ANALYSIS — Enterprise Edition v2
- *
- * Ablauf:
- * 1. KI extrahiert alle relevanten Felder inkl. mehrerer Policen (wie Leads-Analyse)
- * 2. Kundenerkennung nach Priorität (kein hartes Auto-Matching über Namen allein)
- * 3. Gibt strukturierte Analyse-Ergebnisse zurück für manuelle Bestätigung im UI
- *
- * WICHTIG: Diese Funktion erstellt KEINE Kunden, Anträge oder Verträge.
+ * SMART DOCUMENT ANALYSIS — Strict Mode v3
+ * Model: claude_sonnet_4_6 (hallucination-free)
+ * - Nur Produkte mit explizitem CHF-Betrag werden extrahiert
+ * - Versicherungsnehmer (Adressblock) vs. versicherte Person klar getrennt
+ * - Kundenzuordnung sucht BEIDE: Versicherungsnehmer UND versicherte Person
  */
 
 Deno.serve(async (req) => {
@@ -16,65 +13,105 @@ Deno.serve(async (req) => {
 
   try {
     const { file_url, document_type } = await req.json();
-
     if (!file_url) {
       return Response.json({ error: 'file_url erforderlich' }, { status: 400 });
     }
 
+    // Auth required — InvokeLLM muss user-scoped sein damit file_url korrekt aufgeloest wird
+    const user = await base44.auth.me();
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    console.log('[smartDocumentAnalysis] START model=claude_sonnet_4_6 user=' + user.email);
+
     // ================================================================
-    // SCHRITT 1: KI-EXTRAKTION — erweitertes Schema mit policies-Array
+    // SCHRITT 1: KI-EXTRAKTION — STRICT MODE mit Claude
     // ================================================================
     let extracted = null;
     try {
-      extracted = await base44.asServiceRole.integrations.Core.InvokeLLM({
-        prompt: `Du bist ein Schweizer Versicherungsexperte. Analysiere dieses Versicherungsdokument präzise.
-Dokumenttyp-Hinweis: "${document_type || 'unbekannt'}".
+      extracted = await base44.integrations.Core.InvokeLLM({
+        model: 'claude_sonnet_4_6',
+        file_urls: [file_url],
+        prompt: `Du bist eine deterministische Schweizer Versicherungs-Extraktionsengine. STRICT MODE aktiv.
+Dokumenttyp-Hinweis: "${document_type || 'unbekannt'}"
 
-Extrahiere ALLE folgenden Felder soweit im Dokument vorhanden:
+## ABSOLUTE VERBOTE — Null Toleranz
+- NIEMALS Produkte ergänzen, ableiten, erfinden oder aus Erfahrung hinzufügen
+- NIEMALS Standardprodukte annehmen ("KVG hat immer Grundversicherung", "CSS hat Ambulant")
+- NIEMALS fehlende Werte mit Strings füllen — nur null zurückgeben
+- NIEMALS "unknown", "n/a", "nicht angegeben" schreiben — immer null
+
+## PRODUKTE — Eiserne Regel
+Ein Eintrag im policies-Array ist NUR erlaubt wenn GLEICHZEITIG gilt:
+  1. Ein Produktname steht explizit im Dokument
+  2. Daneben steht ein CHF-Betrag (Zahl) — nicht "inklusive", nicht "kostenfrei"
+  3. Es ist eine eigenständige Position, kein Unterpunkt / keine Variante
+
+NICHT extrahieren (auch wenn erwähnt):
+- Gesundheitskonto, Gesundheitskonto-Bonus
+- 24h Notfallservice, medizinische Beratung
+- "Allgemeine Abteilung", "Halbprivate Abteilung" (das sind Optionen, keine Produkte)
+- Inklusivleistungen, Boni, Rabatte
+- Alles ohne eigenen CHF-Betrag
+
+BEISPIEL KORREKT: Nur "Spitalversicherung myFlex CHF 63.10" im Dokument → 1 Eintrag mit product="Spitalversicherung myFlex", premium_monthly=63.10
+BEISPIEL FALSCH: Zusätzlich Grundversicherung/Ambulant hinzufügen weil "CSS typischerweise..."
+
+## PERSONENROLLEN — Strikte Priorität
+
+SCHRITT 1 — VERSICHERUNGSNEHMER (= Adressblock oben rechts / Briefkopf):
+  Der Name und die Adresse oben auf dem Dokument = Versicherungsnehmer / Prämienzahler
+  → policy_holder_first_name, policy_holder_last_name, policy_holder_street/zip/city
+
+SCHRITT 2 — VERSICHERTE PERSON (= wer tatsächlich versichert ist):
+  Steht als "VERSICHERUNGSPOLICE für [Name]" oder "Versicherter:" oder in der Deckungstabelle
+  → insured_first_name, insured_last_name, insured_birthdate
+  → insured_is_different = true wenn NICHT identisch mit Versicherungsnehmer
+
+WICHTIG: Adressblock-Person ≠ versicherte Person ist häufig (z.B. Ehefrau zahlt, Ehemann versichert)
+
+## ZU EXTRAHIERENDE FELDER
 
 DOKUMENTINFO:
-- document_subtype: Erkannter Untertyp: "neuantrag", "aenderungsantrag", "erneuerungsantrag", "police", "kuendigung", "offerte", "rechnung", "korrespondenz"
-- document_confidence: Konfidenz der Dokumenterkennung (0.0–1.0)
-- summary: Kurze Zusammenfassung auf Deutsch (1–2 Sätze)
+- document_subtype: "neuantrag" / "aenderungsantrag" / "erneuerungsantrag" / "police" / "kuendigung" / "offerte" / "rechnung" / "korrespondenz"
+- document_confidence: 0.0–1.0
+- summary: 1–2 Sätze auf Deutsch
 
-VERSICHERUNGSNEHMER (Vertragsinhaber):
+VERSICHERUNGSNEHMER (aus Adressblock/Briefkopf):
 - policy_holder_first_name, policy_holder_last_name
-- policy_holder_birthdate: Format YYYY-MM-DD
-- policy_holder_email, policy_holder_phone
+- policy_holder_birthdate: YYYY-MM-DD (falls im Adressblock angegeben)
 - policy_holder_street, policy_holder_zip_code, policy_holder_city
+- policy_holder_email, policy_holder_phone
 
-VERSICHERTE PERSON (falls abweichend vom VN):
+VERSICHERTE PERSON (wer versichert ist):
 - insured_first_name, insured_last_name
-- insured_birthdate: Format YYYY-MM-DD
+- insured_birthdate: YYYY-MM-DD — aus Deckungsblock oder Policenzeile
 - insured_ahv_number
-- insured_is_different: true wenn versicherte Person ≠ Versicherungsnehmer
+- insured_is_different: true wenn ≠ Versicherungsnehmer, sonst false
 
-POLICEN (WICHTIG: Extrahiere JEDE einzelne Versicherung als eigenen Eintrag im Array!):
-Bei KVG+VVG Dokumenten: KVG und jede VVG-Versicherung als SEPARATE Einträge!
-Für jede Police/Versicherung:
-  - insurer: Versicherungsgesellschaft (z.B. "CSS Kranken-Versicherung AG", "CSS Versicherung AG", "Helsana", "AXA")
-  - policy_number: Policen- oder Antragsnummer (aus Deckblatt, gilt für alle Policen desselben Dokuments)
-  - insurance_type: EXAKT aus: "health"(KVG/VVG/Kranken), "life"(Leben/Rente), "property"(Hausrat/Gebäude), "liability"(Haftpflicht), "motor"(Auto/MF), "other"
-  - sparte: EXAKT aus: "kvg" (Grundversicherung KVG), "vvg_zusatz" (alle VVG-Zusatzversicherungen), "motorfahrzeug", "haftpflicht_privat", "hausrat", "leben_3a", "leben_3b", "unfall_privat", "bvg", "uvg", "ktg"
-  - product: VOLLSTÄNDIGER Produktname wie er im Dokument steht (z.B. "Grundversicherung (KVG)", "Ambulantversicherung myFlex (AVB-Version 01.2026 / ZB 01.2026)", "Spitalversicherung myFlex")
-  - franchise: Jahresfranchise in CHF (Zahl, nur bei KVG)
-  - model: Kassenmodell/Variante (z.B. "Standardmodell", "myFlex", "Balance", "Premium", "Hausarztmodell", "Telemed")
-  - coverage_type: Altersgruppe/Deckungskategorie (z.B. "Erwachsene ab 26", "Kind 0-18", "bis 15 Jahre", "bis 18 Jahre")
-  - premium_monthly: NETTO Monatsprämie als CHF-Zahl (nach Rabatten)
-  - premium_yearly: Jahresprämie als CHF-Zahl (falls nur monatlich: mal 12)
-  - start_date: Format YYYY-MM-DD
-  - end_date: Format YYYY-MM-DD (aus "Vertragsablauf" oder "Laufzeit")
-  - cancellation_deadline: Format YYYY-MM-DD (Kündigungsfrist falls vorhanden)
-  - health_declaration_required: true/false
-  - product_short: KURZE Produktbezeichnung (max. 2 Wörter), z.B.: "Grundversicherung", "Ambulant", "Alternativ", "Spital", "Zahn", "Tod/Invalidität", "Heilungskosten", "Rechtschutz", "Haftpflicht", "Hausrat", "Motorfahrzeug"
-  - coverage_summary: Wichtigste Deckungsdetails (Leistungsprozent, Maximalbetrag, Variante etc.)
+POLICEN (nur mit eigenem CHF-Betrag):
+Für jeden Eintrag:
+- insurer: Voller Firmenname der Versicherung
+- policy_number: Policennummer als String, oder null (NIEMALS "unknown")
+- insurance_type: "health" / "life" / "property" / "liability" / "motor" / "other"
+- sparte: "kvg" / "vvg_zusatz" / "kvg_vvg_kombi" / "motorfahrzeug" / "haftpflicht_privat" / "hausrat" / "leben_3a" / "unfall_privat"
+- product: Exakter Produktname aus dem Dokument
+- product_short: Max 2 Wörter (z.B. "Spital", "Zahn", "Hausrat", "Grundversicherung")
+- franchise: Zahl CHF, nur bei KVG, sonst null
+- model: Modellname oder null
+- coverage_type: Altersgruppe (z.B. "Erwachsene") oder null
+- premium_monthly: NETTO Monatsprämie CHF nach Rabatten
+- premium_yearly: Jahresprämie CHF
+- start_date: YYYY-MM-DD
+- end_date: YYYY-MM-DD
+- health_declaration_required: true/false
+- coverage_summary: Wichtigste Deckungsdetails
 
-VERMITTLER & PROVISION:
-- broker_name, broker_number
-- commission_estimate: Geschätzte Jahresprovision CHF
+VERMITTLER:
+- broker_name, broker_number (null falls nicht angegeben)
 
-Antworte NUR mit JSON. Felder nicht gefunden = null.`,
-        file_urls: [file_url],
+Antworte NUR mit JSON. Fehlende Felder = null. Lieber 0 Policen als halluzinierte Produkte.`,
         response_json_schema: {
           type: 'object',
           properties: {
@@ -123,11 +160,19 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
             commission_estimate: { type: ['number', 'null'] },
           }
         },
-        model: 'gemini_3_flash',
       });
+
       if (!extracted || typeof extracted !== 'object') {
         throw new Error('Leere Antwort von KI');
       }
+
+      console.log('[smartDocumentAnalysis] Extraktion OK:', JSON.stringify({
+        policyholder: `${extracted.policy_holder_first_name} ${extracted.policy_holder_last_name}`,
+        insured: extracted.insured_is_different ? `${extracted.insured_first_name} ${extracted.insured_last_name}` : 'identisch',
+        policies_count: (extracted.policies || []).length,
+        policy_numbers: (extracted.policies || []).map(p => p.policy_number),
+      }));
+
     } catch (aiErr) {
       console.error('[smartDocumentAnalysis] KI-Extraktion fehlgeschlagen:', aiErr.message);
       return Response.json({
@@ -139,17 +184,30 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
       });
     }
 
-    // Erste Police als Hauptpolice für Rückwärtskompatibilität
+    // Kein Inhalt extrahiert? Klare Fehlermeldung statt leere Felder
+    const hasAnyData = extracted.policy_holder_last_name || extracted.insured_last_name ||
+      (extracted.policies && extracted.policies.length > 0);
+    if (!hasAnyData) {
+      console.warn('[smartDocumentAnalysis] Keine Versicherungsdaten gefunden — kein Versicherungsdokument?');
+      return Response.json({
+        success: false,
+        error: 'In diesem Dokument konnten keine Versicherungsdaten gefunden werden. Bitte prüfen Sie ob das korrekte PDF hochgeladen wurde.',
+        extracted: null,
+        customerMatches: [],
+        detectionPhase: 'no_insurance_data',
+      });
+    }
+
     const policies = extracted.policies || [];
     const firstPolicy = policies[0] || {};
 
     // ================================================================
-    // SCHRITT 2: KUNDENERKENNUNG — parallel + gefiltert (Performance)
-    // Verträge nur laden wenn eine Policennummer vorhanden ist
+    // SCHRITT 2: KUNDENERKENNUNG
+    // Sucht nach BEIDEN: Versicherungsnehmer UND versicherte Person
     // ================================================================
     const hasPoliceNumber = policies.some(p => p.policy_number);
     const [allCustomers, allContracts] = await Promise.all([
-      base44.asServiceRole.entities.Customer.list(null, 500),
+      base44.asServiceRole.entities.Customer.list(null, 1000),
       hasPoliceNumber
         ? base44.asServiceRole.entities.Contract.list(null, 1000)
         : Promise.resolve([]),
@@ -185,7 +243,7 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
       }
     };
 
-    // PRIORITÄT 1: Policennummer → Vertrag → Kunde (alle Policen prüfen)
+    // P1: Policennummer → Vertrag → Kunde
     for (const pol of policies) {
       if (pol.policy_number) {
         const contractMatch = allContracts.find(c =>
@@ -201,7 +259,7 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
       }
     }
 
-    // PRIORITÄT 2: E-Mail
+    // P2: E-Mail
     if (extracted.policy_holder_email) {
       const emailMatches = allCustomers.filter(c =>
         c.email && c.email.toLowerCase() === extracted.policy_holder_email.toLowerCase()
@@ -210,85 +268,114 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
       if (emailMatches.length > 0 && detectionPhase === 'no_match') detectionPhase = 'matched_via_email';
     }
 
-    // PRIORITÄT 3: Telefonnummer
-    if (extracted.policy_holder_phone) {
-      const phone = extracted.policy_holder_phone.replace(/[^0-9]/g, '');
-      const phoneMatches = allCustomers.filter(c => {
-        const cp = (c.phone || c.mobile || '').replace(/[^0-9]/g, '');
-        return cp && cp.length >= 9 && cp === phone;
-      });
-      phoneMatches.forEach(c => addMatch(c, 'phone', 90, `Telefon: ${extracted.policy_holder_phone}`));
-      if (phoneMatches.length > 0 && detectionPhase === 'no_match') detectionPhase = 'matched_via_phone';
-    }
-
-    // PRIORITÄT 4: Name + Geburtsdatum
-    const searchFirstName = extracted.insured_is_different ? extracted.insured_first_name : extracted.policy_holder_first_name;
-    const searchLastName = extracted.insured_is_different ? extracted.insured_last_name : extracted.policy_holder_last_name;
-    const searchBirthdate = extracted.insured_is_different ? extracted.insured_birthdate : extracted.policy_holder_birthdate;
-
-    if (searchFirstName && searchLastName && searchBirthdate) {
-      const nameGdMatches = allCustomers.filter(c => {
-        const fnSim = similarity(c.first_name, searchFirstName);
-        const lnSim = similarity(c.last_name, searchLastName);
-        const bdMatch = c.birthdate === searchBirthdate;
-        return fnSim > 0.85 && lnSim > 0.85 && bdMatch;
-      });
-      nameGdMatches.forEach(c => {
-        const conf = Math.round((similarity(c.first_name, searchFirstName) + similarity(c.last_name, searchLastName)) / 2 * 100);
-        addMatch(c, 'name_birthdate', Math.min(conf, 95), `Name + GD: ${searchFirstName} ${searchLastName}`);
-      });
-      if (nameGdMatches.length > 0 && detectionPhase === 'no_match') detectionPhase = 'matched_via_name_birthdate';
-    }
-
-    // PRIORITÄT 5: Adresse (Strasse + PLZ)
+    // P3: Adresse (Strasse + PLZ) — höhere Priorität als Fuzzy-Name
     if (extracted.policy_holder_zip_code && extracted.policy_holder_street) {
       const addressMatches = allCustomers.filter(c => {
         if (!c.zip_code || !c.street) return false;
         const zipMatch = c.zip_code === extracted.policy_holder_zip_code;
         const streetSim = similarity(c.street, extracted.policy_holder_street);
-        return zipMatch && streetSim > 0.75;
+        return zipMatch && streetSim > 0.70;
       });
-      addressMatches.forEach(c => addMatch(c, 'address', 75, `Adresse: ${extracted.policy_holder_street}, ${extracted.policy_holder_zip_code}`));
+      addressMatches.forEach(c => addMatch(c, 'address', 85, `Adresse: ${extracted.policy_holder_street}, ${extracted.policy_holder_zip_code}`));
       if (addressMatches.length > 0 && detectionPhase === 'no_match') detectionPhase = 'matched_via_address';
     }
 
-    // PRIORITÄT 6: Fuzzy Name — nur wenn noch kein sicherer Match gefunden (Performance)
-    if (customerMatches.length === 0 && searchFirstName && searchLastName) {
-      const fuzzyMatches = allCustomers
-        .map(c => ({
-          customer: c,
-          score: (similarity(c.first_name, searchFirstName) * 0.5 + similarity(c.last_name, searchLastName) * 0.5),
-        }))
-        .filter(x => x.score > 0.80)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 3);
+    // P4: Versicherungsnehmer Name + GD (direkte Übereinstimmung)
+    const phFirst = extracted.policy_holder_first_name;
+    const phLast = extracted.policy_holder_last_name;
+    const phBirth = extracted.policy_holder_birthdate;
 
-      fuzzyMatches.forEach(({ customer, score }) => {
-        addMatch(customer, 'fuzzy_name', Math.round(score * 70), `Ähnlicher Name (unsicher): ${customer.first_name} ${customer.last_name}`);
-      });
-      if (fuzzyMatches.length > 0) detectionPhase = 'fuzzy_name_only';
+    if (phFirst && phLast) {
+      // Mit Geburtsdatum
+      if (phBirth) {
+        const nameGdMatches = allCustomers.filter(c => {
+          const fnSim = similarity(c.first_name, phFirst);
+          const lnSim = similarity(c.last_name, phLast);
+          return fnSim > 0.85 && lnSim > 0.85 && c.birthdate === phBirth;
+        });
+        nameGdMatches.forEach(c => {
+          addMatch(c, 'name_birthdate', 95, `VN Name+GD: ${phFirst} ${phLast}`);
+        });
+        if (nameGdMatches.length > 0 && detectionPhase === 'no_match') detectionPhase = 'matched_via_name_birthdate';
+      }
+      // Nur Name (Fuzzy)
+      if (customerMatches.length === 0) {
+        const fuzzyPH = allCustomers
+          .map(c => ({
+            customer: c,
+            score: similarity(c.first_name, phFirst) * 0.5 + similarity(c.last_name, phLast) * 0.5,
+          }))
+          .filter(x => x.score > 0.85)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 2);
+        fuzzyPH.forEach(({ customer, score }) => {
+          addMatch(customer, 'fuzzy_name', Math.round(score * 80), `VN Name: ${phFirst} ${phLast}`);
+        });
+        if (fuzzyPH.length > 0 && detectionPhase === 'no_match') detectionPhase = 'fuzzy_policyholder';
+      }
     }
 
+    // P5: Versicherte Person (falls abweichend) — sucht als Familienmitglied
+    if (extracted.insured_is_different && extracted.insured_first_name && extracted.insured_last_name) {
+      const insFirst = extracted.insured_first_name;
+      const insLast = extracted.insured_last_name;
+      const insBirth = extracted.insured_birthdate;
+
+      // Mit Geburtsdatum
+      if (insBirth) {
+        const insuredMatches = allCustomers.filter(c => {
+          const fnSim = similarity(c.first_name, insFirst);
+          const lnSim = similarity(c.last_name, insLast);
+          return fnSim > 0.85 && lnSim > 0.85 && c.birthdate === insBirth;
+        });
+        insuredMatches.forEach(c => {
+          addMatch(c, 'insured_name_birthdate', 92, `Versicherte Person Name+GD: ${insFirst} ${insLast}`);
+        });
+        if (insuredMatches.length > 0 && detectionPhase === 'no_match') detectionPhase = 'matched_insured_birthdate';
+      }
+
+      // Fuzzy Name versicherte Person
+      if (customerMatches.length === 0) {
+        const fuzzyIns = allCustomers
+          .map(c => ({
+            customer: c,
+            score: similarity(c.first_name, insFirst) * 0.5 + similarity(c.last_name, insLast) * 0.5,
+          }))
+          .filter(x => x.score > 0.85)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 2);
+        fuzzyIns.forEach(({ customer, score }) => {
+          addMatch(customer, 'fuzzy_insured', Math.round(score * 75), `VP Name: ${insFirst} ${insLast}`);
+        });
+        if (fuzzyIns.length > 0 && detectionPhase === 'no_match') detectionPhase = 'fuzzy_insured';
+      }
+    }
+
+    console.log('[smartDocumentAnalysis] Matches:', customerMatches.length, 'phase:', detectionPhase);
+
     // ================================================================
-    // SCHRITT 3: FAMILIENSTRUKTUR ANALYSIEREN
+    // SCHRITT 3: FAMILIENSTRUKTUR
     // ================================================================
-    // Nur Hauptkunden (keine Familienmitglieder) — max 200 ans Frontend
-    // Der gematchte Hauptkontakt wird immer eingefügt (auch wenn >200)
     const primaryCustomers = allCustomers.filter(c => !c.is_family_member);
-    const primarySlice = primaryCustomers.slice(0, 200);
-    // Sicherstellen dass matchedPrimaryCustomer in der Liste ist
+    const primarySlice = primaryCustomers.slice(0, 300);
+
     const bestMatchPrimaryId = customerMatches.length > 0
-      ? (customerMatches[0].customer.is_family_member ? customerMatches[0].customer.primary_customer_id : customerMatches[0].customer.id)
+      ? (customerMatches[0].customer.is_family_member
+          ? customerMatches[0].customer.primary_customer_id
+          : customerMatches[0].customer.id)
       : null;
+
     if (bestMatchPrimaryId && !primarySlice.find(c => c.id === bestMatchPrimaryId)) {
       const missing = primaryCustomers.find(c => c.id === bestMatchPrimaryId);
       if (missing) primarySlice.push(missing);
     }
+
     const availablePrimaryCustomers = primarySlice.map(c => ({
       id: c.id,
       first_name: c.first_name,
       last_name: c.last_name,
       customer_number: c.customer_number,
+      birthdate: c.birthdate,
       city: c.city,
       zip_code: c.zip_code,
       email: c.email || null,
@@ -318,21 +405,18 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
     }
 
     // ================================================================
-    // SCHRITT 4: DOKUMENTTYP NORMALISIEREN
+    // SCHRITT 4: NORMALISIEREN & ANTWORT
     // ================================================================
     const subtypeMap = {
       neuantrag: 'neuantrag', 'neuer antrag': 'neuantrag', antrag: 'neuantrag',
-      aenderungsantrag: 'aenderungsantrag', änderungsantrag: 'aenderungsantrag',
-      'änderung': 'aenderungsantrag', mutation: 'aenderungsantrag',
+      aenderungsantrag: 'aenderungsantrag', mutation: 'aenderungsantrag',
       erneuerungsantrag: 'erneuerungsantrag', erneuerung: 'erneuerungsantrag',
-      'verlängerung': 'erneuerungsantrag', verlaengerung: 'erneuerungsantrag',
       police: 'police', kuendigung: 'kuendigung', offerte: 'offerte',
       rechnung: 'rechnung', korrespondenz: 'korrespondenz',
     };
     const rawSubtype = (extracted.document_subtype || document_type || '').toLowerCase();
     const normalizedSubtype = subtypeMap[rawSubtype] || 'neuantrag';
 
-    // Normalisiere Policen
     const normalizedPolicies = policies.map(pol => ({
       insurer: pol.insurer || null,
       policy_number: pol.policy_number || null,
@@ -354,28 +438,27 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
     return Response.json({
       success: true,
       extracted: {
-        // Dokumentinfo
         document_subtype: normalizedSubtype,
         document_confidence: extracted.document_confidence || 0.8,
         summary: extracted.summary || null,
         // Versicherungsnehmer
-        policy_holder_first_name: extracted.policy_holder_first_name,
-        policy_holder_last_name: extracted.policy_holder_last_name,
-        policy_holder_birthdate: extracted.policy_holder_birthdate,
-        policy_holder_email: extracted.policy_holder_email,
-        policy_holder_phone: extracted.policy_holder_phone,
-        policy_holder_street: extracted.policy_holder_street,
-        policy_holder_zip_code: extracted.policy_holder_zip_code,
-        policy_holder_city: extracted.policy_holder_city,
+        policy_holder_first_name: extracted.policy_holder_first_name || null,
+        policy_holder_last_name: extracted.policy_holder_last_name || null,
+        policy_holder_birthdate: extracted.policy_holder_birthdate || null,
+        policy_holder_email: extracted.policy_holder_email || null,
+        policy_holder_phone: extracted.policy_holder_phone || null,
+        policy_holder_street: extracted.policy_holder_street || null,
+        policy_holder_zip_code: extracted.policy_holder_zip_code || null,
+        policy_holder_city: extracted.policy_holder_city || null,
         // Versicherte Person
-        insured_first_name: extracted.insured_first_name,
-        insured_last_name: extracted.insured_last_name,
-        insured_birthdate: extracted.insured_birthdate,
-        insured_ahv_number: extracted.insured_ahv_number,
+        insured_first_name: extracted.insured_first_name || null,
+        insured_last_name: extracted.insured_last_name || null,
+        insured_birthdate: extracted.insured_birthdate || null,
+        insured_ahv_number: extracted.insured_ahv_number || null,
         insured_is_different: extracted.insured_is_different || false,
-        // Policen-Array (neu)
+        // Policen
         policies: normalizedPolicies,
-        // Rückwärtskompatibilität: erste Police als Hauptfelder
+        // Erste Police als Hauptfelder (Rückwärtskompatibilität)
         insurer: firstPolicy.insurer || null,
         policy_number: firstPolicy.policy_number || null,
         insurance_type: firstPolicy.insurance_type || 'other',
@@ -388,7 +471,6 @@ Antworte NUR mit JSON. Felder nicht gefunden = null.`,
         premium_yearly: firstPolicy.premium_yearly || (firstPolicy.premium_monthly ? Math.round(firstPolicy.premium_monthly * 12 * 100) / 100 : null),
         start_date: firstPolicy.start_date || null,
         end_date: firstPolicy.end_date || null,
-        cancellation_deadline: firstPolicy.cancellation_deadline || null,
         health_declaration_required: firstPolicy.health_declaration_required || false,
         broker_name: extracted.broker_name || null,
         commission_estimate: extracted.commission_estimate || null,
