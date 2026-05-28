@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { base44 } from '@/api/base44Client'
 import { getSparteLabel } from '@/lib/insuranceSparten'
+import { daysUntil, analyzeContract, isContractActionable } from '@/lib/contractRelevance'
 import { cn } from '@/lib/utils'
 import {
   Repeat2, CheckCircle2, RefreshCw, AlertTriangle, Clock,
@@ -18,38 +19,10 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 
-const daysUntil = (d) => d ? Math.ceil((new Date(d + 'T00:00:00') - new Date()) / 86400000) : null
 const fmtDate   = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('de-CH') : '–'
 const fmtCHF    = (n) => n > 0 ? `CHF ${Number(n).toLocaleString('de-CH')}` : null
 
-function analyzeContract(contract) {
-  const endDays    = daysUntil(contract.end_date)
-  const cancelDays = daysUntil(contract.cancellation_deadline)
-  const actions = []
 
-  const isPlaceholderEnd    = contract.end_date?.startsWith('9999')
-  const isPlaceholderCancel = contract.cancellation_deadline?.startsWith('9999')
-  if (isPlaceholderEnd || isPlaceholderCancel || contract.requires_review) {
-    actions.push({ type: 'review_required', severity: 'review_required', days: null })
-    return actions
-  }
-
-  if (contract.status === 'expired' || (endDays !== null && endDays < 0)) {
-    actions.push({ type: 'expired', label: 'Abgelaufen', severity: 'expired', days: endDays ?? -1 })
-  }
-  if (cancelDays !== null && cancelDays <= 365) {
-    const sev = cancelDays < 0 ? 'expired' : cancelDays <= 30 ? 'critical' : cancelDays <= 60 ? 'urgent' : cancelDays <= 90 ? 'warning' : cancelDays <= 150 ? 'process' : 'early'
-    actions.push({ type: 'kuendigung', severity: sev, days: cancelDays })
-  }
-  if (endDays !== null && endDays <= 365) {
-    const sev = endDays < 0 ? 'expired' : endDays <= 30 ? 'critical' : endDays <= 60 ? 'urgent' : endDays <= 90 ? 'warning' : endDays <= 150 ? 'process' : 'early'
-    actions.push({ type: 'ablauf', severity: sev, days: endDays })
-  }
-
-  const order = { critical: 0, urgent: 1, warning: 2, expired: 3, process: 4, early: 5, review_required: 6 }
-  actions.sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9))
-  return actions
-}
 
 const SEV = {
   expired:         { badge: 'bg-red-700 text-white',       countText: 'text-red-700',    rowBg: 'hover:bg-red-50/50',    borderL: 'border-l-red-500',    label: 'Abgelaufen',           barColor: 'bg-red-500',    kpiBg: 'bg-red-50',    kpiBorder: 'border-red-200',    kpiText: 'text-red-700' },
@@ -328,16 +301,9 @@ export default function Vertragsablaeufe() {
   const actionableItems = useMemo(() => {
     return contracts
       .filter(c => {
-        if (c.archived) return false
-        if (['cancelled', 'archived'].includes(c.status)) return false
+        if (!isContractActionable(c)) return false
         if (c.process_status === 'erledigt' && filterProcessStatus !== 'erledigt') return false
-        if (c.requires_review || c.end_date?.startsWith('9999') || c.cancellation_deadline?.startsWith('9999')) return true
-        if (c.status === 'expired') return true
-        const endDays = daysUntil(c.end_date)
-        const cancelDays = daysUntil(c.cancellation_deadline)
-        if (endDays !== null && endDays <= 365) return true
-        if (cancelDays !== null && cancelDays <= 365) return true
-        return false
+        return true
       })
       .map(c => {
         const actions = analyzeContract(c)

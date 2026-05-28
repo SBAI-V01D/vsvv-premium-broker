@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Phone, FileText, CheckCircle2, AlertCircle, TrendingUp, Zap, Clock, MessageSquare } from 'lucide-react'
+import { isContractActionable } from '@/lib/contractRelevance'
 
 const STAGES = [
   { key: 'early', label: 'EARLY', days: '180–120d' },
@@ -249,8 +250,8 @@ function KanbanColumn({ stage, contracts }) {
 export default function RenewalPipelineKanbanV2({ contracts = [] }) {
   const queryClient = useQueryClient()
 
-  // Filter to active contracts — including overdue ones (end_date in past, status still 'active')
-  const activeContracts = contracts.filter(c => c.status === 'active' && c.end_date)
+  // Zentrale Relevanz-Logik (identisch mit Vertragsablaeufe)
+  const activeContracts = contracts.filter(c => isContractActionable(c) && c.status === 'active')
 
   // Compute KPIs
   const kpis = useMemo(() => {
