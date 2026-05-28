@@ -251,12 +251,12 @@ export default function DocumentReviewPanel({ document, onClose, onSaved }) {
     const data = res.data
     // PIPELINE TRACE: Log each transformation stage
     const normalizedStage2 = data.normalized || {}
-    const normalized = applyLearned(normalizedStage2)
-    console.log('[PIPELINE STAGE 1] RAW LLM:', JSON.stringify(data.structured, null, 2))
-    console.log('[PIPELINE STAGE 2] normalizeData output:', JSON.stringify(normalizedStage2, null, 2))
-    console.log('[PIPELINE STAGE 3] applyLearned output:', JSON.stringify(normalized, null, 2))
-    console.log('[PIPELINE DIFF] produkte BEFORE applyLearned:', JSON.stringify(normalizedStage2.produkte))
-    console.log('[PIPELINE DIFF] produkte AFTER  applyLearned:', JSON.stringify(normalized.produkte))
+    // applyLearned BYPASSED in pure mode (or when pure_mode flag is set)
+    const normalized = data.pure_mode ? normalizedStage2 : applyLearned(normalizedStage2)
+    console.log('[PIPELINE STAGE 1] RAW LLM:', JSON.stringify(data.structured?.versicherung?.produkte))
+    console.log('[PIPELINE STAGE 2] normalized.produkte:', JSON.stringify(normalizedStage2.produkte))
+    console.log('[PIPELINE STAGE 3] after applyLearned produkte:', JSON.stringify(normalized.produkte))
+    console.log('[PIPELINE pure_mode]:', data.pure_mode, '| status:', data.status)
     setNormalizedRaw(normalizedStage2)
     setNormalizedAfterLearned(normalized)
     setExtraction({ ...data, normalized })

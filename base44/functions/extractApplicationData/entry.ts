@@ -1,5 +1,10 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+// ─── PURE EXTRACTION MODE ──────────────────────────────────────────
+// true  = skip ALL normalizeData/deriveZusatzTyp/applyLearned. RAW LLM direct to UI.
+// false = restore normal pipeline (only after LLM output confirmed clean)
+const PURE_EXTRACTION_MODE = true;
+
 // ─── NORMALIZATION PIPELINE (Single Source of Truth) ─────────────────────────
 
 /**
@@ -527,28 +532,76 @@ Extrahiere in EXAKT dieser Struktur:`,
       model: 'gemini_3_flash'
     });
 
-    // STEP 2: normalizeData – Single Source of Truth
-    const normalized = normalizeData(raw);
-    const missingFields = validateNormalized(normalized);
     const confidence = raw?.meta?.confidence ?? 0;
 
-    const status = missingFields.length > 0 ? 'unvollstaendig'
-                 : confidence < 85 ? 'pruefung_erforderlich'
-                 : 'ok';
+    // ─── PURE MODE: bypass ALL normalization ─────────────────────────────────
+    if (PURE_EXTRACTION_MODE) {
+      console.log('[extractApplicationData] *** PURE MODE *** skipping normalizeData + all enrichment');
+      console.log('[PURE LLM] person:', JSON.stringify(raw?.person));
+      console.log('[PURE LLM] versicherung.produkte:', JSON.stringify(raw?.versicherung?.produkte));
+      console.log('[PURE LLM] versicherung.praemie_monat:', raw?.versicherung?.praemie_monat);
+      console.log('[PURE LLM] rollen:', JSON.stringify(raw?.rollen));
+      console.log('[PURE LLM] adresse:', JSON.stringify(raw?.adresse));
 
-    console.log(`[normalizeData] company=${normalized.company_name} first=${normalized.first_name} last=${normalized.last_name} lenker=${normalized.lenker_name}`);
-    console.log(`[normalizeData] productType=${normalized.product_type} sparte=${normalized.sparte} ageGroup=${normalized.age_group}`);
-    console.log(`[normalizeData] premiumMonthly=${normalized.premium_monthly} premiumYearly=${normalized.premium_yearly}`);
-    console.log(`[normalizeData] kassenmodell=${normalized.kassenmodell} gd=${normalized.gesundheitsdeklaration}`);
-    console.log(`[normalizeData] zusatz_type=${normalized.zusatz_type} productLabel=${normalized.product_label}`);
-    console.log(`[normalizeData] contract_end_date=${normalized.contract_end_date}`);
+      const rawProdukte = (raw?.versicherung?.produkte || []).map(p => ({ name: p.name, typ: p.typ, source: 'raw_llm' }));
+
+      const pureMapped = {
+        company_name:        raw?.person?.firma ?? null,
+        first_name:          raw?.person?.vorname ?? null,
+        last_name:           raw?.person?.nachname ?? null,
+        birthdate:           raw?.person?.geburtsdatum ?? null,
+        phone:               raw?.kontaktperson?.telefon ?? null,
+        email:               raw?.kontaktperson?.email ?? null,
+        street:              raw?.adresse?.strasse ?? null,
+        zip_code:            raw?.adresse?.plz ?? null,
+        city:                raw?.adresse?.ort ?? null,
+        canton:              raw?.adresse?.kanton ?? null,
+        insurer:             raw?.versicherung?.gesellschaft ?? null,
+        contract_start_date: raw?.versicherung?.beginn ?? null,
+        contract_end_date:   raw?.versicherung?.ende ?? null,
+        franchise:           raw?.versicherung?.franchise ?? null,
+        kassenmodell:        raw?.versicherung?.kassenmodell ?? null,
+        zahlungsintervall:   raw?.versicherung?.zahlungsintervall ?? null,
+        premium_monthly:     raw?.versicherung?.praemie_monat ?? null,
+        premium_yearly:      raw?.versicherung?.praemie_monat ? Math.round(raw.versicherung.praemie_monat * 12 * 100) / 100 : null,
+        produkte:            rawProdukte,
+        product_label:       rawProdukte.map(p => p.name).filter(Boolean).join(', ') || null,
+        product_type:        null,
+        sparte:              null,
+        zusatz_type:         null,
+        age_group:           null,
+        gesundheitsdeklaration: false,
+        lenker_name:         raw?.rollen?.lenker_name ?? null,
+        versicherte_person:  raw?.rollen?.versicherte_person ?? null,
+        role_classification: {
+          policy_holder: { name: `${raw?.person?.vorname || ''} ${raw?.person?.nachname || ''}`.trim() || raw?.person?.firma, source: 'raw_person_field' },
+          driver:        { name: raw?.rollen?.lenker_name ?? null, source: 'raw_rollen' },
+          insured_person:{ name: raw?.rollen?.versicherte_person ?? null, source: 'raw_rollen' },
+        }
+      };
+
+      return Response.json({
+        success: true,
+        structured: raw,
+        normalized: pureMapped,
+        pure_mode: true,
+        confidence,
+        status: `pure_mode (${rawProdukte.length} raw products, 0 derived)`,
+        missing_fields: [],
+        age_group: null,
+        product_type: null,
+        role_classification: pureMapped.role_classification,
+        gesundheitsdeklaration: false,
+      });
+    }
+
+    // ─── STEP 2: normalizeData (only when PURE_EXTRACTION_MODE = false) ─────────────
+    const normalized = normalizeData(raw);
+    const missingFields = validateNormalized(normalized);
     console.log(`[normalizeData] produkte=${JSON.stringify(normalized.produkte)}`);
+    console.log(`[normalizeData] sparte=${normalized.sparte} product_type=${normalized.product_type}`);
     if (missingFields.length > 0) console.warn(`[normalizeData] MISSING: ${missingFields.join(', ')}`);
-
-    // ─── STEP 1 DEBUG LOGGING ────────────────────────────────────────
-    console.log('[extractApplicationData] STEP 1 - ROLE CLASSIFICATION:');
-    console.log(`  policy_holder: ${JSON.stringify(normalized.role_classification.policy_holder)}`);
-    console.log(`  driver: ${JSON.stringify(normalized.role_classification.driver)}`);
+    console.log('[extractApplicationData] ROLE CLASSIFICATION:', JSON.stringify(normalized.role_classification));
 
     return Response.json({
       success: true,
