@@ -444,24 +444,18 @@ BEISPIEL (Motorfahrzeugversicherung):
 
 Dateiname: "${file_name || ''}"
 
-PRODUKTE (KRITISCH – EXAKT SO EXTRAHIEREN):
+PRODUKTE (ABSOLUT KRITISCH – NUR MIT EIGENEM CHF-BETRAG):
 - produkte: ARRAY mit {typ, name}
-- typ: "Grundversicherung" für KVG-Grundversicherung | "Zusatz" für ALLE Zusatzversicherungen (VVG)
-- Grundversicherung = KVG (obligatorisch, z.B. BeneFit PLUS, CasaMed, myBenefits, CompaCaMed, Standard)
-- Zusatzversicherung = VVG (freiwillig, z.B. HOSPITAL, TOP, SANA, Dental, Denta, PREVEA, Ambulant)
-- Beispiele:
-    [{typ:"Grundversicherung", name:"BeneFit PLUS"}, {typ:"Zusatz", name:"TOP"}, {typ:"Zusatz", name:"HOSPITAL ECO"}]
-- Wenn keine Produkte erkennbar: []
-
-SPITAL/ZUSATZ-TYPEN erkennen (NUR explizit genannte, KEINE Ergaenzungen!):
-- "Spital privat" in Produktname = Spitalversicherung privat
-- "Spital halbprivat" / "halbprivat" in Produktname = Spitalversicherung halbprivat
-- "Spital allgemein" / "Hospital" / "allgemein" in Produktname = Spitalversicherung allgemein
-- "Ambulant" explizit in Produktname = ambulante Zusatzversicherung
-- "Denta" / "Dental" / "Zahn" in Produktname = Zahnversicherung
-- myFlex, myFlexHospital, FLEX-Produkte = Spitalversicherung (VVG, typ="Zusatz")
-- NIEMALS TOP, SANA oder Ambulant erganzen wenn nicht explizit im Dokument!
-- Gesundheitskonto mit "inklusive" = KEIN eigenstaendiges Produkt, NICHT in produkte aufnehmen!
+- EINZIGE REGEL: Ein Produkt wird NUR aufgenommen wenn es eine EIGENE CHF-Prämie in der Police hat.
+- "inklusive", "kostenfrei", kein eigener CHF-Betrag = KEIN PRODUKT, niemals aufnehmen!
+- Kostenbeteiligung / Varianten / Abteilungen ("Allgemeine Abteilung", "Halbprivate Abteilung") = KEINE Produkte!
+- typ: "Grundversicherung" für KVG | "Zusatz" für VVG
+- Konkretes Beispiel aus dieser Police:
+    Spitalversicherung myFlex CHF 63.10 → [{typ:"Zusatz", name:"Spitalversicherung myFlex"}]
+    Gesundheitskonto inklusive → NICHT aufnehmen (kein CHF-Betrag)
+    Gesundheitskonto-Bonus inklusive → NICHT aufnehmen (kein CHF-Betrag)
+- Wenn keine Produkte mit eigenem CHF-Betrag: []
+- ABSOLUT VERBOTEN: TOP, SANA, Ambulant, Balance, Standard ergänzen wenn nicht explizit mit eigenem CHF-Betrag im Dokument!
 
 VERSICHERUNGS-FELDER:
 - gesellschaft: Name der Versicherungsgesellschaft
