@@ -25,7 +25,8 @@ Deno.serve(async (req) => {
       extracted = await base44.integrations.Core.InvokeLLM({
         model: 'claude_sonnet_4_6',
         file_urls: [file_url],
-        prompt: `Du bist eine praezise Schweizer Versicherungs-Extraktionsengine. Dokumenttyp-Hinweis: "${document_type || 'unbekannt'}"
+        prompt: `Du bist eine praezise Schweizer Versicherungs-Extraktionsengine. Dokumenttyp-Hinweis: "${document_type || 'unbekannt'}".
+Du erkennst ALLE Versicherungsdokumente: Police, Antrag (Zusammenfassung), Offerte, Rechnung, Korrespondenz — nicht nur Polices.
 
 === SCHRITT 1: PERSONEN-ROLLEN IDENTIFIZIEREN ===
 
@@ -41,7 +42,17 @@ ROLLE B — VERSICHERTE PERSON:
 - Bei CSS: "fuer Thomas Leuenberger, Geburtsdatum: 05.02.1966" unter der Policenüberschrift
 => insured_first_name / insured_last_name / insured_birthdate (Format YYYY-MM-DD)
 
-BEISPIEL:
+SONDERFALL BABY/KIND ANTRAG:
+  Wenn der versicherte Name "Baby [Nachname]" oder ein Geburtsdatum in der Zukunft ist:
+  => insured_first_name="Baby", insured_last_name=[Nachname], insured_is_different=true
+  => policy_holder = Familien-Ansprechperson / Prämienzahler (andere Person im Dokument)
+
+BEISPIEL ANTRAG:
+  Header "Baby Bernard", Familien-Ansprechperson "Philippe Bernard", Adresse "Wuhrmattstrasse 29, 4103 Bottmingen"
+  => policy_holder: Philippe Bernard, 4103 Bottmingen
+  => insured: Baby Bernard, insured_is_different=true
+
+BEISPIEL POLICE:
   Adressblock: "Frau Daniela Leuenberger, Hoernliallee 107, 4125 Riehen" => policy_holder
   Policenzeile: "VERSICHERUNGSPOLICE fuer Thomas Leuenberger, 05.02.1966" => insured + insured_is_different=true
 
@@ -188,7 +199,8 @@ Antworte NUR mit dem JSON-Objekt. Fehlende Felder = null.`,
 
     // Kein Inhalt extrahiert?
     const hasAnyData = extracted.policy_holder_last_name || extracted.insured_last_name ||
-      (extracted.policies && extracted.policies.length > 0);
+      (extracted.policies && extracted.policies.length > 0) ||
+      extracted.total_monthly_premium || extracted.broker_name || extracted.policy_holder_first_name;
     if (!hasAnyData) {
       const summary = extracted.summary || null;
       const confidence = extracted.document_confidence || 0;
