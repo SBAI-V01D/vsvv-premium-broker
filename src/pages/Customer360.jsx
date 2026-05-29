@@ -920,6 +920,7 @@ export default function Customer360() {
       <DocumentUploadDialog
         open={showDocUpload}
         onOpenChange={setShowDocUpload}
+        preselectedCustomerId={customerId}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['documents-all'] })
           setShowDocUpload(false)

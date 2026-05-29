@@ -19,11 +19,11 @@ const ALLOWED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx']
 const sanitizeFilename = (name) =>
   name.replace(/[^\w\s.\-_()äöüÄÖÜ]/g, '_').replace(/\s+/g, '_')
 
-export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) {
+export default function DocumentUploadDialog({ open, onOpenChange, onSuccess, preselectedCustomerId }) {
   const [uploadMode, setUploadMode] = useState(null)
   const [file, setFile] = useState(null)
   const [fileError, setFileError] = useState('')
-  const [form, setForm] = useState({ name: '', notes: '', customer_id: '', contract_id: '', primary_customer_id: '', is_family_member: false, end_date: '', excludeFromStats: false, statsNote: '' })
+  const [form, setForm] = useState({ name: '', notes: '', customer_id: preselectedCustomerId || '', contract_id: '', primary_customer_id: '', is_family_member: false, end_date: '', excludeFromStats: false, statsNote: '' })
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0) // 0-100
   const [uploadError, setUploadError] = useState('')
@@ -51,7 +51,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess }) 
     setUploadMode(null)
     setFile(null)
     setFileError('')
-    setForm({ name: '', notes: '', customer_id: '', contract_id: '', primary_customer_id: '', is_family_member: false, end_date: '', excludeFromStats: false, statsNote: '' })
+    setForm({ name: '', notes: '', customer_id: preselectedCustomerId || '', contract_id: '', primary_customer_id: '', is_family_member: false, end_date: '', excludeFromStats: false, statsNote: '' })
     setUploading(false)
     setUploadProgress(0)
     setUploadError('')
