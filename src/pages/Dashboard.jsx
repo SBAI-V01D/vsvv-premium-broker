@@ -378,7 +378,7 @@ export default function Dashboard() {
         <TodayDashboard
           openTasks={openTasks}
           expiringContracts={expiringContracts}
-          contracts={contracts}
+          contracts={contracts.filter(c => !c.exclude_from_renewal_statistics)}
           activeLeads={activeLeads}
           verkaufschancen={openVerkaufschancen}
           tasks={tasks}
