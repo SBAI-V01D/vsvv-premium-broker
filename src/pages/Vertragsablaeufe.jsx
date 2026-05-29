@@ -251,7 +251,7 @@ export default function Vertragsablaeufe() {
   const [filterSeverity, setFilterSeverity] = useState('all')
   const [filterProcessStatus, setFilterProcessStatus] = useState('all')
   const [search, setSearch] = useState('')
-  const [hideExcluded, setHideExcluded] = useState(false)
+  const [hideExcluded, setHideExcluded] = useState(true)
 
   const { data: contracts = [], isLoading } = useQuery({
     queryKey: ['contracts', 'ablaeufe'],
