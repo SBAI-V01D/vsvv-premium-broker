@@ -29,6 +29,7 @@ import CrossSellingPanel from '@/components/verkaufschance/CrossSellingPanel'
 import EditableField from '@/components/shared/EditableField'
 import CustomerForm from '@/components/customers/CustomerForm'
 import BrokerWorkflowBar from '@/components/customers/BrokerWorkflowBar'
+import DocumentUploadDialog from '@/components/documents/DocumentUploadDialog'
 import { parseISO, differenceInDays } from 'date-fns'
 
 const NEXT_STEP = {
@@ -56,6 +57,7 @@ export default function Customer360() {
   const [editingCustomer, setEditingCustomer] = useState(false)
   const [expandedContractDocs, setExpandedContractDocs] = useState(null)
   const [expandedCancellation, setExpandedCancellation] = useState(null)
+  const [showDocUpload, setShowDocUpload] = useState(false)
 
   // ── Data ─────────────────────────────────────────────────────────────────
   const { data: customer, isLoading } = useQuery({
@@ -829,8 +831,14 @@ export default function Customer360() {
         {/* ── DOKUMENTE ───────────────────────────────────────────────── */}
         {activeSection === 'dokumente' && (
           <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold">{documents.length} Dokument{documents.length !== 1 ? 'e' : ''}</p>
+              <Button size="sm" variant="outline" onClick={() => setShowDocUpload(true)} className="gap-1.5 h-8">
+                <Plus className="w-3.5 h-3.5" /> Hochladen
+              </Button>
+            </div>
             {documents.length === 0 ? (
-              <EmptyState icon={FileText} title="Keine Dokumente" />
+              <EmptyState icon={FileText} title="Keine Dokumente" action={<Button size="sm" variant="outline" onClick={() => setShowDocUpload(true)}><Plus className="w-3.5 h-3.5 mr-1" /> Dokument hochladen</Button>} />
             ) : documents.map(doc => (
               <Card key={doc.id}>
                 <CardContent className="p-3 flex items-center gap-3">
@@ -908,6 +916,15 @@ export default function Customer360() {
           saving={createVsMutation.isPending}
         />
       </StandardModal>
+
+      <DocumentUploadDialog
+        open={showDocUpload}
+        onOpenChange={setShowDocUpload}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['documents-all'] })
+          setShowDocUpload(false)
+        }}
+      />
 
       {selectedVs && (
         <StandardModal
