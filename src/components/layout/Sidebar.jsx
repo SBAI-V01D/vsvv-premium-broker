@@ -83,15 +83,15 @@ const navGroups = [
   {
     label: 'Finanzen & Team',
     items: [
-      { label: 'Provisionen',      icon: Wallet,      path: '/provisionen-courtagen' },
-      { label: 'Berater & Partner',icon: Briefcase,   path: '/berater-organisation' },
       { label: 'Reporting',        icon: BarChart2,   path: '/reporting' },
+      { label: 'Provisionen',      icon: Wallet,      path: '/provisionen-courtagen' },
       { label: 'Finanzdashboard',  icon: BarChart2,   path: '/finanz-dashboard' },
     ],
   },
   {
     label: 'Enterprise',
     items: [
+      { label: 'Berater & Partner',     icon: Briefcase, path: '/berater-organisation' },
       { label: 'Team & Zugriffsrechte', icon: Lock,   path: '/admin/team-zugriffsrechte', adminOnly: true },
       { label: 'Enterprise Control',    icon: Shield, path: '/admin/enterprise-control-center', adminOnly: true },
       { label: 'KI Analyse',            icon: Brain,  path: '/ai-review', adminOnly: true },
