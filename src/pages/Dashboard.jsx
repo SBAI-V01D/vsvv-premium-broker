@@ -17,7 +17,8 @@ import { cn } from '@/lib/utils'
 import {
   ChevronDown, ChevronUp, ChevronRight,
   TrendingUp, Target, RefreshCw,
-  AlertTriangle, Zap, BarChart2, Building2, User, Plus, Loader2
+  AlertTriangle, Zap, BarChart2, Building2, User, Plus, Loader2,
+  Users, FolderOpen, Wallet, Shield
 } from 'lucide-react'
 
 import TodayDashboard from '@/components/dashboard/TodayDashboard'
@@ -256,6 +257,24 @@ export default function Dashboard() {
               <Building2 className="w-3.5 h-3.5" /> Neuer Kunde
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Section Navigation Bar */}
+      <div className="px-6 py-2 border-b border-border bg-background/60 shrink-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => navigate('/kunden')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary/8 text-primary hover:bg-primary/15 transition-colors">
+            <Users className="w-3.5 h-3.5" /> Kunden
+          </button>
+          <button onClick={() => navigate('/dokumente')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+            <FolderOpen className="w-3.5 h-3.5" /> Verwaltung
+          </button>
+          <button onClick={() => navigate('/reporting')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+            <Wallet className="w-3.5 h-3.5" /> Finanzen &amp; Team
+          </button>
+          <button onClick={() => navigate('/berater-organisation')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+            <Shield className="w-3.5 h-3.5" /> Enterprise
+          </button>
         </div>
       </div>
 
