@@ -92,6 +92,27 @@ GESUNDHEITSDEKLARATION-SEITEN: Enthalten keine Produkte. Nutze sie nur fuer heal
 === SCHRITT 5: KONFIDENZ ===
 1.0 = direkt lesbar | 0.8 = klar ableitbar | 0.6 = wahrscheinlich | <0.6 = unsicher
 
+=== SCHRITT 6: MULTI-DOKUMENT-REGEL (KRITISCH) ===
+Viele PDFs enthalten MEHRERE Dokumente verschiedener Versicherer (Antrag + bestehende Police als Anlage).
+
+REGEL: Extrahiere IMMER NUR das HAUPT-ANTRAGSDOKUMENT (die ersten relevanten Seiten).
+IGNORIERE alle bestehenden Polices anderer Versicherer die spaeter im Dokument erscheinen.
+
+Erkennung des Haupt-Antrags:
+- Titel: "Zusammenfassung Ihrer Anfrage", "Versicherungsantrag", "Antrag", "Offerte"
+- Erste Seiten mit dem neuen Versicherer-Logo/Briefkopf
+
+Erkennung von Referenz-Dokumenten (NICHT extrahieren):
+- Spaetere Seiten mit ANDEREM Versicherernamen und neuem Briefkopf
+- Titel: "Police Krankenversicherung", "Uebersicht ueber Ihre Policen", "Beratungsprotokoll", "Information gemaess Art. 45 VAG"
+- Beratungsprotokolle, Datenschutzhinweise, Ausweiskopien = immer ignorieren
+- Ausstellungsgrund "Praxiswechsel" = bestehende Police eines anderen Versicherers, nicht der Antrag
+
+Beispiel: GM Antrag KH + Sympany Police als Anlage = extrahiere NUR KH H-Capital, ignoriere Sympany.
+
+Bekannte Schweizer Versicherer (alle gleichwertig behandeln):
+Helsana, CSS, Groupe Mutuel, Sympany, Vivao Sympany, Swica, Sanitas, Visana, KPT, Assura, Concordia, Philos
+
 Antworte NUR mit dem JSON-Objekt. Fehlende Felder = null.`,
         response_json_schema: {
           type: 'object',
