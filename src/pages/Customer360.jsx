@@ -27,6 +27,7 @@ import VerkaufschanceForm from '@/components/verkaufschance/VerkaufschanceForm'
 import VerkaufschanceDetail from '@/components/verkaufschance/VerkaufschanceDetail'
 import CrossSellingPanel from '@/components/verkaufschance/CrossSellingPanel'
 import EditableField from '@/components/shared/EditableField'
+import CustomerForm from '@/components/customers/CustomerForm'
 import BrokerWorkflowBar from '@/components/customers/BrokerWorkflowBar'
 import { parseISO, differenceInDays } from 'date-fns'
 
@@ -52,6 +53,7 @@ export default function Customer360() {
   const [activeSection, setActiveSection] = useState('overview')
   const [quickTaskTitle, setQuickTaskTitle] = useState('')
   const [editingContract, setEditingContract] = useState(null)
+  const [editingCustomer, setEditingCustomer] = useState(false)
   const [expandedContractDocs, setExpandedContractDocs] = useState(null)
   const [expandedCancellation, setExpandedCancellation] = useState(null)
 
@@ -472,7 +474,7 @@ export default function Customer360() {
                 <Mail className="w-3.5 h-3.5 text-blue-700" />
               </a>
             )}
-            <Button size="sm" variant="outline" onClick={() => navigate(`/kunden/${customerId}?edit=true`)} className="gap-1 h-8 px-3 text-xs">
+                    <Button size="sm" variant="outline" onClick={() => setEditingCustomer(true)} className="gap-1 h-8 px-3 text-xs">
               <Pencil className="w-3.5 h-3.5" /> Bearbeiten
             </Button>
             <Button size="sm" onClick={() => setShowVsForm(true)} className="gap-1 h-8 px-3 text-xs">
@@ -845,6 +847,27 @@ export default function Customer360() {
         )}
 
       </div>
+
+      {/* Customer Edit Modal */}
+      {editingCustomer && (
+        <StandardModal
+          open={editingCustomer}
+          onOpenChange={o => { if (!o) setEditingCustomer(false) }}
+          title={`${customer.first_name} ${customer.last_name} bearbeiten`}
+          size="xl"
+          hideFooter
+        >
+          <CustomerForm
+            customer={customer}
+            onSave={data => {
+              updateCustomerMutation.mutate({ id: customer.id, data })
+              setEditingCustomer(false)
+            }}
+            onCancel={() => setEditingCustomer(false)}
+            saving={updateCustomerMutation.isPending}
+          />
+        </StandardModal>
+      )}
 
       {/* Contract Edit Modal */}
       {editingContract && (
