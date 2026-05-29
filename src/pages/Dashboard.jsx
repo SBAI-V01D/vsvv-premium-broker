@@ -158,6 +158,7 @@ export default function Dashboard() {
   const expiringContracts = useMemo(() =>
     contracts.filter(c => {
       if (!c.end_date) return false
+      if (c.exclude_from_renewal_statistics) return false
       const d = new Date(c.end_date + 'T00:00:00')
       return d <= in360 && !c.end_date.startsWith('9999')
     }), [contracts])
@@ -165,6 +166,7 @@ export default function Dashboard() {
   const renewalIn30 = useMemo(() =>
     contracts.filter(c => {
       if (!c.end_date) return false
+      if (c.exclude_from_renewal_statistics) return false
       const d = new Date(c.end_date + 'T00:00:00')
       return d <= in30 && d > today && !c.end_date.startsWith('9999')
     }), [contracts])
