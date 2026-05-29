@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Upload, Loader2, FileText, FileEdit, RefreshCw, Paperclip, X } from 'lucide-react'
+import { Upload, Loader2, FileText, FileEdit, RefreshCw, Paperclip, X, FolderOpen, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -54,6 +54,9 @@ export default function SmartDocumentUpload({ open, onOpenChange, onSuccess }) {
   const [errorMsg, setErrorMsg] = useState(null)
   const [anlageForm, setAnlageForm] = useState({ name: '', notes: '', customer_id: '', contract_id: '' })
   const [anlageUploading, setAnlageUploading] = useState(false)
+  const [sourceMode, setSourceMode] = useState('new') // 'new' | 'existing'
+  const [existingDocSearch, setExistingDocSearch] = useState('')
+  const [selectedExistingDoc, setSelectedExistingDoc] = useState(null)
 
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
@@ -65,6 +68,14 @@ export default function SmartDocumentUpload({ open, onOpenChange, onSuccess }) {
     queryFn: () => base44.entities.Contract.list(null, 1000),
     enabled: open && documentType === 'anlage',
   })
+  const { data: existingDocs = [] } = useQuery({
+    queryKey: ['documents-for-reassign'],
+    queryFn: () => base44.entities.Document.list('-created_date', 200),
+    enabled: open && step === 'upload' && sourceMode === 'existing',
+  })
+  const filteredExistingDocs = existingDocs.filter(d =>
+    !existingDocSearch || `${d.name} ${d.category || ''}`.toLowerCase().includes(existingDocSearch.toLowerCase())
+  )
   const customerContracts = contracts.filter(c => c.customer_id === anlageForm.customer_id)
 
   const uploadMutation = useMutation({
@@ -122,37 +133,48 @@ export default function SmartDocumentUpload({ open, onOpenChange, onSuccess }) {
   }
 
   const handleUploadAndAnalyze = async () => {
-    if (!file || !documentType) return
+    if (sourceMode === 'existing' && !selectedExistingDoc) return
+    if (sourceMode === 'new' && !file) return
+    if (!documentType) return
     setErrorMsg(null)
 
     try {
-      setStep('uploading')
-      const fileUrl = await uploadMutation.mutateAsync(file)
+      let fileUrl
+      let doc
 
-      // Dokument-Eintrag erstellen
-      const doc = await base44.entities.Document.create({
-        name: file.name.replace(/\.[^/.]+$/, ''), // ohne Extension
-        file_url: fileUrl,
-        category: 'application',
-        doc_type: 'antrag',
-        processing_stage: 'uploaded',
-        classification_status: 'ausstehend',
-      })
-      setUploadedDoc(doc)
+      if (sourceMode === 'existing') {
+        // Bestehendes Dokument neu klassifizieren
+        fileUrl = selectedExistingDoc.file_url
+        await base44.entities.Document.update(selectedExistingDoc.id, {
+          category: 'application',
+          doc_type: 'antrag',
+          classification_status: 'ausstehend',
+        })
+        doc = { ...selectedExistingDoc, category: 'application', doc_type: 'antrag' }
+        setUploadedDoc(doc)
+      } else {
+        setStep('uploading')
+        fileUrl = await uploadMutation.mutateAsync(file)
+        doc = await base44.entities.Document.create({
+          name: file.name.replace(/\.[^/.]+$/, ''),
+          file_url: fileUrl,
+          category: 'application',
+          doc_type: 'antrag',
+          processing_stage: 'uploaded',
+          classification_status: 'ausstehend',
+        })
+        setUploadedDoc(doc)
+      }
 
       setStep('analyzing')
       setAnalysisSeconds(0)
       const timer = setInterval(() => setAnalysisSeconds(s => s + 1), 1000)
       let result
       try {
-        result = await analysisMutation.mutateAsync({
-        file_url: fileUrl,
-        document_type: documentType,
-      })
-
-        } finally {
-          clearInterval(timer)
-        }
+        result = await analysisMutation.mutateAsync({ file_url: fileUrl, document_type: documentType })
+      } finally {
+        clearInterval(timer)
+      }
 
       if (!result?.success) {
         throw new Error(result?.error || 'KI-Analyse fehlgeschlagen. Bitte prüfen Sie das Dokument.')
@@ -176,6 +198,9 @@ export default function SmartDocumentUpload({ open, onOpenChange, onSuccess }) {
     setErrorMsg(null)
     setAnlageForm({ name: '', notes: '', customer_id: '', contract_id: '' })
     setAnlageUploading(false)
+    setSourceMode('new')
+    setExistingDocSearch('')
+    setSelectedExistingDoc(null)
     onOpenChange(false)
   }
 
@@ -246,54 +271,104 @@ export default function SmartDocumentUpload({ open, onOpenChange, onSuccess }) {
                 const Icon = t?.icon || FileText
                 return <><Icon className="w-4 h-4" /><span>{t?.label}</span></>
               })()}
+              <button onClick={() => setStep('type')} className="ml-auto text-xs text-muted-foreground hover:text-foreground">Ändern</button>
+            </div>
+
+            {/* Quelle wählen */}
+            <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => setStep('type')}
-                className="ml-auto text-xs text-muted-foreground hover:text-foreground"
+                type="button"
+                onClick={() => { setSourceMode('new'); setSelectedExistingDoc(null) }}
+                className={cn('flex items-center gap-2 p-3 rounded-lg border-2 text-sm font-medium transition',
+                  sourceMode === 'new' ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground hover:bg-muted/40'
+                )}
               >
-                Ändern
+                <Upload className="w-4 h-4" /> Neue Datei hochladen
+              </button>
+              <button
+                type="button"
+                onClick={() => { setSourceMode('existing'); setFile(null) }}
+                className={cn('flex items-center gap-2 p-3 rounded-lg border-2 text-sm font-medium transition',
+                  sourceMode === 'existing' ? 'border-amber-400 bg-amber-50 text-amber-800' : 'border-border text-muted-foreground hover:bg-muted/40'
+                )}
+              >
+                <FolderOpen className="w-4 h-4" /> Bestehendes Dokument
               </button>
             </div>
 
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:bg-muted/30 transition"
-            >
-              <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-              <p className="font-medium">PDF oder Bild hochladen</p>
-              <p className="text-sm text-muted-foreground">Antragsdokument (PDF, JPG, PNG)</p>
-            </div>
+            {/* Neue Datei */}
+            {sourceMode === 'new' && (
+              <>
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:bg-muted/30 transition"
+                >
+                  <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                  <p className="font-medium">PDF oder Bild hochladen</p>
+                  <p className="text-sm text-muted-foreground">Antragsdokument (PDF, JPG, PNG)</p>
+                </div>
+                <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileSelect} className="hidden" />
+                {file && (
+                  <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                    <span className="text-sm font-medium truncate">{file.name}</span>
+                    <button onClick={() => setFile(null)} className="text-xs text-muted-foreground hover:text-foreground">Ändern</button>
+                  </div>
+                )}
+              </>
+            )}
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-
-            {file && (
-              <div className="p-3 bg-muted/40 rounded-lg flex items-center justify-between">
-                <span className="text-sm font-medium truncate">{file.name}</span>
-                <button onClick={() => setFile(null)} className="text-xs text-muted-foreground hover:text-foreground">
-                  Ändern
-                </button>
+            {/* Bestehendes Dokument auswählen */}
+            {sourceMode === 'existing' && (
+              <div className="space-y-2">
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                  Wählen Sie ein bereits hochgeladenes Dokument aus — die KI analysiert es neu und weist es korrekt zu.
+                </p>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Dokument suchen..."
+                    value={existingDocSearch}
+                    onChange={e => setExistingDocSearch(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+                <div className="max-h-48 overflow-y-auto border rounded-lg divide-y">
+                  {filteredExistingDocs.slice(0, 30).map(doc => (
+                    <button
+                      key={doc.id}
+                      type="button"
+                      onClick={() => setSelectedExistingDoc(doc)}
+                      className={cn('w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition',
+                        selectedExistingDoc?.id === doc.id ? 'bg-amber-50 border-l-4 border-l-amber-400' : 'hover:bg-muted/40'
+                      )}
+                    >
+                      <FileText className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{doc.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{doc.category || '–'} · {doc.created_date ? new Date(doc.created_date).toLocaleDateString('de-CH') : ''}</p>
+                      </div>
+                      {selectedExistingDoc?.id === doc.id && <span className="text-amber-700 text-[10px] font-bold">✓ Gewählt</span>}
+                    </button>
+                  ))}
+                  {filteredExistingDocs.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">Keine Dokumente gefunden</p>
+                  )}
+                </div>
               </div>
             )}
 
             {errorMsg && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-                {errorMsg}
-              </div>
+              <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">{errorMsg}</div>
             )}
 
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setStep('type')}>Zurück</Button>
               <Button
                 onClick={handleUploadAndAnalyze}
-                disabled={!file}
+                disabled={sourceMode === 'new' ? !file : !selectedExistingDoc}
                 className="flex-1 gap-2"
               >
-                Hochladen & KI-Analyse starten
+                KI-Analyse starten
               </Button>
             </div>
           </div>
