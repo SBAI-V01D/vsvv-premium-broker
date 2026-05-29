@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
+import BreadcrumbBar from './BreadcrumbBar'
 import { Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -42,7 +43,8 @@ export default function AppLayout() {
         </div>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto flex flex-col">
+          <BreadcrumbBar />
           <div className="mx-auto px-5 sm:px-6 lg:px-8 py-6 lg:py-8 pb-14 w-full max-w-[1600px]">
             <Outlet />
           </div>
