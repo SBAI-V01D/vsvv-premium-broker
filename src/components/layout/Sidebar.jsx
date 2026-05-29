@@ -62,6 +62,7 @@ const navGroups = [
   },
   {
     label: 'Kunden',
+    headerPath: '/kunden',
     items: [
       { label: 'Kundenübersicht',  icon: Users,       path: '/kunden' },
       { label: 'Kundenportal',     icon: ExternalLink, path: '/portal', external: true },
@@ -73,6 +74,7 @@ const navGroups = [
 
   {
     label: 'Verwaltung',
+    headerPath: '/dokumente',
     items: [
       { label: 'Dokumente',        icon: FolderOpen,  path: '/dokumente',        color: 'primary' },
       { label: 'Anträge',          icon: CheckSquare, path: '/antraege' },
@@ -82,6 +84,7 @@ const navGroups = [
   },
   {
     label: 'Finanzen & Team',
+    headerPath: '/reporting',
     items: [
       { label: 'Reporting',        icon: BarChart2,   path: '/reporting' },
       { label: 'Provisionen',      icon: Wallet,      path: '/provisionen-courtagen' },
@@ -90,6 +93,7 @@ const navGroups = [
   },
   {
     label: 'Enterprise',
+    headerPath: '/berater-organisation',
     items: [
       { label: 'Berater & Partner',     icon: Briefcase, path: '/berater-organisation' },
       { label: 'Team & Zugriffsrechte', icon: Lock,   path: '/admin/team-zugriffsrechte', adminOnly: true },
@@ -157,9 +161,19 @@ export default function Sidebar({ onNavigate }) {
         {navGroups.map((group) => (
           <div key={group.label} className="mb-0.5">
             {!collapsed ? (
+              group.headerPath ? (
+                <Link
+                  to={group.headerPath}
+                  onClick={onNavigate}
+                  className="px-4 pt-5 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-[hsl(var(--sidebar-label))] hover:text-white transition-colors block cursor-pointer"
+                >
+                  {group.label}
+                </Link>
+              ) : (
               <p className="px-4 pt-5 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-[hsl(var(--sidebar-label))] select-none">
                 {group.label}
               </p>
+              )
             ) : (
               <div className="mx-3 my-3 h-px bg-[hsl(var(--border-subtle))]/50" />
             )}
