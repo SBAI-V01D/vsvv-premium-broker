@@ -62,8 +62,9 @@ const navGroups = [
     label: 'Kunden',
     items: [
       { label: 'Kundenübersicht',  icon: Users,       path: '/kunden' },
+      { label: 'Kundenportal',     icon: ExternalLink, path: '/portal', external: true },
+      { label: 'Beratungsdossiers',icon: BookOpen,    path: '/beratungsdossier' },
       { label: 'Leads',            icon: UserPlus,    path: '/leads',           color: 'warning' },
-      { label: 'Neukunden',        icon: Users,       path: '/neukunden' },
     ],
   },
   {
@@ -80,7 +81,6 @@ const navGroups = [
       { label: 'Verträge',         icon: FileText,    path: '/vertraege' },
       { label: 'Aufgaben',         icon: CheckSquare, path: '/aufgaben',         color: 'warning' },
       { label: 'Dokumente',        icon: FolderOpen,  path: '/dokumente',        color: 'primary' },
-      { label: 'Beratungsdossiers',icon: BookOpen,    path: '/beratungsdossier' },
       { label: 'Dok.-Extraktor',   icon: Brain,       path: '/dokument-extraktor' },
     ],
   },
@@ -91,7 +91,6 @@ const navGroups = [
       { label: 'Berater & Partner',icon: Briefcase,   path: '/berater-organisation' },
       { label: 'Reporting',        icon: BarChart2,   path: '/reporting' },
       { label: 'Finanzdashboard',  icon: BarChart2,   path: '/finanz-dashboard' },
-      { label: 'Kundenportal',     icon: ExternalLink, path: '/portal', external: true },
     ],
   },
   {
