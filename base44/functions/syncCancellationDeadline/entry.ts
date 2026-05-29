@@ -20,8 +20,12 @@ Deno.serve(async (req) => {
       if (!endDateStr) return null;
       const d = new Date(endDateStr + 'T00:00:00');
       if (isNaN(d.getTime())) return null;
-      d.setMonth(d.getMonth() - 3);
-      return d.toISOString().slice(0, 10);
+      // 3 Monate zurück, dann letzter Tag des Monats
+      const targetMonth = d.getMonth() - 3; // kann negativ werden → Date() handles overflow
+      const year = d.getFullYear();
+      // new Date(year, month, 0) = letzter Tag des Vormonats → daher month (nicht month-1)
+      const lastDay = new Date(year, targetMonth + 1, 0);
+      return lastDay.toISOString().slice(0, 10);
     }
 
     // ── AUTOMATION-PAYLOAD: { event, data, old_data } ─────────────────────────
