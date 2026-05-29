@@ -56,6 +56,8 @@ const navGroups = [
     label: 'Cockpit',
     items: [
       { label: 'Dashboard',        icon: LayoutDashboard, path: '/' },
+      { label: 'Vertragsabläufe',  icon: RefreshCw,   path: '/vertragsablaeufe', color: 'warning' },
+      { label: 'Aufgaben',         icon: CheckSquare, path: '/aufgaben',         color: 'warning' },
     ],
   },
   {
@@ -64,23 +66,17 @@ const navGroups = [
       { label: 'Kundenübersicht',  icon: Users,       path: '/kunden' },
       { label: 'Kundenportal',     icon: ExternalLink, path: '/portal', external: true },
       { label: 'Beratungsdossiers',icon: BookOpen,    path: '/beratungsdossier' },
+      { label: 'Verkaufschancen',  icon: TrendingUp,  path: '/verkaufschancen', color: 'primary' },
       { label: 'Leads',            icon: UserPlus,    path: '/leads',           color: 'warning' },
     ],
   },
-  {
-    label: 'Vertrieb',
-    items: [
-      { label: 'Verkaufschancen',  icon: TrendingUp,  path: '/verkaufschancen', color: 'primary' },
-      { label: 'Vertragsabläufe',  icon: RefreshCw,   path: '/vertragsablaeufe', color: 'warning' },
-      { label: 'Anträge',          icon: CheckSquare, path: '/antraege' },
-    ],
-  },
+
   {
     label: 'Verwaltung',
     items: [
-      { label: 'Verträge',         icon: FileText,    path: '/vertraege' },
-      { label: 'Aufgaben',         icon: CheckSquare, path: '/aufgaben',         color: 'warning' },
       { label: 'Dokumente',        icon: FolderOpen,  path: '/dokumente',        color: 'primary' },
+      { label: 'Anträge',          icon: CheckSquare, path: '/antraege' },
+      { label: 'Verträge',         icon: FileText,    path: '/vertraege' },
       { label: 'Dok.-Extraktor',   icon: Brain,       path: '/dokument-extraktor' },
     ],
   },
