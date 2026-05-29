@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     let extracted = null;
     try {
       extracted = await base44.integrations.Core.InvokeLLM({
-        model: 'claude_sonnet_4_6',
+        model: 'gemini_3_1_pro',
         file_urls: [file_url],
         prompt: `Du bist eine praezise Schweizer Versicherungs-Extraktionsengine.
 Dokumenttyp-Hinweis: "${document_type || 'unbekannt'}"
