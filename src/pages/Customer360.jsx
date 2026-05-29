@@ -45,6 +45,14 @@ const NEXT_STEP = {
 
 const ROLE_LABEL = { spouse: 'Partner/in', child: 'Kind', parent: 'Elternteil', other: 'Mitglied' }
 
+const CATEGORY_LABEL = {
+  contract:       'Vertrag',
+  application:    'Antrag',
+  identification: 'Identifikation',
+  correspondence: 'Korrespondenz',
+  other:          'Sonstiges',
+}
+
 export default function Customer360() {
   const { customerId } = useParams()
   const navigate = useNavigate()
@@ -845,7 +853,7 @@ export default function Customer360() {
                   <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{doc.name}</p>
-                    <p className="text-xs text-muted-foreground">{doc.category}</p>
+                    <p className="text-xs text-muted-foreground">{CATEGORY_LABEL[doc.category] || doc.category}</p>
                   </div>
                   {doc.file_url && (
                     <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
