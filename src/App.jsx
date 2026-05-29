@@ -46,6 +46,7 @@ import BrokerReporting from './pages/BrokerReporting'
 import EnterpriseAudit from './pages/EnterpriseAudit'
 import EnterpriseSystemCheck from './pages/EnterpriseSystemCheck'
 import InsuranceLearningCenter from './pages/InsuranceLearningCenter'
+import DocumentExtractor from './pages/DocumentExtractor'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -141,6 +142,7 @@ const AuthenticatedApp = () => {
         <Route path="/admin/enterprise-audit" element={<EnterpriseAudit />} />
         <Route path="/admin/system-check" element={<EnterpriseSystemCheck />} />
         <Route path="/admin/insurance-learning" element={<InsuranceLearningCenter />} />
+        <Route path="/dokument-extraktor" element={<DocumentExtractor />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
