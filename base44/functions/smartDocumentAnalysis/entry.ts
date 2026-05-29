@@ -25,81 +25,72 @@ Deno.serve(async (req) => {
       extracted = await base44.integrations.Core.InvokeLLM({
         model: 'claude_sonnet_4_6',
         file_urls: [file_url],
-        prompt: `Du bist eine praezise Schweizer Versicherungs-Extraktionsengine. Dokumenttyp-Hinweis: "${document_type || 'unbekannt'}".
-Du erkennst ALLE Versicherungsdokumente: Police, Antrag (Zusammenfassung), Offerte, Rechnung, Korrespondenz — nicht nur Polices.
+        prompt: `Du bist eine praezise Schweizer Versicherungs-Extraktionsengine.
+Dokumenttyp-Hinweis: "${document_type || 'unbekannt'}"
+Du erkennst ALLE Dokumenttypen: Police, Versicherungsausweis, Antrag, Zusammenfassung, Offerte, Vorgeburtliche Anmeldung.
 
-=== SCHRITT 1: PERSONEN-ROLLEN IDENTIFIZIEREN ===
+=== SCHRITT 1: VERSICHERTE PERSON (VP) vs. VERSICHERUNGSNEHMER (VN) ===
 
-ROLLE A — PRAEMIENZAHLER / VERSICHERUNGSNEHMER:
-- Person im ADRESSBLOCK oben rechts (an wen der Brief adressiert ist)
-- Erkennbar: Name + Strasse + PLZ + Ort im Adressfenster
-- Unter "Praemienzahler" oder "Versicherungsnehmer" mit eigener Kundennummer
-=> policy_holder_first_name / policy_holder_last_name / policy_holder_street / policy_holder_zip_code / policy_holder_city
+VN = PRAEMIENZAHLER: Person im Adressblock (oben rechts oder links adressiert), zahlt die Praemie.
+VP = VERSICHERTE PERSON: Person die tatsaechlich versichert ist.
 
-ROLLE B — VERSICHERTE PERSON:
-- Person die tatsaechlich versichert ist (kann abweichen!)
-- Erkennbar: "VERSICHERUNGSPOLICE fuer [Name]", "fuer [Vorname Nachname]", eigenes Geburtsdatum im Policenblock
-- Bei CSS: "fuer Thomas Leuenberger, Geburtsdatum: 05.02.1966" unter der Policenüberschrift
-=> insured_first_name / insured_last_name / insured_birthdate (Format YYYY-MM-DD)
+MUSTER JE VERSICHERER:
+- HELSANA POLICE: Adressblock = VN. "Nadine Leuenberger, 18.05.2001, Versicherten-Nr. XXX" = VP (kann andere Person sein!)
+- CSS POLICE: Adressblock = VN (z.B. "Frau Daniela Leuenberger"). Box "VERSICHERUNGSPOLICE fuer Thomas Leuenberger, GD 05.02.1966" = VP
+- GROUPE MUTUEL POLICE: Box oben rechts "Versicherte Person Mark Schoenholzer / Versicherungsnehmer Helga Schoenholzer" = direkte Angabe
+- HELSANA ANTRAG (Online): "Familien-Ansprechperson" oder "Versicherungsvertrag > Vorname Nachname" = VN. Header-Name (z.B. "Yvonne Engeli", "Baby Bernard") = VP.
+- GM ANTRAG/ANFRAGE: "Versicherungsnehmer/in" in Box oben rechts = VN. "Zu versichernde Person" = VP.
+- VORGEBURT: Baby [Nachname] = VP, Mutter/Vater in Formular Seite 2+ = VN
 
-SONDERFALL BABY/KIND ANTRAG:
-  Wenn der versicherte Name "Baby [Nachname]" oder ein Geburtsdatum in der Zukunft ist:
-  => insured_first_name="Baby", insured_last_name=[Nachname], insured_is_different=true
-  => policy_holder = Familien-Ansprechperson / Prämienzahler (andere Person im Dokument)
+Wenn VN = VP (selbe Person): insured_is_different = false
+Wenn VN ≠ VP (verschiedene Personen): insured_is_different = true, beide Personen extrahieren
 
-BEISPIEL ANTRAG:
-  Header "Baby Bernard", Familien-Ansprechperson "Philippe Bernard", Adresse "Wuhrmattstrasse 29, 4103 Bottmingen"
-  => policy_holder: Philippe Bernard, 4103 Bottmingen
-  => insured: Baby Bernard, insured_is_different=true
+=== SCHRITT 2: KVG vs VVG STRIKT TRENNEN ===
 
-BEISPIEL POLICE:
-  Adressblock: "Frau Daniela Leuenberger, Hoernliallee 107, 4125 Riehen" => policy_holder
-  Policenzeile: "VERSICHERUNGSPOLICE fuer Thomas Leuenberger, 05.02.1966" => insured + insured_is_different=true
+KVG-ERKENNUNGSZEICHEN:
+- Titel "Grundversicherung", "Versicherungsausweis KVG", "Police Grundversicherung"
+- Sektion "Versicherungen gemaeß KVG"
+- Produkte: Standard, BeneFit PLUS Telemedizin, BeneFit PLUS Hausarzt, HMO, HAM, Callmed, SanaTel (RT), PrimaFlex (RX), SanaFlex (RF), SanaMed (RM), SanaHAM (RH), SanaCare (RC)
+- Hat immer Franchise (CHF 300/500/1000/1500/2000/2500 fuer Erwachsene)
+- Hat Unfall-Flag ("Krankheit und Unfall" ODER "Nur Krankheit / Unfall sistiert")
 
-=== SCHRITT 2: PRODUKT-EXTRAKTION (NUR EXPLIZITE CHF-ZEILEN) ===
+VVG-ERKENNUNGSZEICHEN:
+- Titel "Zusatzversicherung", "Versicherungspolice VVG"
+- Sektion "Versicherungen gemaeß VVG"
+- Helsana VVG: COMPLETA, TOP, SANA, HOSPITAL ECO/Halbprivat/Privat, DENTAplus, Helsana Advocare PLUS, OMNI, VITA, PREVEA
+- CSS VVG: myFlex Spital (Balance/Comfort/Premium), myFlex Ambulant, myFlex Dental
+- GM VVG: HB (H-Bonus), KH (H-Capital), MU (Mundo), SB (Bonus Heilungskosten), AB (Acrobat), DP (Dentaire Plus/Zahnpflege Plus), GL (Global), LS (Legis sana+), SP (Supra), HO (Hospi), CO (Complementa), DE (Denta), BH (Taggeld), GO (GlobalSmart)
 
-JEDE Police MUSS eine eigene CHF-Prämienzeile haben. VERBOTEN:
-- KVG Grundversicherung wenn KEIN KVG-CHF-Betrag explizit sichtbar
-- Produkte die nicht namentlich im Dokument stehen
-- Gesundheitskonto, 24h-Service, Boni, Rabatte, Inklusivleistungen
-- Subtotale / Gesamttotale als Produkt erfassen
-REGEL: Zaehle CHF-Produktzeilen -> erstelle GENAU so viele Policen.
+=== SCHRITT 3: RABATTE vs. PRODUKTE ===
 
-=== VERSICHERER-SPEZIFISCHES WISSEN ===
+RABATTE erkennen (NIEMALS als eigenes Produkt zaehlen):
+- Zeilen mit "zu Ihren Gunsten" oder negativen CHF-Betraegen
+- Familienrabatt, Kollektivrabatt, Rahmenvertragsrabatt, Jugendrabatt, Kinder/Jugendrabatt
+- Kombinationsrabatt, Nichtnutzungsrabatt, Leistungsfreiheitsrabatt
+- Umweltabgabe / Verteilung Umweltabgabe (immer Abzug, kein Produkt)
+- Mehrjahresvertragsrabatt, Minderjährigenrabatt
+- Gesundheitskonto, Gesundheitskonto-Bonus ("inklusive" = Beilage, kein Preis)
+- 24h Notfall & medizinische Beratung ("kostenfrei eingeschlossen")
 
-GROUPE MUTUEL:
-  KVG (section: grundversicherung) — Seite 1 "Versicherungen gemäss KVG":
-    RT=SanaTel, RF=SanaFlex, RS=SanaStart, RM=SanaMed, RH=SanaHAM, RC=SanaCare
-    => modell aus Code ableiten (RT=TelMed, RF=FreieArztwahl, RH=Hausarzt, RC=HMO)
-  VVG (section: zusatzversicherung) — Seite 2+ "Versicherungen gemäss VVG":
-    BH=Taggeldversicherung, GO=Global Smart, KH=H-Capital, MU=Mundo, SP=Supra, HO=Hospi, CO=Complementa, DE=Denta
-  ACHTUNG: "Monatlicher Abzug"/"Kombinationsrabatt" = Rabatt, KEIN Produkt!
-  "Monatsprämie gemäss KVG/VVG" = Subtotal, KEIN Produkt!
-  Letztes Total = total_monthly_premium
+PRODUKTE erkennen: Nur Zeilen MIT explizitem CHF-Preis AND eigenem Produktnamen (fett gedruckt oder mit Code).
+MONATSTOTALE ("Total Nettoprämie", "Monatsprämie zu Ihren Lasten") = Summe, kein Produkt!
 
-CSS / myFlex:
-  KVG: "CSS Kranken-Versicherung", Standard, HMO, Callmed, myDoc, Telmed
-  VVG: myFlex Spitalversicherung (Balance/Comfort/Premium), myFlex Ambulant, myFlex Dental
-  Produkte stehen unter "VERSICHERUNGSPOLICE fuer [Name]" mit eigenem CHF-Betrag
-  Polnummer-Format: X.XXX.XXX (z.B. 8.055.733)
+=== SCHRITT 4: SPEZIALFAELLE ===
 
-HELSANA / PROGRÈS:
-  KVG: Helsana Standard, Helsana BeneFit Plus HAM/HMO, Progrès HAM/HMO
-  VVG: Helsana TOP, OMNI (stationär), SANA (ambulant), DENTA, VITA (Unfall)
+VORGEBURT:
+- VP = Baby [Nachname], Geburtsdatum liegt in Zukunft oder unbekannt
+- KVG und VVG koennen beide vorhanden sein (Philos PrimaFlex + Acrobat/DP/Global)
+- Unfall bei KVG: "Mit Unfallrisiko" oder "Krankheit und Unfall" = eingeschlossen
 
-SWICA / OEKK:
-  KVG: SWICA FAVORIT/OPTIMA HMO/HAM, OEKK Standard/Telklinik
-  VVG: SWICA HOSPITA (Spital), SWICA COMPLETA (ambulant), SWICA DENTA
+MEHRERE BEGINNDATEN (z.B. KVG 01.01.2027, VVG 01.01.2028):
+- start_date pro Police separat angeben, nicht vereinheitlichen
 
-SANITAS:
-  KVG: Sanitas Standard, JumpStart, Callmed, Flexmed, HMO
-  VVG: Sanitas Hospital (Flex/Eco/Classic/Top), Sanitas Ambulant Plus
+BONUS-STUFEN GM: "Praemienstufe 0" = Bonus-Level, als bonus_stufe=0 angeben
 
-=== KONFIDENZ-BEWERTUNG (0.0 - 1.0) ===
-1.00 = exakt lesbar im Dokument
-0.80-0.99 = klar ableitbar aus Kontext
-0.60-0.79 = wahrscheinlich korrekt, Berater pruefen
-0.00-0.59 = unsicher, nicht eindeutig lesbar
+GESUNDHEITSDEKLARATION-SEITEN: Enthalten keine Produkte. Nutze sie nur fuer health_declaration_required=true.
+
+=== SCHRITT 5: KONFIDENZ ===
+1.0 = direkt lesbar | 0.8 = klar ableitbar | 0.6 = wahrscheinlich | <0.6 = unsicher
 
 Antworte NUR mit dem JSON-Objekt. Fehlende Felder = null.`,
         response_json_schema: {

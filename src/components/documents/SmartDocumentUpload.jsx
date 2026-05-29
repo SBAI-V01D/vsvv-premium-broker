@@ -48,6 +48,7 @@ export default function SmartDocumentUpload({ open, onOpenChange, onSuccess }) {
   const [file, setFile] = useState(null)
   const [documentType, setDocumentType] = useState(null)
   const [step, setStep] = useState('type') // type | upload | uploading | analyzing | review | anlage_form
+  const [analysisSeconds, setAnalysisSeconds] = useState(0)
   const [uploadedDoc, setUploadedDoc] = useState(null)
   const [analysisResult, setAnalysisResult] = useState(null)
   const [errorMsg, setErrorMsg] = useState(null)
@@ -140,10 +141,18 @@ export default function SmartDocumentUpload({ open, onOpenChange, onSuccess }) {
       setUploadedDoc(doc)
 
       setStep('analyzing')
-      const result = await analysisMutation.mutateAsync({
+      setAnalysisSeconds(0)
+      const timer = setInterval(() => setAnalysisSeconds(s => s + 1), 1000)
+      let result
+      try {
+        result = await analysisMutation.mutateAsync({
         file_url: fileUrl,
         document_type: documentType,
       })
+
+        } finally {
+          clearInterval(timer)
+        }
 
       if (!result?.success) {
         throw new Error(result?.error || 'KI-Analyse fehlgeschlagen. Bitte prüfen Sie das Dokument.')
@@ -303,8 +312,13 @@ export default function SmartDocumentUpload({ open, onOpenChange, onSuccess }) {
           <div className="py-10 text-center space-y-4">
             <Loader2 className="w-10 h-10 mx-auto animate-spin text-primary" />
             <p className="font-semibold">KI analysiert Ihr Dokument...</p>
-            <p className="text-sm text-muted-foreground">Extrahiere Kundendaten, Versicherungsinfos und Konditionen</p>
-            <p className="text-xs text-muted-foreground">Dauert ca. 15–30 Sekunden</p>
+            <p className="text-sm text-muted-foreground">Extrahiere Personen, KVG/VVG-Produkte und Konditionen</p>
+            <p className="text-xs text-muted-foreground">{analysisSeconds}s — dauert ca. 20–45 Sekunden</p>
+            {analysisSeconds > 30 && (
+              <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2 mx-auto max-w-xs">
+                Komplexes Dokument wird verarbeitet — bitte warten...
+              </p>
+            )}
           </div>
         )}
 
