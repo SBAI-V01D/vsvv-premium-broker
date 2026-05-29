@@ -57,8 +57,13 @@ function PolicyCard({ policy, index, unsichere, editData, onChange }) {
             { key: 'praemie_brutto', label: 'Prämie Brutto', type: 'number' },
             { key: 'praemie_netto', label: 'Prämie Netto', type: 'number' },
             { key: 'gueltig_ab', label: 'Gültig ab' },
-            { key: 'gueltig_bis', label: 'Gültig bis' },
-          ].map(({ key, label, type }) => (
+              { key: 'gueltig_bis', label: 'Gültig bis' },
+              ...(!isKvg ? [
+                { key: 'tod_kapital_chf', label: 'Tod-Kapital CHF', type: 'number' },
+                { key: 'invaliditaet_kapital_chf', label: 'Invalidität-Kapital CHF', type: 'number' },
+                { key: 'spital_franchise_chf', label: 'Spital-Franchise CHF', type: 'number' },
+              ] : []),
+            ].map(({ key, label, type }) => (
             <div key={key}>
               <label className={cn('text-[10px] font-semibold uppercase tracking-wide block mb-1', isUnsicher(key) ? 'text-amber-600' : 'text-muted-foreground')}>
                 {label}{isUnsicher(key) && ' ⚠'}
@@ -245,14 +250,34 @@ export default function DocumentExtractor() {
           <Button onClick={handleExtract} disabled={!file || isLoading} className="w-full gap-2">
             {isLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Analysiere...</> : <><Search className="w-4 h-4" /> KI-Analyse starten</>}
           </Button>
-          {extractMutation.data && !extractMutation.data.success && (
-            <p className="text-sm text-destructive">{extractMutation.data.error}</p>
+          {(extractMutation.isError || (extractMutation.data && !extractMutation.data.success)) && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 space-y-2">
+              <p className="text-sm font-semibold text-red-700">Fehler bei der Extraktion</p>
+              <p className="text-sm text-red-600">
+                {extractMutation.data?.error || extractMutation.error?.message || 'Unbekannter Fehler'}
+              </p>
+              <details className="text-xs text-muted-foreground">
+                <summary className="cursor-pointer">Debug-Info</summary>
+                <p className="mt-1 font-mono">{file?.name} · {file?.type} · {file ? (file.size / 1024).toFixed(0) + ' KB' : '–'}</p>
+              </details>
+            </div>
           )}
         </div>
 
         {/* Ergebnis */}
         {data && (
           <>
+            {/* Antrag/Vorgeburt Banner */}
+            {(data.dokument_typ === 'antrag' || data.dokument_typ === 'antrag_vorgeburt' || data.dokument_typ?.includes('antrag')) && (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                <strong>Antrag erkannt</strong>
+                {data.persons?.some(p => p.vorname === 'Baby' || (p.geburtsdatum && p.geburtsdatum > new Date().toISOString().slice(0,10))) && (
+                  <span> — Vorgeburtliche Anmeldung</span>
+                )}
+                {data.notizen && <div className="mt-1 text-xs text-blue-700">{data.notizen}</div>}
+              </div>
+            )}
+
             {/* Header */}
             <div className="surface p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
