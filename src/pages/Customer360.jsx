@@ -15,7 +15,7 @@ import { StandardModal, KpiCard, EmptyState } from '@/components/shared'
 import {
   ArrowLeft, Phone, Mail, MapPin, Plus, FileText, TrendingUp,
   CheckCircle2, Clock, Download, Shield, Pencil, Calendar, Tag,
-  Building2, Edit, ChevronDown, ChevronUp, AlertTriangle, XCircle
+  Building2, Edit, ChevronDown, ChevronUp, AlertTriangle, XCircle, CreditCard
 } from 'lucide-react'
 import StatusBadge from '@/components/status/StatusBadge'
 import DateQualityBadge from '@/components/contracts/DateQualityBadge'
@@ -551,6 +551,12 @@ export default function Customer360() {
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <MapPin className="w-4 h-4 flex-shrink-0" />
                     <span>{customer.zip_code} {customer.city}</span>
+                  </div>
+                )}
+                {customer.bank_account && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <CreditCard className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate font-mono text-xs">{customer.bank_account}</span>
                   </div>
                 )}
               </CardContent>
