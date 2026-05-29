@@ -9,6 +9,7 @@ import {
   ChevronRight, ChevronLeft, Loader2, FileText, Search,
   Sparkles, Bot, X, Trash2
 } from 'lucide-react'
+import ExtractionValidationPanel from './ExtractionValidationPanel'
 import { cn } from '@/lib/utils'
 
 const STEPS = ['Kundenzuweisung', 'Antragsdaten', 'Bestätigen']
@@ -483,6 +484,9 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
             </p>
           )}
         </div>
+
+        {/* Phase 1+2: Validierungsprotokoll */}
+        <ExtractionValidationPanel extracted={extracted} policies={activePolicies} />
 
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
