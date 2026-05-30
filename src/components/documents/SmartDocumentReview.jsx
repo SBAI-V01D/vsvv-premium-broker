@@ -417,26 +417,47 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
                 >🏢 Unternehmen</button>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Input placeholder="Vorname *" value={newCustomerData.first_name}
-                onChange={e => setNewCustomerData(d => ({ ...d, first_name: e.target.value }))} />
-              <Input placeholder="Nachname *" value={newCustomerData.last_name}
-                onChange={e => setNewCustomerData(d => ({ ...d, last_name: e.target.value }))} />
-            </div>
-            <Input type="date" value={newCustomerData.birthdate}
-              onChange={e => setNewCustomerData(d => ({ ...d, birthdate: e.target.value }))} />
-            <Input type="email" placeholder="E-Mail" value={newCustomerData.email}
-              onChange={e => setNewCustomerData(d => ({ ...d, email: e.target.value }))} />
-            <Input placeholder="Telefon" value={newCustomerData.phone}
-              onChange={e => setNewCustomerData(d => ({ ...d, phone: e.target.value }))} />
-            <div className="grid grid-cols-3 gap-2">
-              <Input placeholder="Strasse" value={newCustomerData.street} className="col-span-2"
-                onChange={e => setNewCustomerData(d => ({ ...d, street: e.target.value }))} />
-              <Input placeholder="PLZ" value={newCustomerData.zip_code}
-                onChange={e => setNewCustomerData(d => ({ ...d, zip_code: e.target.value }))} />
-            </div>
-            <Input placeholder="Ort" value={newCustomerData.city}
-              onChange={e => setNewCustomerData(d => ({ ...d, city: e.target.value }))} />
+            {newCustomerData.customer_type === 'business' ? (
+              <>
+                <Input placeholder="Firmenname *" value={newCustomerData.company_name || ''}
+                  onChange={e => setNewCustomerData(d => ({ ...d, company_name: e.target.value, first_name: e.target.value, last_name: '' }))} />
+                <Input type="email" placeholder="E-Mail" value={newCustomerData.email}
+                  onChange={e => setNewCustomerData(d => ({ ...d, email: e.target.value }))} />
+                <Input placeholder="Telefon" value={newCustomerData.phone}
+                  onChange={e => setNewCustomerData(d => ({ ...d, phone: e.target.value }))} />
+                <div className="grid grid-cols-3 gap-2">
+                  <Input placeholder="Strasse" value={newCustomerData.street} className="col-span-2"
+                    onChange={e => setNewCustomerData(d => ({ ...d, street: e.target.value }))} />
+                  <Input placeholder="PLZ" value={newCustomerData.zip_code}
+                    onChange={e => setNewCustomerData(d => ({ ...d, zip_code: e.target.value }))} />
+                </div>
+                <Input placeholder="Ort" value={newCustomerData.city}
+                  onChange={e => setNewCustomerData(d => ({ ...d, city: e.target.value }))} />
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="Vorname *" value={newCustomerData.first_name}
+                    onChange={e => setNewCustomerData(d => ({ ...d, first_name: e.target.value }))} />
+                  <Input placeholder="Nachname *" value={newCustomerData.last_name}
+                    onChange={e => setNewCustomerData(d => ({ ...d, last_name: e.target.value }))} />
+                </div>
+                <Input type="date" value={newCustomerData.birthdate}
+                  onChange={e => setNewCustomerData(d => ({ ...d, birthdate: e.target.value }))} />
+                <Input type="email" placeholder="E-Mail" value={newCustomerData.email}
+                  onChange={e => setNewCustomerData(d => ({ ...d, email: e.target.value }))} />
+                <Input placeholder="Telefon" value={newCustomerData.phone}
+                  onChange={e => setNewCustomerData(d => ({ ...d, phone: e.target.value }))} />
+                <div className="grid grid-cols-3 gap-2">
+                  <Input placeholder="Strasse" value={newCustomerData.street} className="col-span-2"
+                    onChange={e => setNewCustomerData(d => ({ ...d, street: e.target.value }))} />
+                  <Input placeholder="PLZ" value={newCustomerData.zip_code}
+                    onChange={e => setNewCustomerData(d => ({ ...d, zip_code: e.target.value }))} />
+                </div>
+                <Input placeholder="Ort" value={newCustomerData.city}
+                  onChange={e => setNewCustomerData(d => ({ ...d, city: e.target.value }))} />
+              </>
+            )}
           </Card>
         )}
 
