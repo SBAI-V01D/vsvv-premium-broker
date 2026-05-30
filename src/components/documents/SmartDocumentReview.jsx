@@ -114,6 +114,7 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
     zip_code: extracted?.policy_holder_zip_code || '',
     city: extracted?.policy_holder_city || '',
     family_role: 'other',
+    customer_type: 'private',
   })
 
   const createMutation = useMutation({
@@ -401,7 +402,21 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
         {/* Neuer Hauptkontakt: Daten */}
         {customerAction === 'create_primary' && (
           <Card className="p-3 border-l-4 border-l-primary space-y-2">
-            <p className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">Kundendaten</p>
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">Kundendaten</p>
+              <div className="flex rounded-lg border overflow-hidden text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setNewCustomerData(d => ({ ...d, customer_type: 'private' }))}
+                  className={cn('px-2.5 py-1 transition-colors', newCustomerData.customer_type === 'private' ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80')}
+                >👤 Privat</button>
+                <button
+                  type="button"
+                  onClick={() => setNewCustomerData(d => ({ ...d, customer_type: 'business' }))}
+                  className={cn('px-2.5 py-1 transition-colors', newCustomerData.customer_type === 'business' ? 'bg-blue-600 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80')}
+                >🏢 Unternehmen</button>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <Input placeholder="Vorname *" value={newCustomerData.first_name}
                 onChange={e => setNewCustomerData(d => ({ ...d, first_name: e.target.value }))} />
