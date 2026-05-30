@@ -245,6 +245,14 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
                         ? <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full border border-amber-200">Familienmitglied</span>
                         : <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full border border-blue-200">Hauptkontakt</span>
                       }
+                      <span className={cn(
+                        'text-[10px] px-1.5 py-0.5 rounded-full font-semibold border',
+                        customer.customer_type === 'business'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      )}>
+                        {customer.customer_type === 'business' ? '🏢 Unternehmen' : '👤 Privat'}
+                      </span>
                       <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-semibold',
                         conf >= 90 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                       )}>{conf}%</span>
