@@ -81,8 +81,8 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Vorname und Nachname Pflicht für neuen Hauptkontakt' }, { status: 400 });
       }
 
-      // Duplikatprüfung: gleiche E-Mail
-      if (newCustomerData.email) {
+      // Duplikatprüfung: gleiche E-Mail (nur für Privatkunden)
+      if (!isBusiness && newCustomerData.email) {
         const emailCheck = await base44.asServiceRole.entities.Customer.filter({ email: newCustomerData.email });
         if (emailCheck.length > 0) {
           return Response.json({
