@@ -115,7 +115,8 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
     city: extracted?.policy_holder_city || '',
     family_role: 'other',
     customer_type: 'private',
-    company_name: extracted?.company_name || extracted?.policy_holder_company || '',
+    company_name: extracted?.company_name || extracted?.policy_holder_company
+      || [extracted?.policy_holder_first_name, extracted?.policy_holder_last_name].filter(Boolean).join(' ') || '',
   })
 
   const createMutation = useMutation({
@@ -408,12 +409,16 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
               <div className="flex rounded-lg border overflow-hidden text-xs font-semibold">
                 <button
                   type="button"
-                  onClick={() => setNewCustomerData(d => ({ ...d, customer_type: 'private' }))}
+                  onClick={() => setNewCustomerData(d => ({ ...d, customer_type: 'private', first_name: d.first_name || '', last_name: d.last_name || '' }))}
                   className={cn('px-2.5 py-1 transition-colors', newCustomerData.customer_type === 'private' ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80')}
                 >👤 Privat</button>
                 <button
                   type="button"
-                  onClick={() => setNewCustomerData(d => ({ ...d, customer_type: 'business' }))}
+                  onClick={() => setNewCustomerData(d => ({
+                    ...d,
+                    customer_type: 'business',
+                    company_name: d.company_name || [d.first_name, d.last_name !== '-' ? d.last_name : ''].filter(Boolean).join(' ').trim()
+                  }))}
                   className={cn('px-2.5 py-1 transition-colors', newCustomerData.customer_type === 'business' ? 'bg-blue-600 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80')}
                 >🏢 Unternehmen</button>
               </div>
