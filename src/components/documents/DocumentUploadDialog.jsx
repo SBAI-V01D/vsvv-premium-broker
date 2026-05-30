@@ -23,7 +23,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess, pr
   const [uploadMode, setUploadMode] = useState(null)
   const [file, setFile] = useState(null)
   const [fileError, setFileError] = useState('')
-  const [form, setForm] = useState({ name: '', notes: '', customer_id: preselectedCustomerId || '', contract_id: '', primary_customer_id: '', is_family_member: false, end_date: '', excludeFromStats: false, statsNote: '' })
+  const [form, setForm] = useState({ name: '', notes: '', customer_id: preselectedCustomerId || '', contract_id: '', primary_customer_id: '', is_family_member: false, end_date: '', excludeFromStats: false, statsNote: '', category: '' })
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0) // 0-100
   const [uploadError, setUploadError] = useState('')
@@ -43,6 +43,28 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess, pr
   })
 
   const selectedCustomer = customers.find(c => c.id === form.customer_id)
+  const isBusinessCustomer = selectedCustomer?.customer_type === 'business'
+
+  const CATEGORIES_PRIVATE = [
+    { value: 'police', label: 'Police / Vertragsdokument' },
+    { value: 'korrespondenz', label: 'Korrespondenz' },
+    { value: 'ausweis', label: 'Ausweis / Identifikation' },
+    { value: 'rechnung', label: 'Rechnung' },
+    { value: 'antrag', label: 'Antrag' },
+    { value: 'sonstiges', label: 'Sonstiges' },
+  ]
+  const CATEGORIES_BUSINESS = [
+    { value: 'police', label: 'Police / Vertragsdokument' },
+    { value: 'korrespondenz', label: 'Korrespondenz' },
+    { value: 'handelsregister', label: 'Handelsregisterauszug' },
+    { value: 'jahresabschluss', label: 'Jahresabschluss' },
+    { value: 'vollmacht', label: 'Vollmacht / Vertrag' },
+    { value: 'betriebsdokument', label: 'Betriebsdokument' },
+    { value: 'rechnung', label: 'Rechnung' },
+    { value: 'antrag', label: 'Antrag' },
+    { value: 'sonstiges', label: 'Sonstiges' },
+  ]
+  const categoryOptions = selectedCustomer ? (isBusinessCustomer ? CATEGORIES_BUSINESS : CATEGORIES_PRIVATE) : [...CATEGORIES_PRIVATE, { value: 'handelsregister', label: 'Handelsregisterauszug' }, { value: 'jahresabschluss', label: 'Jahresabschluss' }]
   const selectedPrimaryCustomer = customers.find(c => c.id === form.primary_customer_id)
   const customerContracts = contracts.filter(c => c.customer_id === form.customer_id)
   const primaryCustomerContracts = contracts.filter(c => c.customer_id === form.primary_customer_id)
@@ -51,7 +73,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess, pr
     setUploadMode(null)
     setFile(null)
     setFileError('')
-    setForm({ name: '', notes: '', customer_id: preselectedCustomerId || '', contract_id: '', primary_customer_id: '', is_family_member: false, end_date: '', excludeFromStats: false, statsNote: '' })
+    setForm({ name: '', notes: '', customer_id: preselectedCustomerId || '', contract_id: '', primary_customer_id: '', is_family_member: false, end_date: '', excludeFromStats: false, statsNote: '', category: '' })
     setUploading(false)
     setUploadProgress(0)
     setUploadError('')
@@ -148,7 +170,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess, pr
           uploadMode === 'mandat'    ? 'correspondence' :
           uploadMode === 'vag45'     ? 'correspondence' :
           uploadMode === 'antrag_dok'? 'application' :
-          'other'
+          form.category || 'other'
         const docType = 'anlage'
         await base44.entities.Document.create({
           name: form.name,
@@ -373,18 +395,55 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess, pr
               <>
                 <div>
                   <Label>Kunde (optional)</Label>
-                  <Select value={form.customer_id} onValueChange={v => setForm(p => ({ ...p, customer_id: v, contract_id: '', is_family_member: false, primary_customer_id: '' }))}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="Kunden auswählen..." /></SelectTrigger>
+                  <Select value={form.customer_id} onValueChange={v => setForm(p => ({ ...p, customer_id: v, contract_id: '', is_family_member: false, primary_customer_id: '', category: '' }))}>
+                    <SelectTrigger className="mt-1">
+                      {selectedCustomer ? (
+                        <span className="flex items-center gap-2">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isBusinessCustomer ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                            {isBusinessCustomer ? '🏢 Unternehmen' : '👤 Privat'}
+                          </span>
+                          <span>{selectedCustomer.customer_type === 'business' ? (selectedCustomer.company_name || `${selectedCustomer.first_name} ${selectedCustomer.last_name}`) : `${selectedCustomer.first_name} ${selectedCustomer.last_name}`}</span>
+                        </span>
+                      ) : (
+                        <SelectValue placeholder="Kunden auswählen..." />
+                      )}
+                    </SelectTrigger>
                     <SelectContent>
                       {customers.map(c => (
                         <SelectItem key={c.id} value={c.id}>
-                          {c.first_name} {c.last_name}
-                          {c.is_family_member ? ` (Familienmitglied)` : ''}
+                          <span className="flex items-center gap-2">
+                            <span className={`text-[10px] font-bold px-1 py-0.5 rounded flex-shrink-0 ${c.customer_type === 'business' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                              {c.customer_type === 'business' ? '🏢' : '👤'}
+                            </span>
+                            {c.customer_type === 'business' ? (c.company_name || `${c.first_name} ${c.last_name}`) : `${c.first_name} ${c.last_name}`}
+                            {c.is_family_member ? ` (Familienmitglied)` : ''}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Kategorie je Kundentyp — nur für Anlage/Zusatzdokument */}
+                {uploadMode === 'anlage' && (
+                  <div>
+                    <Label>Kategorie</Label>
+                    {selectedCustomer && (
+                      <p className="text-[11px] mt-0.5 mb-1 font-medium"
+                        style={{ color: isBusinessCustomer ? '#1d4ed8' : '#059669' }}>
+                        {isBusinessCustomer ? '🏢 Unternehmenskunde — Geschäftskategorien verfügbar' : '👤 Privatkunde — Privatkategorien'}
+                      </p>
+                    )}
+                    <Select value={form.category} onValueChange={v => setForm(p => ({ ...p, category: v }))}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Kategorie wählen..." /></SelectTrigger>
+                      <SelectContent>
+                        {categoryOptions.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 
                 {form.customer_id && selectedCustomer?.is_family_member && (
                   <div>
