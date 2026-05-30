@@ -115,6 +115,7 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
     city: extracted?.policy_holder_city || '',
     family_role: 'other',
     customer_type: 'private',
+    company_name: extracted?.company_name || extracted?.policy_holder_company || '',
   })
 
   const createMutation = useMutation({
@@ -420,7 +421,7 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
             {newCustomerData.customer_type === 'business' ? (
               <>
                 <Input placeholder="Firmenname *" value={newCustomerData.company_name || ''}
-                  onChange={e => setNewCustomerData(d => ({ ...d, company_name: e.target.value, first_name: e.target.value, last_name: '' }))} />
+                  onChange={e => setNewCustomerData(d => ({ ...d, company_name: e.target.value, first_name: e.target.value, last_name: '-' }))} />
                 <Input type="email" placeholder="E-Mail" value={newCustomerData.email}
                   onChange={e => setNewCustomerData(d => ({ ...d, email: e.target.value }))} />
                 <Input placeholder="Telefon" value={newCustomerData.phone}
