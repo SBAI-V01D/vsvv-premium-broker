@@ -418,11 +418,10 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
                 >👤 Privat</button>
                 <button
                   type="button"
-                  onClick={() => setNewCustomerData(d => ({
-                    ...d,
-                    customer_type: 'business',
-                    company_name: d.company_name || [d.first_name, d.last_name !== '-' ? d.last_name : ''].filter(Boolean).join(' ').trim()
-                  }))}
+                  onClick={() => setNewCustomerData(d => {
+                    const name = d.company_name || [d.first_name, d.last_name !== '-' ? d.last_name : ''].filter(Boolean).join(' ').trim()
+                    return { ...d, customer_type: 'business', company_name: name, first_name: name || d.first_name, last_name: '-' }
+                  })}
                   className={cn('px-2.5 py-1 transition-colors', newCustomerData.customer_type === 'business' ? 'bg-blue-600 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80')}
                 >🏢 Unternehmen</button>
               </div>
