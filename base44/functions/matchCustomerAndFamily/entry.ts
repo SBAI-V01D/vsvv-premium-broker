@@ -18,13 +18,14 @@ Deno.serve(async (req) => {
     const { extractedData, organization_id } = await req.json();
     if (!extractedData) return Response.json({ error: 'Missing extractedData' }, { status: 400 });
 
-    console.log(`[matchCustomerAndFamily] START: ${extractedData.first_name} ${extractedData.last_name}, DOB: ${extractedData.birthdate}`);
+    console.log(`[matchCustomerAndFamily] START: ${extractedData.first_name} ${extractedData.last_name}, company: ${extractedData.company_name}, DOB: ${extractedData.birthdate}`);
 
     // Fetch all customers for matching — use pagination to handle 1000+ customers
     const customers = await base44.asServiceRole.entities.Customer.list(null, 5000);
     
     const firstName = (extractedData.first_name || '').trim().toLowerCase();
     const lastName = (extractedData.last_name || '').trim().toLowerCase();
+    const companyName = (extractedData.company_name || '').trim().toLowerCase();
     const birthdate = extractedData.birthdate || null;
     const street = (extractedData.street || '').trim().toLowerCase();
     const zipCode = extractedData.zip_code || null;
@@ -32,6 +33,66 @@ Deno.serve(async (req) => {
     const email = (extractedData.email || '').trim().toLowerCase();
     const phone = (extractedData.phone || '').trim();
     const mobile = (extractedData.mobile || '').trim();
+
+    // ── COMPANY MATCH: Match by company_name (highest priority for business customers) ──
+    if (companyName) {
+      const companyMatch = customers.find(c =>
+        c.customer_type === 'business' &&
+        (c.company_name || '').trim().toLowerCase() === companyName
+      );
+      if (companyMatch) {
+        console.log(`[matchCustomerAndFamily] COMPANY MATCH found: ${companyMatch.id} — ${companyMatch.company_name}`);
+        return Response.json({
+          success: true,
+          decision: {
+            action: 'link_existing',
+            customer_id: companyMatch.id,
+            primary_customer_id: companyMatch.id,
+            is_family_member: false,
+            family_role: null,
+            confidence: 100,
+            matched_customer: companyMatch,
+            matched_customers: [companyMatch],
+            reasons: ['company_name_exact'],
+            message: `Unternehmen exakt gefunden: ${companyMatch.company_name}`
+          },
+          all_matches: []
+        });
+      }
+
+      // Partial company name match (contains)
+      const partialCompanyMatches = customers.filter(c =>
+        c.customer_type === 'business' &&
+        c.company_name &&
+        ((c.company_name || '').trim().toLowerCase().includes(companyName) ||
+         companyName.includes((c.company_name || '').trim().toLowerCase()))
+      );
+      if (partialCompanyMatches.length > 0) {
+        console.log(`[matchCustomerAndFamily] PARTIAL COMPANY MATCH: ${partialCompanyMatches[0].company_name}`);
+        return Response.json({
+          success: true,
+          decision: {
+            action: 'ask_confirmation',
+            customer_id: null,
+            primary_customer_id: partialCompanyMatches[0].id,
+            is_family_member: false,
+            family_role: null,
+            confidence: 75,
+            matched_customer: partialCompanyMatches[0],
+            matched_customers: partialCompanyMatches.slice(0, 3),
+            reasons: ['company_name_partial'],
+            message: `Mögliche Firma gefunden: ${partialCompanyMatches[0].company_name}. Bitte bestätigen.`
+          },
+          all_matches: partialCompanyMatches.slice(0, 3).map(c => ({
+            customer_id: c.id,
+            name: c.company_name,
+            email: c.email,
+            score: 75,
+            reasons: ['company_name_partial']
+          }))
+        });
+      }
+    }
 
     // ── EXACT MATCH: Same first name, last name, AND birthdate ──────────────
     let exactMatch = null;
