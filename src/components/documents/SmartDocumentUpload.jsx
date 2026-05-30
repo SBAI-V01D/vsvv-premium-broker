@@ -77,6 +77,8 @@ export default function SmartDocumentUpload({ open, onOpenChange, onSuccess }) {
     !existingDocSearch || `${d.name} ${d.category || ''}`.toLowerCase().includes(existingDocSearch.toLowerCase())
   )
   const customerContracts = contracts.filter(c => c.customer_id === anlageForm.customer_id)
+  const selectedCustomer = customers.find(c => c.id === anlageForm.customer_id)
+  const isBusinessCustomer = selectedCustomer?.customer_type === 'business'
 
   const uploadMutation = useMutation({
     mutationFn: async (f) => {
@@ -451,10 +453,23 @@ export default function SmartDocumentUpload({ open, onOpenChange, onSuccess }) {
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Kunden auswählen..." /></SelectTrigger>
                 <SelectContent>
                   {customers.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}{c.is_family_member ? ' (FM)' : ''}</SelectItem>
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className="flex items-center gap-2">
+                        <span className={`text-[10px] font-bold px-1 py-0.5 rounded flex-shrink-0 ${c.customer_type === 'business' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                          {c.customer_type === 'business' ? '🏢' : '👤'}
+                        </span>
+                        {c.customer_type === 'business' ? (c.company_name || `${c.first_name} ${c.last_name}`) : `${c.first_name} ${c.last_name}`}
+                        {c.is_family_member ? ' (FM)' : ''}
+                      </span>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {selectedCustomer && (
+                <div className={`mt-1 px-2 py-1 rounded text-[11px] font-semibold inline-flex items-center gap-1 ${isBusinessCustomer ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                  {isBusinessCustomer ? '🏢 Unternehmen — Geschäftskategorien aktiv' : '👤 Privatkunde'}
+                </div>
+              )}
             </div>
 
             {anlageForm.customer_id && customerContracts.length > 0 && (
