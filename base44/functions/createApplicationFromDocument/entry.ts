@@ -73,7 +73,11 @@ Deno.serve(async (req) => {
 
     } else if (customerAction === 'create_primary') {
       // Neuer Hauptkontakt
-      if (!newCustomerData?.first_name || !newCustomerData?.last_name) {
+      const isBusiness = newCustomerData?.customer_type === 'business';
+      if (isBusiness && !newCustomerData?.company_name) {
+        return Response.json({ error: 'Firmenname Pflicht für Unternehmen' }, { status: 400 });
+      }
+      if (!isBusiness && (!newCustomerData?.first_name || !newCustomerData?.last_name)) {
         return Response.json({ error: 'Vorname und Nachname Pflicht für neuen Hauptkontakt' }, { status: 400 });
       }
 
@@ -88,13 +92,18 @@ Deno.serve(async (req) => {
         }
       }
 
-      const email = newCustomerData.email || `${newCustomerData.first_name.toLowerCase()}.${newCustomerData.last_name.toLowerCase()}.${Date.now()}@placeholder.local`;
+      const nameSlug = isBusiness
+        ? newCustomerData.company_name.toLowerCase().replace(/\s+/g, '_')
+        : `${newCustomerData.first_name.toLowerCase()}.${newCustomerData.last_name.toLowerCase()}`;
+      const email = newCustomerData.email || `${nameSlug}.${Date.now()}@placeholder.local`;
       const newCustomer = await base44.asServiceRole.entities.Customer.create({
-        first_name: newCustomerData.first_name,
-        last_name: newCustomerData.last_name,
+        first_name: isBusiness ? (newCustomerData.company_name) : newCustomerData.first_name,
+        last_name: isBusiness ? '-' : newCustomerData.last_name,
+        company_name: isBusiness ? newCustomerData.company_name : null,
+        customer_type: isBusiness ? 'business' : 'private',
         email,
         phone: newCustomerData.phone || null,
-        birthdate: newCustomerData.birthdate || null,
+        birthdate: isBusiness ? null : (newCustomerData.birthdate || null),
         street: newCustomerData.street || null,
         zip_code: newCustomerData.zip_code || null,
         city: newCustomerData.city || null,
@@ -107,7 +116,7 @@ Deno.serve(async (req) => {
 
       resolvedCustomerId = newCustomer.id;
       resolvedPrimaryCustomerId = newCustomer.id;
-      resolvedCustomerName = `${newCustomer.first_name} ${newCustomer.last_name}`;
+      resolvedCustomerName = isBusiness ? newCustomer.company_name : `${newCustomer.first_name} ${newCustomer.last_name}`;
       isFamilyMember = false;
 
       // Kundennummer generieren
@@ -235,7 +244,7 @@ Deno.serve(async (req) => {
       is_family_member: isFamilyMember,
       organization_id: orgId,
       advisor_id: applicationData.advisor_id || null,
-      kundentyp: 'privat',
+      kundentyp: newCustomerData?.customer_type === 'business' ? 'firma' : 'privat',
       sparte,
       sparte_data: sparteData,
       insurance_type: applicationData.insurance_type || sparte,
