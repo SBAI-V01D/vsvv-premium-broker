@@ -81,16 +81,7 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Vorname und Nachname Pflicht für neuen Hauptkontakt' }, { status: 400 });
       }
 
-      // Duplikatprüfung: gleiche E-Mail (nur für Privatkunden)
-      if (!isBusiness && newCustomerData.email) {
-        const emailCheck = await base44.asServiceRole.entities.Customer.filter({ email: newCustomerData.email });
-        if (emailCheck.length > 0) {
-          return Response.json({
-            error: 'Kunde mit dieser E-Mail existiert bereits',
-            existingCustomerId: emailCheck[0].id,
-          }, { status: 409 });
-        }
-      }
+      // Keine E-Mail-Duplikatprüfung — mehrere Kunden können dieselbe E-Mail haben
 
       const nameSlug = isBusiness
         ? newCustomerData.company_name.toLowerCase().replace(/\s+/g, '_')
