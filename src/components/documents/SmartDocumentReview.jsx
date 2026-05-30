@@ -209,7 +209,11 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
     const canProceed = (
       (customerAction === 'use_existing' && selectedCustomerId) ||
       (customerAction === 'create_family_member' && selectedPrimaryId && newCustomerData.first_name && newCustomerData.last_name) ||
-      (customerAction === 'create_primary' && newCustomerData.first_name && newCustomerData.last_name)
+      (customerAction === 'create_primary' && (
+        newCustomerData.customer_type === 'business'
+          ? !!newCustomerData.company_name
+          : !!(newCustomerData.first_name && newCustomerData.last_name)
+      ))
     )
 
     return (
