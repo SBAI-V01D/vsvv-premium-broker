@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { base44 } from '@/api/base44Client'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -40,19 +40,39 @@ const grouped = ALL_SPARTEN.reduce((acc, s) => {
 
 function AdvisorSelect({ value, onChange }) {
   const { data: advisors = [] } = useQuery({
-    queryKey: ['advisors'],
+    queryKey: ['advisors-all'],
     queryFn: () => base44.entities.Advisor.list(),
     staleTime: 60_000,
   })
   const active = advisors.filter(a => a.status === 'active')
+
+  // Resolve initial value: match by id, email, or name string
+  const resolvedId = useMemo(() => {
+    if (!value) return '__none__'
+    const byId = active.find(a => a.id === value)
+    if (byId) return byId.id
+    const byEmail = active.find(a => a.email === value)
+    if (byEmail) return byEmail.id
+    const byName = active.find(a => `${a.firstname} ${a.lastname}`.trim() === value)
+    if (byName) return byName.id
+    return '__none__'
+  }, [value, active])
+
+  const handleChange = (id) => {
+    if (id === '__none__') { onChange(''); return }
+    const advisor = active.find(a => a.id === id)
+    if (advisor) onChange(advisor.id)
+  }
+
   return (
     <div>
       <Label>Zuständiger Berater</Label>
-      <Select value={value} onValueChange={onChange}>
+      <Select value={resolvedId} onValueChange={handleChange}>
         <SelectTrigger className="mt-1"><SelectValue placeholder="Berater auswählen" /></SelectTrigger>
         <SelectContent>
+          <SelectItem value="__none__">– kein Berater –</SelectItem>
           {active.map(a => (
-            <SelectItem key={a.id} value={a.email}>
+            <SelectItem key={a.id} value={a.id}>
               {`${a.firstname} ${a.lastname}`.trim()}
               {a.organization_name ? ` · ${a.organization_name}` : ''}
             </SelectItem>
