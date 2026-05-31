@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 import {
   Repeat2, CheckCircle2, RefreshCw, AlertTriangle, Clock,
   TrendingUp, Zap, Target, Shield, X, CalendarClock,
-  User, ArrowRight, ClipboardCheck, Loader2
+  User, ArrowRight, ClipboardCheck, Loader2, Info, Scale
 } from 'lucide-react'
 import { format, addDays } from 'date-fns'
 import { Button } from '@/components/ui/button'
@@ -41,6 +41,29 @@ const PROCESS_STATUS = {
   verlaengerung_vorbereiten: { label: 'Verlängerung',  color: 'text-violet-600' },
   beratung_erfolgt:          { label: 'Beraten',       color: 'text-teal-600' },
   erledigt:                  { label: 'Erledigt',      color: 'text-green-600' },
+}
+
+/**
+ * VVG Art. 35a — Berechnet Kündigungstermine für Mehrjahresverträge (>3 Jahre Laufzeit)
+ * Gültig seit 01.01.2022: Kündigung möglich nach Ablauf von 3 Versicherungsjahren,
+ * danach auf jedes weitere Vertragsjahr.
+ */
+function getVvgDates(contract) {
+  if (!contract.start_date || !contract.end_date) return []
+  if (contract.end_date.startsWith('9999')) return []
+  const start = new Date(contract.start_date + 'T00:00:00')
+  const end   = new Date(contract.end_date   + 'T00:00:00')
+  const durationYears = (end - start) / (365.25 * 24 * 3600 * 1000)
+  if (durationYears <= 3) return []
+  const dates = []
+  for (let n = 3; ; n++) {
+    const d = new Date(start)
+    d.setFullYear(d.getFullYear() + n)
+    d.setDate(d.getDate() - 1) // letzter Tag des n-ten Versicherungsjahres
+    if (d >= end) break
+    dates.push(d)
+  }
+  return dates
 }
 
 function CountdownBar({ days, maxDays = 180, color }) {
@@ -245,6 +268,114 @@ function TodayPanel({ items }) {
   )
 }
 
+function VvgPanel({ items, navigate }) {
+  const [open, setOpen] = useState(true)
+  if (items.length === 0) return null
+  const today = new Date()
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50/20 overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-3 px-4 py-3 border-b border-amber-200/70 bg-amber-50/50 hover:bg-amber-100/50 transition-colors text-left"
+      >
+        <Scale className="w-4 h-4 text-amber-700 flex-shrink-0" />
+        <div className="flex-1">
+          <span className="text-[12px] font-bold text-amber-800">VVG Art. 35a – Mehrjahresverträge</span>
+          <span className="text-[10px] text-amber-700 ml-2">{items.length} Vertrag{items.length !== 1 ? 'e' : ''} mit gesetzlichen Kündigungsoptionen</span>
+        </div>
+        <span
+          title="Gemäss Art. 35a VVG (gültig seit 01.01.2022) können Mehrjahresverträge nach Ablauf von drei Versicherungsjahren ordentlich gekündigt werden."
+          onClick={e => e.stopPropagation()}
+        >
+          <Info className="w-4 h-4 text-amber-600 cursor-help" />
+        </span>
+        <span className="text-[10px] text-amber-600 ml-2">{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div>
+          <div
+            className="grid text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50/80 px-4 py-2 border-b border-amber-100"
+            style={{ gridTemplateColumns: '1fr 110px 110px 1fr 70px' }}
+          >
+            <div>Kunde / Versicherer</div>
+            <div>Beginn</div>
+            <div>Ordentl. Ablauf</div>
+            <div>VVG Kündigungstermine (Art. 35a)</div>
+            <div className="text-right">Aktion</div>
+          </div>
+          <div className="divide-y divide-amber-100">
+            {items.map(({ contract, vvgDates }) => {
+              const nextVvg = vvgDates.find(d => d >= today)
+              const daysToNext = nextVvg ? Math.ceil((nextVvg - today) / 86400000) : null
+              const isUrgent = daysToNext !== null && daysToNext <= 90
+              return (
+                <div
+                  key={contract.id}
+                  className={cn('grid items-start px-4 py-3 hover:bg-amber-50/60 transition-colors', isUrgent && 'bg-amber-50/40')}
+                  style={{ gridTemplateColumns: '1fr 110px 110px 1fr 70px' }}
+                >
+                  <div className="min-w-0 pr-2">
+                    <p className="text-[12px] font-semibold truncate">{contract.customer_name || '–'}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{contract.insurer || '–'} · {contract.policy_number || '–'}</p>
+                    {fmtCHF(contract.premium_yearly) && <p className="text-[10px] text-emerald-700 font-semibold">{fmtCHF(contract.premium_yearly)}/Jahr</p>}
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-medium">{fmtDate(contract.start_date)}</p>
+                    <p className="text-[9px] text-muted-foreground">Vertragsbeginn</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-medium">{fmtDate(contract.end_date)}</p>
+                    <p className="text-[9px] text-muted-foreground">Ordentlicher Ablauf</p>
+                  </div>
+                  <div className="flex flex-wrap gap-1 pr-2">
+                    {vvgDates.map((d, idx) => {
+                      const isPast = d < today
+                      const isNext = d === nextVvg
+                      const dTo = Math.ceil((d - today) / 86400000)
+                      return (
+                        <span
+                          key={idx}
+                          className={cn(
+                            'inline-flex items-center gap-0.5 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border',
+                            isPast
+                              ? 'bg-slate-100 text-slate-400 border-slate-200'
+                              : isNext && dTo <= 90
+                              ? 'bg-amber-500 text-white border-amber-600'
+                              : isNext
+                              ? 'bg-amber-100 text-amber-800 border-amber-300'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          )}
+                        >
+                          <Scale className="w-2.5 h-2.5 flex-shrink-0" />
+                          {d.toLocaleDateString('de-CH')}
+                          {!isPast && isNext && <span className="ml-0.5">({dTo}d)</span>}
+                        </span>
+                      )
+                    })}
+                  </div>
+                  <div className="text-right">
+                    <button
+                      onClick={() => contract.customer_id && navigate(`/kunden/${contract.customer_id}/360`)}
+                      className="text-[9px] px-2 py-1 border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      <User className="w-2.5 h-2.5 inline mr-0.5" />360°
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <div className="px-4 py-2 bg-amber-50/50 border-t border-amber-100">
+            <p className="text-[9px] text-amber-700">
+              <strong>Art. 35a VVG</strong> (gültig seit 01.01.2022): Mehrjahresverträge können nach Ablauf von 3 Versicherungsjahren ordentlich gekündigt werden — danach auf jedes weitere Vertragsjahr. Gelb = nächster möglicher Termin. Grau = bereits vergangen.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Vertragsablaeufe() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -297,6 +428,19 @@ export default function Vertragsablaeufe() {
     mutationFn: ({ id, data }) => base44.entities.Contract.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contracts'] }),
   })
+
+  const vvgItems = useMemo(() => {
+    const today = new Date()
+    return contracts
+      .filter(c => ['active', 'pending'].includes(c.status) && !c.archived)
+      .map(c => ({ contract: c, vvgDates: getVvgDates(c) }))
+      .filter(({ vvgDates }) => vvgDates.length > 0 && vvgDates.some(d => d >= today))
+      .sort((a, b) => {
+        const nextA = a.vvgDates.find(d => d >= new Date()) || new Date(9999, 0, 1)
+        const nextB = b.vvgDates.find(d => d >= new Date()) || new Date(9999, 0, 1)
+        return nextA - nextB
+      })
+  }, [contracts])
 
   const actionableItems = useMemo(() => {
     return contracts
@@ -551,6 +695,9 @@ export default function Vertragsablaeufe() {
             </div>
           </div>
         )}
+
+        {/* VVG Art. 35a — Mehrjahresverträge mit gesetzlichen Kündigungsoptionen */}
+        <VvgPanel items={vvgItems} navigate={navigate} />
       </div>
     </div>
   )
