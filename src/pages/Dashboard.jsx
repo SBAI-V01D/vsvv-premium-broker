@@ -302,51 +302,51 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* 3 Grosse Kacheln */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {/* 3 Kacheln */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button onClick={() => setActiveView('broker')}
-              className="group flex flex-col items-center justify-center gap-4 p-8 bg-white rounded-2xl border-2 border-blue-100 hover:border-primary hover:shadow-card-lg transition-all text-center">
-              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                <Users className="w-8 h-8 text-primary" />
+              className="group flex flex-col items-center justify-center gap-3 p-6 bg-white rounded-2xl border-2 border-blue-100 hover:border-primary hover:shadow-card-md transition-all text-center">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                <Users className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <p className="text-xl font-bold text-slate-800 group-hover:text-primary transition-colors">Berateransicht</p>
-                <p className="text-sm text-muted-foreground mt-1">Tagesgeschäft · Leads · Aufgaben · Renewals</p>
+                <p className="text-base font-bold text-slate-800 group-hover:text-primary transition-colors">Berateransicht</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Tagesgeschäft · Leads · Aufgaben · Renewals</p>
               </div>
-              <div className="flex gap-3 text-xs text-muted-foreground">
-                <span className="px-2 py-1 bg-slate-100 rounded-full">{openTasks.length} Aufgaben</span>
-                <span className="px-2 py-1 bg-slate-100 rounded-full">{hotLeads.length} Hot Leads</span>
+              <div className="flex gap-2 text-xs text-muted-foreground">
+                <span className="px-2 py-0.5 bg-slate-100 rounded-full">{openTasks.length} Aufgaben</span>
+                <span className="px-2 py-0.5 bg-slate-100 rounded-full">{hotLeads.length} Hot Leads</span>
               </div>
             </button>
 
             <button onClick={() => setActiveView('manager')}
-              className="group flex flex-col items-center justify-center gap-4 p-8 bg-white rounded-2xl border-2 border-emerald-100 hover:border-emerald-500 hover:shadow-card-lg transition-all text-center">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
-                <BarChart2 className="w-8 h-8 text-emerald-600" />
+              className="group flex flex-col items-center justify-center gap-3 p-6 bg-white rounded-2xl border-2 border-emerald-100 hover:border-emerald-500 hover:shadow-card-md transition-all text-center">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
+                <BarChart2 className="w-6 h-6 text-emerald-600" />
               </div>
               <div>
-                <p className="text-xl font-bold text-slate-800 group-hover:text-emerald-700 transition-colors">Manageransicht</p>
-                <p className="text-sm text-muted-foreground mt-1">KPIs · Portfolio · Finanzen · Reporting</p>
+                <p className="text-base font-bold text-slate-800 group-hover:text-emerald-700 transition-colors">Manageransicht</p>
+                <p className="text-xs text-muted-foreground mt-0.5">KPIs · Portfolio · Finanzen · Reporting</p>
               </div>
-              <div className="flex gap-3 text-xs text-muted-foreground">
-                <span className="px-2 py-1 bg-slate-100 rounded-full">{contracts.length} Verträge</span>
-                <span className="px-2 py-1 bg-slate-100 rounded-full">CHF {Math.round(contracts.reduce((s,c)=>s+(c.premium_yearly||0),0)/1000)}k</span>
+              <div className="flex gap-2 text-xs text-muted-foreground">
+                <span className="px-2 py-0.5 bg-slate-100 rounded-full">{contracts.length} Verträge</span>
+                <span className="px-2 py-0.5 bg-slate-100 rounded-full">CHF {Math.round(contracts.reduce((s,c)=>s+(c.premium_yearly||0),0)/1000)}k</span>
               </div>
             </button>
 
             <button onClick={() => setActiveView('admin')}
-              className="group flex flex-col items-center justify-center gap-4 p-8 bg-white rounded-2xl border-2 border-slate-200 hover:border-slate-500 hover:shadow-card-lg transition-all text-center">
-              <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
-                <Shield className="w-8 h-8 text-slate-600" />
+              className="group flex flex-col items-center justify-center gap-3 p-6 bg-white rounded-2xl border-2 border-slate-200 hover:border-slate-500 hover:shadow-card-md transition-all text-center">
+              <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
+                <Shield className="w-6 h-6 text-slate-600" />
               </div>
               <div>
-                <p className="text-xl font-bold text-slate-800 group-hover:text-slate-900 transition-colors">Adminansicht</p>
-                <p className="text-sm text-muted-foreground mt-1">Governance · System · KI · Audit</p>
+                <p className="text-base font-bold text-slate-800 group-hover:text-slate-900 transition-colors">Adminansicht</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Governance · System · KI · Audit</p>
               </div>
-              <div className="flex gap-3 text-xs text-muted-foreground">
-                <span className={`px-2 py-1 rounded-full ${criticalIncidents.length > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100'}`}>
-                  {criticalIncidents.length} Incidents
-                </span>
+              <div className="flex gap-2 text-xs">
+                <span className={`px-2 py-0.5 rounded-full ${
+                  criticalIncidents.length > 0 ? 'bg-rose-100 text-rose-700 font-semibold' : 'bg-slate-100 text-muted-foreground'
+                }`}>{criticalIncidents.length} Incidents</span>
               </div>
             </button>
           </div>
