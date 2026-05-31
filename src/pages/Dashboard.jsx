@@ -79,7 +79,7 @@ export default function Dashboard() {
   const [selectedTask, setSelectedTask] = useState(null)
   const [formData, setFormData] = useState({ title: '', status: '', notes: '', due_date: '' })
   const [quickTask, setQuickTask] = useState('')
-  const [activeView, setActiveView] = useState('broker')
+  const [activeView, setActiveView] = useState('overview')
   const queryClient = useQueryClient()
 
   const { data: tasks = [] } = useQuery({
@@ -265,6 +265,10 @@ export default function Dashboard() {
       <div className="px-6 py-2 border-b border-border bg-background/60 shrink-0">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-1">
+            <button onClick={() => setActiveView('overview')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                activeView === 'overview' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}>🏠 Übersicht</button>
             {[{id:'broker',label:'👤 Berater'},{id:'manager',label:'📊 Manager'},{id:'admin',label:'⚙️ Admin'}].map(v => (
               <button key={v.id} onClick={() => setActiveView(v.id)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
@@ -282,6 +286,108 @@ export default function Dashboard() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
+        {/* ── ÜBERSICHTSSEITE ───────────────────────────────────────── */}
+        {activeView === 'overview' && (<>
+
+          {/* Critical Incident Banner */}
+          {criticalIncidents.length > 0 && (
+            <div className="flex items-start gap-3 px-4 py-3 bg-rose-50 border border-rose-300 rounded-xl">
+              <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse mt-1.5 flex-shrink-0" />
+              <p className="text-sm font-bold text-rose-800 flex-1">
+                {criticalIncidents.length} kritische{criticalIncidents.length !== 1 ? ' Incidents' : 'r Incident'} offen
+              </p>
+              <button onClick={() => setActiveView('admin')}
+                className="text-xs font-semibold text-rose-700 hover:text-rose-900 whitespace-nowrap underline">Zur Adminansicht →</button>
+            </div>
+          )}
+
+          {/* 3 Grosse Kacheln */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <button onClick={() => setActiveView('broker')}
+              className="group flex flex-col items-center justify-center gap-4 p-8 bg-white rounded-2xl border-2 border-blue-100 hover:border-primary hover:shadow-card-lg transition-all text-center">
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                <Users className="w-8 h-8 text-primary" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-slate-800 group-hover:text-primary transition-colors">Berateransicht</p>
+                <p className="text-sm text-muted-foreground mt-1">Tagesgeschäft · Leads · Aufgaben · Renewals</p>
+              </div>
+              <div className="flex gap-3 text-xs text-muted-foreground">
+                <span className="px-2 py-1 bg-slate-100 rounded-full">{openTasks.length} Aufgaben</span>
+                <span className="px-2 py-1 bg-slate-100 rounded-full">{hotLeads.length} Hot Leads</span>
+              </div>
+            </button>
+
+            <button onClick={() => setActiveView('manager')}
+              className="group flex flex-col items-center justify-center gap-4 p-8 bg-white rounded-2xl border-2 border-emerald-100 hover:border-emerald-500 hover:shadow-card-lg transition-all text-center">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
+                <BarChart2 className="w-8 h-8 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-slate-800 group-hover:text-emerald-700 transition-colors">Manageransicht</p>
+                <p className="text-sm text-muted-foreground mt-1">KPIs · Portfolio · Finanzen · Reporting</p>
+              </div>
+              <div className="flex gap-3 text-xs text-muted-foreground">
+                <span className="px-2 py-1 bg-slate-100 rounded-full">{contracts.length} Verträge</span>
+                <span className="px-2 py-1 bg-slate-100 rounded-full">CHF {Math.round(contracts.reduce((s,c)=>s+(c.premium_yearly||0),0)/1000)}k</span>
+              </div>
+            </button>
+
+            <button onClick={() => setActiveView('admin')}
+              className="group flex flex-col items-center justify-center gap-4 p-8 bg-white rounded-2xl border-2 border-slate-200 hover:border-slate-500 hover:shadow-card-lg transition-all text-center">
+              <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
+                <Shield className="w-8 h-8 text-slate-600" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-slate-800 group-hover:text-slate-900 transition-colors">Adminansicht</p>
+                <p className="text-sm text-muted-foreground mt-1">Governance · System · KI · Audit</p>
+              </div>
+              <div className="flex gap-3 text-xs text-muted-foreground">
+                <span className={`px-2 py-1 rounded-full ${criticalIncidents.length > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100'}`}>
+                  {criticalIncidents.length} Incidents
+                </span>
+              </div>
+            </button>
+          </div>
+
+          {/* 4 Navigations-Buttons */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <button onClick={() => navigate('/kunden')}
+              className="flex items-center gap-3 p-4 bg-white/80 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-all group">
+              <Users className="w-5 h-5 text-primary shrink-0" />
+              <div className="text-left">
+                <p className="text-sm font-semibold group-hover:text-primary transition-colors">Kunden</p>
+                <p className="text-xs text-muted-foreground">CRM &amp; Portfolio</p>
+              </div>
+            </button>
+            <button onClick={() => navigate('/dokumente')}
+              className="flex items-center gap-3 p-4 bg-white/80 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-all group">
+              <FolderOpen className="w-5 h-5 text-amber-500 shrink-0" />
+              <div className="text-left">
+                <p className="text-sm font-semibold group-hover:text-primary transition-colors">Verwaltung</p>
+                <p className="text-xs text-muted-foreground">Dokumente &amp; Anträge</p>
+              </div>
+            </button>
+            <button onClick={() => navigate('/reporting')}
+              className="flex items-center gap-3 p-4 bg-white/80 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-all group">
+              <Wallet className="w-5 h-5 text-emerald-600 shrink-0" />
+              <div className="text-left">
+                <p className="text-sm font-semibold group-hover:text-primary transition-colors">Finanzen</p>
+                <p className="text-xs text-muted-foreground">Provisionen &amp; Reporting</p>
+              </div>
+            </button>
+            <button onClick={() => navigate('/berater-organisation')}
+              className="flex items-center gap-3 p-4 bg-white/80 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-all group">
+              <Shield className="w-5 h-5 text-slate-500 shrink-0" />
+              <div className="text-left">
+                <p className="text-sm font-semibold group-hover:text-primary transition-colors">Enterprise</p>
+                <p className="text-xs text-muted-foreground">Team &amp; Organisation</p>
+              </div>
+            </button>
+          </div>
+
+        </>)}
 
         {/* ── BERATERANSICHT ───────────────────────────────────────── */}
         {activeView === 'broker' && (<>
