@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 import {
   Repeat2, CheckCircle2, RefreshCw, AlertTriangle, Clock,
   TrendingUp, Zap, Target, Shield, X, CalendarClock,
-  User, ArrowRight, ClipboardCheck, Loader2, Info, Scale
+  User, ArrowRight, ClipboardCheck, Loader2, Info, FileText
 } from 'lucide-react'
 import { format, addDays } from 'date-fns'
 import { Button } from '@/components/ui/button'
@@ -278,7 +278,7 @@ function VvgPanel({ items, navigate }) {
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center gap-3 px-4 py-3 border-b border-amber-200/70 bg-amber-50/50 hover:bg-amber-100/50 transition-colors text-left"
       >
-        <Scale className="w-4 h-4 text-amber-700 flex-shrink-0" />
+        <FileText className="w-4 h-4 text-amber-700 flex-shrink-0" />
         <div className="flex-1">
           <span className="text-[12px] font-bold text-amber-800">VVG Art. 35a – Mehrjahresverträge</span>
           <span className="text-[10px] text-amber-700 ml-2">{items.length} Vertrag{items.length !== 1 ? 'e' : ''} mit gesetzlichen Kündigungsoptionen</span>
@@ -346,7 +346,7 @@ function VvgPanel({ items, navigate }) {
                               : 'bg-amber-50 text-amber-700 border-amber-200'
                           )}
                         >
-                          <Scale className="w-2.5 h-2.5 flex-shrink-0" />
+                          <FileText className="w-2.5 h-2.5 flex-shrink-0" />
                           {d.toLocaleDateString('de-CH')}
                           {!isPast && isNext && <span className="ml-0.5">({dTo}d)</span>}
                         </span>
