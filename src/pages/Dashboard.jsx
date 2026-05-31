@@ -317,38 +317,46 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* 4 Navigations-Buttons */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* 4 Navigations-Kacheln */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <button onClick={() => navigate('/kunden')}
-              className="flex items-center gap-3 p-4 bg-white/80 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-all group">
-              <Users className="w-5 h-5 text-primary shrink-0" />
-              <div className="text-left">
-                <p className="text-sm font-semibold group-hover:text-primary transition-colors">Kunden</p>
-                <p className="text-xs text-muted-foreground">CRM &amp; Portfolio</p>
+              className="group flex flex-col items-center justify-center gap-3 p-6 bg-white rounded-2xl border-2 border-blue-100 hover:border-primary hover:shadow-card-md transition-all text-center">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                <Users className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-base font-bold text-slate-800 group-hover:text-primary transition-colors">Kunden</p>
+                <p className="text-xs text-muted-foreground mt-0.5">CRM &amp; Portfolio</p>
               </div>
             </button>
             <button onClick={() => navigate('/dokumente')}
-              className="flex items-center gap-3 p-4 bg-white/80 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-all group">
-              <FolderOpen className="w-5 h-5 text-amber-500 shrink-0" />
-              <div className="text-left">
-                <p className="text-sm font-semibold group-hover:text-primary transition-colors">Verwaltung</p>
-                <p className="text-xs text-muted-foreground">Dokumente &amp; Anträge</p>
+              className="group flex flex-col items-center justify-center gap-3 p-6 bg-white rounded-2xl border-2 border-amber-100 hover:border-amber-500 hover:shadow-card-md transition-all text-center">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+                <FolderOpen className="w-6 h-6 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-base font-bold text-slate-800 group-hover:text-amber-700 transition-colors">Verwaltung</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Dokumente &amp; Anträge</p>
               </div>
             </button>
             <button onClick={() => navigate('/reporting')}
-              className="flex items-center gap-3 p-4 bg-white/80 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-all group">
-              <Wallet className="w-5 h-5 text-emerald-600 shrink-0" />
-              <div className="text-left">
-                <p className="text-sm font-semibold group-hover:text-primary transition-colors">Finanzen</p>
-                <p className="text-xs text-muted-foreground">Provisionen &amp; Reporting</p>
+              className="group flex flex-col items-center justify-center gap-3 p-6 bg-white rounded-2xl border-2 border-emerald-100 hover:border-emerald-500 hover:shadow-card-md transition-all text-center">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
+                <Wallet className="w-6 h-6 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-base font-bold text-slate-800 group-hover:text-emerald-700 transition-colors">Finanzen</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Provisionen &amp; Reporting</p>
               </div>
             </button>
             <button onClick={() => navigate('/berater-organisation')}
-              className="flex items-center gap-3 p-4 bg-white/80 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-all group">
-              <Shield className="w-5 h-5 text-slate-500 shrink-0" />
-              <div className="text-left">
-                <p className="text-sm font-semibold group-hover:text-primary transition-colors">Enterprise</p>
-                <p className="text-xs text-muted-foreground">Team &amp; Organisation</p>
+              className="group flex flex-col items-center justify-center gap-3 p-6 bg-white rounded-2xl border-2 border-slate-200 hover:border-slate-500 hover:shadow-card-md transition-all text-center">
+              <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center group-hover:bg-slate-200 transition-colors">
+                <Shield className="w-6 h-6 text-slate-600" />
+              </div>
+              <div>
+                <p className="text-base font-bold text-slate-800 group-hover:text-slate-900 transition-colors">Enterprise</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Team &amp; Organisation</p>
               </div>
             </button>
           </div>
