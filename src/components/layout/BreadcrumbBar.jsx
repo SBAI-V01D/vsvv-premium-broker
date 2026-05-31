@@ -139,11 +139,12 @@ export default function BreadcrumbBar() {
               <Link
                 to={item.path}
                 className={cn(
-                  'flex items-center gap-1 hover:text-primary transition-colors whitespace-nowrap',
-                  item.icon && 'text-muted-foreground'
+                  'flex items-center gap-1 hover:text-primary transition-colors whitespace-nowrap font-medium',
+                  item.icon && 'text-primary'
                 )}
               >
-                {item.icon && <Home className="w-3 h-3" />}
+                {item.icon && <Home className="w-3.5 h-3.5" />}
+                {item.icon && <span>Dashboard</span>}
                 {!item.icon && item.label}
               </Link>
             )}
