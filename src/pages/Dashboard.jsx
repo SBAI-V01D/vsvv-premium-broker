@@ -250,7 +250,13 @@ export default function Dashboard() {
               <GlobalSearch collapsed={false} light={true} />
             </div>
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-end items-center gap-2">
+            {activeView !== 'overview' && (
+              <button onClick={() => setActiveView('overview')}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
+                ← Cockpit
+              </button>
+            )}
             <button
               onClick={() => navigate('/kunden')}
               className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex-shrink-0"
