@@ -261,46 +261,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* View Tabs + Section Nav */}
-      <div className="px-6 py-2 border-b border-border bg-background/60 shrink-0">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-1">
-            <button onClick={() => setActiveView('overview')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                activeView === 'overview' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}>🏠 Übersicht</button>
-            {[{id:'broker',label:'👤 Berater'},{id:'manager',label:'📊 Manager'},{id:'admin',label:'⚙️ Admin'}].map(v => (
-              <button key={v.id} onClick={() => setActiveView(v.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  activeView === v.id ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}>{v.label}</button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => navigate('/kunden')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary/8 text-primary hover:bg-primary/15 transition-colors"><Users className="w-3.5 h-3.5" /> Kunden</button>
-            <button onClick={() => navigate('/dokumente')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"><FolderOpen className="w-3.5 h-3.5" /> Verwaltung</button>
-            <button onClick={() => navigate('/reporting')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"><Wallet className="w-3.5 h-3.5" /> Finanzen</button>
-            <button onClick={() => navigate('/berater-organisation')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"><Shield className="w-3.5 h-3.5" /> Enterprise</button>
-          </div>
-        </div>
-      </div>
-
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
         {/* ── ÜBERSICHTSSEITE ───────────────────────────────────────── */}
         {activeView === 'overview' && (<>
 
-          {/* Critical Incident Banner */}
-          {criticalIncidents.length > 0 && (
-            <div className="flex items-start gap-3 px-4 py-3 bg-rose-50 border border-rose-300 rounded-xl">
-              <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse mt-1.5 flex-shrink-0" />
-              <p className="text-sm font-bold text-rose-800 flex-1">
-                {criticalIncidents.length} kritische{criticalIncidents.length !== 1 ? ' Incidents' : 'r Incident'} offen
-              </p>
-              <button onClick={() => setActiveView('admin')}
-                className="text-xs font-semibold text-rose-700 hover:text-rose-900 whitespace-nowrap underline">Zur Adminansicht →</button>
-            </div>
-          )}
+
 
           {/* 3 Kacheln */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -391,6 +357,9 @@ export default function Dashboard() {
 
         {/* ── BERATERANSICHT ───────────────────────────────────────── */}
         {activeView === 'broker' && (<>
+          <button onClick={() => setActiveView('overview')} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+            ← Zurück zur Übersicht
+          </button>
 
           {/* Critical Incident Banner */}
           {criticalIncidents.length > 0 && (
@@ -511,6 +480,9 @@ export default function Dashboard() {
 
         {/* ── MANAGERANSICHT ───────────────────────────────────────── */}
         {activeView === 'manager' && (<>
+          <button onClick={() => setActiveView('overview')} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+            ← Zurück zur Übersicht
+          </button>
 
           {/* Manager KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -541,6 +513,9 @@ export default function Dashboard() {
 
         {/* ── ADMINANSICHT ─────────────────────────────────────────── */}
         {activeView === 'admin' && (<>
+          <button onClick={() => setActiveView('overview')} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
+            ← Zurück zur Übersicht
+          </button>
 
           {/* Critical Incidents */}
           {criticalIncidents.length > 0 && (
