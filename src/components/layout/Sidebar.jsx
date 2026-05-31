@@ -55,7 +55,7 @@ const navGroups = [
   {
     label: 'Cockpit',
     items: [
-      { label: 'Dashboard',        icon: LayoutDashboard, path: '/' },
+      { label: 'Cockpit',           icon: LayoutDashboard, path: '/' },
       { label: 'Vertragsabläufe',  icon: RefreshCw,   path: '/vertragsablaeufe', color: 'warning' },
       { label: 'Aufgaben',         icon: CheckSquare, path: '/aufgaben',         color: 'warning' },
     ],
