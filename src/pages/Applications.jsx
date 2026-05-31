@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import ApplicationKanban from '../components/applications/ApplicationKanban'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
-import { Plus, Search, Edit, Trash2, FileText, TrendingUp, Clock, CheckCircle, Calendar, Building2, Tag, Archive, Inbox } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, FileText, TrendingUp, Clock, CheckCircle, Calendar, Building2, Tag, Archive, Inbox, LayoutGrid, List } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent } from '@/components/ui/card'
 
@@ -37,7 +38,8 @@ export default function Applications() {
   const [statusChanging, setStatusChanging] = useState(null)
   const [expandedDocs, setExpandedDocs] = useState(null)
   const [showAuswertung, setShowAuswertung] = useState(false)
-  const [activeTab, setActiveTab] = useState('pending') // 'pending' | 'archived'
+  const [activeTab, setActiveTab] = useState('pending')
+  const [viewMode, setViewMode] = useState('list')
 
   const queryClient = useQueryClient()
 
@@ -211,9 +213,13 @@ export default function Applications() {
               <p className="text-xs text-muted-foreground">{pendingApps.length} pendente · {archivedApps.length} archivierte Anträge</p>
             </div>
           </div>
-          <Button onClick={() => { setEditing(null); setShowForm(true) }}>
-            <Plus className="w-4 h-4 mr-2" /> Neuer Antrag
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center rounded-lg border border-border bg-muted/30 p-0.5">
+              <button onClick={() => setViewMode('list')} title="Liste" className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}><List className="w-4 h-4" /></button>
+              <button onClick={() => setViewMode('kanban')} title="Kanban" className={`p-1.5 rounded-md transition-colors ${viewMode === 'kanban' ? 'bg-white shadow text-foreground' : 'text-muted-foreground hover:text-foreground'}`}><LayoutGrid className="w-4 h-4" /></button>
+            </div>
+            <Button onClick={() => { setEditing(null); setShowForm(true) }}><Plus className="w-4 h-4 mr-2" /> Neuer Antrag</Button>
+          </div>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-6 space-y-5">
@@ -319,18 +325,16 @@ export default function Applications() {
         )}
       </div>
 
-      {/* List */}
-      <Card>
+      {/* Kanban View */}
+      {viewMode === 'kanban' && (
+        <ApplicationKanban applications={filtered} getCustomer={getCustomer} />
+      )}
+
+      {/* List View */}
+      {viewMode === 'list' && <Card>
         <CardContent className="p-0">
-          {/* Table Header */}
           <div className="hidden md:grid grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            <div>Kunde / Berater</div>
-            <div>Sparte / Versicherer</div>
-            <div>Produkt / Tarif</div>
-            <div>Vertragsdaten</div>
-            <div>Jahresprämie</div>
-            <div>Status</div>
-            <div className="w-20"></div>
+            <div>Kunde / Berater</div><div>Sparte / Versicherer</div><div>Produkt / Tarif</div><div>Vertragsdaten</div><div>Jahresprämie</div><div>Status</div><div className="w-20"></div>
           </div>
 
           {filtered.length === 0 ? (
@@ -552,7 +556,7 @@ export default function Applications() {
             })
           )}
         </CardContent>
-      </Card>
+      </Card>}
 
       <ConfirmDialog
         open={!!confirmDeleteApp}

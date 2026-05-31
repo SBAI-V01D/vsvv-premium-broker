@@ -79,6 +79,7 @@ export default function Dashboard() {
   const [selectedTask, setSelectedTask] = useState(null)
   const [formData, setFormData] = useState({ title: '', status: '', notes: '', due_date: '' })
   const [quickTask, setQuickTask] = useState('')
+  const [activeView, setActiveView] = useState('broker')
   const queryClient = useQueryClient()
 
   const { data: tasks = [] } = useQuery({
@@ -260,21 +261,23 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Section Navigation Bar */}
+      {/* View Tabs + Section Nav */}
       <div className="px-6 py-2 border-b border-border bg-background/60 shrink-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => navigate('/kunden')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary/8 text-primary hover:bg-primary/15 transition-colors">
-            <Users className="w-3.5 h-3.5" /> Kunden
-          </button>
-          <button onClick={() => navigate('/dokumente')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
-            <FolderOpen className="w-3.5 h-3.5" /> Verwaltung
-          </button>
-          <button onClick={() => navigate('/reporting')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
-            <Wallet className="w-3.5 h-3.5" /> Finanzen &amp; Team
-          </button>
-          <button onClick={() => navigate('/berater-organisation')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
-            <Shield className="w-3.5 h-3.5" /> Enterprise
-          </button>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-1">
+            {[{id:'broker',label:'👤 Berater'},{id:'manager',label:'📊 Manager'},{id:'admin',label:'⚙️ Admin'}].map(v => (
+              <button key={v.id} onClick={() => setActiveView(v.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  activeView === v.id ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}>{v.label}</button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate('/kunden')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary/8 text-primary hover:bg-primary/15 transition-colors"><Users className="w-3.5 h-3.5" /> Kunden</button>
+            <button onClick={() => navigate('/dokumente')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"><FolderOpen className="w-3.5 h-3.5" /> Verwaltung</button>
+            <button onClick={() => navigate('/reporting')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"><Wallet className="w-3.5 h-3.5" /> Finanzen</button>
+            <button onClick={() => navigate('/berater-organisation')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"><Shield className="w-3.5 h-3.5" /> Enterprise</button>
+          </div>
         </div>
       </div>
 
@@ -393,8 +396,37 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {/* Operative Content */}
-        <TodayDashboard
+        {/* Manager View */}
+        {activeView === 'manager' && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-5 bg-white/70 rounded-2xl border border-border">
+            <div className="text-center"><p className="text-2xl font-bold text-primary">{contracts.length}</p><p className="text-xs text-muted-foreground mt-1">Aktive Verträge</p></div>
+            <div className="text-center"><p className="text-2xl font-bold text-emerald-600">CHF {Math.round(contracts.reduce((s,c)=>s+(c.premium_yearly||0),0)/1000)}k</p><p className="text-xs text-muted-foreground mt-1">Jahresprämien</p></div>
+            <div className="text-center"><p className="text-2xl font-bold text-amber-600">{openVerkaufschancen.length}</p><p className="text-xs text-muted-foreground mt-1">Offene Chancen</p></div>
+            <div className="text-center"><p className="text-2xl font-bold text-slate-700">{openTasks.length}</p><p className="text-xs text-muted-foreground mt-1">Offene Aufgaben</p></div>
+          </div>
+        )}
+
+        {/* Admin View */}
+        {activeView === 'admin' && (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {[{label:'Enterprise Control',path:'/admin/enterprise-control-center',icon:'⚙️',desc:'Governance & Incidents'},
+              {label:'System Check',path:'/admin/system-check',icon:'🔍',desc:'Integrität & Validierung'},
+              {label:'KI-Analyse',path:'/ai-review',icon:'🤖',desc:'AI Findings & Qualität'},
+              {label:'Audit & Security',path:'/admin/enterprise-audit',icon:'🛡️',desc:'Audit-Trail'},
+              {label:'Insurance Learning',path:'/admin/insurance-learning',icon:'📚',desc:'KI-Wissensbasis'},
+              {label:'Berater & Org',path:'/berater-organisation',icon:'🏢',desc:'Team verwalten'},
+            ].map(item => (
+              <button key={item.path} onClick={() => navigate(item.path)}
+                className="flex items-center gap-3 p-4 bg-white/80 rounded-xl border border-border hover:shadow-card-md hover:border-primary/30 transition-all text-left group">
+                <span className="text-2xl">{item.icon}</span>
+                <div><p className="text-sm font-semibold group-hover:text-primary transition-colors">{item.label}</p><p className="text-xs text-muted-foreground">{item.desc}</p></div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Operative Content — Berater + Manager view */}
+        {activeView !== 'admin' && <TodayDashboard
           openTasks={openTasks}
           expiringContracts={expiringContracts}
           contracts={contracts.filter(c => !c.exclude_from_renewal_statistics)}
@@ -403,7 +435,7 @@ export default function Dashboard() {
           tasks={tasks}
           onTaskClick={handleTaskClick}
           onTaskComplete={handleTaskComplete}
-        />
+        />}
 
         {/* Neukunden Section */}
         {newCustomers.length > 0 && (
@@ -476,7 +508,7 @@ export default function Dashboard() {
         <BirthdaySection />
 
         {/* AI Intelligence Panel */}
-        <AiInsightsPanel />
+        {activeView !== 'admin' && <AiInsightsPanel />}
 
         {/* Finance & Reporting */}
         <FinanceSection>
