@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-// v4 — direkt Claude, kein Stage0 OCR
+// v5 — Gemini-kompatibles Schema (single types only)
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
