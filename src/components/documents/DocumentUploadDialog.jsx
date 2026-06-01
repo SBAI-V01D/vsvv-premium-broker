@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Upload, Zap, Paperclip, Loader2, CheckCircle2, AlertCircle, FileText, Shield, ClipboardList, Scale, ScrollText } from 'lucide-react'
+import { Upload, Zap, Paperclip, Loader2, CheckCircle2, AlertCircle, FileText, Shield, ClipboardList, ScrollText } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 
 const MAX_FILE_SIZE_MB = 50
@@ -121,10 +121,6 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess, pr
     if (err) { setFileError(err); return }
     // Police muss immer einem Vertrag zugeordnet sein
     if (uploadMode === 'police' && !form.contract_id) {
-      setUploadError('Eine Police muss immer einem Vertrag zugeordnet werden. Bitte Vertrag auswählen.')
-      return
-    }
-    if (uploadMode === 'police' && !form.end_date) {
       setUploadError('Eine Police muss immer einem Vertrag zugeordnet werden. Bitte Vertrag auswählen.')
       return
     }
@@ -247,7 +243,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess, pr
               <div>
                 <p className="font-semibold text-green-800">Versicherungsantrag</p>
                 <p className="text-xs text-green-700 mt-0.5">
-                  Automatische KI-Extraktion, Kunden-Matching & Antragserstellung nach dem Upload.
+                  Automatische KI-Extraktion, Kunden-Matching &amp; Antragserstellung nach dem Upload.
                 </p>
               </div>
             </button>
@@ -280,7 +276,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess, pr
               className="w-full flex items-start gap-4 p-4 rounded-xl border-2 border-violet-200 bg-violet-50 hover:bg-violet-100 hover:border-violet-400 transition-all text-left"
             >
               <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Scale className="w-5 h-5 text-violet-700" />
+                <FileText className="w-5 h-5 text-violet-700" />
               </div>
               <div>
                 <p className="font-semibold text-violet-800">VAG 45 (Kundeninformation)</p>
@@ -328,7 +324,7 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess, pr
               {uploadMode === 'antrag'     ? <Zap className="w-4 h-4" /> :
                uploadMode === 'police'     ? <Shield className="w-4 h-4" /> :
                uploadMode === 'mandat'     ? <ClipboardList className="w-4 h-4" /> :
-               uploadMode === 'vag45'      ? <Scale className="w-4 h-4" /> :
+               uploadMode === 'vag45'      ? <FileText className="w-4 h-4" /> :
                uploadMode === 'antrag_dok' ? <ScrollText className="w-4 h-4" /> :
                <Paperclip className="w-4 h-4" />}
               {uploadMode === 'antrag'     ? 'Versicherungsantrag – KI verarbeitet automatisch' :
