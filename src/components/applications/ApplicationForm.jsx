@@ -468,7 +468,7 @@ export default function ApplicationForm({ application, customers = [], brokers =
 
       {/* Police & Vertragsdaten */}
       <div className="p-4 bg-muted/30 rounded-lg border border-border space-y-3">
-        <p className="text-sm font-semibold text-foreground">Police & Vertragsdaten</p>
+        <p className="text-sm font-semibold text-foreground">Police &amp; Vertragsdaten</p>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>Policennummer</Label>
