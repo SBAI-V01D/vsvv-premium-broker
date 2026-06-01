@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
-// v5 — Gemini-kompatibles Schema (single types only)
+// v6 — Claude (kein Gemini), single types, forced redeploy 2026-06-01
 
 Deno.serve(async (req) => {
   const base44 = createClientFromRequest(req);
