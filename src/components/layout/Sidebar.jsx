@@ -74,9 +74,9 @@ const navGroups = [
   {
     label: 'Verwaltung',
     items: [
-      { label: 'Dokumente',        icon: FolderOpen,  path: '/dokumente',        color: 'primary' },
-      { label: 'Anträge',          icon: CheckSquare, path: '/antraege' },
       { label: 'Verträge',         icon: FileText,    path: '/vertraege' },
+      { label: 'Anträge',          icon: CheckSquare, path: '/antraege' },
+      { label: 'Dokumente',        icon: FolderOpen,  path: '/dokumente',        color: 'primary' },
       { label: 'Dok.-Extraktor',   icon: Brain,       path: '/dokument-extraktor' },
     ],
   },
