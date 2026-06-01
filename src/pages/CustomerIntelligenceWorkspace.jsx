@@ -356,6 +356,12 @@ export default function CustomerIntelligenceWorkspace() {
     };
   }, [modeFiltered, search, customers, sortBy, workspaceMode]);
 
+  // Kundensuche für Intelligence-View (über alle Kunden)
+  const intelligenceCustomerResults = useMemo(() => {
+    if (!intelligenceSearch.trim()) return [];
+    return searchCustomers(primaryCustomers, intelligenceSearch).slice(0, 20);
+  }, [primaryCustomers, intelligenceSearch]);
+
   const filteredMandateIssues = useMemo(() => {
     if (!intelligenceSearch.trim()) return mandateIssues;
     const query = intelligenceSearch.toLowerCase();
@@ -417,6 +423,89 @@ export default function CustomerIntelligenceWorkspace() {
             </div>
           </div>
         </div>
+
+        {/* Kundensuche-Ergebnisse — immer sichtbar wenn gesucht wird */}
+        {intelligenceSearch.trim() && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-[hsl(var(--border-subtle))] p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Search className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
+              <h3 className="text-sm font-bold text-[hsl(var(--primary))]">Suchergebnisse</h3>
+              <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
+                {intelligenceCustomerResults.length} Kunden
+              </span>
+            </div>
+            {intelligenceCustomerResults.length === 0 ? (
+              <p className="text-[11px] text-[hsl(var(--text-muted))]">Keine Kunden gefunden für "{intelligenceSearch}"</p>
+            ) : (
+              <div className="space-y-1">
+                {intelligenceCustomerResults.map(customer => (
+                  <button
+                    key={customer.id}
+                    onClick={() => navigate(`/kunden/${customer.id}`)}
+                    className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-[hsl(var(--surface-2))]/60 transition-colors text-left group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-7 h-7 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center shrink-0">
+                        <User className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-semibold text-[hsl(var(--text-heading))] truncate">
+                          {customer.first_name} {customer.last_name}
+                          {customer.company_name && <span className="ml-1 text-[hsl(var(--text-muted))]">{customer.company_name}</span>}
+                        </p>
+                        <p className="text-[10px] text-[hsl(var(--text-muted))] truncate">
+                          {[customer.customer_number, customer.email, customer.city].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-[hsl(var(--text-muted))] group-hover:text-[hsl(var(--primary))] shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Kundensuche-Ergebnisse — immer sichtbar wenn gesucht wird */}
+        {intelligenceSearch.trim() && (
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-[hsl(var(--border-subtle))] p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Search className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
+              <h3 className="text-sm font-bold text-[hsl(var(--primary))]">Suchergebnisse</h3>
+              <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
+                {intelligenceCustomerResults.length} Kunden
+              </span>
+            </div>
+            {intelligenceCustomerResults.length === 0 ? (
+              <p className="text-[11px] text-[hsl(var(--text-muted))]">Keine Kunden gefunden für "{intelligenceSearch}"</p>
+            ) : (
+              <div className="space-y-1">
+                {intelligenceCustomerResults.map(customer => (
+                  <button
+                    key={customer.id}
+                    onClick={() => navigate(`/kunden/${customer.id}`)}
+                    className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-[hsl(var(--surface-2))]/60 transition-colors text-left group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-7 h-7 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center shrink-0">
+                        {customer.customer_type === 'business' ? <Building2 className="w-3.5 h-3.5 text-[hsl(var(--primary))]" /> : <User className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-semibold text-[hsl(var(--text-heading))] truncate">
+                          {customer.customer_type === 'business' ? customer.company_name : `${customer.first_name || ''} ${customer.last_name || ''}`}
+                        </p>
+                        <p className="text-[10px] text-[hsl(var(--text-muted))] truncate">
+                          {[customer.customer_number, customer.email, customer.city].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-[hsl(var(--text-muted))] group-hover:text-[hsl(var(--primary))] shrink-0" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <NewCustomersSection searchQuery={intelligenceSearch} />
         <div className="h-px bg-[hsl(var(--primary))]/20 my-2" />
