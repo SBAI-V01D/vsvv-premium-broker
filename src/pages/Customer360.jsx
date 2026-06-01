@@ -131,7 +131,11 @@ export default function Customer360() {
 
   const updateCustomerMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Customer.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['customer', customerId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer', customerId] })
+      queryClient.invalidateQueries({ queryKey: ['360-contracts', customerId] })
+      queryClient.invalidateQueries({ queryKey: ['360-family', customerId] })
+    },
   })
 
   const updateContractMutation = useMutation({
@@ -883,10 +887,18 @@ export default function Customer360() {
           <CustomerForm
             customer={customer}
             onSave={data => {
-              updateCustomerMutation.mutate({ id: customer.id, data })
+              // Preserve RLS-critical fields that are not editable in the form
+              const safeData = {
+                ...data,
+                organization_id: data.organization_id || customer.organization_id,
+                assigned_advisors: customer.assigned_advisors,
+                assigned_assistants: customer.assigned_assistants,
+                primary_advisor_id: customer.primary_advisor_id,
+                access_level: customer.access_level,
+              }
+              updateCustomerMutation.mutate({ id: customer.id, data: safeData })
               setEditingCustomer(false)
             }}
-            onCancel={() => setEditingCustomer(false)}
             saving={updateCustomerMutation.isPending}
           />
         </StandardModal>
