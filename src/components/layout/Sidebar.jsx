@@ -93,8 +93,9 @@ const navGroups = [
     items: [
       { label: 'Berater & Partner',     icon: Briefcase, path: '/berater-organisation' },
       { label: 'Team & Zugriffsrechte', icon: Lock,   path: '/admin/team-zugriffsrechte', adminOnly: true },
-      { label: 'Enterprise Control',    icon: Shield, path: '/admin/enterprise-control-center', adminOnly: true },
-      { label: 'KI Analyse',            icon: Brain,  path: '/ai-review', adminOnly: true },
+      { label: 'Enterprise Control',    icon: Shield,    path: '/admin/enterprise-control-center', adminOnly: true },
+      { label: 'System Check',           icon: Activity,  path: '/admin/system-check', adminOnly: true },
+      { label: 'KI Analyse',             icon: Brain,     path: '/ai-review', adminOnly: true },
     ],
   },
 ];
