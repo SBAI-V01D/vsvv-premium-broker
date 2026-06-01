@@ -33,6 +33,7 @@ import CancellationPanel from '@/components/contracts/CancellationPanel'
 import ApplicationDocumentsPanel from '@/components/applications/ApplicationDocumentsPanel'
 import ApplicationForm from '@/components/applications/ApplicationForm'
 import { HouseholdPrintExport } from '@/components/customers/HouseholdPrintExport'
+import CustomerStammdatenCard from '../components/customers/CustomerStammdatenCard'
 import { StickyNav, EnterpriseCard, EmptySection, SectionHeader } from '@/components/ui/ds'
 import EmailLink from '@/components/common/EmailLink'
 
@@ -335,6 +336,15 @@ export default function CustomerDetail() {
                 />
               </div>
             )}
+
+            {/* Stammdaten */}
+            <div className="space-y-3">
+              <SectionHeader
+                title="Stammdaten"
+                subtitle="Persönliche Angaben, Kontakt und Finanzen"
+              />
+              <CustomerStammdatenCard customer={customer} />
+            </div>
 
             <CustomerDashboardCompact
               customer={customer}
