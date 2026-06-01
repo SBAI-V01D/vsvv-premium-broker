@@ -18,13 +18,13 @@ async function logQueryError(error, query) {
 export const queryClientInstance = new QueryClient({
   defaultOptions: {
     queries: {
-      // refetchOnMount: false — zeigt gecachte Daten sofort, kein Reload bei Seitennavigation
-      // Daten werden nur neu geladen wenn: Mutation invalidiert, staleTime abgelaufen, oder manuell
-      refetchOnMount: false,
+      // refetchOnMount: true — beim Navigieren werden veraltete Daten im Hintergrund aktualisiert
+      // Gecachte Daten werden sofort angezeigt, dann still im Hintergrund aktualisiert (stale-while-revalidate)
+      refetchOnMount: true,
       refetchOnWindowFocus: false,
-      // 15 Minuten staleTime — CRM-Daten ändern sich selten ohne eigene Aktion
-      staleTime: 15 * 60 * 1000,
-      gcTime: 60 * 60 * 1000,
+      // 3 Minuten staleTime — CRM hat aktive Änderungen (Dokumente, Tasks, Importe)
+      staleTime: 3 * 60 * 1000,
+      gcTime: 30 * 60 * 1000,
       retry: (failureCount, error) => {
         const status = error?.response?.status || error?.status;
         if (status === 401 || status === 403 || status === 404) return false;
