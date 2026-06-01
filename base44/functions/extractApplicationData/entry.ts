@@ -469,45 +469,45 @@ Extrahiere in EXAKT dieser Struktur:`,
           person: {
             type: 'object',
             properties: {
-              firma:        { type: ['string','null'] },
-              vorname:      { type: ['string','null'] },
-              nachname:     { type: ['string','null'] },
-              geburtsdatum: { type: ['string','null'] },
-              ist_praemienzahler: { type: ['boolean','null'] }
+              firma:        { type: 'string' },
+              vorname:      { type: 'string' },
+              nachname:     { type: 'string' },
+              geburtsdatum: { type: 'string' },
+              ist_praemienzahler: { type: 'boolean' }
             },
             required: ['firma','vorname','nachname','geburtsdatum']
           },
           kontaktperson: {
             type: 'object',
             properties: {
-              name:    { type: ['string','null'] },
-              telefon: { type: ['string','null'] },
-              email:   { type: ['string','null'] }
+              name:    { type: 'string' },
+              telefon: { type: 'string' },
+              email:   { type: 'string' }
             },
             required: ['name','telefon','email']
           },
           adresse: {
             type: 'object',
             properties: {
-              strasse: { type: ['string','null'] },
-              plz:     { type: ['string','null'] },
-              ort:     { type: ['string','null'] },
-              kanton:  { type: ['string','null'] }
+              strasse: { type: 'string' },
+              plz:     { type: 'string' },
+              ort:     { type: 'string' },
+              kanton:  { type: 'string' }
             },
             required: ['strasse','plz','ort']
           },
           versicherung: {
             type: 'object',
             properties: {
-              gesellschaft:           { type: ['string','null'] },
-              sparte:                 { type: ['string','null'] },
-              beginn:                 { type: ['string','null'] },
-              ende:                   { type: ['string','null'] },
-              praemie_monat:          { type: ['number','null'] },
-              franchise:              { type: ['string','null'] },
-              kassenmodell:           { type: ['string','null'] },
-              zahlungsintervall:      { type: ['string','null'] },
-              gesundheitsdeklaration: { type: ['boolean','null'] },
+              gesellschaft:           { type: 'string' },
+              sparte:                 { type: 'string' },
+              beginn:                 { type: 'string' },
+              ende:                   { type: 'string' },
+              praemie_monat:          { type: 'number' },
+              franchise:              { type: 'string' },
+              kassenmodell:           { type: 'string' },
+              zahlungsintervall:      { type: 'string' },
+              gesundheitsdeklaration: { type: 'boolean' },
               produkte: {
                 type: 'array',
                 items: {
@@ -525,10 +525,10 @@ Extrahiere in EXAKT dieser Struktur:`,
           rollen: {
             type: 'object',
             properties: {
-              lenker_name:        { type: ['string','null'] },
-              fahrer_name:        { type: ['string','null'] },
-              beguenstigter:      { type: ['string','null'] },
-              versicherte_person: { type: ['string','null'] }
+              lenker_name:        { type: 'string' },
+              fahrer_name:        { type: 'string' },
+              beguenstigter:      { type: 'string' },
+              versicherte_person: { type: 'string' }
             },
             required: ['lenker_name','fahrer_name','beguenstigter']
           },
