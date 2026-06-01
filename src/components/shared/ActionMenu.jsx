@@ -32,18 +32,21 @@ export default function ActionMenu({ items = [], align = 'end' }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align}>
-        {items.map((item, idx) => (
-          <React.Fragment key={idx}>
-            {item.separator && <DropdownMenuSeparator />}
+        {items.flatMap((item, idx) => {
+          const elements = []
+          if (item.separator) elements.push(<DropdownMenuSeparator key={`sep-${idx}`} />)
+          elements.push(
             <DropdownMenuItem
+              key={idx}
               onClick={item.onClick}
               className={cn(item.variant === 'destructive' && 'text-destructive focus:text-destructive')}
             >
               {item.icon && <item.icon className="w-4 h-4 mr-2" />}
               {item.label}
             </DropdownMenuItem>
-          </React.Fragment>
-        ))}
+          )
+          return elements
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   )
