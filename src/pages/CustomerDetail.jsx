@@ -678,7 +678,17 @@ export default function CustomerDetail() {
           <CustomerForm
             customer={customer}
             primaryCustomers={allCustomers.filter(c => !c.is_family_member)}
-            onSave={(data) => updateCustomerMutation.mutate({ id: customer.id, data })}
+            onSave={(data) => {
+              const safeData = {
+                ...data,
+                organization_id: data.organization_id || customer.organization_id,
+                assigned_advisors: customer.assigned_advisors,
+                assigned_assistants: customer.assigned_assistants,
+                primary_advisor_id: customer.primary_advisor_id,
+                access_level: customer.access_level,
+              }
+              updateCustomerMutation.mutate({ id: customer.id, data: safeData })
+            }}
             onCancel={() => setShowEdit(false)}
             saving={updateCustomerMutation.isPending}
           />
