@@ -2,7 +2,8 @@ import React, { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Edit, UserPlus, LayoutDashboard, Download,
-  Mail, Phone, MapPin, Shield, Users, FileText, AlertTriangle
+  Mail, Phone, MapPin, Shield, Users, FileText, AlertTriangle,
+  Smartphone, CreditCard, CheckCircle2, XCircle, Clock
 } from 'lucide-react'
 import { HealthScore, SemanticBadge, QuickAction } from '@/components/ui/ds'
 import EmailLink from '@/components/common/EmailLink'
@@ -148,11 +149,37 @@ export default function CustomerExecutiveHeader({
                 <Phone className="w-3 h-3" /> {customer.phone}
               </span>
             )}
+            {customer.mobile && (
+              <span className="flex items-center gap-1.5 text-slate-500">
+                <Smartphone className="w-3 h-3" /> {customer.mobile}
+              </span>
+            )}
             {(customer.city || customer.canton) && (
               <span className="flex items-center gap-1.5 text-slate-500">
                 <MapPin className="w-3 h-3" /> {[customer.zip_code, customer.city, customer.canton].filter(Boolean).join(' ')}
               </span>
             )}
+            {customer.bank_account && (
+              <span className="flex items-center gap-1.5 text-slate-500">
+                <CreditCard className="w-3 h-3" /> {customer.bank_account}
+              </span>
+            )}
+            {customer.mandate_status && (() => {
+              const ms = customer.mandate_status
+              const cfg = ms === 'valid'
+                ? { icon: CheckCircle2, cls: 'text-emerald-600', label: 'Mandat gültig' }
+                : ms === 'pending'
+                ? { icon: Clock, cls: 'text-amber-600', label: 'Mandat ausstehend' }
+                : ms === 'expired'
+                ? { icon: XCircle, cls: 'text-rose-600', label: 'Mandat abgelaufen' }
+                : { icon: XCircle, cls: 'text-rose-600', label: 'Mandat ungültig' }
+              const Icon = cfg.icon
+              return (
+                <span className={`flex items-center gap-1.5 font-semibold ${cfg.cls}`}>
+                  <Icon className="w-3 h-3" /> {cfg.label}
+                </span>
+              )
+            })()}
             {advisor && (
               <span className="flex items-center gap-1.5 text-slate-500">
                 <Shield className="w-3 h-3" /> {advisor.firstname} {advisor.lastname}
