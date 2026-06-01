@@ -374,7 +374,17 @@ export default function CustomerIntelligenceWorkspace() {
   }, [mandateIssues, intelligenceSearch]);
 
   const handleSave = async (data) => {
-    if (editing) { updateMutation.mutate({ id: editing.id, data }); return; }
+    if (editing) {
+      const safeData = {
+        ...data,
+        organization_id: data.organization_id || editing.organization_id,
+        assigned_advisors: editing.assigned_advisors,
+        assigned_assistants: editing.assigned_assistants,
+        primary_advisor_id: editing.primary_advisor_id,
+        access_level: editing.access_level,
+      }
+      updateMutation.mutate({ id: editing.id, data: safeData }); return;
+    }
     const orgId = data.organization_id || organizations[0]?.id || '';
     let cData = { ...data, organization_id: orgId };
     if (!cData.customer_number) {
