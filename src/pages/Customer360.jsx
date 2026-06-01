@@ -70,8 +70,7 @@ export default function Customer360() {
   // ── Data ─────────────────────────────────────────────────────────────────
   const { data: customer, isLoading } = useQuery({
     queryKey: ['customer', customerId],
-    queryFn: () => base44.entities.Customer.filter({ id: customerId }),
-    select: d => d?.[0],
+    queryFn: () => base44.entities.Customer.get(customerId),
   })
 
   const { data: contracts = [] } = useQuery({
@@ -86,8 +85,7 @@ export default function Customer360() {
 
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks', customerId],
-    queryFn: () => base44.entities.Task.list(),
-    select: d => d.filter(t => t.customer_id === customerId),
+    queryFn: () => base44.entities.Task.filter({ customer_id: customerId }, '-due_date', 100),
   })
 
   const { data: familyMembers = [] } = useQuery({
@@ -108,19 +106,22 @@ export default function Customer360() {
     enabled: !!customerId,
   })
 
-  const { data: allDocuments = [] } = useQuery({
-    queryKey: ['documents-all'],
-    queryFn: () => base44.entities.Document.list(),
+  const { data: documents = [] } = useQuery({
+    queryKey: ['documents', customerId],
+    queryFn: async () => {
+      const [byCustomer, byPrimary] = await Promise.all([
+        base44.entities.Document.filter({ customer_id: customerId }, '-uploaded_at', 100),
+        base44.entities.Document.filter({ primary_customer_id: customerId }, '-uploaded_at', 50),
+      ])
+      const seen = new Set()
+      return [...byCustomer, ...byPrimary].filter(d => {
+        if (seen.has(d.id)) return false
+        seen.add(d.id)
+        return true
+      })
+    },
+    enabled: !!customerId,
   })
-
-  const documents = useMemo(() => {
-    const contractIds = new Set(contracts.map(c => c.id))
-    return allDocuments.filter(d =>
-      d.customer_id === customerId ||
-      d.primary_customer_id === customerId ||
-      (d.linked_contract_id && contractIds.has(d.linked_contract_id))
-    )
-  }, [allDocuments, customerId, contracts])
 
   const { data: customers = [] } = useQuery({
     queryKey: ['customers-for-360'],
@@ -729,7 +730,7 @@ export default function Customer360() {
         {activeSection === 'crossselling' && (
           <div className="space-y-3">
             <div>
-              <p className="text-sm font-bold">Cross-Selling & Beratungspotenziale</p>
+              <p className="text-sm font-bold">Cross-Selling &amp; Beratungspotenziale</p>
               <p className="text-xs text-muted-foreground mt-0.5">Automatisch erkannte Lücken und Optimierungspotenziale</p>
             </div>
             <CrossSellingPanel customer={customer} contracts={allHouseholdContracts} verkaufschancen={verkaufschancen} />
