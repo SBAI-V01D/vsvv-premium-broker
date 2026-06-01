@@ -74,27 +74,27 @@ export default function Customer360() {
   })
 
   const { data: contracts = [] } = useQuery({
-    queryKey: ['contracts', customerId],
+    queryKey: ['360-contracts', customerId],
     queryFn: () => base44.entities.Contract.filter({ customer_id: customerId, archived: false }),
   })
 
   const { data: verkaufschancen = [] } = useQuery({
-    queryKey: ['verkaufschancen', customerId],
+    queryKey: ['360-vs', customerId],
     queryFn: () => base44.entities.Verkaufschance.filter({ customer_id: customerId }),
   })
 
   const { data: tasks = [] } = useQuery({
-    queryKey: ['tasks', customerId],
+    queryKey: ['360-tasks', customerId],
     queryFn: () => base44.entities.Task.filter({ customer_id: customerId }, '-due_date', 100),
   })
 
   const { data: familyMembers = [] } = useQuery({
-    queryKey: ['family-members', customerId],
+    queryKey: ['360-family', customerId],
     queryFn: () => base44.entities.Customer.filter({ primary_customer_id: customerId }),
   })
 
   const { data: familyContracts = [] } = useQuery({
-    queryKey: ['family-contracts', customerId],
+    queryKey: ['360-family-contracts', customerId],
     queryFn: async () => {
       const members = await base44.entities.Customer.filter({ primary_customer_id: customerId })
       if (!members.length) return []
@@ -137,21 +137,21 @@ export default function Customer360() {
   const updateContractMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Contract.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contracts', customerId] })
-      queryClient.invalidateQueries({ queryKey: ['family-contracts', customerId] })
+      queryClient.invalidateQueries({ queryKey: ['360-contracts', customerId] })
+      queryClient.invalidateQueries({ queryKey: ['360-family-contracts', customerId] })
       setEditingContract(null)
     },
   })
 
   const createTaskMutation = useMutation({
     mutationFn: d => base44.entities.Task.create(d),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks', customerId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['360-tasks', customerId] }),
   })
 
   const createVsMutation = useMutation({
     mutationFn: d => base44.entities.Verkaufschance.create(d),
     onSuccess: result => {
-      queryClient.invalidateQueries({ queryKey: ['verkaufschancen', customerId] })
+      queryClient.invalidateQueries({ queryKey: ['360-vs', customerId] })
       setShowVsForm(false)
       setSelectedVsId(result.id)
     },
@@ -371,8 +371,8 @@ export default function Customer360() {
               <CancellationPanel
                 contract={c}
                 onUpdated={() => {
-                  queryClient.invalidateQueries({ queryKey: ['contracts', customerId] })
-                  queryClient.invalidateQueries({ queryKey: ['family-contracts', customerId] })
+                  queryClient.invalidateQueries({ queryKey: ['360-contracts', customerId] })
+                  queryClient.invalidateQueries({ queryKey: ['360-family-contracts', customerId] })
                 }}
               />
             </div>
