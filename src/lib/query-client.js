@@ -18,16 +18,19 @@ async function logQueryError(error, query) {
 export const queryClientInstance = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnMount: true,
+      // refetchOnMount: false — zeigt gecachte Daten sofort, kein Reload bei Seitennavigation
+      // Daten werden nur neu geladen wenn: Mutation invalidiert, staleTime abgelaufen, oder manuell
+      refetchOnMount: false,
       refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000,
-      gcTime: 30 * 60 * 1000,
+      // 15 Minuten staleTime — CRM-Daten ändern sich selten ohne eigene Aktion
+      staleTime: 15 * 60 * 1000,
+      gcTime: 60 * 60 * 1000,
       retry: (failureCount, error) => {
-        // Keine Retries bei Autorisierungsfehlern
-        if (error?.response?.status === 401 || error?.response?.status === 403) return false;
+        const status = error?.response?.status || error?.status;
+        if (status === 401 || status === 403 || status === 404) return false;
         return failureCount < 1;
       },
-      retryDelay: 1200,
+      retryDelay: 800,
       placeholderData: (prev) => prev,
     },
     mutations: {

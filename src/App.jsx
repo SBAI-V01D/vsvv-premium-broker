@@ -151,9 +151,7 @@ const AuthenticatedApp = () => {
 
 function App() {
   React.useEffect(() => {
-    // Clear stale query cache on mount
-    queryClientInstance.clear()
-    // Clear localStorage recovery flags
+    // Clear localStorage recovery flags only
     localStorage.removeItem('recovery_mode_enabled')
     localStorage.removeItem('bypass_visibility')
   }, [])
