@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import BrokerOpsCleanupPanel from '@/components/admin/BrokerOpsCleanupPanel';
 
 const CATEGORY_ICONS = {
   technical_quality: Activity,
@@ -92,7 +93,7 @@ export default function EnterpriseSystemCheck() {
             <p className="text-sm text-[hsl(var(--text-muted))] max-w-lg mx-auto mb-8">
               Vollständiger, tiefgehender Systemcheck der Broker Operating Platform.
               <br />
-              10 Prüfungsbereiche · Keine autonomen Änderungen · Nur Analyse & Dokumentation
+              10 Prüfungsbereiche · Keine autonomen Änderungen · Nur Analyse &amp; Dokumentation
             </p>
             <Button
               onClick={() => runCheckMutation.mutate()}
@@ -327,10 +328,14 @@ export default function EnterpriseSystemCheck() {
           {/* CATEGORY DETAILS */}
           {Object.keys(CATEGORY_LABELS).map(cat => (
             <TabsContent key={cat} value={cat} className="mt-0">
-              <CategoryDetail
-                category={cat}
-                report={report}
-              />
+              <div className="space-y-6">
+                <CategoryDetail category={cat} report={report} />
+                {cat === 'broker_operations' && (
+                  <div className="border-t border-border pt-6">
+                    <BrokerOpsCleanupPanel />
+                  </div>
+                )}
+              </div>
             </TabsContent>
           ))}
         </Tabs>
