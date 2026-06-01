@@ -7,7 +7,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { format, addDays } from 'date-fns';
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertTriangle, Edit, Trash2, Phone, Mail, FileText, TrendingUp, Zap, CheckSquare, Loader2 } from 'lucide-react';
+import { AlertTriangle, Edit, Trash2, Phone, Mail, FileText, TrendingUp, Zap, CheckSquare, Loader2, Smartphone, ShieldCheck, ShieldAlert, ShieldOff, Clock } from 'lucide-react';
 import ActionMenu from '@/components/shared/ActionMenu';
 import { FAMILY_ROLE_LABELS, label } from '@/lib/labels';
 import HealthScoreRing, { calculateHealthScore } from '@/components/customers/HealthScoreRing';
@@ -69,6 +69,14 @@ export default function CustomerCard({
 
   const hasMetrics = contractCount > 0 || customer.total_premium > 0 || taskCount > 0 || familyMembers.length > 0 || status !== 'active';
 
+  const MANDATE_CONFIG = {
+    valid:   { label: 'Mandat gültig',      icon: ShieldCheck, cls: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
+    pending: { label: 'Mandat ausstehend',  icon: Clock,       cls: 'text-amber-600 bg-amber-50 border-amber-100' },
+    invalid: { label: 'Mandat ungültig',    icon: ShieldAlert, cls: 'text-red-600 bg-red-50 border-red-100' },
+    expired: { label: 'Mandat abgelaufen',  icon: ShieldOff,   cls: 'text-red-600 bg-red-50 border-red-100' },
+  };
+  const mandateCfg = MANDATE_CONFIG[customer.mandate_status];
+
   return (
     <div className={`bg-card rounded-2xl transition-all hover:shadow-card-md mb-6 ${
       status === 'critical' ? 'border border-red-200 shadow-sm' : 'border border-border/60 shadow-xs'
@@ -92,6 +100,27 @@ export default function CustomerCard({
                   {customer.email}
                   {customer.city && <span className="ml-2">· {customer.city}</span>}
                 </p>
+                {/* Kontakt & Mandat — immer sichtbar */}
+                {(customer.phone || customer.mobile || customer.mandate_status) && (
+                  <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-1.5">
+                    {customer.phone && (
+                      <a href={`tel:${customer.phone}`} className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-green-600 transition-colors">
+                        <Phone className="w-3 h-3" />{customer.phone}
+                      </a>
+                    )}
+                    {customer.mobile && (
+                      <a href={`tel:${customer.mobile}`} className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-blue-600 transition-colors">
+                        <Smartphone className="w-3 h-3" />{customer.mobile}
+                      </a>
+                    )}
+                    {mandateCfg && (
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded border ${mandateCfg.cls}`}>
+                        <mandateCfg.icon className="w-2.5 h-2.5" />{mandateCfg.label}
+                      </span>
+                    )}
+                  </div>
+                )}
+
               </div>
 
               <div className="flex items-center gap-3 shrink-0 mt-0.5">
