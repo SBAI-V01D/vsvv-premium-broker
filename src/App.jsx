@@ -49,6 +49,7 @@ import InsuranceLearningCenter from './pages/InsuranceLearningCenter'
 import DocumentExtractor from './pages/DocumentExtractor'
 import Ausschreibungen from './pages/Ausschreibungen'
 import AusschreibungDetail from './pages/AusschreibungDetail'
+import VersichererDBPage from './pages/VersichererDBPage'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -147,6 +148,7 @@ const AuthenticatedApp = () => {
         <Route path="/dokument-extraktor" element={<DocumentExtractor />} />
         <Route path="/ausschreibungen" element={<Ausschreibungen />} />
         <Route path="/ausschreibungen/:id" element={<AusschreibungDetail />} />
+        <Route path="/ausschreibungen/versicherer" element={<VersichererDBPage />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

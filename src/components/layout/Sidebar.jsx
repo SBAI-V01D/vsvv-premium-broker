@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
   ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink,
   User, Briefcase, TrendingUp, Lock, BookOpen, Activity,
-  Brain, BarChart2, UserPlus, FolderOpen, RefreshCw
+  Brain, BarChart2, UserPlus, FolderOpen, RefreshCw, Building2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -75,6 +75,7 @@ const navGroups = [
     label: 'Ausschreibungen',
     items: [
       { label: 'Ausschreibungen',  icon: BarChart2,   path: '/ausschreibungen' },
+      { label: 'Versicherer DB',   icon: Building2,   path: '/ausschreibungen/versicherer' },
     ],
   },
   {
