@@ -1,443 +1,171 @@
 /**
- * EnterpriseSystemCheck — Vollständiger Enterprise System Check UI
- * 10 Prüfungsbereiche · Tiefenanalyse · Dokumentierte Ergebnisse
+ * Enterprise System Check — Technische Systemsicht
+ * 
+ * Nutzt ausschliesslich die zentrale Analyse-Engine.
+ * Keine eigene Analyse-Logik.
  */
-
 import React, { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { CentralAnalysisProvider, useCentralAnalysis, getScoreColor, getScoreBg } from '@/lib/CentralAnalysisContext';
+import AnalysisLauncher from '@/components/analysis/AnalysisLauncher';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Shield, Activity, Brain, Zap, Layout, Smartphone, Lock,
-  CheckCircle2, AlertTriangle, XCircle, Loader2, RefreshCw,
-  TrendingUp, AlertCircle, FileText, Target
-} from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, Activity, Database, Shield, Zap, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import toast from 'react-hot-toast';
 import BrokerOpsCleanupPanel from '@/components/admin/BrokerOpsCleanupPanel';
 
-const CATEGORY_ICONS = {
-  technical_quality: Activity,
-  performance: Zap,
-  data_integrity: Target,
-  ai_intelligence: Brain,
-  ux_consistency: Layout,
-  broker_operations: TrendingUp,
-  mobile_readiness: Smartphone,
-  governance_security: Shield,
-};
-
 const CATEGORY_LABELS = {
-  technical_quality: 'Technische Qualität',
-  performance: 'Performance',
   data_integrity: 'Datenintegrität',
-  ai_intelligence: 'KI / Intelligence',
-  ux_consistency: 'UX / Design',
-  broker_operations: 'Broker-Logik',
-  mobile_readiness: 'Mobile',
-  governance_security: 'Governance',
+  security: 'Governance & Security',
+  performance: 'Performance & Workflows',
 };
 
-const STATUS_COLORS = {
-  pass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  warning: 'bg-amber-50 text-amber-700 border-amber-200',
-  critical: 'bg-rose-50 text-rose-700 border-rose-200',
-  fail: 'bg-rose-50 text-rose-700 border-rose-200',
+const CATEGORY_ICONS = {
+  data_integrity: Database,
+  security: Shield,
+  performance: Zap,
 };
 
-const STATUS_ICONS = {
-  pass: CheckCircle2,
-  warning: AlertTriangle,
-  critical: XCircle,
-  fail: XCircle,
+const STATUS_CONFIG = {
+  pass: { icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200', label: 'OK' },
+  warning: { icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200', label: 'Warnung' },
+  critical: { icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50 border-rose-200', label: 'Kritisch' },
 };
 
-export default function EnterpriseSystemCheck() {
-  const [report, setReport] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState('overview');
-
-  const runCheckMutation = useMutation({
-    mutationFn: async () => {
-      const res = await base44.functions.invoke('enterpriseSystemCheck', {});
-      return res.data;
-    },
-    onSuccess: (data) => {
-      setReport(data);
-      toast.success('Enterprise System Check abgeschlossen', {
-        duration: 3000,
-        icon: '✓',
-      });
-    },
-    onError: (error) => {
-      toast.error('System Check fehlgeschlagen: ' + error.message, {
-        duration: 4000,
-        icon: '✗',
-      });
-    },
-  });
-
-  if (!report && !runCheckMutation.isPending) {
-    return (
-      <div className="min-h-screen bg-[hsl(var(--surface-1))] p-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center py-20">
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <Shield className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold text-[hsl(var(--text-heading))] mb-3">
-              Enterprise System Check
-            </h1>
-            <p className="text-sm text-[hsl(var(--text-muted))] max-w-lg mx-auto mb-8">
-              Vollständiger, tiefgehender Systemcheck der Broker Operating Platform.
-              <br />
-              10 Prüfungsbereiche · Keine autonomen Änderungen · Nur Analyse &amp; Dokumentation
-            </p>
-            <Button
-              onClick={() => runCheckMutation.mutate()}
-              className="h-12 px-8 text-base font-semibold bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700"
-            >
-              <Shield className="w-5 h-5 mr-2" />
-              System Check starten
-            </Button>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-            <InfoCard
-              title="Technische Qualität"
-              desc="Re-Render, Memory, Queries"
-              icon={Activity}
-            />
-            <InfoCard
-              title="Performance"
-              desc="Ladezeiten, Pipeline, Cache"
-              icon={Zap}
-            />
-            <InfoCard
-              title="Datenintegrität"
-              desc="Truth Layer, Relationships"
-              icon={Target}
-            />
-            <InfoCard
-              title="Governance"
-              desc="Security, Audit, Compliance"
-              icon={Shield}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (runCheckMutation.isPending) {
-    return (
-      <div className="min-h-screen bg-[hsl(var(--surface-1))] p-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center py-20">
-            <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-violet-600" />
-            <h2 className="text-xl font-bold text-[hsl(var(--text-heading))] mb-2">
-              Enterprise System Check läuft...
-            </h2>
-            <p className="text-sm text-[hsl(var(--text-muted))]">
-              Analysiere {report?.summary?.total_checks || 'alle'} Prüfungsbereiche
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const scores = report.scores || {};
-  const avgScore = parseFloat(report.summary.average_score);
-
+function CheckItem({ check }) {
+  const cfg = STATUS_CONFIG[check.status] || STATUS_CONFIG.warning;
+  const Icon = cfg.icon;
   return (
-    <div className="min-h-screen bg-[hsl(var(--surface-1))] p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center shadow-sm">
-              <Shield className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-[hsl(var(--text-heading))]">Enterprise System Check</h1>
-              <p className="text-xs text-[hsl(var(--text-muted))]">
-                {new Date(report.timestamp).toLocaleString('de-CH')} · {report.summary.duration_ms}ms
-              </p>
-            </div>
-          </div>
-          <Button
-            onClick={() => runCheckMutation.mutate()}
-            variant="outline"
-            className="gap-2"
-          >
-            <RefreshCw className={cn('w-4 h-4', runCheckMutation.isPending && 'animate-spin')} />
-            Erneut prüfen
-          </Button>
-        </div>
-
-        {/* Executive Summary */}
-        <Card className="mb-8 border-l-4 border-l-[hsl(var(--primary))]">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <FileText className="w-4 h-4 text-violet-600" />
-              Executive Summary
-            </CardTitle>
-            <CardDescription className="text-xs">
-              {report.executive_summary?.platform_status}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-4 gap-4">
-              <ScoreCard
-                label="Gesamt-Score"
-                value={avgScore}
-                max={100}
-                color={avgScore >= 90 ? 'text-emerald-600' : avgScore >= 70 ? 'text-amber-600' : 'text-rose-600'}
-              />
-              <ScoreCard
-                label="Bestanden"
-                value={report.summary.passed}
-                total={report.summary.total_checks}
-                color="text-emerald-600"
-              />
-              <ScoreCard
-                label="Kritisch"
-                value={report.summary.critical}
-                color="text-rose-600"
-              />
-              <ScoreCard
-                label="Warnungen"
-                value={report.summary.warnings}
-                color="text-amber-600"
-              />
-            </div>
-
-            {report.executive_summary?.top_critical_issues?.length > 0 && (
-              <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-lg">
-                <p className="text-xs font-semibold text-rose-700 mb-2 flex items-center gap-1">
-                  <XCircle className="w-3 h-3" />
-                  Kritische Probleme ({report.executive_summary.top_critical_issues.length})
-                </p>
-                <ul className="space-y-1">
-                  {report.executive_summary.top_critical_issues.slice(0, 3).map((issue, i) => (
-                    <li key={i} className="text-xs text-rose-800">• {issue}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Tabs */}
-        <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
-          <TabsList className="grid w-full grid-cols-5 gap-2 mb-6">
-            <TabsTrigger value="overview" className="text-xs font-semibold h-10">
-              <Activity className="w-3.5 h-3.5 mr-1.5" />
-              Übersicht
-            </TabsTrigger>
-            {Object.keys(CATEGORY_LABELS).map(cat => (
-              <TabsTrigger key={cat} value={cat} className="text-xs font-semibold h-10">
-                {React.createElement(CATEGORY_ICONS[cat], { className: 'w-3.5 h-3.5 mr-1.5' })}
-                {CATEGORY_LABELS[cat]}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          {/* OVERVIEW */}
-          <TabsContent value="overview" className="mt-0">
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {Object.entries(scores).map(([cat, score]) => {
-                const Icon = CATEGORY_ICONS[cat];
-                return (
-                  <Card key={cat} className="border hover:shadow-sm transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Icon className="w-4 h-4 text-[hsl(var(--primary))]" />
-                        <span className="text-xs font-semibold text-[hsl(var(--text-heading))]">
-                          {CATEGORY_LABELS[cat]}
-                        </span>
-                      </div>
-                      <div className="flex items-end justify-between">
-                        <p className={cn(
-                          'text-2xl font-bold',
-                          score >= 90 ? 'text-emerald-600' : score >= 70 ? 'text-amber-600' : 'text-rose-600'
-                        )}>
-                          {score}
-                        </p>
-                        <span className="text-xs text-[hsl(var(--text-muted))]">/ 100</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-
-            {/* Critical Issues */}
-            {report.critical_issues?.length > 0 && (
-              <Card className="mt-6 border-rose-200">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-bold text-rose-700 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
-                    Kritische Probleme ({report.critical_issues.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {report.critical_issues.slice(0, 10).map((issue, i) => (
-                      <div key={i} className="p-3 bg-rose-50 border border-rose-200 rounded-lg">
-                        <p className="text-xs font-semibold text-rose-700 mb-1">{issue.name}</p>
-                        <p className="text-xs text-rose-600">{issue.impact}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Recommendations */}
-            {report.recommendations?.length > 0 && (
-              <Card className="mt-6 border-violet-200">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-bold text-violet-700 flex items-center gap-2">
-                    <Target className="w-4 h-4" />
-                    Empfehlungen ({report.recommendations.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {report.recommendations.slice(0, 10).map((rec, i) => (
-                      <div key={i} className="p-3 bg-violet-50 border border-violet-200 rounded-lg">
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="text-xs font-semibold text-violet-700">{rec.name}</p>
-                          <Badge className={rec.priority === 'high' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}>
-                            {rec.priority}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-violet-600">{rec.recommendation}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          {/* CATEGORY DETAILS */}
-          {Object.keys(CATEGORY_LABELS).map(cat => (
-            <TabsContent key={cat} value={cat} className="mt-0">
-              <div className="space-y-6">
-                <CategoryDetail category={cat} report={report} />
-                {cat === 'broker_operations' && (
-                  <div className="border-t border-border pt-6">
-                    <BrokerOpsCleanupPanel />
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+    <div className={cn('p-3 rounded-lg border flex items-start gap-3', cfg.bg)}>
+      <Icon className={cn('w-4 h-4 mt-0.5 flex-shrink-0', cfg.color)} />
+      <div className="flex-1 min-w-0">
+        <p className={cn('text-xs font-semibold', cfg.color)}>{check.name}</p>
+        <p className="text-xs text-slate-600 mt-0.5">{check.details}</p>
+        {check.recommendation && check.status !== 'pass' && (
+          <p className="text-xs text-slate-500 mt-1 font-medium">→ {check.recommendation}</p>
+        )}
       </div>
+      <Badge className={cn('text-[10px] flex-shrink-0', cfg.bg, cfg.color, 'border-current')}>{cfg.label}</Badge>
     </div>
   );
 }
 
-function InfoCard({ title, desc, icon: Icon }) {
-  return (
-    <Card className="border hover:shadow-sm transition-shadow">
-      <CardContent className="p-4">
-        <Icon className="w-5 h-5 text-[hsl(var(--primary))] mb-2" />
-        <p className="text-xs font-semibold text-[hsl(var(--text-heading))] mb-1">{title}</p>
-        <p className="text-xs text-[hsl(var(--text-muted))]">{desc}</p>
-      </CardContent>
-    </Card>
-  );
-}
+function SystemCheckContent() {
+  const { analysisData } = useCentralAnalysis();
+  const [activeCategory, setActiveCategory] = useState('all');
 
-function ScoreCard({ label, value, total, max, color }) {
-  return (
-    <div>
-      <p className="text-[10px] text-[hsl(var(--text-muted))] uppercase mb-1">{label}</p>
-      <p className={cn('text-2xl font-bold', color)}>
-        {value}{total !== undefined ? ` / ${total}` : max !== undefined ? ` / ${max}` : ''}
-      </p>
-    </div>
-  );
-}
+  if (!analysisData) return null;
 
-function CategoryDetail({ category, report }) {
-  const categoryData = report.categories?.[category];
-  const checks = report.checks?.filter(c => c.category === category) || [];
-  const Icon = CATEGORY_ICONS[category];
+  const { system_checks, scores, metrics, summary } = analysisData;
 
-  if (!categoryData) {
-    return <div className="text-center py-10 text-sm text-[hsl(var(--text-muted))]">Keine Daten verfügbar</div>;
-  }
+  const categories = ['all', 'data_integrity', 'security', 'performance'];
+
+  const filtered = activeCategory === 'all'
+    ? system_checks
+    : system_checks.filter(c => c.category === activeCategory);
+
+  const countByCat = (cat, status) => system_checks.filter(c => c.category === cat && c.status === status).length;
 
   return (
-    <div className="space-y-4">
-      {/* Score */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <Icon className="w-4 h-4 text-[hsl(var(--primary))]" />
-            {CATEGORY_LABELS[category]}
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Score: {categoryData.score} / 100
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="w-full bg-slate-200 rounded-full h-2">
-            <div
-              className={cn(
-                'h-2 rounded-full transition-all',
-                categoryData.score >= 90 ? 'bg-emerald-600' : categoryData.score >= 70 ? 'bg-amber-600' : 'bg-rose-600'
-              )}
-              style={{ width: `${categoryData.score}%` }}
-            />
+    <div className="space-y-6">
+      {/* Score-Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className={cn('rounded-xl border p-4', getScoreBg(scores.overall))}>
+          <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Gesamt</p>
+          <p className={cn('text-3xl font-bold', getScoreColor(scores.overall))}>{scores.overall}</p>
+        </div>
+        <div className={cn('rounded-xl border p-4', getScoreBg(scores.data_quality))}>
+          <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Datenintegrität</p>
+          <p className={cn('text-3xl font-bold', getScoreColor(scores.data_quality))}>{scores.data_quality}</p>
+        </div>
+        <div className={cn('rounded-xl border p-4', getScoreBg(scores.security))}>
+          <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Sicherheit</p>
+          <p className={cn('text-3xl font-bold', getScoreColor(scores.security))}>{scores.security}</p>
+        </div>
+        <div className="rounded-xl border p-4 bg-slate-50 border-slate-200">
+          <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Checks</p>
+          <p className="text-2xl font-bold text-slate-700">{summary.checks_passed}<span className="text-sm text-muted-foreground">/{summary.checks_total}</span></p>
+          <p className="text-[10px] text-muted-foreground">bestanden</p>
+        </div>
+      </div>
+
+      {/* Quick-Stats */}
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+        {[
+          { label: 'Kunden', value: metrics.active_customers },
+          { label: 'Verträge', value: metrics.active_contracts },
+          { label: 'Unklassifiziert', value: metrics.unclassified_documents, warn: metrics.unclassified_documents > 50 },
+          { label: 'Überfällige Tasks', value: metrics.overdue_tasks, warn: metrics.overdue_tasks > 0 },
+          { label: 'Krit. Incidents', value: metrics.open_critical_incidents, warn: metrics.open_critical_incidents > 0 },
+          { label: 'Backup (Tage)', value: metrics.last_backup_days, warn: !metrics.backup_ok },
+        ].map((s, i) => (
+          <div key={i} className={cn('rounded-lg border p-2.5 text-center', s.warn ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200')}>
+            <p className={cn('text-lg font-bold', s.warn ? 'text-amber-700' : 'text-slate-700')}>{s.value}</p>
+            <p className="text-[10px] text-muted-foreground">{s.label}</p>
           </div>
-        </CardContent>
-      </Card>
+        ))}
+      </div>
+
+      {/* Category Filter */}
+      <div className="flex gap-1.5 flex-wrap">
+        {categories.map(cat => (
+          <button key={cat} onClick={() => setActiveCategory(cat)}
+            className={cn('text-xs px-3 py-1.5 rounded-lg border transition-all font-medium',
+              activeCategory === cat ? 'bg-primary text-white border-primary' : 'bg-white border-slate-200 text-slate-600 hover:border-primary'
+            )}>
+            {cat === 'all' ? `Alle (${system_checks.length})` : (
+              <>
+                {CATEGORY_LABELS[cat] || cat}
+                {countByCat(cat, 'critical') > 0 && <span className="ml-1.5 bg-rose-100 text-rose-700 rounded-full px-1.5 py-0.5 text-[9px]">{countByCat(cat, 'critical')}</span>}
+              </>
+            )}
+          </button>
+        ))}
+      </div>
 
       {/* Checks */}
-      {checks.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold">Prüfungen ({checks.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {checks.map((check, i) => {
-                const StatusIcon = STATUS_ICONS[check.status];
-                return (
-                  <div key={i} className={cn('p-3 rounded-lg border', STATUS_COLORS[check.status])}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <StatusIcon className="w-3.5 h-3.5" />
-                      <p className="text-xs font-semibold">{check.name}</p>
-                    </div>
-                    {check.findings?.length > 0 && (
-                      <p className="text-xs opacity-80 mb-1">
-                        {check.findings.length} Befund{check.findings.length > 1 ? 'e' : ''}
-                      </p>
-                    )}
-                    {check.impact && (
-                      <p className="text-xs opacity-70">{check.impact}</p>
-                    )}
-                    {check.recommendation && (
-                      <p className="text-xs mt-2 pt-2 border-t border-current/20 font-semibold">
-                        → {check.recommendation}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <div className="space-y-2">
+        {filtered.map((check, i) => <CheckItem key={i} check={check} />)}
+      </div>
+
+      {/* Broker Ops Cleanup */}
+      <div className="border-t border-border pt-6">
+        <BrokerOpsCleanupPanel />
+      </div>
     </div>
+  );
+}
+
+function PageContent() {
+  const { analysisData } = useCentralAnalysis();
+
+  return (
+    <div className="page-enter min-h-full bg-[hsl(var(--surface-1))]">
+      <div className="px-6 py-5 border-b border-border bg-card">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-blue-600 flex items-center justify-center">
+            <Target className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-[hsl(var(--text-heading))]">Enterprise System Check</h1>
+            <p className="text-xs text-muted-foreground">Technische Systemsicht · Datenintegrität · Workflows · Performance</p>
+          </div>
+        </div>
+        <AnalysisLauncher compact />
+      </div>
+      <div className="p-6">
+        {analysisData ? <SystemCheckContent /> : (
+          <div className="text-center py-16 text-muted-foreground text-sm">
+            Starten Sie die Analyse oben, um den System Check zu sehen.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function EnterpriseSystemCheck() {
+  return (
+    <CentralAnalysisProvider>
+      <PageContent />
+    </CentralAnalysisProvider>
   );
 }
