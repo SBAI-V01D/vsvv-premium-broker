@@ -72,6 +72,12 @@ const navGroups = [
   },
 
   {
+    label: 'Ausschreibungen',
+    items: [
+      { label: 'Ausschreibungen',  icon: BarChart2,   path: '/ausschreibungen' },
+    ],
+  },
+  {
     label: 'Verwaltung',
     items: [
       { label: 'Verträge',         icon: FileText,    path: '/vertraege' },

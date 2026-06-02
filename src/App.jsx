@@ -47,6 +47,8 @@ import EnterpriseAudit from './pages/EnterpriseAudit'
 import EnterpriseSystemCheck from './pages/EnterpriseSystemCheck'
 import InsuranceLearningCenter from './pages/InsuranceLearningCenter'
 import DocumentExtractor from './pages/DocumentExtractor'
+import Ausschreibungen from './pages/Ausschreibungen'
+import AusschreibungDetail from './pages/AusschreibungDetail'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -143,6 +145,8 @@ const AuthenticatedApp = () => {
         <Route path="/admin/system-check" element={<EnterpriseSystemCheck />} />
         <Route path="/admin/insurance-learning" element={<InsuranceLearningCenter />} />
         <Route path="/dokument-extraktor" element={<DocumentExtractor />} />
+        <Route path="/ausschreibungen" element={<Ausschreibungen />} />
+        <Route path="/ausschreibungen/:id" element={<AusschreibungDetail />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

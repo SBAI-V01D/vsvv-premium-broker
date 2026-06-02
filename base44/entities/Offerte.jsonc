@@ -1,0 +1,153 @@
+{
+  "name": "Offerte",
+  "type": "object",
+  "properties": {
+    "ausschreibung_id": {
+      "type": "string"
+    },
+    "ausschreibung_titel": {
+      "type": "string"
+    },
+    "versicherer_id": {
+      "type": "string"
+    },
+    "versicherer_name": {
+      "type": "string"
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "organization_id": {
+      "type": "string"
+    },
+    "offert_nummer": {
+      "type": "string"
+    },
+    "praemie_jaehrlich": {
+      "type": "number"
+    },
+    "praemie_monatlich": {
+      "type": "number"
+    },
+    "selbstbehalt": {
+      "type": "string"
+    },
+    "deckung_beschreibung": {
+      "type": "string"
+    },
+    "zusatzleistungen": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ausschluesse": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "laufzeit": {
+      "type": "string"
+    },
+    "kuendigungsfrist": {
+      "type": "string"
+    },
+    "besondere_bedingungen": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ausstehend",
+        "erhalten",
+        "analysiert",
+        "empfohlen",
+        "abgelehnt",
+        "angenommen"
+      ],
+      "default": "ausstehend"
+    },
+    "erfassungsdatum": {
+      "type": "string",
+      "format": "date"
+    },
+    "gueltig_bis": {
+      "type": "string",
+      "format": "date"
+    },
+    "dokument_url": {
+      "type": "string"
+    },
+    "ki_score": {
+      "type": "number",
+      "description": "Gesamtscore 0-100"
+    },
+    "ki_preis_score": {
+      "type": "number"
+    },
+    "ki_deckungs_score": {
+      "type": "number"
+    },
+    "ki_risiko_score": {
+      "type": "number"
+    },
+    "ki_service_score": {
+      "type": "number"
+    },
+    "ki_flexibilitaet_score": {
+      "type": "number"
+    },
+    "ki_analyse_text": {
+      "type": "string"
+    },
+    "ki_staerken": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ki_schwaechen": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ki_risiken": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "ist_empfohlen": {
+      "type": "boolean",
+      "default": false
+    },
+    "ist_guenstigste": {
+      "type": "boolean",
+      "default": false
+    },
+    "ist_beste_deckung": {
+      "type": "boolean",
+      "default": false
+    },
+    "deckungsluecken": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sparten_daten": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "notizen": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "ausschreibung_id",
+    "versicherer_name",
+    "organization_id"
+  ]
+}

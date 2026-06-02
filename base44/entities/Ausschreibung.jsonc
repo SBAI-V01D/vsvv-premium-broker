@@ -1,0 +1,181 @@
+{
+  "name": "Ausschreibung",
+  "type": "object",
+  "properties": {
+    "ausschreibung_nummer": {
+      "type": "string",
+      "description": "Eindeutige Ausschreibungsnummer"
+    },
+    "titel": {
+      "type": "string",
+      "description": "Titel der Ausschreibung"
+    },
+    "customer_id": {
+      "type": "string"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "ansprechpartner": {
+      "type": "string"
+    },
+    "broker_id": {
+      "type": "string"
+    },
+    "broker_name": {
+      "type": "string"
+    },
+    "organization_id": {
+      "type": "string"
+    },
+    "versicherungsbereich": {
+      "type": "string",
+      "enum": [
+        "privat",
+        "gewerbe",
+        "industrie",
+        "landwirtschaft"
+      ]
+    },
+    "sparten": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Liste der Versicherungssparten"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "entwurf",
+        "vorbereitung",
+        "versendet",
+        "offerten_ausstehend",
+        "teilweise_erhalten",
+        "vollstaendig_erhalten",
+        "in_analyse",
+        "praesentation_erstellt",
+        "praesentiert",
+        "entscheidung_ausstehend",
+        "gewonnen",
+        "verloren",
+        "abgeschlossen"
+      ],
+      "default": "entwurf"
+    },
+    "prioritaet": {
+      "type": "string",
+      "enum": [
+        "niedrig",
+        "mittel",
+        "hoch",
+        "dringend"
+      ],
+      "default": "mittel"
+    },
+    "ausschreibungsdatum": {
+      "type": "string",
+      "format": "date"
+    },
+    "versanddatum": {
+      "type": "string",
+      "format": "date"
+    },
+    "fristdatum": {
+      "type": "string",
+      "format": "date"
+    },
+    "praesentationsdatum": {
+      "type": "string",
+      "format": "date"
+    },
+    "abschlussdatum": {
+      "type": "string",
+      "format": "date"
+    },
+    "risiko_daten": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Dynamische Risikodaten je Sparte"
+    },
+    "ausgewaehlte_versicherer": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "versicherer_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ausgewaehlt",
+              "versendet",
+              "erhalten",
+              "abgelehnt"
+            ]
+          },
+          "versanddatum": {
+            "type": "string"
+          },
+          "erinnerung_count": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "bemerkungen": {
+      "type": "string"
+    },
+    "ki_analyse": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "ki_empfehlung_text": {
+      "type": "string"
+    },
+    "ki_empfohlener_versicherer": {
+      "type": "string"
+    },
+    "gewinner_versicherer": {
+      "type": "string"
+    },
+    "gewinner_offerte_id": {
+      "type": "string"
+    },
+    "verlust_grund": {
+      "type": "string"
+    },
+    "dokument_urls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "offerten_count": {
+      "type": "number",
+      "default": 0
+    },
+    "laufende_praemie": {
+      "type": "number",
+      "description": "Aktuelle Jahrespr\u00e4mie des Kunden"
+    }
+  },
+  "required": [
+    "titel",
+    "customer_id",
+    "organization_id"
+  ]
+}

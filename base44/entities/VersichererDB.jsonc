@@ -1,0 +1,87 @@
+{
+  "name": "VersichererDB",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "kurzname": {
+      "type": "string"
+    },
+    "kontaktperson": {
+      "type": "string"
+    },
+    "funktion": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "telefon": {
+      "type": "string"
+    },
+    "adresse": {
+      "type": "string"
+    },
+    "plz": {
+      "type": "string"
+    },
+    "ort": {
+      "type": "string"
+    },
+    "website": {
+      "type": "string"
+    },
+    "bearbeitungszeit_tage": {
+      "type": "number",
+      "description": "Durchschnittliche Bearbeitungszeit in Tagen"
+    },
+    "aktiv": {
+      "type": "boolean",
+      "default": true
+    },
+    "bewertung": {
+      "type": "number",
+      "description": "Bewertung 1-5"
+    },
+    "spezialisierungen": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Versicherungssparten-Spezialisierungen"
+    },
+    "bevorzugter_kanal": {
+      "type": "string",
+      "enum": [
+        "email",
+        "portal",
+        "telefon",
+        "post"
+      ]
+    },
+    "portal_url": {
+      "type": "string"
+    },
+    "notizen": {
+      "type": "string"
+    },
+    "logo_url": {
+      "type": "string"
+    },
+    "ausschreibungen_gesamt": {
+      "type": "number",
+      "default": 0
+    },
+    "ausschreibungen_gewonnen": {
+      "type": "number",
+      "default": 0
+    },
+    "durchschnittliche_antwortzeit_tage": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}
