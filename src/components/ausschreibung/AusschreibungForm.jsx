@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus } from 'lucide-react';
+import { X, Search, ChevronDown } from 'lucide-react';
 
 const SPARTEN = [
   'Motorfahrzeug','Motorrad','Oldtimer','Flotte','Haushalt','Privathaftpflicht',
@@ -24,6 +24,9 @@ const STATUS_OPTIONS = [
 
 export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
   const [customers, setCustomers] = useState([]);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
+  const customerRef = useRef(null);
   const [form, setForm] = useState({
     titel: '', customer_id: '', customer_name: '', ansprechpartner: '',
     versicherungsbereich: 'privat', sparten: [], status: 'entwurf',
@@ -36,6 +39,23 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
   useEffect(() => {
     base44.entities.Customer.list().then(setCustomers).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (customerRef.current && !customerRef.current.contains(e.target)) {
+        setCustomerDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const filteredCustomers = customers.filter(c => {
+    const name = `${c.first_name} ${c.last_name}`.toLowerCase();
+    const company = (c.company_name || '').toLowerCase();
+    const q = customerSearch.toLowerCase();
+    return name.includes(q) || company.includes(q);
+  });
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -66,16 +86,49 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
           <Label>Titel *</Label>
           <Input value={form.titel} onChange={e => set('titel', e.target.value)} required placeholder="z.B. Motorfahrzeugversicherung Privathaushalt 2026" />
         </div>
-        <div>
+        <div ref={customerRef} className="relative">
           <Label>Kunde *</Label>
-          <Select value={form.customer_id} onValueChange={handleCustomer}>
-            <SelectTrigger><SelectValue placeholder="Kunde wählen..." /></SelectTrigger>
-            <SelectContent>
-              {customers.map(c => (
-                <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <button
+            type="button"
+            onClick={() => { setCustomerDropdownOpen(o => !o); setCustomerSearch(''); }}
+            className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm text-left"
+          >
+            <span className={form.customer_name ? 'text-foreground' : 'text-muted-foreground'}>
+              {form.customer_name || 'Kunde wählen...'}
+            </span>
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </button>
+          {customerDropdownOpen && (
+            <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg">
+              <div className="p-2 border-b border-slate-100">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                  <Input
+                    autoFocus
+                    value={customerSearch}
+                    onChange={e => setCustomerSearch(e.target.value)}
+                    placeholder="Name suchen..."
+                    className="pl-8 h-8 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="max-h-48 overflow-y-auto">
+                {filteredCustomers.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-3">Keine Kunden gefunden</p>
+                ) : filteredCustomers.map(c => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => { handleCustomer(c.id); setCustomerDropdownOpen(false); }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 flex items-center gap-2"
+                  >
+                    <span className="font-medium">{c.first_name} {c.last_name}</span>
+                    {c.company_name && <span className="text-xs text-muted-foreground">· {c.company_name}</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <div>
           <Label>Ansprechpartner</Label>
