@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/AuthContext';
 import {
   Shield, AlertTriangle, CheckCircle2, TrendingUp, Zap, Brain,
   Database, Users, Clock, ThumbsUp, ThumbsDown, ChevronDown, ChevronUp,
-  RefreshCw, Loader2, Sparkles
+  RefreshCw, Loader2, Sparkles, PlayCircle, BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -133,6 +133,9 @@ export default function AdminEnterpriseControlCenter() {
   const [analysisData, setAnalysisData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showAllWarnings, setShowAllWarnings] = useState(false);
+  const [reviewLevel, setReviewLevel] = useState('operational');
+  const [reviewResult, setReviewResult] = useState(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
 
   const { data: improvements = [], refetch: refetchImprovements } = useQuery({
     queryKey: ['enterprise_improvements'],
@@ -178,7 +181,41 @@ export default function AdminEnterpriseControlCenter() {
 
   const rejectMutation = useMutation({
     mutationFn: async (id) => base44.entities.EnterpriseImprovement.update(id, { status: 'rejected' }),
-    onSuccess: () => { refetchImprovements(); toast.success('Abgelehnt'); },
+    onSuccess: () => { refetchImprovements(); toast.success('Abgelehnt — KI lernt daraus'); },
+  });
+
+  const learnMutation = useMutation({
+    mutationFn: async () => {
+      const res = await base44.functions.invoke('learnAndGenerateImprovements', { mode: 'all', limit: 5 });
+      return res.data;
+    },
+    onSuccess: (data) => {
+      refetchImprovements();
+      toast.success(`${data.new_improvements?.length || 0} neue Vorschläge aus ${data.analysis_summary?.total_learned_from || 0} Erfolgen gelernt`);
+    },
+  });
+
+  const runReview = async () => {
+    setReviewLoading(true);
+    setReviewResult(null);
+    try {
+      const res = await base44.functions.invoke('aiSystemReview', { level: reviewLevel });
+      setReviewResult(res.data);
+    } catch (e) {
+      toast.error('KI-Review fehlgeschlagen: ' + e.message);
+    }
+    setReviewLoading(false);
+  };
+
+  const generateFromReviewMutation = useMutation({
+    mutationFn: async (findings) => {
+      const res = await base44.functions.invoke('generateEnterpriseImprovements', { audit_result: { findings } });
+      return res.data;
+    },
+    onSuccess: (data) => {
+      refetchImprovements();
+      toast.success(`${data.total_count || 0} Verbesserungen aus KI-Review generiert`);
+    },
   });
 
   if (user?.role !== 'admin') {
@@ -361,11 +398,62 @@ export default function AdminEnterpriseControlCenter() {
                 <span className="bg-violet-100 text-violet-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{activeImprovements.length}</span>
               )}
             </p>
-            <Button size="sm" variant="outline" onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending}
-              className="gap-1.5 h-7 text-xs">
-              {generateMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-              Neue Vorschläge
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => learnMutation.mutate()} disabled={learnMutation.isPending}
+                className="gap-1.5 h-7 text-xs">
+                {learnMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <BookOpen className="w-3 h-3" />}
+                KI lernt
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending}
+                className="gap-1.5 h-7 text-xs">
+                {generateMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                Neue Vorschläge
+              </Button>
+            </div>
+          </div>
+
+          {/* KI-Review Panel */}
+          <div className="surface-sm border p-4 mb-4 space-y-3">
+            <p className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+              <PlayCircle className="w-3.5 h-3.5 text-violet-600" />
+              Manuelle KI-Analyse für Test & Integration
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { id: 'quick', label: 'Quick', desc: '~30 Sek.' },
+                { id: 'operational', label: 'Operational', desc: '~2 Min.' },
+                { id: 'enterprise', label: 'Enterprise', desc: '~5 Min.' },
+              ].map(lv => (
+                <button key={lv.id} onClick={() => setReviewLevel(lv.id)}
+                  className={cn('text-xs px-3 py-1.5 rounded-lg border-2 transition-all',
+                    reviewLevel === lv.id ? 'bg-violet-600 text-white border-violet-600' : 'bg-white border-slate-200 text-slate-600 hover:border-violet-400'
+                  )}>
+                  {lv.label} <span className="opacity-60">{lv.desc}</span>
+                </button>
+              ))}
+              <Button size="sm" onClick={runReview} disabled={reviewLoading}
+                className="bg-gradient-to-r from-violet-600 to-blue-600 gap-1.5 h-7 text-xs">
+                {reviewLoading ? <><Loader2 className="w-3 h-3 animate-spin" />Analysiert...</> : <><Brain className="w-3 h-3" />KI-Review starten</>}
+              </Button>
+            </div>
+            {reviewResult && (
+              <div className="p-3 bg-violet-50 border border-violet-200 rounded-lg space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-violet-800">
+                    Review abgeschlossen · {reviewResult.findings?.length || 0} Findings
+                    ({reviewResult.findings?.filter(f => f.severity === 'critical').length || 0} kritisch,{' '}
+                    {reviewResult.findings?.filter(f => f.severity === 'warning').length || 0} Warnungen,{' '}
+                    {reviewResult.findings?.filter(f => f.severity === 'opportunity').length || 0} Potenziale)
+                  </p>
+                  <Button size="sm" onClick={() => generateFromReviewMutation.mutate(reviewResult.findings)}
+                    disabled={generateFromReviewMutation.isPending}
+                    className="bg-violet-600 gap-1.5 h-7 text-xs">
+                    {generateFromReviewMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                    Verbesserungen generieren
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {activeImprovements.length === 0 ? (
