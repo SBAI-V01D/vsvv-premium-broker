@@ -21,9 +21,9 @@ export const queryClientInstance = new QueryClient({
       // refetchOnMount: true — beim Navigieren werden veraltete Daten im Hintergrund aktualisiert
       // Gecachte Daten werden sofort angezeigt, dann still im Hintergrund aktualisiert (stale-while-revalidate)
       refetchOnMount: true,
-      refetchOnWindowFocus: false,
-      // 3 Minuten staleTime — CRM hat aktive Änderungen (Dokumente, Tasks, Importe)
-      staleTime: 3 * 60 * 1000,
+      refetchOnWindowFocus: true,
+      // 0 staleTime — Daten sofort als veraltet markieren für schnelle Reaktionszeit
+      staleTime: 0,
       gcTime: 30 * 60 * 1000,
       retry: (failureCount, error) => {
         const status = error?.response?.status || error?.status;

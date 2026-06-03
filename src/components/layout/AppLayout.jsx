@@ -5,8 +5,10 @@ import BreadcrumbBar from './BreadcrumbBar'
 import CommandPalette from './CommandPalette'
 import { Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useRealtimeSync } from '@/hooks/useRealtimeSync'
 
 export default function AppLayout() {
+  useRealtimeSync()
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [cmdOpen, setCmdOpen] = useState(false)
 
