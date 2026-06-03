@@ -268,6 +268,7 @@ Deno.serve(async (req) => {
 
       // CONTRACT CREATE — einmalig, atomar, durch Guard geschützt
       const contractCreateStart = Date.now();
+      const brokerId = app.advisor_id || null;
       const newContract = await base44.asServiceRole.entities.Contract.create({
         customer_id: app.customer_id,
         customer_name: app.customer_name,
@@ -287,7 +288,9 @@ Deno.serve(async (req) => {
         end_date: app.contract_end_date || '',
         cancellation_deadline: cancellationDeadline || '',
         assigned_broker: app.assigned_broker || '',
-        advisor_id: app.advisor_id || null,
+        advisor_id: brokerId,
+        primary_broker_id: brokerId,
+        assigned_brokers: brokerId ? [brokerId] : [],
         custom_status: 'aktiv',
         status: 'active',
         commission_amount: app.commission_estimate || null,
