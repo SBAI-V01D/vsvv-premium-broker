@@ -65,7 +65,7 @@ function IssueCard({ issue, type = 'critical' }) {
 }
 
 // ── Verbesserungs-Karte ───────────────────────────────────────────────────────
-function ImprovementCard({ imp, onApprove, onReject }) {
+function ImprovementCard({ imp, onApprove, onReject, onMeasure, measuring }) {
   const [expanded, setExpanded] = useState(false);
   const prioBg = {
     critical: 'bg-rose-50 border-rose-200 text-rose-700',
@@ -73,6 +73,21 @@ function ImprovementCard({ imp, onApprove, onReject }) {
     medium:   'bg-blue-50 border-blue-200 text-blue-700',
     low:      'bg-slate-50 border-slate-200 text-slate-600',
   };
+  const statusBg = {
+    proposed:    'bg-slate-100 text-slate-600',
+    approved:    'bg-blue-100 text-blue-700',
+    in_progress: 'bg-violet-100 text-violet-700',
+    implemented: 'bg-amber-100 text-amber-700',
+    verified:    'bg-emerald-100 text-emerald-700',
+    rejected:    'bg-rose-100 text-rose-600',
+  };
+  const statusLabel = {
+    proposed: 'Vorgeschlagen', approved: 'Genehmigt', in_progress: 'In Arbeit',
+    implemented: 'Implementiert', verified: 'Verifiziert', rejected: 'Abgelehnt',
+  };
+
+  const actualPct = imp.actual_impact?.performance_improvement_actual_percent;
+  const estimatedPct = imp.estimated_impact?.performance_improvement_percent;
 
   return (
     <div className="surface-sm border">
@@ -81,9 +96,29 @@ function ImprovementCard({ imp, onApprove, onReject }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
               <Badge className={cn('text-[10px] border', prioBg[imp.priority] || prioBg.medium)}>{imp.priority}</Badge>
+              <span className={cn('text-[10px] px-1.5 py-0.5 rounded font-medium', statusBg[imp.status] || statusBg.proposed)}>
+                {statusLabel[imp.status] || imp.status}
+              </span>
               <span className="text-[10px] text-muted-foreground">{imp.area?.replace(/_/g, ' ')}</span>
             </div>
             <p className="text-sm font-semibold leading-snug">{imp.title}</p>
+            {/* Impact-Werte direkt sichtbar */}
+            {(actualPct != null || estimatedPct != null) && (
+              <div className="flex items-center gap-3 mt-1.5">
+                {estimatedPct != null && (
+                  <span className="text-[11px] text-slate-500">
+                    Erwartet: <span className="font-semibold text-slate-700">+{estimatedPct}%</span>
+                  </span>
+                )}
+                {actualPct != null && (
+                  <span className={cn('text-[11px] font-bold flex items-center gap-0.5', actualPct >= (estimatedPct || 0) ? 'text-emerald-600' : 'text-amber-600')}>
+                    <TrendingUp className="w-3 h-3" />
+                    Tatsächlich: +{actualPct}%
+                    {estimatedPct != null && actualPct >= estimatedPct && <span className="text-[10px] ml-1 text-emerald-500">(Ziel erreicht ✓)</span>}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <button onClick={() => setExpanded(!expanded)} className="text-muted-foreground flex-shrink-0 mt-0.5">
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -110,16 +145,60 @@ function ImprovementCard({ imp, onApprove, onReject }) {
                 <p className="text-xs text-violet-800">{imp.ki_recommendation}</p>
               </div>
             )}
-            {imp.status === 'proposed' && (
-              <div className="flex gap-2 pt-1">
-                <Button size="sm" className="bg-emerald-600 gap-1.5 h-7 text-xs" onClick={onApprove}>
-                  <ThumbsUp className="w-3 h-3" />Umsetzen
-                </Button>
-                <Button size="sm" variant="outline" className="text-rose-600 border-rose-200 gap-1.5 h-7 text-xs" onClick={onReject}>
-                  <ThumbsDown className="w-3 h-3" />Ablehnen
-                </Button>
+            {/* Impact-Details ausgeklappt */}
+            {(actualPct != null || estimatedPct != null || imp.estimated_impact?.effort_level) && (
+              <div className="p-2 bg-blue-50 border border-blue-100 rounded-lg">
+                <p className="text-[9px] font-semibold uppercase text-blue-500 mb-1.5">Impact & Messung</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {estimatedPct != null && (
+                    <div>
+                      <p className="text-[9px] text-slate-500">Erwartete Verbesserung</p>
+                      <p className="text-sm font-bold text-blue-700">+{estimatedPct}%</p>
+                    </div>
+                  )}
+                  {actualPct != null && (
+                    <div>
+                      <p className="text-[9px] text-slate-500">Tatsächliche Verbesserung</p>
+                      <p className={cn('text-sm font-bold', actualPct >= (estimatedPct || 0) ? 'text-emerald-700' : 'text-amber-700')}>+{actualPct}%</p>
+                    </div>
+                  )}
+                  {imp.estimated_impact?.effort_level && (
+                    <div>
+                      <p className="text-[9px] text-slate-500">Aufwand</p>
+                      <p className="text-xs font-semibold text-slate-700 capitalize">{imp.estimated_impact.effort_level}</p>
+                    </div>
+                  )}
+                  {imp.estimated_impact?.estimated_hours && (
+                    <div>
+                      <p className="text-[9px] text-slate-500">Geschätzte Stunden</p>
+                      <p className="text-xs font-semibold text-slate-700">{imp.estimated_impact.estimated_hours}h</p>
+                    </div>
+                  )}
+                </div>
+                {imp.actual_impact?.measured_at && (
+                  <p className="text-[9px] text-slate-400 mt-1.5">Gemessen: {new Date(imp.actual_impact.measured_at).toLocaleString('de-CH')}</p>
+                )}
               </div>
             )}
+            <div className="flex gap-2 pt-1 flex-wrap">
+              {imp.status === 'proposed' && (
+                <>
+                  <Button size="sm" className="bg-emerald-600 gap-1.5 h-7 text-xs" onClick={onApprove}>
+                    <ThumbsUp className="w-3 h-3" />Umsetzen
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-rose-600 border-rose-200 gap-1.5 h-7 text-xs" onClick={onReject}>
+                    <ThumbsDown className="w-3 h-3" />Ablehnen
+                  </Button>
+                </>
+              )}
+              {imp.status === 'implemented' && (
+                <Button size="sm" onClick={onMeasure} disabled={measuring}
+                  className="bg-amber-600 gap-1.5 h-7 text-xs">
+                  {measuring ? <Loader2 className="w-3 h-3 animate-spin" /> : <TrendingUp className="w-3 h-3" />}
+                  Impact messen & verifizieren
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -143,6 +222,9 @@ export default function AdminEnterpriseControlCenter() {
   });
 
   const activeImprovements = improvements.filter(i => !['verified', 'rejected'].includes(i.status));
+  const implementedImprovements = improvements.filter(i => i.status === 'implemented');
+  const verifiedImprovements = improvements.filter(i => i.status === 'verified');
+  const [measuringId, setMeasuringId] = useState(null);
 
   const runAnalysis = async () => {
     setLoading(true);
@@ -217,6 +299,30 @@ export default function AdminEnterpriseControlCenter() {
       toast.success(`${data.total_count || 0} Verbesserungen aus KI-Review generiert`);
     },
   });
+
+  const measureImpact = async (imp) => {
+    setMeasuringId(imp.id);
+    try {
+      const res = await base44.functions.invoke('measureImprovementImpact', { improvement_id: imp.id });
+      const result = res.data;
+      const actualPct = result?.actual_improvement_percent ?? result?.performance_improvement_actual_percent;
+      await base44.entities.EnterpriseImprovement.update(imp.id, {
+        status: 'verified',
+        verified_at: new Date().toISOString(),
+        actual_impact: {
+          performance_improvement_actual_percent: actualPct,
+          measured_at: new Date().toISOString(),
+          verified_by: (await base44.auth.me())?.email,
+          ...result,
+        },
+      });
+      refetchImprovements();
+      toast.success(`Impact gemessen: ${actualPct != null ? `+${actualPct}%` : 'Verifiziert'} ✅`);
+    } catch (e) {
+      toast.error('Impact-Messung fehlgeschlagen: ' + e.message);
+    }
+    setMeasuringId(null);
+  };
 
   if (user?.role !== 'admin') {
     return (
@@ -467,6 +573,8 @@ export default function AdminEnterpriseControlCenter() {
                 <ImprovementCard key={imp.id} imp={imp}
                   onApprove={() => approveMutation.mutate(imp)}
                   onReject={() => rejectMutation.mutate(imp.id)}
+                  onMeasure={() => measureImpact(imp)}
+                  measuring={measuringId === imp.id}
                 />
               ))}
               {activeImprovements.length > 10 && (
@@ -474,6 +582,66 @@ export default function AdminEnterpriseControlCenter() {
                   + {activeImprovements.length - 10} weitere Vorschläge
                 </p>
               )}
+            </div>
+          )}
+
+          {/* ── VERIFIZIERTE VERBESSERUNGEN (mit Impact-Werten) ── */}
+          {verifiedImprovements.length > 0 && (
+            <div className="mt-6">
+              <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                Verifizierte Verbesserungen ({verifiedImprovements.length})
+              </p>
+              <div className="surface p-4 space-y-2">
+                {/* Gesamt-Impact */}
+                {(() => {
+                  const withActual = verifiedImprovements.filter(i => i.actual_impact?.performance_improvement_actual_percent != null);
+                  const avgActual = withActual.length > 0
+                    ? Math.round(withActual.reduce((s, i) => s + i.actual_impact.performance_improvement_actual_percent, 0) / withActual.length)
+                    : null;
+                  return avgActual != null ? (
+                    <div className="flex items-center gap-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg mb-3">
+                      <TrendingUp className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs text-emerald-700 font-semibold">Durchschnittlicher Impact ({withActual.length} gemessen)</p>
+                        <p className="text-2xl font-bold text-emerald-700">+{avgActual}%</p>
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+                {verifiedImprovements.map(imp => {
+                  const actualPct = imp.actual_impact?.performance_improvement_actual_percent;
+                  const estimatedPct = imp.estimated_impact?.performance_improvement_percent;
+                  return (
+                    <div key={imp.id} className="flex items-center justify-between py-1.5 border-b border-border/40 last:border-0 gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{imp.title}</p>
+                        <p className="text-[10px] text-muted-foreground">{imp.area?.replace(/_/g, ' ')}</p>
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        {estimatedPct != null && (
+                          <div className="text-right">
+                            <p className="text-[9px] text-slate-400">Erwartet</p>
+                            <p className="text-xs font-semibold text-slate-500">+{estimatedPct}%</p>
+                          </div>
+                        )}
+                        {actualPct != null ? (
+                          <div className="text-right">
+                            <p className="text-[9px] text-slate-400">Tatsächlich</p>
+                            <p className={cn('text-sm font-bold', actualPct >= (estimatedPct || 0) ? 'text-emerald-600' : 'text-amber-600')}>
+                              +{actualPct}%
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                            Verifiziert
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
