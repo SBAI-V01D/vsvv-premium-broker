@@ -93,12 +93,15 @@ Deno.serve(async (req) => {
       
       const premiumYearly = app.estimated_premium_yearly || (app.estimated_premium_monthly ? Math.round(app.estimated_premium_monthly * 12) : 0);
       
+      const brokerId = app.advisor_id || null;
       const newContract = await base44.entities.Contract.create({
         customer_id: app.customer_id,
         customer_name: app.customer_name,
         primary_customer_id: app.primary_customer_id || app.customer_id,
         organization_id: finalOrgId,
-        advisor_id: app.advisor_id,
+        advisor_id: brokerId,
+        primary_broker_id: brokerId,
+        assigned_brokers: brokerId ? [brokerId] : [],
         assigned_broker: app.assigned_broker,
         insurer: app.insurer,
         insurance_type: app.insurance_type || app.sparte,
