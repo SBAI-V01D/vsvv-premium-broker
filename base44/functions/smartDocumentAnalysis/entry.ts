@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
     // KI-Extraktion OHNE response_json_schema (verhindert null-Typ-Fehler)
     let extracted = null;
     const rawResponse = await base44.integrations.Core.InvokeLLM({
-      model: 'gemini_3_flash',
+      model: 'claude_sonnet_4_6',
       file_urls: [file_url],
       prompt: `Du bist eine Schweizer Versicherungs-Extraktionsengine. Dokumenttyp-Hinweis: "${document_type || 'unbekannt'}"
 
