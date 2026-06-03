@@ -140,10 +140,8 @@ const AuthenticatedApp = () => {
         {/* AdvisoryDossierEngine — Phase 1 — Admin-Only */}
         <Route path="/beratungsdossier" element={<AdvisoryDossier />} />
         <Route path="/admin/enterprise-control-center" element={<AdminEnterpriseControlCenter />} />
-        <Route path="/ai-review" element={<KiAnalyseVerbesserungen />} />
         <Route path="/reporting" element={<BrokerReporting />} />
         <Route path="/admin/enterprise-audit" element={<EnterpriseAudit />} />
-        <Route path="/admin/system-check" element={<EnterpriseSystemCheck />} />
         <Route path="/admin/insurance-learning" element={<InsuranceLearningCenter />} />
         <Route path="/dokument-extraktor" element={<DocumentExtractor />} />
         <Route path="/ausschreibungen" element={<Ausschreibungen />} />
