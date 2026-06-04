@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -89,7 +89,8 @@ export default function Tasks() {
       queryClient.setQueryData(['tasks'], (old = []) =>
         old.map(t => t.id === updated.id ? updated : t)
       );
-      closeForm();
+      // Only close form if editing (not for inline status toggles)
+      if (showForm) closeForm();
     },
   });
 
@@ -117,6 +118,19 @@ export default function Tasks() {
 
   const activeTasks = tasks.filter(t => ['open', 'in_progress'].includes(t.status));
   const archivedTasks = tasks.filter(t => t.status === 'completed');
+
+  // Real-time subscription
+  useEffect(() => {
+    const unsubscribe = base44.entities.Task.subscribe((event) => {
+      queryClient.setQueryData(['tasks'], (old = []) => {
+        if (event.type === 'create') return [event.data, ...old];
+        if (event.type === 'update') return old.map(t => t.id === event.id ? event.data : t);
+        if (event.type === 'delete') return old.filter(t => t.id !== event.id);
+        return old;
+      });
+    });
+    return unsubscribe;
+  }, [queryClient]);
 
   const filtered = tasks.filter(t => {
     const matchSearch = !search || t.title?.toLowerCase().includes(search.toLowerCase()) || t.customer_name?.toLowerCase().includes(search.toLowerCase());
