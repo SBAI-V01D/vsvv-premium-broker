@@ -95,6 +95,8 @@ function sortCustomers(list, sortBy) {
   });
 }
 
+const PAGE_SIZE = 20;
+
 // Interne Navigation
 const WORKSPACE_MODES = [
   { id: 'private', label: 'Privatkunden', icon: User },
@@ -176,6 +178,7 @@ export default function CustomerIntelligenceWorkspace() {
   const [sortBy, setSortBy]               = useState('alpha');
   const [search, setSearch]             = useState('');
 
+  const [page, setPage]                 = useState(1);
   const [showImport, setShowImport]     = useState(false);
   const [showMerge, setShowMerge]       = useState(false);
   const [showAllMandate, setShowAllMandate] = useState(false);
@@ -321,6 +324,9 @@ export default function CustomerIntelligenceWorkspace() {
     [primaryCustomers]
   );
 
+  // Reset page on mode/search change
+  useEffect(() => { setPage(1); }, [workspaceMode, search]);
+
   const modeFiltered = useMemo(() => {
     if (workspaceMode === 'private') return privateCustomers;
     if (workspaceMode === 'business') return businessCustomers;
@@ -366,6 +372,9 @@ export default function CustomerIntelligenceWorkspace() {
   }, [modeFiltered, search, customers, sortBy, workspaceMode]);
 
 
+
+  const totalPages = Math.ceil(displayed.length / PAGE_SIZE);
+  const pagedDisplayed = displayed.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleSave = async (data) => {
     if (editing) {
@@ -487,6 +496,7 @@ export default function CustomerIntelligenceWorkspace() {
           <div className="flex items-center gap-1 overflow-x-auto pb-1">
             {WORKSPACE_MODES.map(mode => {
               const Icon = mode.icon;
+              const count = mode.id === 'private' ? privateCustomers.length : businessCustomers.length;
               return (
                 <button
                   key={mode.id}
@@ -500,6 +510,9 @@ export default function CustomerIntelligenceWorkspace() {
                 >
                   <Icon className="w-3.5 h-3.5" />
                   {mode.label}
+                  <span className={cn('text-[11px] px-1.5 py-0.5 rounded-full font-semibold', workspaceMode === mode.id ? 'bg-white/20 text-white' : 'bg-[hsl(var(--surface-3))] text-[hsl(var(--text-muted))]')}>
+                    {count}
+                  </span>
                 </button>
               );
             })}
@@ -672,7 +685,7 @@ export default function CustomerIntelligenceWorkspace() {
               <div className="border-t-2 border-[hsl(var(--primary))] bg-white">
                 <div className="p-4">
                   <CustomerFeed
-                    displayed={displayed}
+                    displayed={pagedDisplayed}
                     customers={customers}
                     segments={segments}
                     matchedFamilyIds={matchedFamilyIds}
@@ -684,6 +697,38 @@ export default function CustomerIntelligenceWorkspace() {
                     workspaceMode={workspaceMode}
                   />
                 </div>
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between px-6 py-3 border-t border-[hsl(var(--border-subtle))] bg-[hsl(var(--surface-1))]">
+                    <span className="text-[12px] text-[hsl(var(--text-muted))]">
+                      {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, displayed.length)} von {displayed.length}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="px-3 py-1.5 text-[12px] font-medium rounded-lg border border-[hsl(var(--border-subtle))] disabled:opacity-40 hover:bg-[hsl(var(--surface-2))] transition-colors"
+                      >
+                        ← Zurück
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                        <button
+                          key={p}
+                          onClick={() => setPage(p)}
+                          className={cn('w-8 h-8 text-[12px] font-medium rounded-lg transition-colors', p === page ? 'bg-[hsl(var(--primary))] text-white' : 'hover:bg-[hsl(var(--surface-2))] text-[hsl(var(--text-muted))]')}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                        className="px-3 py-1.5 text-[12px] font-medium rounded-lg border border-[hsl(var(--border-subtle))] disabled:opacity-40 hover:bg-[hsl(var(--surface-2))] transition-colors"
+                      >
+                        Weiter →
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
