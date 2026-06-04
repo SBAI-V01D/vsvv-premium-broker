@@ -69,6 +69,10 @@ Deno.serve(async (req) => {
       // Organisatorische Daten übernehmen
       organization_id: primaryCustomer.organization_id,
       advisor_id: primaryCustomer.advisor_id,
+      primary_advisor_id: primaryCustomer.primary_advisor_id || primaryCustomer.advisor_id,
+      assigned_advisors: primaryCustomer.assigned_advisors || (primaryCustomer.advisor_id ? [primaryCustomer.advisor_id] : []),
+      assigned_assistants: primaryCustomer.assigned_assistants || [],
+      access_level: primaryCustomer.access_level || 'assigned_advisors_only',
       assigned_broker: primaryCustomer.assigned_broker,
       
       // Kundentypologien
