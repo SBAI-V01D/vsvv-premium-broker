@@ -466,7 +466,11 @@ export default function CustomerDetail() {
                             className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
                           >
                             <span className="text-muted-foreground">Anträge</span>
-                            <span className="font-semibold">{relatedApplications.length}</span>
+                            <span className="font-semibold">{relatedApplications.filter(a => {
+                              const status = (a.custom_status || a.status || '').toLowerCase().trim()
+                              const OPEN_KEYS = ['neu', 'new', 'eingereicht', 'in_pruefung', 'rueckfrage', 'vorbehalt', 'risikopruefung', 'under_review', 'in_progress', 'warten']
+                              return OPEN_KEYS.includes(status)
+                            }).length}</span>
                           </button>
                           <button
                             onClick={() => setActiveSection('aufgaben')}
