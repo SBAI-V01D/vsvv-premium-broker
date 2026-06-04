@@ -527,7 +527,7 @@ export default function CustomerDetail() {
               )}
 
               {/* Navigation */}
-              <div className="surface p-5">
+              <div className="surface p-5 min-h-[450px]">
                 <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Navigation</h3>
                 <div className="space-y-2">
                   <button
@@ -923,7 +923,7 @@ export default function CustomerDetail() {
         {/* ── Betreuung ─────────────────────────────────────────────── */}
         {activeSection === 'betreuung' && (
           <div className="space-y-6">
-            <div className="surface p-5">
+            <div className="surface p-5 min-h-[600px]">
               <p className="text-xs font-semibold text-muted-foreground mb-4">
                 <strong className="font-bold text-foreground">Zuständiger Berater:</strong> {(() => {
                   const aid = customer.primary_advisor_id || customer.advisor_id
