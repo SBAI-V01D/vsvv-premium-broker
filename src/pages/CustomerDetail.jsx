@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client'
 import { useParams, useNavigate } from 'react-router-dom'
 import html2pdf from 'html2pdf.js'
 import { useAccessControl } from '@/hooks/useAccessControl'
-import { Edit, Users, FileText, Clock, Shield, Bot, Tag, Building2, Calendar, Trash2, Plus, XCircle } from 'lucide-react'
+import { Edit, Users, FileText, Clock, Shield, Bot, Tag, Building2, Calendar, Trash2, Plus, XCircle, Phone, Mail } from 'lucide-react'
 import AiInsightsPanel from '../components/customers/AiInsightsPanel'
 import ActivityTimeline from '../components/customers/ActivityTimeline'
 import HouseholdContractsCockpit from '../components/customers/HouseholdContractsCockpit'
@@ -375,6 +375,45 @@ export default function CustomerDetail() {
               />
               <CustomerStammdatenCard customer={customer} />
             </div>
+
+            {/* Zuständiger Berater */}
+            {(() => {
+              const advisorId = customer.primary_advisor_id || customer.advisor_id
+              const advisor = advisorId ? allAdvisors.find(a => a.id === advisorId) : null
+              if (!advisor) return null
+              return (
+                <div className="space-y-3">
+                  <SectionHeader
+                    title="Zuständiger Berater"
+                    subtitle="Ihr persönlicher Ansprechpartner"
+                  />
+                  <div className="surface p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-base font-bold text-primary flex-shrink-0">
+                        {advisor.firstname?.[0]}{advisor.lastname?.[0]}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-foreground">{advisor.firstname} {advisor.lastname}</p>
+                        <p className="text-xs text-muted-foreground">{advisor.email}</p>
+                        {advisor.phone && <p className="text-xs text-muted-foreground">{advisor.phone}</p>}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {advisor.phone && (
+                          <a href={`tel:${advisor.phone}`} className="p-2 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Anrufen">
+                            <Phone className="w-4 h-4" />
+                          </a>
+                        )}
+                        {advisor.email && (
+                          <a href={`mailto:${advisor.email}`} className="p-2 text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded-lg transition-colors" title="E-Mail">
+                            <Mail className="w-4 h-4" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
 
             <CustomerDashboardCompact
               customer={customer}
