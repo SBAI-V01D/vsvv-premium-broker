@@ -352,9 +352,35 @@ export default function CustomerDetail() {
               <div className="surface p-5">
                 <h3 className="text-sm font-bold text-foreground mb-4">Kontakt & Daten</h3>
                 <div className="space-y-4">
-                  {/* Kontakt */}
-                  {(customer.email || customer.phone || customer.mobile) && (
+                  {/* Adresse - zuerst */}
+                  {customer.street && (
                     <div>
+                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Adresse</p>
+                      <div className="flex items-start gap-2 text-sm text-slate-600">
+                        <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p>{customer.street}</p>
+                          {(customer.zip_code || customer.city) && <p>{[customer.zip_code, customer.city].filter(Boolean).join(' ')}</p>}
+                          {customer.canton && <p className="text-muted-foreground">Kanton {customer.canton}</p>}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Geburtsdatum - als zweites */}
+                  {customer.birthdate && (
+                    <div className="pt-2 border-t border-border">
+                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Geburtsdatum</p>
+                      <div className="flex items-center gap-2 text-sm text-slate-600">
+                        <Calendar className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-medium">{formatDate(customer.birthdate)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Kontakt - als drittes */}
+                  {(customer.email || customer.phone || customer.mobile) && (
+                    <div className="pt-2 border-t border-border">
                       <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Kontakt</p>
                       <div className="flex flex-wrap gap-4 text-sm">
                         {customer.email && (
@@ -379,32 +405,11 @@ export default function CustomerDetail() {
                     </div>
                   )}
 
-                  {/* Adresse */}
-                  {customer.street && (
-                    <div className="pt-2 border-t border-border">
-                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Adresse</p>
-                      <div className="flex items-start gap-2 text-sm text-slate-600">
-                        <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p>{customer.street}</p>
-                          {(customer.zip_code || customer.city) && <p>{[customer.zip_code, customer.city].filter(Boolean).join(' ')}</p>}
-                          {customer.canton && <p className="text-muted-foreground">Kanton {customer.canton}</p>}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Persönliche Daten */}
-                  {(customer.birthdate || customer.profession || customer.civil_status || customer.nationality) && (
+                  {(customer.profession || customer.civil_status || customer.nationality) && (
                     <div className="pt-2 border-t border-border">
                       <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Persönliche Daten</p>
                       <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                        {customer.birthdate && (
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Geburtsdatum</span>
-                            <span className="text-slate-700">{formatDate(customer.birthdate)}</span>
-                          </div>
-                        )}
                         {customer.profession && (
                           <div className="flex flex-col">
                             <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Beruf</span>
@@ -427,10 +432,10 @@ export default function CustomerDetail() {
                     </div>
                   )}
 
-                  {/* Haushaltsmitglieder */}
+                  {/* Haushaltsmitglieder - mit konsistentem Titel */}
                   {familyMembers.length > 1 && (
                     <div className="pt-2 border-t border-border">
-                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Haushalt</p>
+                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Haushaltsmitglieder</p>
                       <div className="flex flex-wrap gap-2">
                         {familyMembers.filter(m => m.id !== id).map(member => (
                           <button
