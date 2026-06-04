@@ -21,10 +21,10 @@ const FAMILY_ROLES = {
   other: 'Sonstiges',
 }
 const MANDATE_STATUSES = {
-  active: 'Aktiv',
-  inactive: 'Inaktiv',
+  valid: 'Gültig',
   pending: 'Ausstehend',
-  terminated: 'Beendet',
+  invalid: 'Ungültig',
+  expired: 'Abgelaufen',
 }
 const ASSOCIATIONS = {
   vsvv: 'VSVV',
@@ -146,7 +146,7 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
       street: '', zip_code: '', city: '', canton: '', birthdate: '',
       ahv_number: '', profession: '', civil_status: 'single', nationality: 'CH',
       drivers_license_date: '', bank_account: '', risk_profile: 'medium',
-      customer_type: 'private', status: 'active', mandate_status: 'active',
+      customer_type: 'private', status: 'active', mandate_status: 'pending',
       association_membership: 'none', permit_type: 'none', is_family_member: false,
       primary_customer_id: '', family_role: 'primary', notes: '',
       assigned_broker: '', organization_id: '', advisor_id: '',

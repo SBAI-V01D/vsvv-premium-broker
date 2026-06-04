@@ -43,6 +43,8 @@ export default function CustomerDetail() {
   const exportRef = useRef(null)
   const { checkCustomerAccess, isAdmin } = useAccessControl()
   const urlParams = new URLSearchParams(window.location.search)
+  const backTo = urlParams.get('from') || '/kunden'
+  const backLabel = backTo === '/neukunden' ? 'Neukunden' : backTo === '/kunden?view=private' ? 'Privatkunden' : backTo === '/kunden?view=business' ? 'Unternehmen' : 'Kundenübersicht'
   const [showEdit, setShowEdit] = useState(urlParams.get('edit') === 'true')
   const [editingContract, setEditingContract] = useState(null)
   const [statusChangingContract, setStatusChangingContract] = useState(null)
@@ -289,6 +291,8 @@ export default function CustomerDetail() {
         onAddFamilyMember={() => { setNeedAllCustomers(true); setShowAddFamilyMember(true) }}
         onDownloadPDF={() => downloadPDFMutation.mutate()}
         isDownloading={downloadPDFMutation.isPending}
+        backTo={backTo}
+        backLabel={backLabel}
       />
 
       {/* Sticky Nav */}
@@ -648,6 +652,29 @@ export default function CustomerDetail() {
         {/* ── Betreuung ─────────────────────────────────────────────── */}
         {activeSection === 'betreuung' && (
           <div className="space-y-6">
+            {/* Direkt zugewiesener Berater (aus Kundenstamm) */}
+            {(customer.advisor_id || customer.primary_advisor_id) && (() => {
+              const advisorId = customer.primary_advisor_id || customer.advisor_id
+              const advisor = allAdvisors.find(a => a.id === advisorId)
+              return advisor ? (
+                <div className="surface p-4">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-primary" />Zuständiger Berater
+                  </p>
+                  <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
+                      {advisor.firstname?.[0]}{advisor.lastname?.[0]}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold">{advisor.firstname} {advisor.lastname}</p>
+                      <p className="text-xs text-muted-foreground">{advisor.email}</p>
+                      {advisor.phone && <p className="text-xs text-muted-foreground">{advisor.phone}</p>}
+                    </div>
+                  </div>
+                </div>
+              ) : null
+            })()}
+
             <AdvisorAssignmentPanel customerId={id} />
 
             {/* Berater aus Anträgen & Verträgen */}

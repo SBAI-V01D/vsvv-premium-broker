@@ -125,6 +125,7 @@ function CustomerFeed({ displayed, customers, segments, matchedFamilyIds, onEdit
       allContracts={allContracts}
       allTasks={allTasks}
       allDocuments={allDocuments}
+      workspaceMode={workspaceMode}
     />
   );
 

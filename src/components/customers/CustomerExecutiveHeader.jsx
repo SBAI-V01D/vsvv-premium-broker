@@ -53,6 +53,8 @@ export default function CustomerExecutiveHeader({
   onAddFamilyMember,
   onDownloadPDF,
   isDownloading,
+  backTo,
+  backLabel,
 }) {
   const navigate = useNavigate()
 
@@ -88,10 +90,10 @@ export default function CustomerExecutiveHeader({
       {/* Back nav */}
       <div className="px-6 pt-4">
         <button
-          onClick={() => navigate('/kunden')}
+          onClick={() => navigate(backTo || '/kunden')}
           className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-slate-700 transition-colors mb-4"
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> Kundenübersicht
+          <ArrowLeft className="w-3.5 h-3.5" /> {backLabel || 'Kundenübersicht'}
         </button>
       </div>
 

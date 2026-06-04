@@ -37,10 +37,12 @@ export default function CustomerCard({
   allContracts = [],
   allTasks = [],
   allDocuments = [],
+  workspaceMode,
 }) {
   const hasFamilyMatch = familyMembers.some(m => matchedFamilyIds.has(m.id));
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const fromParam = workspaceMode === 'private' ? '?from=/kunden?view=private' : workspaceMode === 'business' ? '?from=/kunden?view=business' : '';
   const status = getStatus(customer);
   const isCompany = customer.customer_type === 'business';
   
@@ -92,7 +94,7 @@ export default function CustomerCard({
           <div className="flex-1 min-w-0 pt-0.5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <Link to={`/kunden/${customer.id}`} className="text-[15px] font-semibold text-slate-900 hover:text-primary leading-tight block truncate">
+                <Link to={`/kunden/${customer.id}${fromParam}`} className="text-[15px] font-semibold text-slate-900 hover:text-primary leading-tight block truncate">
                   {displayName}
                 </Link>
                 <p className="text-[12px] text-slate-400 mt-0.5 truncate">
@@ -227,7 +229,7 @@ export default function CustomerCard({
               </div>
               
               <div className="flex items-center gap-2">
-                <Link to={`/kunden/${customer.id}`} className="text-[12px] font-medium text-primary hover:underline">
+                <Link to={`/kunden/${customer.id}${fromParam}`} className="text-[12px] font-medium text-primary hover:underline">
                   Profil öffnen →
                 </Link>
                 <button onClick={() => navigate(`/kunden/${customer.id}/360`)}
@@ -239,7 +241,7 @@ export default function CustomerCard({
           </div>
         ) : (
           <div className="mt-3 flex items-center gap-3">
-            <Link to={`/kunden/${customer.id}`} className="text-[12px] font-medium text-primary hover:underline">
+            <Link to={`/kunden/${customer.id}${fromParam}`} className="text-[12px] font-medium text-primary hover:underline">
               Profil öffnen →
             </Link>
             <span className="text-slate-200">|</span>
