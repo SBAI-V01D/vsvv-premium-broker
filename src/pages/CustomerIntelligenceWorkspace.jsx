@@ -480,9 +480,7 @@ export default function CustomerIntelligenceWorkspace() {
             <h1 className="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight">
               Kundenübersicht
             </h1>
-            <p className="text-body-sm text-[hsl(var(--text-muted))] mt-0.5">
-              {displayed.length} Kunden
-            </p>
+            
           </div>
 
           {/* Workspace Modes + Nav Links */}
