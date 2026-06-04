@@ -425,7 +425,11 @@ export default function CustomerDetail() {
                          {customer.ahv_number && <p className="text-xs font-mono text-muted-foreground mt-0.5">{customer.ahv_number}</p>}
                          {(c.assigned_broker || c.advisor_id) && (
                            <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                             {c.assigned_broker || allAdvisors.find(a => a.id === c.advisor_id)?.email || ''}
+                             {(() => {
+                               // assigned_broker kann E-Mail ODER Advisor-ID sein
+                               const advisor = allAdvisors.find(a => a.id === c.assigned_broker || a.id === c.advisor_id)
+                               return advisor?.email || c.assigned_broker || ''
+                             })()}
                            </p>
                          )}
                         </div>
