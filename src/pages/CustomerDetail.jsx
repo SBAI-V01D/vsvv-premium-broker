@@ -347,9 +347,9 @@ export default function CustomerDetail() {
 
         {/* ── Übersicht ─────────────────────────────────────────────── */}
         {activeSection === 'uebersicht' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Kachel 1: Kontakt & Adresse */}
-            <div className="surface p-5 h-[280px]">
+            <div className="surface p-6 h-[340px]">
               <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Kontakt & Adresse</h3>
               <div className="space-y-4">
                 {/* Adresse */}
@@ -409,7 +409,7 @@ export default function CustomerDetail() {
             </div>
 
             {/* Kachel 2: Berater */}
-            <div className="surface p-5 h-[280px]">
+            <div className="surface p-6 h-[340px]">
               <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Berater</h3>
               {(() => {
                 const advisorId = customer.primary_advisor_id || customer.advisor_id
@@ -499,37 +499,12 @@ export default function CustomerDetail() {
               })()}
             </div>
 
-            {/* Kachel 3: Finanzen */}
-            <div className="surface p-5 h-[280px]">
-              <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Finanzen</h3>
-              <div className="space-y-4">
-                {customer.total_premium > 0 && (
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Gesamtprämie</p>
-                    <span className="font-semibold text-foreground text-lg">CHF {customer.total_premium.toLocaleString('de-CH')}</span>
-                  </div>
-                )}
-                {customer.bank_account && (
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Bankkonto</p>
-                    <span className="text-slate-700 font-mono text-sm">{customer.bank_account}</span>
-                  </div>
-                )}
-                {customer.ahv_number && (
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">AHV-Nummer</p>
-                    <span className="text-slate-700 font-mono text-sm">{customer.ahv_number}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Kachel 4: Haushaltsmitglieder */}
-            <div className="surface p-5 h-[280px]">
+            {/* Kachel 3: Haushaltsmitglieder */}
+            <div className="surface p-6 h-[340px]">
               <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Haushaltsmitglieder</h3>
               {familyMembers.length > 1 ? (
-                <div className="space-y-3">
-                  <p className="text-xs text-muted-foreground">{familyMembers.length} Personen im Haushalt</p>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">{familyMembers.length} Personen im Haushalt</p>
                   <div className="flex flex-wrap gap-2">
                     {familyMembers.filter(m => m.id !== id).map(member => (
                       <button
