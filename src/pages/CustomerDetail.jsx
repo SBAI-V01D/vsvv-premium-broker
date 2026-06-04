@@ -108,6 +108,9 @@ export default function CustomerDetail() {
 
   const customer = customerDirect || allCustomers.find(x => x.id === id)
 
+  // primaryCustomerId FRÜH definieren (wird von householdContracts Query benötigt)
+  const primaryCustomerId = customer?.is_family_member ? customer?.primary_customer_id : customer?.id
+
   // Haushaltsverträge ZENTRAL laden: Alle Verträge des Haushalts in einer Query
   const { data: householdContracts = [] } = useQuery({
     queryKey: ['household-contracts-all', primaryCustomerId],
@@ -191,7 +194,6 @@ export default function CustomerDetail() {
     enabled: !!id,
   })
 
-  const primaryCustomerId = customer?.is_family_member ? customer?.primary_customer_id : customer?.id
   // Familienmitglieder: dedupliziert aus householdFamilyMembers (immer geladen) + allCustomers (lazy)
   const mergedHouseholdMembers = householdFamilyMembers.length > 0
     ? householdFamilyMembers
