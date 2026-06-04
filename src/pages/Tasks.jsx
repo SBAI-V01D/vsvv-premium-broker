@@ -71,7 +71,7 @@ export default function Tasks() {
     staleTime: 5 * 60 * 1000,
   });
   const dateReviewItems = reviewContracts.filter(c =>
-    c.end_date?.startsWith('9999') || c.end_date?.startsWith('0001') || !c.end_date
+    c.end_date?.startsWith('9999') || c.end_date?.startsWith('0001')
   );
   const [showAllDateReview, setShowAllDateReview] = useState(false);
   const DATE_REVIEW_LIMIT = 5;
