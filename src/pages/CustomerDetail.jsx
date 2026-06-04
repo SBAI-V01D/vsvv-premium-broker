@@ -347,221 +347,196 @@ export default function CustomerDetail() {
 
         {/* ── Übersicht ─────────────────────────────────────────────── */}
         {activeSection === 'uebersicht' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Linke Spalte: Kontakt, Adresse, Persönliche Daten, Haushalt */}
-            <div className="lg:col-span-2 space-y-4">
-              {/* Kontakt & Daten - gesamtes Feld */}
-              <div className="surface p-5 h-[110px]">
-                <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Kontakt & Daten</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Adresse */}
-                  {customer.street && (
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Adresse</p>
-                      <div className="text-sm text-slate-600">
-                        <p>{customer.street}</p>
-                        {(customer.zip_code || customer.city) && <p>{[customer.zip_code, customer.city].filter(Boolean).join(' ')}</p>}
-                        {customer.canton && <p className="text-muted-foreground">Kanton {customer.canton}</p>}
-                      </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Kachel 1: Kontakt & Adresse */}
+            <div className="surface p-5 h-[280px]">
+              <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Kontakt & Adresse</h3>
+              <div className="space-y-4">
+                {/* Adresse */}
+                {customer.street && (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Adresse</p>
+                    <div className="text-sm text-slate-600">
+                      <p>{customer.street}</p>
+                      {(customer.zip_code || customer.city) && <p>{[customer.zip_code, customer.city].filter(Boolean).join(' ')}</p>}
+                      {customer.canton && <p className="text-muted-foreground">Kanton {customer.canton}</p>}
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* Geburtsdatum */}
-                  {customer.birthdate && (
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Geburtsdatum</p>
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                        <Calendar className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-medium">{formatDate(customer.birthdate)}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Kontakt */}
-                  {(customer.email || customer.phone || customer.mobile) && (
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Kontakt</p>
-                      <div className="space-y-1.5 text-sm">
-                        {customer.email && (
-                          <EmailLink email={customer.email} />
-                        )}
-                        {customer.phone && (
-                          <p className="text-slate-600">{customer.phone}</p>
-                        )}
-                        {customer.mobile && (
-                          <p className="text-slate-600">{customer.mobile}</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Persönliche Daten - separate Zeile */}
-                {(customer.profession || customer.civil_status || customer.nationality) && (
-                  <div className="pt-4 mt-4 border-t border-border">
-                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-3">Persönliche Daten</p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-sm">
-                      {customer.profession && (
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Beruf</span>
-                          <span className="text-slate-700">{customer.profession}</span>
-                        </div>
+                {/* Kontakt */}
+                {(customer.email || customer.phone || customer.mobile) && (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Kontakt</p>
+                    <div className="space-y-1.5 text-sm">
+                      {customer.email && (
+                        <EmailLink email={customer.email} />
                       )}
-                      {customer.civil_status && (
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Zivilstand</span>
-                          <span className="text-slate-700">{CIVIL_STATUS_LABELS[customer.civil_status] || customer.civil_status}</span>
-                        </div>
+                      {customer.phone && (
+                        <p className="text-slate-600">{customer.phone}</p>
                       )}
-                      {customer.nationality && (
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Nationalität</span>
-                          <span className="text-slate-700">{customer.nationality}</span>
-                        </div>
+                      {customer.mobile && (
+                        <p className="text-slate-600">{customer.mobile}</p>
                       )}
                     </div>
                   </div>
                 )}
               </div>
-              
-              {/* Haushaltsmitglieder - eigenes Feld */}
-              {familyMembers.length > 1 && (
-                <div className="surface p-5 h-[110px]">
-                  <h3 className="text-xs font-bold text-foreground mb-3 uppercase tracking-widest">Haushaltsmitglieder</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {familyMembers.filter(m => m.id !== id).map(member => (
-                      <button
-                        key={member.id}
-                        onClick={() => navigate(`/kunden/${member.id}`)}
-                        className="inline-flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"
-                      >
-                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                          {member.first_name?.[0]}{member.last_name?.[0]}
-                        </div>
-                        <div className="flex flex-col items-start">
-                          <span className="text-sm font-medium">{member.first_name} {member.last_name}</span>
-                          <span className="text-xs text-muted-foreground">{FAMILY_ROLE_LABELS[member.family_role] || 'Familie'}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
-            {/* Rechte Spalte: Berater, Finanzen, Quick Stats (klickbar) */}
-            <div className="space-y-4">
-              {/* Zuständiger Berater */}
-              {(() => {
-                const advisorId = customer.primary_advisor_id || customer.advisor_id
-                let advisor = advisorId ? allAdvisors.find(a => a.id === advisorId || a.email === advisorId) : null
-                
-                if (!advisor && relatedContracts.length > 0) {
-                  for (const c of relatedContracts) {
-                    if (c.advisor_id) {
-                      advisor = allAdvisors.find(a => a.id === c.advisor_id || a.email === c.advisor_id)
-                      if (advisor) break
-                    }
-                    if (c.assigned_broker) {
-                      advisor = allAdvisors.find(a => a.id === c.assigned_broker || a.email === c.assigned_broker)
-                      if (advisor) break
-                    }
-                  }
-                }
-                
-                if (!advisor) return null
-                return (
-                  <div className="surface p-4 h-[70px]">
-                    <h3 className="text-sm font-bold text-foreground mb-3">Berater</h3>
-                    <div className="flex items-start gap-3">
-                      <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
-                        {advisor.firstname?.[0]}{advisor.lastname?.[0]}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-foreground truncate">{advisor.firstname} {advisor.lastname}</p>
-                        <p className="text-xs text-muted-foreground truncate">{advisor.email}</p>
-                        {advisor.phone && <p className="text-xs text-muted-foreground">{advisor.phone}</p>}
-                        <div className="flex items-center gap-1 mt-2">
-                          {advisor.phone && (
-                            <a href={`tel:${advisor.phone}`} className="p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded transition-colors" title="Anrufen">
-                              <Phone className="w-3.5 h-3.5" />
-                            </a>
-                          )}
-                          {advisor.email && (
-                            <a href={`mailto:${advisor.email}`} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded transition-colors" title="E-Mail">
-                              <Mail className="w-3.5 h-3.5" />
-                            </a>
-                          )}
-                        </div>
-                      </div>
+            {/* Kachel 2: Persönliche Daten */}
+            <div className="surface p-5 h-[280px]">
+              <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Persönliche Daten</h3>
+              <div className="space-y-4">
+                {customer.birthdate && (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Geburtsdatum</p>
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      <span className="font-medium">{formatDate(customer.birthdate)}</span>
                     </div>
                   </div>
-                )
-              })()}
+                )}
+                {customer.profession && (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Beruf</p>
+                    <span className="text-slate-700 text-sm">{customer.profession}</span>
+                  </div>
+                )}
+                {customer.civil_status && (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Zivilstand</p>
+                    <span className="text-slate-700 text-sm">{CIVIL_STATUS_LABELS[customer.civil_status] || customer.civil_status}</span>
+                  </div>
+                )}
+                {customer.nationality && (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Nationalität</p>
+                    <span className="text-slate-700 text-sm">{customer.nationality}</span>
+                  </div>
+                )}
+              </div>
+            </div>
 
-              {/* Finanzen */}
-              {(customer.bank_account || customer.total_premium > 0 || customer.ahv_number) && (
-                <div className="surface p-5 h-[70px]">
-                  <h3 className="text-sm font-bold text-foreground mb-3">Finanzen & Daten</h3>
-                  <div className="space-y-2 text-sm">
-                    {customer.total_premium > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Gesamtprämie</span>
-                        <span className="font-semibold text-foreground">CHF {customer.total_premium.toLocaleString('de-CH')}</span>
+            {/* Kachel 3: Berater & Finanzen */}
+            <div className="surface p-5 h-[280px]">
+              <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Berater & Finanzen</h3>
+              <div className="space-y-4">
+                {/* Berater */}
+                {(() => {
+                  const advisorId = customer.primary_advisor_id || customer.advisor_id
+                  let advisor = advisorId ? allAdvisors.find(a => a.id === advisorId || a.email === advisorId) : null
+                  if (!advisor && relatedContracts.length > 0) {
+                    for (const c of relatedContracts) {
+                      if (c.advisor_id || c.assigned_broker) {
+                        advisor = allAdvisors.find(a => a.id === c.advisor_id || a.email === c.advisor_id || a.id === c.assigned_broker || a.email === c.assigned_broker)
+                        if (advisor) break
+                      }
+                    }
+                  }
+                  if (advisor) {
+                    return (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Berater</p>
+                        <div className="flex items-start gap-2">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+                            {advisor.firstname?.[0]}{advisor.lastname?.[0]}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-foreground truncate">{advisor.firstname} {advisor.lastname}</p>
+                            <p className="text-xs text-muted-foreground truncate">{advisor.email}</p>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    {customer.bank_account && (
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Konto</span>
-                        <span className="text-slate-700 font-mono text-xs">{customer.bank_account}</span>
-                      </div>
-                    )}
-                    {customer.ahv_number && (
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">AHV-Nr.</span>
-                        <span className="text-slate-700 font-mono text-xs">{customer.ahv_number}</span>
-                      </div>
+                    )
+                  }
+                  return null
+                })()}
+
+                {/* Finanzen */}
+                {customer.total_premium > 0 && (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Gesamtprämie</p>
+                    <span className="font-semibold text-foreground text-sm">CHF {customer.total_premium.toLocaleString('de-CH')}</span>
+                  </div>
+                )}
+                {customer.bank_account && (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Konto</p>
+                    <span className="text-slate-700 font-mono text-xs">{customer.bank_account}</span>
+                  </div>
+                )}
+                {customer.ahv_number && (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">AHV-Nr.</p>
+                    <span className="text-slate-700 font-mono text-xs">{customer.ahv_number}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Kachel 4: Haushalt & Navigation */}
+            <div className="surface p-5 h-[280px]">
+              <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Haushalt & Navigation</h3>
+              <div className="space-y-4">
+                {/* Haushaltsmitglieder */}
+                {familyMembers.length > 1 && (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Haushalt ({familyMembers.length})</p>
+                    <div className="flex flex-wrap gap-2">
+                      {familyMembers.filter(m => m.id !== id).map(member => (
+                        <button
+                          key={member.id}
+                          onClick={() => navigate(`/kunden/${member.id}`)}
+                          className="inline-flex items-center gap-2 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"
+                        >
+                          <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                            {member.first_name?.[0]}{member.last_name?.[0]}
+                          </div>
+                          <span className="text-xs font-medium">{member.first_name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Navigation */}
+                <div>
+                  <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Quick Links</p>
+                  <div className="space-y-1.5">
+                    <button
+                      onClick={() => setActiveSection('vertraege')}
+                      className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
+                    >
+                      <span className="text-muted-foreground">Verträge</span>
+                      <span className="font-semibold">{relatedContracts.length}</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveSection('antraege')}
+                      className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
+                    >
+                      <span className="text-muted-foreground">Anträge</span>
+                      <span className="font-semibold">{relatedApplications.length}</span>
+                    </button>
+                    <button
+                      onClick={() => setActiveSection('aufgaben')}
+                      className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
+                    >
+                      <span className="text-muted-foreground">Aufgaben</span>
+                      <span className={`font-semibold ${custTasks.filter(t => t.status !== 'completed').length > 0 ? 'text-amber-600' : ''}`}>
+                        {custTasks.filter(t => t.status !== 'completed').length}
+                      </span>
+                    </button>
+                    {verkaufschancen.length > 0 && (
+                      <button
+                        onClick={() => setActiveSection('beratungspotential')}
+                        className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
+                      >
+                        <span className="text-muted-foreground">Potential</span>
+                        <span className="font-semibold text-primary">{verkaufschancen.length}</span>
+                      </button>
                     )}
                   </div>
-                </div>
-              )}
-
-              {/* Navigation */}
-              <div className="surface p-5 h-[70px]">
-                <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Navigation</h3>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setActiveSection('vertraege')}
-                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-2 rounded transition-colors"
-                  >
-                    <span className="text-muted-foreground">Verträge</span>
-                    <span className="font-semibold">{relatedContracts.length}</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveSection('antraege')}
-                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-2 rounded transition-colors"
-                  >
-                    <span className="text-muted-foreground">Anträge</span>
-                    <span className="font-semibold">{relatedApplications.length}</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveSection('aufgaben')}
-                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-2 rounded transition-colors"
-                  >
-                    <span className="text-muted-foreground">Offene Aufgaben</span>
-                    <span className={`font-semibold ${custTasks.filter(t => t.status !== 'completed').length > 0 ? 'text-amber-600' : ''}`}>
-                      {custTasks.filter(t => t.status !== 'completed').length}
-                    </span>
-                  </button>
-                  {verkaufschancen.length > 0 && (
-                    <button
-                      onClick={() => setActiveSection('beratungspotential')}
-                      className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-2 rounded transition-colors"
-                    >
-                      <span className="text-muted-foreground">Beratungspotential</span>
-                      <span className="font-semibold text-primary">{verkaufschancen.length}</span>
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
