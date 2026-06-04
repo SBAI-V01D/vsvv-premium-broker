@@ -330,7 +330,7 @@ export default function CustomerDetail() {
         {/* ── Übersicht ─────────────────────────────────────────────── */}
         {activeSection === 'uebersicht' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Linke Spalte: Basis-Informationen */}
+            {/* Linke Spalte: Kontakt, Adresse, Persönliche Daten, Haushalt */}
             <div className="lg:col-span-2 space-y-4">
               {/* Kontakt & Haushalt */}
               <div className="surface p-5">
@@ -438,7 +438,7 @@ export default function CustomerDetail() {
               )}
             </div>
 
-            {/* Rechte Spalte: Berater & Finanzen */}
+            {/* Rechte Spalte: Berater, Finanzen, Quick Stats (klickbar) */}
             <div className="space-y-4">
               {/* Zuständiger Berater */}
               {(() => {
@@ -515,29 +515,41 @@ export default function CustomerDetail() {
                 </div>
               )}
 
-              {/* Quick Stats */}
+              {/* Quick Stats - Klickbar */}
               <div className="surface p-4">
                 <h3 className="text-xs font-bold text-foreground mb-3">Übersicht</h3>
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center text-sm">
+                  <button
+                    onClick={() => setActiveSection('vertraege')}
+                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1.5 rounded transition-colors"
+                  >
                     <span className="text-muted-foreground">Verträge</span>
                     <span className="font-semibold">{relatedContracts.length}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
+                  </button>
+                  <button
+                    onClick={() => setActiveSection('antraege')}
+                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1.5 rounded transition-colors"
+                  >
                     <span className="text-muted-foreground">Anträge</span>
                     <span className="font-semibold">{relatedApplications.length}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Offene Tasks</span>
+                  </button>
+                  <button
+                    onClick={() => navigate('/aufgaben')}
+                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1.5 rounded transition-colors"
+                  >
+                    <span className="text-muted-foreground">Offene Aufgaben</span>
                     <span className={`font-semibold ${custTasks.filter(t => t.status !== 'completed').length > 0 ? 'text-amber-600' : ''}`}>
                       {custTasks.filter(t => t.status !== 'completed').length}
                     </span>
-                  </div>
+                  </button>
                   {verkaufschancen.length > 0 && (
-                    <div className="flex justify-between items-center text-sm">
+                    <button
+                      onClick={() => setActiveSection('beratungspotential')}
+                      className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1.5 rounded transition-colors"
+                    >
                       <span className="text-muted-foreground">Beratungspotential</span>
                       <span className="font-semibold text-primary">{verkaufschancen.length}</span>
-                    </div>
+                    </button>
                   )}
                 </div>
               </div>
