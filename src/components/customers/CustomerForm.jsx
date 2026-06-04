@@ -227,14 +227,15 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
 
    // Auto-sync from primary customer for family members
    const [syncedFromPrimary, setSyncedFromPrimary] = useState([])
-   useEffect(() => {
-     if (!form.is_family_member || !form.primary_customer_id) return
-     const primary = primaryCustomers.find(c => c.id === form.primary_customer_id)
+
+   const syncFromPrimary = useCallback((primaryId) => {
+     if (!primaryId) return
+     const primary = primaryCustomers.find(c => c.id === primaryId)
      if (!primary) return
      const synced = []
      setForm(prev => {
        const next = { ...prev }
-       // Email immer vom Hauptkunden übernehmen (nicht nur wenn leer)
+       // Email immer vom Hauptkunden übernehmen
        if (primary.email) { next.email = primary.email; synced.push('email') }
        if (!prev.phone && primary.phone) { next.phone = primary.phone; synced.push('phone') }
        if (!prev.mobile && primary.mobile) { next.mobile = primary.mobile; synced.push('mobile') }
@@ -247,7 +248,14 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
        return next
      })
      setSyncedFromPrimary(synced)
-   }, [form.primary_customer_id, form.is_family_member])
+   }, [primaryCustomers])
+
+   // Trigger sync wenn primary_customer_id sich ändert ODER beim ersten Laden (edit-Modus)
+   useEffect(() => {
+     if (form.is_family_member && form.primary_customer_id && primaryCustomers.length > 0) {
+       syncFromPrimary(form.primary_customer_id)
+     }
+   }, [form.primary_customer_id, form.is_family_member, primaryCustomers.length])
 
    const { data: advisors = [] } = useQuery({
      queryKey: ['advisors'],
@@ -368,7 +376,7 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>Hauptkunde *</Label>
-            <Select value={form.primary_customer_id} onValueChange={v => { set('primary_customer_id', v); setSyncedFromPrimary([]) }}>
+            <Select value={form.primary_customer_id} onValueChange={v => { set('primary_customer_id', v); setSyncedFromPrimary([]); syncFromPrimary(v); }}>
               <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {primaryCustomers.map(c => (

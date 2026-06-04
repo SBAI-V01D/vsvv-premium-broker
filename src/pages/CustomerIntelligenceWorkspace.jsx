@@ -550,17 +550,17 @@ export default function CustomerIntelligenceWorkspace() {
           {/* Intelligence Panel — nur im Privatkunden-Tab */}
           {workspaceMode === 'private' && renderIntelligencePanel()}
 
-          {/* Suchleiste + Sortierung */}
-          <div className="sticky top-0 z-10 px-6 py-3 bg-white/95 backdrop-blur-sm border-b border-[hsl(var(--border-subtle))] flex items-center gap-4 flex-wrap">
+          {/* Suchleiste + Sortierung + Live-Suchliste */}
+          <div className="px-6 py-3 bg-white border-b border-[hsl(var(--border-subtle))] flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-3 shrink-0">
               <span className="text-[13px] font-semibold text-[hsl(var(--text-heading))]">
                 {workspaceMode === 'private' ? 'Privatkunden' : 'Unternehmen'}
               </span>
               <span className="text-[11px] text-[hsl(var(--text-muted))]">
-                {displayed.length} Kunden{search ? ` · "${search}"` : ''}
+                {search ? `${displayed.length} Treffer` : `${displayed.length} Kunden`}
               </span>
             </div>
-            <div className="flex-1 min-w-[240px] max-w-md relative">
+            <div className="flex-1 min-w-[240px] max-w-md">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--text-subtle))]" />
                 <input
@@ -575,40 +575,6 @@ export default function CustomerIntelligenceWorkspace() {
                   </button>
                 )}
               </div>
-              {/* Live-Suchergebnis-Dropdown */}
-              {search.trim().length >= 2 && displayed.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[hsl(var(--border-default))] rounded-xl shadow-card-lg z-50 max-h-72 overflow-y-auto">
-                  {displayed.slice(0, 12).map(c => {
-                    const isCompany = c.customer_type === 'business';
-                    const name = isCompany ? (c.company_name || `${c.last_name} ${c.first_name}`) : `${c.last_name} ${c.first_name}`;
-                    return (
-                      <button
-                        key={c.id}
-                        onMouseDown={() => { navigate(`/kunden/${c.id}?from=/kunden?view=${workspaceMode}`); setSearch(''); }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[hsl(var(--surface-1))] transition-colors text-left border-b border-[hsl(var(--border-subtle))] last:border-0"
-                      >
-                        <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0', isCompany ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-600')}>
-                          {isCompany ? (c.company_name || '?').slice(0, 2).toUpperCase() : `${(c.first_name || '').charAt(0)}${(c.last_name || '').charAt(0)}`.toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-medium text-[hsl(var(--text-heading))] truncate">{name}</p>
-                          <p className="text-[11px] text-[hsl(var(--text-muted))] truncate">
-                            {c.customer_number && <span className="font-mono mr-2">{c.customer_number}</span>}
-                            {c.email}
-                            {c.city && ` · ${c.city}`}
-                          </p>
-                        </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-[hsl(var(--text-subtle))] shrink-0" />
-                      </button>
-                    );
-                  })}
-                  {displayed.length > 12 && (
-                    <div className="px-4 py-2 text-[11px] text-[hsl(var(--text-muted))] text-center border-t border-[hsl(var(--border-subtle))]">
-                      + {displayed.length - 12} weitere · Suche verfeinern
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
             <div className="flex items-center gap-2 ml-auto shrink-0">
               <select
@@ -623,6 +589,46 @@ export default function CustomerIntelligenceWorkspace() {
               </select>
             </div>
           </div>
+
+          {/* Live-Suchliste — erscheint direkt unterhalb der Suchleiste wenn aktiv */}
+          {search.trim().length >= 2 && (
+            <div className="bg-white border-b-2 border-[hsl(var(--primary))]">
+              {displayed.length === 0 ? (
+                <div className="px-6 py-4 text-[13px] text-[hsl(var(--text-muted))]">Keine Treffer für „{search}"</div>
+              ) : (
+                <div className="divide-y divide-[hsl(var(--border-subtle))]">
+                  {displayed.slice(0, 15).map(c => {
+                    const isCompany = c.customer_type === 'business';
+                    const name = isCompany ? (c.company_name || `${c.last_name} ${c.first_name}`) : `${c.last_name} ${c.first_name}`;
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => { navigate(`/kunden/${c.id}?from=/kunden?view=${workspaceMode}`); setSearch(''); }}
+                        className="w-full flex items-center gap-3 px-6 py-3 hover:bg-[hsl(var(--surface-1))] transition-colors text-left"
+                      >
+                        <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0', isCompany ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-600')}>
+                          {isCompany ? (c.company_name || '?').slice(0, 2).toUpperCase() : `${(c.first_name || '').charAt(0)}${(c.last_name || '').charAt(0)}`.toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-semibold text-[hsl(var(--text-heading))] truncate">{name}</p>
+                          <p className="text-[11px] text-[hsl(var(--text-muted))] truncate">
+                            {c.customer_number && <span className="font-mono mr-2">{c.customer_number}</span>}
+                            {c.email}{c.city && ` · ${c.city}`}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-[hsl(var(--text-subtle))] shrink-0" />
+                      </button>
+                    );
+                  })}
+                  {displayed.length > 15 && (
+                    <div className="px-6 py-2.5 text-[11px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))]">
+                      + {displayed.length - 15} weitere — Suchbegriff verfeinern
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Kundenliste */}
           <div className="p-0">
