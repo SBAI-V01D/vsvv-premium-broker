@@ -108,6 +108,24 @@ export default function CustomerDetail() {
 
   const customer = customerDirect || allCustomers.find(x => x.id === id)
 
+  // Familienmitglieder immer laden (unabhängig von needAllCustomers)
+  const { data: householdFamilyMembers = [] } = useQuery({
+    queryKey: ['family-members', id],
+    queryFn: async () => {
+      // Zuerst den Kunden holen um primary_customer_id zu kennen
+      const cust = customerDirect
+      if (!cust) return []
+      const primaryId = cust.is_family_member ? cust.primary_customer_id : cust.id
+      if (!primaryId) return []
+      const members = await base44.entities.Customer.filter({ primary_customer_id: primaryId })
+      const primary = await base44.entities.Customer.filter({ id: primaryId }, null, 1).then(r => r?.[0])
+      const all = primary ? [primary, ...members.filter(m => m.id !== primaryId)] : members
+      return all
+    },
+    enabled: !!customerDirect,
+    staleTime: 5 * 60 * 1000,
+  })
+
   const { data: relatedContracts = [] } = useQuery({
     queryKey: ['contracts', id],
     queryFn: () => base44.entities.Contract.filter({ customer_id: id, archived: false }),
@@ -155,10 +173,12 @@ export default function CustomerDetail() {
   })
 
   const primaryCustomerId = customer?.is_family_member ? customer?.primary_customer_id : customer?.id
-  const primaryCustomer = allCustomers.find(c => c.id === primaryCustomerId) || customer
-  const householdMembers = allCustomers.filter(c =>
-    c.id === primaryCustomerId || c.primary_customer_id === primaryCustomerId
-  )
+  // Familienmitglieder: dedupliziert aus householdFamilyMembers (immer geladen) + allCustomers (lazy)
+  const mergedHouseholdMembers = householdFamilyMembers.length > 0
+    ? householdFamilyMembers
+    : allCustomers.filter(c => c.id === primaryCustomerId || c.primary_customer_id === primaryCustomerId)
+  const primaryCustomer = mergedHouseholdMembers.find(c => c.id === primaryCustomerId) || allCustomers.find(c => c.id === primaryCustomerId) || customer
+  const householdMembers = mergedHouseholdMembers
   const familyMembers = householdMembers
   const householdCustomerIds = householdMembers.map(m => m.id).filter(Boolean)
 
@@ -172,7 +192,7 @@ export default function CustomerDetail() {
       )
       return results.flat()
     },
-    enabled: !!primaryCustomerId && householdCustomerIds.length > 1,
+    enabled: !!primaryCustomerId && householdCustomerIds.length > 0,
     staleTime: 5 * 60 * 1000,
   })
 
@@ -639,12 +659,12 @@ export default function CustomerDetail() {
                   <FamilyMemberCard
                     key={member.id}
                     member={member}
-                    memberContracts={relatedContracts.filter(c => c.customer_id === member.id)}
+                    memberContracts={allHouseholdContracts.filter(c => c.customer_id === member.id)}
                     onEdit={() => navigate(`/kunden/${member.id}`)}
                   />
                 ))}
               </div>
-              <HouseholdContractsCockpit contracts={relatedContracts} familyMembers={familyMembers.filter(m => m.id !== id)} />
+              <HouseholdContractsCockpit contracts={allHouseholdContracts} familyMembers={familyMembers.filter(m => m.id !== id)} />
             </div>
           )
         )}
