@@ -72,6 +72,8 @@ export default function Tasks() {
   const dateReviewItems = reviewContracts.filter(c =>
     c.end_date?.startsWith('9999') || c.end_date?.startsWith('0001') || !c.end_date
   );
+  const [showAllDateReview, setShowAllDateReview] = useState(false);
+  const DATE_REVIEW_LIMIT = 5;
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Task.create(data),
@@ -201,36 +203,58 @@ export default function Tasks() {
 
       {/* Manuelle Datumsprüfung — separater Bereich, getrennt von klassischen Aufgaben */}
       {dateReviewItems.length > 0 && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/30 overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-amber-200/70 bg-amber-50/60">
+        <div className="surface overflow-hidden border-amber-200">
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-amber-200/70 bg-amber-50/60 table-header">
             <ClipboardCheck className="w-4 h-4 text-amber-700" />
-            <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wide">Manuelle Datumsprüfung</span>
-            <span className="text-[10px] text-amber-700 font-semibold bg-amber-200/60 px-1.5 py-0.5 rounded-full ml-1">{dateReviewItems.length}</span>
-            <span className="ml-auto text-[10px] text-amber-600">Verträge mit Platzhalter-Ablaufdatum — bitte prüfen und korrigieren</span>
+            <span className="font-semibold text-amber-800">Manuelle Datumsprüfung</span>
+            <span className="text-xs text-amber-700 font-semibold bg-amber-200/60 px-1.5 py-0.5 rounded-full ml-1">{dateReviewItems.length}</span>
+            <span className="ml-auto text-xs text-amber-600 hidden sm:block">Verträge mit Platzhalter-Ablaufdatum — bitte prüfen und korrigieren</span>
           </div>
-          <div className="divide-y divide-amber-100">
-            {dateReviewItems.map(c => (
-              <div key={c.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50/60 transition-colors">
-                <div className="flex-1 min-w-0">
-                  <span className="text-[12px] font-semibold">{c.customer_name || '–'}</span>
-                  <span className="text-muted-foreground mx-1.5 text-[11px]">·</span>
-                  <span className="text-[11px] text-muted-foreground">{c.insurer || '–'}</span>
-                  {c.policy_number && <span className="text-[10px] font-mono text-muted-foreground ml-2">{c.policy_number}</span>}
-                </div>
-                <span className="text-[10px] text-amber-700 font-semibold">
-                  {c.end_date ? c.end_date : 'Kein Datum'}
-                </span>
-                {c.customer_id && (
-                  <button
-                    onClick={() => navigate(`/kunden/${c.customer_id}/360`)}
-                    className="text-[10px] px-2 py-1 border border-amber-300 rounded text-amber-700 hover:bg-amber-100 transition-colors whitespace-nowrap"
-                  >
-                    Öffnen →
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="table-header">
+                <th className="px-4 py-2.5 text-left font-semibold">Kunde</th>
+                <th className="px-4 py-2.5 text-left font-semibold hidden md:table-cell">Versicherer</th>
+                <th className="px-4 py-2.5 text-left font-semibold hidden lg:table-cell">Policen-Nr.</th>
+                <th className="px-4 py-2.5 text-left font-semibold">Ablaufdatum</th>
+                <th className="px-4 py-2.5 text-right font-semibold w-24"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/50">
+              {(showAllDateReview ? dateReviewItems : dateReviewItems.slice(0, DATE_REVIEW_LIMIT)).map(c => (
+                <tr key={c.id} className="table-row-hover group">
+                  <td className="px-4 py-3 font-medium text-foreground">{c.customer_name || '–'}</td>
+                  <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">{c.insurer || '–'}</td>
+                  <td className="px-4 py-3 hidden lg:table-cell text-xs font-mono text-muted-foreground">{c.policy_number || '—'}</td>
+                  <td className="px-4 py-3">
+                    <span className="text-xs text-amber-700 font-semibold">{c.end_date || 'Kein Datum'}</span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {c.customer_id && (
+                      <button
+                        onClick={() => navigate(`/kunden/${c.customer_id}/360`)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-xs px-2 py-1 border border-amber-300 rounded text-amber-700 hover:bg-amber-100 transition-colors whitespace-nowrap"
+                      >
+                        Öffnen →
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {dateReviewItems.length > DATE_REVIEW_LIMIT && (
+            <div className="px-4 py-2.5 border-t border-border/50 bg-muted/20">
+              <button
+                onClick={() => setShowAllDateReview(v => !v)}
+                className="text-xs font-medium text-primary hover:underline"
+              >
+                {showAllDateReview
+                  ? 'Weniger anzeigen ↑'
+                  : `Alle ${dateReviewItems.length} anzeigen (+${dateReviewItems.length - DATE_REVIEW_LIMIT} weitere) ↓`}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
