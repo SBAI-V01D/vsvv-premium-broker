@@ -437,7 +437,7 @@ export default function CustomerDetail() {
                   {/* Haushaltsmitglieder - mit konsistentem Titel und Trennung */}
                   {familyMembers.length > 1 && (
                     <div className="pt-4 border-t border-border">
-                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-3">Haushaltsmitglieder</p>
+                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Haushaltsmitglieder</p>
                       <div className="flex flex-wrap gap-2">
                         {familyMembers.filter(m => m.id !== id).map(member => (
                           <button
