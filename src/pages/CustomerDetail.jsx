@@ -655,7 +655,7 @@ export default function CustomerDetail() {
             <div className="space-y-6">
               <SectionHeader title={`Haushalt · ${familyMembers.length} Personen`} />
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {familyMembers.filter(m => m.id !== id).map(member => (
+                {familyMembers.map(member => (
                   <FamilyMemberCard
                     key={member.id}
                     member={member}
@@ -664,7 +664,7 @@ export default function CustomerDetail() {
                   />
                 ))}
               </div>
-              <HouseholdContractsCockpit contracts={allHouseholdContracts} familyMembers={familyMembers.filter(m => m.id !== id)} />
+              <HouseholdContractsCockpit contracts={allHouseholdContracts} familyMembers={familyMembers} />
             </div>
           )
         )}
