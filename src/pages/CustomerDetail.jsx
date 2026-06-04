@@ -526,27 +526,27 @@ export default function CustomerDetail() {
                 </div>
               )}
 
-              {/* Quick Stats - Klickbar */}
-              <div className="surface p-4">
-                <h3 className="text-sm font-bold text-foreground mb-3">Navigation</h3>
-                <div className="space-y-0.5">
+              {/* Navigation */}
+              <div className="surface p-5">
+                <h3 className="text-xs font-bold text-foreground mb-3 uppercase tracking-widest">Navigation</h3>
+                <div className="space-y-1">
                   <button
                     onClick={() => setActiveSection('vertraege')}
-                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1 rounded transition-colors"
+                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1.5 rounded transition-colors"
                   >
                     <span className="text-muted-foreground">Verträge</span>
                     <span className="font-semibold">{relatedContracts.length}</span>
                   </button>
                   <button
                     onClick={() => setActiveSection('antraege')}
-                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1 rounded transition-colors"
+                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1.5 rounded transition-colors"
                   >
                     <span className="text-muted-foreground">Anträge</span>
                     <span className="font-semibold">{relatedApplications.length}</span>
                   </button>
                   <button
                     onClick={() => setActiveSection('aufgaben')}
-                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1 rounded transition-colors"
+                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1.5 rounded transition-colors"
                   >
                     <span className="text-muted-foreground">Offene Aufgaben</span>
                     <span className={`font-semibold ${custTasks.filter(t => t.status !== 'completed').length > 0 ? 'text-amber-600' : ''}`}>
@@ -556,7 +556,7 @@ export default function CustomerDetail() {
                   {verkaufschancen.length > 0 && (
                     <button
                       onClick={() => setActiveSection('beratungspotential')}
-                      className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1 rounded transition-colors"
+                      className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1.5 rounded transition-colors"
                     >
                       <span className="text-muted-foreground">Beratungspotential</span>
                       <span className="font-semibold text-primary">{verkaufschancen.length}</span>
