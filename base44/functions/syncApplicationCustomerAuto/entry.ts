@@ -86,6 +86,18 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Berater vom Antrag ist verbindlich — immer setzen wenn vorhanden
+    const advisorId = app.advisor_id || app.assigned_broker;
+    if (advisorId) {
+      enrichmentData.primary_advisor_id = advisorId;
+      enrichmentData.advisor_id = advisorId;
+      const existing = customer.assigned_advisors || [];
+      if (!existing.includes(advisorId)) {
+        enrichmentData.assigned_advisors = [...existing, advisorId];
+      }
+      enrichmentData.access_level = 'assigned_advisors_only';
+    }
+
     if (Object.keys(enrichmentData).length === 0) {
       return Response.json({ status: 'skipped', reason: 'No enrichment needed' });
     }

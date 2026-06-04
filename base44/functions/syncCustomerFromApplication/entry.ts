@@ -30,6 +30,7 @@ Deno.serve(async (req) => {
       ahv_number,
       nationality,
       organization_id,
+      advisor_id,
     } = payload;
 
     // Validate required fields
@@ -78,6 +79,16 @@ Deno.serve(async (req) => {
         nationality,
       }, matchedCustomer);
 
+      // Berater vom Antrag ist verbindlich — immer setzen wenn vorhanden
+      if (advisor_id) {
+        updateData.primary_advisor_id = advisor_id;
+        updateData.advisor_id = advisor_id;
+        if (!Array.isArray(matchedCustomer.assigned_advisors) || !matchedCustomer.assigned_advisors.includes(advisor_id)) {
+          updateData.assigned_advisors = [...(matchedCustomer.assigned_advisors || []), advisor_id];
+        }
+        updateData.access_level = 'assigned_advisors_only';
+      }
+
       await base44.entities.Customer.update(matchedCustomer.id, updateData);
 
       result = {
@@ -104,6 +115,13 @@ Deno.serve(async (req) => {
         status: 'prospect',
         customer_type: 'private',
         is_family_member: false,
+        // Berater vom Antrag ist verbindlich
+        ...(advisor_id ? {
+          primary_advisor_id: advisor_id,
+          advisor_id: advisor_id,
+          assigned_advisors: [advisor_id],
+          access_level: 'assigned_advisors_only',
+        } : {}),
       });
 
       result = {
