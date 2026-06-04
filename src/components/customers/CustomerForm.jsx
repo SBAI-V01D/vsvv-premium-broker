@@ -234,7 +234,8 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
      const synced = []
      setForm(prev => {
        const next = { ...prev }
-       if (!prev.email && primary.email) { next.email = primary.email; synced.push('email') }
+       // Email immer vom Hauptkunden übernehmen (nicht nur wenn leer)
+       if (primary.email) { next.email = primary.email; synced.push('email') }
        if (!prev.phone && primary.phone) { next.phone = primary.phone; synced.push('phone') }
        if (!prev.mobile && primary.mobile) { next.mobile = primary.mobile; synced.push('mobile') }
        if (!prev.street && primary.street) { next.street = primary.street; synced.push('address') }
