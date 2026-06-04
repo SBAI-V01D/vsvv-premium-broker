@@ -378,8 +378,26 @@ export default function CustomerDetail() {
 
             {/* Zuständiger Berater */}
             {(() => {
+              // Priorität 1: Berater aus Kundenstamm
               const advisorId = customer.primary_advisor_id || customer.advisor_id
-              const advisor = advisorId ? allAdvisors.find(a => a.id === advisorId) : null
+              let advisor = advisorId ? allAdvisors.find(a => a.id === advisorId) : null
+              
+              // Priorität 2: Berater aus Verträgen (wenn Kunde keinen eigenen hat)
+              if (!advisor && relatedContracts.length > 0) {
+                const contractAdvisorId = relatedContracts[0].advisor_id || relatedContracts[0].assigned_broker
+                if (contractAdvisorId) {
+                  advisor = allAdvisors.find(a => a.id === contractAdvisorId || a.email === contractAdvisorId)
+                }
+              }
+              
+              // Priorität 3: Berater aus Anträgen
+              if (!advisor && relatedApplications.length > 0) {
+                const appAdvisorId = relatedApplications[0].advisor_id || relatedApplications[0].assigned_broker
+                if (appAdvisorId) {
+                  advisor = allAdvisors.find(a => a.id === appAdvisorId || a.email === appAdvisorId)
+                }
+              }
+              
               if (!advisor) return null
               return (
                 <div className="space-y-3">
