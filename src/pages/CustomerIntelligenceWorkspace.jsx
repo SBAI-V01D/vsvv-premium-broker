@@ -8,10 +8,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
   Plus, User, Building2, Upload, Download, Users, Search,
-  AlertTriangle, Loader2, XCircle, TrendingUp, Target, Calendar, ChevronRight,
-  Heart
+  AlertTriangle, Loader2, XCircle, TrendingUp, Target, Calendar, ChevronRight
 } from 'lucide-react';
-import BirthdaySection from '@/components/customers/BirthdaySection';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
@@ -29,7 +27,6 @@ import OperationsIntelligence from '@/components/intelligence/OperationsIntellig
 import PortfolioDashboard from '@/components/intelligence/PortfolioDashboard';
 import RenewalsSection from '@/components/customers/RenewalsSection';
 import CancellationsSection from '@/components/customers/CancellationsSection';
-import HouseholdIntelligenceSection from '@/components/customers/HouseholdIntelligenceSection';
 import NewCustomersSection from '@/components/customers/NewCustomersSection';
 
 // ── Segment builder ────────────────────────────────────────────────────────
@@ -97,9 +94,8 @@ function sortCustomers(list, sortBy) {
   });
 }
 
-// Interne Navigation: AUSSCHLIESSLICH Fokusansichten
+// Interne Navigation
 const WORKSPACE_MODES = [
-  { id: 'kundenaktionen', label: 'Kundenübersicht', icon: Users },
   { id: 'private', label: 'Privatkunden', icon: User },
   { id: 'business', label: 'Unternehmen', icon: Building2 },
 ];
@@ -175,13 +171,14 @@ export default function CustomerIntelligenceWorkspace() {
   const [showForm, setShowForm]         = useState(false);
   const [editing, setEditing]           = useState(null);
   const [newCustomerType, setNewCustomerType] = useState('private');
-  const [workspaceMode, setWorkspaceMode] = useState('kundenaktionen');
+  const [workspaceMode, setWorkspaceMode] = useState('private');
   const [sortBy, setSortBy]               = useState('alpha');
   const [search, setSearch]             = useState('');
-  const [intelligenceSearch, setIntelligenceSearch] = useState('');
+
   const [showImport, setShowImport]     = useState(false);
   const [showMerge, setShowMerge]       = useState(false);
   const [showAllMandate, setShowAllMandate] = useState(false);
+  const [showIntelligence, setShowIntelligence] = useState(true);
 
   const DISPLAY_LIMIT = 3;
   const queryClient = useQueryClient();
@@ -299,6 +296,8 @@ export default function CustomerIntelligenceWorkspace() {
     const urlView = params.get('view');
     if (urlView && ['private', 'business'].includes(urlView)) {
       setWorkspaceMode(urlView);
+    } else {
+      setWorkspaceMode('private');
     }
   }, []);
 
@@ -357,22 +356,7 @@ export default function CustomerIntelligenceWorkspace() {
     };
   }, [modeFiltered, search, customers, sortBy, workspaceMode]);
 
-  // Kundensuche für Intelligence-View (über alle Kunden)
-  const intelligenceCustomerResults = useMemo(() => {
-    if (!intelligenceSearch.trim()) return [];
-    return searchCustomers(primaryCustomers, intelligenceSearch).slice(0, 20);
-  }, [primaryCustomers, intelligenceSearch]);
 
-  const filteredMandateIssues = useMemo(() => {
-    if (!intelligenceSearch.trim()) return mandateIssues;
-    const query = intelligenceSearch.toLowerCase();
-    return mandateIssues.filter(c => {
-      const name = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
-      const email = (c.email || '').toLowerCase();
-      const number = (c.customer_number || '').toLowerCase();
-      return name.includes(query) || email.includes(query) || number.includes(query);
-    });
-  }, [mandateIssues, intelligenceSearch]);
 
   const handleSave = async (data) => {
     if (editing) {
@@ -412,195 +396,69 @@ export default function CustomerIntelligenceWorkspace() {
 
 
 
-  const renderIntelligenceView = () => {
-    return (
-      <div className="space-y-6 p-6 max-w-[1600px] mx-auto">
-        {/* Search bar for kundenaktionen mode */}
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex-1 max-w-xl">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--text-subtle))]" />
-              <input
-                value={intelligenceSearch}
-                onChange={e => setIntelligenceSearch(e.target.value)}
-                placeholder="Kunden suchen (Name, E-Mail, Kundennummer)…"
-                className="w-full pl-9 pr-8 py-1.5 text-[13px] border border-[hsl(var(--border-subtle))] rounded-lg bg-[hsl(var(--surface-0))] text-[hsl(var(--text-heading))] placeholder:text-[hsl(var(--text-subtle))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))/0.3] focus:border-[hsl(var(--primary))/0.4] transition-all"
-              />
-              {intelligenceSearch && (
-                <button onClick={() => setIntelligenceSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))]">
-                  <XCircle className="w-3.5 h-3.5" />
-                </button>
+  // Kompakter Intelligence-Panel: immer sichtbar im Privatkunden-Tab (zusammenklappbar)
+  const renderIntelligencePanel = () => (
+    <div className="border-b border-[hsl(var(--border-subtle))] bg-[hsl(var(--surface-1))]">
+      <button
+        onClick={() => setShowIntelligence(v => !v)}
+        className="w-full flex items-center gap-3 px-6 py-3 hover:bg-[hsl(var(--surface-2))] transition-colors text-left"
+      >
+        <TrendingUp className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
+        <span className="text-[12px] font-semibold text-[hsl(var(--text-heading))]">Betriebsübersicht</span>
+        {mandateIssues.length > 0 && (
+          <span className="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+            {mandateIssues.length} Mandat-Issues
+          </span>
+        )}
+        <ChevronRight className={cn('w-3.5 h-3.5 text-muted-foreground ml-auto transition-transform', showIntelligence && 'rotate-90')} />
+      </button>
+
+      {showIntelligence && (
+        <div className="px-6 pb-5 space-y-5">
+          <NewCustomersSection searchQuery="" />
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="md:col-span-2">
+              <RenewalsSection contracts={contracts.filter(c => !c.exclude_from_renewal_statistics)} customers={customers} verkaufschancen={verkaufschancen} />
+            </div>
+            <div>
+              {mandateIssues.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                    <span className="text-[11px] font-semibold text-[hsl(var(--text-heading))]">Mandat / Berater</span>
+                    <span className="text-[9px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">{mandateIssues.length}</span>
+                  </div>
+                  <div className="bg-white/80 rounded-lg border border-[hsl(var(--border-subtle))] p-2.5 space-y-1">
+                    {(showAllMandate ? mandateIssues : mandateIssues.slice(0, DISPLAY_LIMIT)).map(c => (
+                      <button key={c.id} onClick={() => navigate(`/kunden/${c.id}`)}
+                        className="w-full flex items-center justify-between p-1.5 rounded hover:bg-[hsl(var(--surface-2))] transition-colors text-left">
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-medium truncate">{c.first_name} {c.last_name}</p>
+                          <p className="text-[9px] text-muted-foreground">
+                            {!c.advisor_id && !c.primary_advisor_id && '⚠ Kein Berater'}
+                            {['expired','pending','invalid'].includes(c.mandate_status) && ` · Mandat: ${c.mandate_status}`}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
+                      </button>
+                    ))}
+                    {mandateIssues.length > DISPLAY_LIMIT && (
+                      <button onClick={() => setShowAllMandate(v => !v)} className="text-[10px] font-medium text-primary mt-1">
+                        {showAllMandate ? 'Weniger' : `Alle ${mandateIssues.length} anzeigen`}
+                      </button>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>
+          <CancellationsSection contracts={contracts.filter(c => !c.exclude_from_renewal_statistics)} customers={customers} />
         </div>
+      )}
+    </div>
+  );
 
-        {/* Kundensuche-Ergebnisse — immer sichtbar wenn gesucht wird */}
-        {intelligenceSearch.trim() && (
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-[hsl(var(--border-subtle))] p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Search className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
-              <h3 className="text-sm font-bold text-[hsl(var(--primary))]">Suchergebnisse</h3>
-              <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
-                {intelligenceCustomerResults.length} Kunden
-              </span>
-            </div>
-            {intelligenceCustomerResults.length === 0 ? (
-              <p className="text-[11px] text-[hsl(var(--text-muted))]">Keine Kunden gefunden für "{intelligenceSearch}"</p>
-            ) : (
-              <div className="space-y-1">
-                {intelligenceCustomerResults.map(customer => (
-                  <button
-                    key={customer.id}
-                    onClick={() => navigate(`/kunden/${customer.id}`)}
-                    className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-[hsl(var(--surface-2))]/60 transition-colors text-left group"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-7 h-7 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center shrink-0">
-                        <User className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[12px] font-semibold text-[hsl(var(--text-heading))] truncate">
-                          {customer.first_name} {customer.last_name}
-                          {customer.company_name && <span className="ml-1 text-[hsl(var(--text-muted))]">{customer.company_name}</span>}
-                        </p>
-                        <p className="text-[10px] text-[hsl(var(--text-muted))] truncate">
-                          {[customer.customer_number, customer.email, customer.city].filter(Boolean).join(' · ')}
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-[hsl(var(--text-muted))] group-hover:text-[hsl(var(--primary))] shrink-0" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Kundensuche-Ergebnisse — immer sichtbar wenn gesucht wird */}
-        {intelligenceSearch.trim() && (
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-[hsl(var(--border-subtle))] p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Search className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
-              <h3 className="text-sm font-bold text-[hsl(var(--primary))]">Suchergebnisse</h3>
-              <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
-                {intelligenceCustomerResults.length} Kunden
-              </span>
-            </div>
-            {intelligenceCustomerResults.length === 0 ? (
-              <p className="text-[11px] text-[hsl(var(--text-muted))]">Keine Kunden gefunden für "{intelligenceSearch}"</p>
-            ) : (
-              <div className="space-y-1">
-                {intelligenceCustomerResults.map(customer => (
-                  <button
-                    key={customer.id}
-                    onClick={() => navigate(`/kunden/${customer.id}`)}
-                    className="w-full flex items-center justify-between p-2.5 rounded-lg hover:bg-[hsl(var(--surface-2))]/60 transition-colors text-left group"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-7 h-7 rounded-full bg-[hsl(var(--primary))]/10 flex items-center justify-center shrink-0">
-                        {customer.customer_type === 'business' ? <Building2 className="w-3.5 h-3.5 text-[hsl(var(--primary))]" /> : <User className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[12px] font-semibold text-[hsl(var(--text-heading))] truncate">
-                          {customer.customer_type === 'business' ? customer.company_name : `${customer.first_name || ''} ${customer.last_name || ''}`}
-                        </p>
-                        <p className="text-[10px] text-[hsl(var(--text-muted))] truncate">
-                          {[customer.customer_number, customer.email, customer.city].filter(Boolean).join(' · ')}
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-[hsl(var(--text-muted))] group-hover:text-[hsl(var(--primary))] shrink-0" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        <NewCustomersSection searchQuery={intelligenceSearch} />
-        <div className="h-px bg-[hsl(var(--primary))]/20 my-2" />
-        <RenewalsSection contracts={contracts.filter(c => !c.exclude_from_renewal_statistics)} customers={customers} verkaufschancen={verkaufschancen} />
-        <div className="h-px bg-[hsl(var(--primary))]/20 my-2" />
-        <CancellationsSection contracts={contracts.filter(c => !c.exclude_from_renewal_statistics)} customers={customers} />
-
-        {/* Combined layout: Haushalt first, then Mandat/Berater */}
-        <div className="h-px bg-[hsl(var(--primary))]/20 my-2" />
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* Haushalte */}
-          <div>
-            <HouseholdIntelligenceSection
-              householdCustomers={householdCustomers}
-              customers={customers}
-              contracts={contracts}
-            />
-          </div>
-
-          {/* Kunden ohne Mandat oder Berater */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--critical-hsl))]" />
-              <h3 className="text-sm font-bold text-[hsl(var(--primary))]">Mandat / Berater</h3>
-              <span className="text-[9px] font-medium text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-2))] px-1.5 py-0.5 rounded-full">
-                {filteredMandateIssues.length} Kunden
-              </span>
-            </div>
-            {filteredMandateIssues.length === 0 ? (
-              intelligenceSearch ? (
-                <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
-                  Keine Mandat-Probleme für diese Suche gefunden
-                </p>
-              ) : (
-                <p className="text-[9px] text-[hsl(var(--text-muted))] bg-[hsl(var(--surface-1))] rounded-lg p-3">
-                  Keine offenen Mandat- oder Beraterzuweisungen
-                </p>
-              )
-            ) : (
-              <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-[hsl(var(--border-subtle))]/40">
-                <div className="space-y-1">
-                  {(showAllMandate ? filteredMandateIssues : filteredMandateIssues.slice(0, DISPLAY_LIMIT)).map(customer => (
-                    <button
-                      key={customer.id}
-                      onClick={() => navigate(`/kunden/${customer.id}/360`)}
-                      className="w-full flex items-center justify-between p-2 rounded-md hover:bg-[hsl(var(--surface-2))]/40 transition-colors text-left"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-medium text-[hsl(var(--text-heading))] truncate">
-                          {customer.first_name} {customer.last_name}
-                        </p>
-                        <p className="text-[9px] text-[hsl(var(--text-muted))] truncate">
-                          {!customer.advisor_id && !customer.primary_advisor_id && (
-                            <span>⚠ Kein Berater</span>
-                          )}
-                          {['expired', 'pending', 'invalid'].includes(customer.mandate_status) && (
-                            <span className={!customer.advisor_id && !customer.primary_advisor_id ? 'ml-1' : ''}>
-                              Mandat: {customer.mandate_status}
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <ChevronRight className="w-3 h-3 text-[hsl(var(--text-muted))]" />
-                    </button>
-                  ))}
-                </div>
-                {filteredMandateIssues.length > DISPLAY_LIMIT && (
-                  <button
-                    onClick={() => setShowAllMandate(!showAllMandate)}
-                    className="mt-2 text-[10px] font-medium text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]/80"
-                  >
-                    {showAllMandate ? 'Weniger anzeigen' : `Alle ${filteredMandateIssues.length} Kunden anzeigen`}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const isIntelligenceMode = workspaceMode === 'kundenaktionen';
-  const isCustomerListMode = ['private', 'business'].includes(workspaceMode);
+  const isCustomerListMode = true;
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -611,14 +469,10 @@ export default function CustomerIntelligenceWorkspace() {
           {/* Title */}
           <div className="shrink-0">
             <h1 className="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight">
-              {workspaceMode === 'private' ? 'Privatkunden' : workspaceMode === 'business' ? 'Unternehmen' : 'Kundenübersicht'}
+              {workspaceMode === 'private' ? 'Privatkunden' : 'Unternehmen'}
             </h1>
             <p className="text-body-sm text-[hsl(var(--text-muted))] mt-0.5">
-              {workspaceMode === 'private' 
-                ? displayed.filter(c => c.customer_type !== 'business').length + ' Kunden'
-                : workspaceMode === 'business'
-                ? displayed.filter(c => c.customer_type === 'business').length + ' Kunden'
-                : primaryCustomers.length + ' Kunden'}
+              {displayed.length} Kunden
             </p>
           </div>
 
@@ -658,7 +512,7 @@ export default function CustomerIntelligenceWorkspace() {
             })}
           </div>
 
-          {isCustomerListMode && (
+          {(
             <div className="flex items-center gap-1.5 shrink-0 ml-auto">
               <button onClick={handleExport} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Export">
                 <Download className="w-4 h-4" />
@@ -690,148 +544,95 @@ export default function CustomerIntelligenceWorkspace() {
         </div>
       </div>
 
-      {/* ── Main Content Area — Stable Container with min-height ─────────────────── */}
+      {/* ── Main Content Area ───────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto bg-[hsl(var(--surface-1))] min-h-[70vh]">
-        {isIntelligenceMode ? (
-          renderIntelligenceView()
-        ) : (
-          <>
-            {/* Mode Indicator Strip mit Suchfeld auf Höhe des Titels */}
-            <div className="sticky top-0 z-10 px-6 py-3 bg-white/95 backdrop-blur-sm border-b border-[hsl(var(--border-subtle))] flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-[13px] font-semibold text-[hsl(var(--text-heading))]">
-                  {workspaceMode === 'private' ? 'Privatkunden' : 'Unternehmen'}
-                </span>
-                <span className="text-[11px] text-[hsl(var(--text-muted))]">
-                  {displayed.length} Kunden{search ? ` · "${search}"` : ''}
-                </span>
+        <>
+          {/* Intelligence Panel — nur im Privatkunden-Tab */}
+          {workspaceMode === 'private' && renderIntelligencePanel()}
+
+          {/* Suchleiste + Sortierung */}
+          <div className="sticky top-0 z-10 px-6 py-3 bg-white/95 backdrop-blur-sm border-b border-[hsl(var(--border-subtle))] flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-[13px] font-semibold text-[hsl(var(--text-heading))]">
+                {workspaceMode === 'private' ? 'Privatkunden' : 'Unternehmen'}
+              </span>
+              <span className="text-[11px] text-[hsl(var(--text-muted))]">
+                {displayed.length} Kunden{search ? ` · "${search}"` : ''}
+              </span>
+            </div>
+            <div className="flex-1 min-w-[240px] max-w-md">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--text-subtle))]" />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Name, E-Mail, Kundennummer…"
+                  className="w-full pl-9 pr-8 py-1.5 text-[13px] border border-[hsl(var(--border-subtle))] rounded-lg bg-[hsl(var(--surface-0))] text-[hsl(var(--text-heading))] placeholder:text-[hsl(var(--text-subtle))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))/0.3] focus:border-[hsl(var(--primary))/0.4] transition-all"
+                />
+                {search && (
+                  <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))]">
+                    <XCircle className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
-              {/* Suchfeld — auf Höhe des Titels */}
-              <div className="flex-1 min-w-[240px] max-w-md">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--text-subtle))]" />
-                  <input
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    placeholder="Name, E-Mail, Kundennummer…"
-                    className="w-full pl-9 pr-8 py-1.5 text-[13px] border border-[hsl(var(--border-subtle))] rounded-lg bg-[hsl(var(--surface-0))] text-[hsl(var(--text-heading))] placeholder:text-[hsl(var(--text-subtle))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--primary))/0.3] focus:border-[hsl(var(--primary))/0.4] transition-all"
+            </div>
+            <div className="flex items-center gap-2 ml-auto shrink-0">
+              <select
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value)}
+                className="text-[11px] border border-[hsl(var(--border-subtle))] rounded-lg px-2.5 py-1.5 bg-[hsl(var(--surface-0))] text-[hsl(var(--text-heading))] focus:outline-none"
+              >
+                <option value="alpha">A – Z</option>
+                <option value="updated">Zuletzt aktualisiert</option>
+                <option value="premium">Höchste Prämie</option>
+                <option value="new">Neuste zuerst</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Kundenliste */}
+          <div className="p-0">
+            {isLoading ? (
+              <LoadingTable rows={8} className="py-12" />
+            ) : displayed.length === 0 ? (
+              <div className="p-6">
+                <EmptyState
+                  type={search ? 'empty' : 'customers'}
+                  title={search ? 'Keine Ergebnisse' : workspaceMode === 'private' ? 'Keine Privatkunden' : 'Keine Firmenkunden'}
+                  description={search ? 'Passen Sie den Suchbegriff an.' : 'Fügen Sie Ihren ersten Kunden hinzu.'}
+                  action={
+                    !search && (
+                      <button
+                        onClick={() => { setEditing(null); setNewCustomerType(workspaceMode === 'business' ? 'business' : 'private'); setShowForm(true); }}
+                        className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
+                      >
+                        <Plus className="w-4 h-4" /> Kunde hinzufügen
+                      </button>
+                    )
+                  }
+                  size="lg"
+                />
+              </div>
+            ) : (
+              <div className="border-t-2 border-[hsl(var(--primary))] bg-white">
+                <div className="p-4">
+                  <CustomerFeed
+                    displayed={displayed}
+                    customers={customers}
+                    segments={segments}
+                    matchedFamilyIds={matchedFamilyIds}
+                    onEdit={(c) => { setEditing(c); setShowForm(true); }}
+                    onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
+                    allContracts={contracts}
+                    allTasks={tasks}
+                    allDocuments={documents}
+                    workspaceMode={workspaceMode}
                   />
-                  {search && (
-                    <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))]">
-                      <XCircle className="w-3.5 h-3.5" />
-                    </button>
-                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-2 ml-auto shrink-0">
-                <select
-                  value={sortBy}
-                  onChange={e => setSortBy(e.target.value)}
-                  className="text-[11px] border border-[hsl(var(--border-subtle))] rounded-lg px-2.5 py-1.5 bg-[hsl(var(--surface-0))] text-[hsl(var(--text-heading))] focus:outline-none"
-                >
-                  <option value="alpha">A – Z</option>
-                  <option value="updated">Zuletzt aktualisiert</option>
-                  <option value="premium">Höchste Prämie</option>
-                  <option value="new">Neuste zuerst</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="p-0">
-              {isLoading ? (
-                <LoadingTable rows={8} className="py-12" />
-              ) : workspaceMode === 'private' ? (
-                /* ── Privatkunden ── */
-                displayed.length === 0 ? (
-                  <div className="p-6">
-                    <EmptyState
-                      type={search ? 'empty' : 'customers'}
-                      title={search ? 'Keine Ergebnisse' : 'Keine Privatkunden'}
-                      description={search ? 'Passen Sie den Suchbegriff an.' : 'Fügen Sie Ihren ersten Privatkunden hinzu.'}
-                      action={
-                        !search && (
-                          <button
-                            onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}
-                            className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
-                          >
-                            <Plus className="w-4 h-4" /> Privatkunde hinzufügen
-                          </button>
-                        )
-                      }
-                      size="lg"
-                    />
-                  </div>
-                ) : (
-                  <div className="border-t-2 border-[hsl(var(--primary))] bg-white">
-                    <div className="flex items-center gap-2 px-4 py-3 bg-[hsl(var(--surface-1))] border-b border-[hsl(var(--border-subtle))]">
-                      <User className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
-                      <h3 className="text-[11px] font-semibold uppercase tracking-widest text-[hsl(var(--text-heading))]">Privatkunden</h3>
-                      <span className="text-[10px] text-[hsl(var(--text-muted))]">({displayed.length})</span>
-                    </div>
-                    <div className="p-4">
-                      <CustomerFeed
-                        displayed={displayed}
-                        customers={customers}
-                        segments={segments}
-                        matchedFamilyIds={matchedFamilyIds}
-                        onEdit={(c) => { setEditing(c); setShowForm(true); }}
-                        onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
-                        allContracts={contracts}
-                        allTasks={tasks}
-                        allDocuments={documents}
-                        workspaceMode="private"
-                      />
-                    </div>
-                  </div>
-                )
-              ) : workspaceMode === 'business' ? (
-                /* ── Firmenkunden ── */
-                displayed.length === 0 ? (
-                  <div className="p-6">
-                    <EmptyState
-                      type={search ? 'empty' : 'customers'}
-                      title={search ? 'Keine Ergebnisse' : 'Keine Firmenkunden'}
-                      description={search ? 'Passen Sie den Suchbegriff an.' : 'Fügen Sie Ihren ersten Firmenkunden hinzu.'}
-                      action={
-                        !search && (
-                          <button
-                            onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}
-                            className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
-                          >
-                            <Plus className="w-4 h-4" /> Firmenkunde hinzufügen
-                          </button>
-                        )
-                      }
-                      size="lg"
-                    />
-                  </div>
-                ) : (
-                  <div className="border-t-2 border-[hsl(var(--primary))] bg-white">
-                    <div className="flex items-center gap-2 px-4 py-3 bg-[hsl(var(--surface-1))] border-b border-[hsl(var(--border-subtle))]">
-                      <Building2 className="w-3.5 h-3.5 text-[hsl(var(--primary))]" />
-                      <h3 className="text-[11px] font-semibold uppercase tracking-widest text-[hsl(var(--text-heading))]">Firmenkunden</h3>
-                      <span className="text-[10px] text-[hsl(var(--text-muted))]">({displayed.length})</span>
-                    </div>
-                    <div className="p-4">
-                      <CustomerFeed
-                        displayed={displayed}
-                        customers={customers}
-                        segments={segments}
-                        matchedFamilyIds={matchedFamilyIds}
-                        onEdit={(c) => { setEditing(c); setShowForm(true); }}
-                        onDelete={(id) => { if (confirm('Kunde löschen?')) deleteMutation.mutate(id); }}
-                        allContracts={contracts}
-                        allTasks={tasks}
-                        allDocuments={documents}
-                        workspaceMode="business"
-                      />
-                    </div>
-                  </div>
-                )
-              ) : null}
-            </div>
-          </>
-        )}
+            )}
+          </div>
+        </>
       </div>
 
       {/* ── Dialogs ── */}
