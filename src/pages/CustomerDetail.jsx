@@ -434,31 +434,32 @@ export default function CustomerDetail() {
                     </div>
                   )}
 
-                  {/* Haushaltsmitglieder - mit konsistentem Titel und Trennung */}
-                  {familyMembers.length > 1 && (
-                    <div className="pt-4 border-t border-border">
-                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Haushaltsmitglieder</p>
-                      <div className="flex flex-wrap gap-2">
-                        {familyMembers.filter(m => m.id !== id).map(member => (
-                          <button
-                            key={member.id}
-                            onClick={() => navigate(`/kunden/${member.id}`)}
-                            className="inline-flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"
-                          >
-                            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                              {member.first_name?.[0]}{member.last_name?.[0]}
-                            </div>
-                            <div className="flex flex-col items-start">
-                              <span className="text-sm font-medium">{member.first_name} {member.last_name}</span>
-                              <span className="text-xs text-muted-foreground">{FAMILY_ROLE_LABELS[member.family_role] || 'Familie'}</span>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
+              
+              {/* Haushaltsmitglieder - eigenes Feld */}
+              {familyMembers.length > 1 && (
+                <div className="surface p-5">
+                  <h3 className="text-xs font-bold text-foreground mb-3 uppercase tracking-widest">Haushaltsmitglieder</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {familyMembers.filter(m => m.id !== id).map(member => (
+                      <button
+                        key={member.id}
+                        onClick={() => navigate(`/kunden/${member.id}`)}
+                        className="inline-flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"
+                      >
+                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                          {member.first_name?.[0]}{member.last_name?.[0]}
+                        </div>
+                        <div className="flex flex-col items-start">
+                          <span className="text-sm font-medium">{member.first_name} {member.last_name}</span>
+                          <span className="text-xs text-muted-foreground">{FAMILY_ROLE_LABELS[member.family_role] || 'Familie'}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Rechte Spalte: Berater, Finanzen, Quick Stats (klickbar) */}
@@ -541,24 +542,24 @@ export default function CustomerDetail() {
               {/* Quick Stats - Klickbar */}
               <div className="surface p-4">
                 <h3 className="text-sm font-bold text-foreground mb-3">Navigation</h3>
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   <button
                     onClick={() => setActiveSection('vertraege')}
-                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1.5 rounded transition-colors"
+                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1 rounded transition-colors"
                   >
                     <span className="text-muted-foreground">Verträge</span>
                     <span className="font-semibold">{relatedContracts.length}</span>
                   </button>
                   <button
                     onClick={() => setActiveSection('antraege')}
-                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1.5 rounded transition-colors"
+                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1 rounded transition-colors"
                   >
                     <span className="text-muted-foreground">Anträge</span>
                     <span className="font-semibold">{relatedApplications.length}</span>
                   </button>
                   <button
                     onClick={() => setActiveSection('aufgaben')}
-                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1.5 rounded transition-colors"
+                    className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1 rounded transition-colors"
                   >
                     <span className="text-muted-foreground">Offene Aufgaben</span>
                     <span className={`font-semibold ${custTasks.filter(t => t.status !== 'completed').length > 0 ? 'text-amber-600' : ''}`}>
@@ -568,7 +569,7 @@ export default function CustomerDetail() {
                   {verkaufschancen.length > 0 && (
                     <button
                       onClick={() => setActiveSection('beratungspotential')}
-                      className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1.5 rounded transition-colors"
+                      className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1 rounded transition-colors"
                     >
                       <span className="text-muted-foreground">Beratungspotential</span>
                       <span className="font-semibold text-primary">{verkaufschancen.length}</span>
