@@ -633,9 +633,6 @@ export default function CustomerIntelligenceWorkspace() {
 
           {/* Sortierung */}
           <div className="px-6 py-2 bg-white border-b border-[hsl(var(--border-subtle))] flex items-center gap-3">
-            <span className="text-[12px] text-[hsl(var(--text-muted))]">
-              {workspaceMode === 'private' ? 'Privatkunden' : 'Unternehmen'} · {displayed.length}
-            </span>
             <div className="ml-auto">
               <select
                 value={sortBy}
