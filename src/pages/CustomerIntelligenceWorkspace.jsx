@@ -637,52 +637,40 @@ export default function CustomerIntelligenceWorkspace() {
       </div>
 
       {/* ── Main Content Area ───────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto overflow-x-visible bg-[hsl(var(--surface-1))] min-h-[70vh]">
-        <>
-          {/* Intelligence Panel — nur im Privatkunden-Tab */}
-          {workspaceMode === 'private' && renderIntelligencePanel()}
+      <div className="flex-1 overflow-y-auto overflow-x-visible bg-[hsl(var(--surface-1))]">
 
-          {/* Sortierung */}
-          <div className="px-6 py-2 bg-white border-b border-[hsl(var(--border-subtle))] flex items-center gap-3">
-            <div className="ml-auto">
-              <select
-                value={sortBy}
-                onChange={e => setSortBy(e.target.value)}
-                className="text-[11px] border border-[hsl(var(--border-subtle))] rounded-lg px-2.5 py-1.5 bg-[hsl(var(--surface-0))] text-[hsl(var(--text-heading))] focus:outline-none"
-              >
-                <option value="alpha">A – Z</option>
-                <option value="updated">Zuletzt aktualisiert</option>
-                <option value="premium">Höchste Prämie</option>
-                <option value="new">Neuste zuerst</option>
-              </select>
-            </div>
-          </div>
+        {/* Intelligence Panel — nur im Privatkunden-Tab, nur ohne aktive Suche */}
+        {!search.trim() && workspaceMode === 'private' && renderIntelligencePanel()}
 
-          {/* Kundenliste */}
+        {/* Kundenliste — nur bei aktiver Suche */}
+        {search.trim().length >= 2 && (
           <div className="p-0">
             {isLoading ? (
               <LoadingTable rows={8} className="py-12" />
             ) : displayed.length === 0 ? (
               <div className="p-6">
                 <EmptyState
-                  type={search ? 'empty' : 'customers'}
-                  title={search ? 'Keine Ergebnisse' : workspaceMode === 'private' ? 'Keine Privatkunden' : 'Keine Firmenkunden'}
-                  description={search ? 'Passen Sie den Suchbegriff an.' : 'Fügen Sie Ihren ersten Kunden hinzu.'}
-                  action={
-                    !search && (
-                      <button
-                        onClick={() => { setEditing(null); setNewCustomerType(workspaceMode === 'business' ? 'business' : 'private'); setShowForm(true); }}
-                        className="mt-2 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80"
-                      >
-                        <Plus className="w-4 h-4" /> Kunde hinzufügen
-                      </button>
-                    )
-                  }
+                  type="empty"
+                  title="Keine Ergebnisse"
+                  description={`Keine Treffer für „${search}"`}
                   size="lg"
                 />
               </div>
             ) : (
               <div className="border-t-2 border-[hsl(var(--primary))] bg-white">
+                <div className="px-6 py-2 border-b border-[hsl(var(--border-subtle))] flex items-center justify-between">
+                  <span className="text-[12px] text-[hsl(var(--text-muted))]">{displayed.length} Treffer</span>
+                  <select
+                    value={sortBy}
+                    onChange={e => setSortBy(e.target.value)}
+                    className="text-[11px] border border-[hsl(var(--border-subtle))] rounded-lg px-2.5 py-1.5 bg-[hsl(var(--surface-0))] text-[hsl(var(--text-heading))] focus:outline-none"
+                  >
+                    <option value="alpha">A – Z</option>
+                    <option value="updated">Zuletzt aktualisiert</option>
+                    <option value="premium">Höchste Prämie</option>
+                    <option value="new">Neuste zuerst</option>
+                  </select>
+                </div>
                 <div className="p-4">
                   <CustomerFeed
                     displayed={pagedDisplayed}
@@ -703,27 +691,18 @@ export default function CustomerIntelligenceWorkspace() {
                       {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, displayed.length)} von {displayed.length}
                     </span>
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setPage(p => Math.max(1, p - 1))}
-                        disabled={page === 1}
-                        className="px-3 py-1.5 text-[12px] font-medium rounded-lg border border-[hsl(var(--border-subtle))] disabled:opacity-40 hover:bg-[hsl(var(--surface-2))] transition-colors"
-                      >
+                      <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                        className="px-3 py-1.5 text-[12px] font-medium rounded-lg border border-[hsl(var(--border-subtle))] disabled:opacity-40 hover:bg-[hsl(var(--surface-2))] transition-colors">
                         ← Zurück
                       </button>
                       {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                        <button
-                          key={p}
-                          onClick={() => setPage(p)}
-                          className={cn('w-8 h-8 text-[12px] font-medium rounded-lg transition-colors', p === page ? 'bg-[hsl(var(--primary))] text-white' : 'hover:bg-[hsl(var(--surface-2))] text-[hsl(var(--text-muted))]')}
-                        >
+                        <button key={p} onClick={() => setPage(p)}
+                          className={cn('w-8 h-8 text-[12px] font-medium rounded-lg transition-colors', p === page ? 'bg-[hsl(var(--primary))] text-white' : 'hover:bg-[hsl(var(--surface-2))] text-[hsl(var(--text-muted))]')}>
                           {p}
                         </button>
                       ))}
-                      <button
-                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                        disabled={page === totalPages}
-                        className="px-3 py-1.5 text-[12px] font-medium rounded-lg border border-[hsl(var(--border-subtle))] disabled:opacity-40 hover:bg-[hsl(var(--surface-2))] transition-colors"
-                      >
+                      <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                        className="px-3 py-1.5 text-[12px] font-medium rounded-lg border border-[hsl(var(--border-subtle))] disabled:opacity-40 hover:bg-[hsl(var(--surface-2))] transition-colors">
                         Weiter →
                       </button>
                     </div>
@@ -732,7 +711,7 @@ export default function CustomerIntelligenceWorkspace() {
               </div>
             )}
           </div>
-        </>
+        )}
       </div>
 
       {/* ── Dialogs ── */}
