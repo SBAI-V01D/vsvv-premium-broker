@@ -79,6 +79,19 @@ Deno.serve(async (req) => {
       if (appData[f] && !customer[f]) enrichmentData[f] = appData[f];
     }
 
+    // Familienmitglied ohne echte Email: Email des Hauptkunden übernehmen
+    const isPlaceholderEmail = !customer.email || customer.email.includes('@placeholder.local') || customer.email.includes('@family.local');
+    if (isPlaceholderEmail && customer.is_family_member && customer.primary_customer_id) {
+      try {
+        const primaryCustomer = await base44.asServiceRole.entities.Customer.get(customer.primary_customer_id);
+        if (primaryCustomer?.email && !primaryCustomer.email.includes('@placeholder.local') && !primaryCustomer.email.includes('@family.local')) {
+          enrichmentData.email = primaryCustomer.email;
+        }
+      } catch (e) {
+        console.warn('[SYNC_APP_CUSTOMER] Could not load primary customer for email inheritance:', e.message);
+      }
+    }
+
     // Business fields
     if (customer.customer_type === 'business' || app.kundentyp === 'firma') {
       for (const f of ['company_name','legal_form','uid_number','industry']) {
