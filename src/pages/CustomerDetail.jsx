@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client'
 import { useParams, useNavigate } from 'react-router-dom'
 import html2pdf from 'html2pdf.js'
 import { useAccessControl } from '@/hooks/useAccessControl'
-import { Edit, Users, FileText, Clock, Shield, Bot, Tag, Building2, Calendar, Trash2, Plus, XCircle, Phone, Mail, MapPin, Smartphone, CreditCard } from 'lucide-react'
+import { Edit, Users, FileText, Clock, Shield, Bot, Tag, Building2, Calendar, Trash2, Plus, XCircle, Phone, Mail, MapPin, Smartphone, CreditCard, CheckCircle2 } from 'lucide-react'
 import AiInsightsPanel from '../components/customers/AiInsightsPanel'
 import ActivityTimeline from '../components/customers/ActivityTimeline'
 import HouseholdContractsCockpit from '../components/customers/HouseholdContractsCockpit'
@@ -285,6 +285,7 @@ export default function CustomerDetail() {
     { id: 'uebersicht', label: 'Übersicht', icon: Shield },
     { id: 'vertraege', label: 'Verträge', icon: FileText, count: relatedContracts.length },
     { id: 'antraege', label: 'Anträge', icon: FileText, count: relatedApplications.length },
+    { id: 'aufgaben', label: 'Aufgaben', icon: Clock, count: custTasks.filter(t => t.status !== 'completed').length },
     { id: 'dokumente', label: 'Dokumente', icon: FileText, count: relatedDocuments.length },
     { id: 'familie', label: 'Familie', icon: Users, count: familyMembers.length > 1 ? familyMembers.length : 0 },
     { id: 'betreuung', label: 'Betreuung', icon: Shield },
@@ -534,7 +535,7 @@ export default function CustomerDetail() {
                     <span className="font-semibold">{relatedApplications.length}</span>
                   </button>
                   <button
-                    onClick={() => navigate('/aufgaben')}
+                    onClick={() => setActiveSection('aufgaben')}
                     className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1.5 rounded transition-colors"
                   >
                     <span className="text-muted-foreground">Offene Aufgaben</span>
@@ -796,6 +797,81 @@ export default function CustomerDetail() {
                     </div>
                   )
                 })}
+              </div>
+            )}
+          </EnterpriseCard>
+        )}
+
+        {/* ── Aufgaben ─────────────────────────────────────────────── */}
+        {activeSection === 'aufgaben' && (
+          <EnterpriseCard noPad>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[hsl(var(--border-subtle))]">
+              <p className="text-label">{custTasks.filter(t => t.status !== 'completed').length} offene Aufgaben</p>
+              <button
+                onClick={() => navigate('/aufgaben')}
+                className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80"
+              >
+                <Plus className="w-3.5 h-3.5" /> Alle Aufgaben
+              </button>
+            </div>
+            {custTasks.filter(t => t.status !== 'completed').length === 0 ? (
+              <EmptySection icon={Clock} title="Keine offenen Aufgaben" subtitle="Für diesen Kunden sind keine offenen Aufgaben vorhanden." />
+            ) : (
+              <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="hidden md:grid grid-cols-[2fr_1.5fr_1.5fr_1fr_auto] gap-3 px-4 py-2 border-b border-border bg-muted/30 text-[10.5px] font-semibold text-muted-foreground uppercase tracking-wide">
+                  <div>Aufgabe</div><div>Fälligkeit</div><div>Priorität</div><div>Status</div><div className="w-20" />
+                </div>
+                {custTasks.filter(t => t.status !== 'completed').map((task, idx) => (
+                  <div key={task.id} className={idx > 0 ? 'border-t border-border' : ''}>
+                    <div className="grid grid-cols-1 md:grid-cols-[2fr_1.5fr_1.5fr_1fr_auto] gap-3 px-4 py-3 items-center hover:bg-muted/20 transition-colors">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold truncate">{task.title}</p>
+                        {task.description && <p className="text-xs text-muted-foreground truncate mt-0.5">{task.description}</p>}
+                      </div>
+                      <div>
+                        {task.due_date && (
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-3 h-3 text-muted-foreground" />
+                            <span className={`text-xs font-medium ${
+                              new Date(task.due_date) < new Date() ? 'text-red-600' : 'text-slate-600'
+                            }`}>
+                              {formatDate(task.due_date)}
+                            </span>
+                          </div>
+                        )}
+                        {!task.due_date && <span className="text-xs text-muted-foreground">–</span>}
+                      </div>
+                      <div>
+                        <span className={`text-xs px-2 py-1 rounded font-semibold ${
+                          task.priority === 'urgent' ? 'bg-red-50 text-red-600' :
+                          task.priority === 'high' ? 'bg-amber-50 text-amber-600' :
+                          task.priority === 'low' ? 'bg-blue-50 text-blue-600' :
+                          'bg-slate-100 text-slate-600'
+                        }`}>
+                          {task.priority === 'urgent' ? 'Dringend' :
+                           task.priority === 'high' ? 'Hoch' :
+                           task.priority === 'low' ? 'Niedrig' : 'Mittel'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className={`text-xs px-2 py-1 rounded font-semibold ${
+                          task.status === 'in_progress' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {task.status === 'in_progress' ? 'In Arbeit' : 'Offen'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <ActionMenu items={[
+                          { label: 'Bearbeiten', icon: Edit, onClick: () => navigate(`/aufgaben?edit=${task.id}`) },
+                          { label: 'Als erledigt markieren', icon: CheckCircle2, onClick: async () => {
+                            await base44.entities.Task.update(task.id, { status: 'completed', completion_date: new Date().toISOString().split('T')[0] })
+                            queryClient.invalidateQueries({ queryKey: ['tasks', id] })
+                          }},
+                        ]} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </EnterpriseCard>
