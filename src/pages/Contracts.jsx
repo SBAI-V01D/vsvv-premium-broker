@@ -35,11 +35,13 @@ export default function Contracts() {
   const { data: statusDefs = [] } = useQuery({
     queryKey: ['statusDefinitions'],
     queryFn: () => base44.entities.StatusDefinition.filter({ type: 'contract' }),
+    staleTime: 10 * 60 * 1000,
   })
 
   const { data: contracts = [] } = useQuery({
     queryKey: ['contracts'],
     queryFn: () => base44.entities.Contract.filter({ archived: false }, '-created_date', 500),
+    staleTime: 2 * 60 * 1000,
   })
 
   const { data: customers = [] } = useQuery({
