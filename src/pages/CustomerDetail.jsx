@@ -541,7 +541,7 @@ export default function CustomerDetail() {
               {/* Quick Stats - Klickbar */}
               <div className="surface p-4">
                 <h3 className="text-sm font-bold text-foreground mb-3">Navigation</h3>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <button
                     onClick={() => setActiveSection('vertraege')}
                     className="w-full flex justify-between items-center text-sm hover:bg-muted/50 p-1.5 rounded transition-colors"
