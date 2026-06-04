@@ -2,7 +2,8 @@
  * CustomerIntelligenceWorkspace — Broker Intelligence / Operations Workspace
  * Ultimate restructuring: Operations · Risks · Tasks · Actions
  */
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -179,6 +180,14 @@ export default function CustomerIntelligenceWorkspace() {
   const [showMerge, setShowMerge]       = useState(false);
   const [showAllMandate, setShowAllMandate] = useState(false);
   const [showIntelligence, setShowIntelligence] = useState(true);
+  const searchInputRef = useRef(null);
+  const [searchInputRect, setSearchInputRect] = useState(null);
+
+  useEffect(() => {
+    if (search.trim().length >= 2 && searchInputRef.current) {
+      setSearchInputRect(searchInputRef.current.getBoundingClientRect());
+    }
+  }, [search]);
 
   const DISPLAY_LIMIT = 3;
   const queryClient = useQueryClient();
@@ -545,13 +554,13 @@ export default function CustomerIntelligenceWorkspace() {
       </div>
 
       {/* ── Main Content Area ───────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto bg-[hsl(var(--surface-1))] min-h-[70vh]">
+      <div className="flex-1 overflow-y-auto overflow-x-visible bg-[hsl(var(--surface-1))] min-h-[70vh]">
         <>
           {/* Intelligence Panel — nur im Privatkunden-Tab */}
           {workspaceMode === 'private' && renderIntelligencePanel()}
 
           {/* Suchleiste + Sortierung */}
-          <div className="px-6 py-3 bg-white border-b border-[hsl(var(--border-subtle))] flex items-center gap-4 flex-wrap">
+          <div className="px-6 py-3 bg-white border-b border-[hsl(var(--border-subtle))] flex items-center gap-4 flex-wrap overflow-visible z-10 relative">
             <div className="flex items-center gap-3 shrink-0">
               <span className="text-[13px] font-semibold text-[hsl(var(--text-heading))]">
                 {workspaceMode === 'private' ? 'Privatkunden' : 'Unternehmen'}
@@ -563,25 +572,37 @@ export default function CustomerIntelligenceWorkspace() {
             <div className="flex-1 min-w-[240px] max-w-md relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--text-subtle))] pointer-events-none" />
               <input
+                ref={searchInputRef}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
+                onBlur={() => setTimeout(() => setSearch(s => s), 150)}
                 placeholder="Name, E-Mail, Kundennummer suchen…"
-                className="w-full pl-9 pr-8 py-1.5 text-[13px] border border-[hsl(var(--border-subtle))] rounded-xl bg-white text-[hsl(var(--text-heading))] placeholder:text-[hsl(var(--text-subtle))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))/0.15] focus:border-[hsl(var(--primary))] transition-all shadow-xs"
+                className="w-full pl-9 pr-8 py-1.5 text-[13px] border border-[hsl(var(--border-subtle))] rounded-xl bg-white text-[hsl(var(--text-heading))] placeholder:text-[hsl(var(--text-subtle))] focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-all shadow-xs"
               />
               {search && (
                 <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))]">
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
-              {/* Dropdown Suchergebnisse */}
-              {search.trim().length >= 2 && (
-                <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-white border border-[hsl(var(--border-default))] rounded-xl shadow-card-lg overflow-hidden">
+              {/* Dropdown via Portal — nicht durch overflow-y-auto abgeschnitten */}
+              {search.trim().length >= 2 && searchInputRef.current && ReactDOM.createPortal(
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: searchInputRef.current.getBoundingClientRect().bottom + 4,
+                    left: searchInputRef.current.getBoundingClientRect().left,
+                    width: searchInputRef.current.getBoundingClientRect().width,
+                    zIndex: 9999,
+                  }}
+                  className="bg-white border border-slate-200 rounded-xl shadow-modal overflow-hidden"
+                >
                   {displayed.length === 0 ? (
                     <div className="px-4 py-3 text-[12px] text-[hsl(var(--text-muted))]">Keine Treffer für „{search}"</div>
                   ) : (
                     <div className="py-1 max-h-72 overflow-y-auto">
-                      {workspaceMode === 'private' && <p className="px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-widest text-[hsl(var(--text-muted))]">Privatkunden</p>}
-                      {workspaceMode === 'business' && <p className="px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-widest text-[hsl(var(--text-muted))]">Unternehmen</p>}
+                      <p className="px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-widest text-[hsl(var(--text-muted))]">
+                        {workspaceMode === 'private' ? 'Privatkunden' : 'Unternehmen'}
+                      </p>
                       {displayed.slice(0, 12).map(c => {
                         const isCompany = c.customer_type === 'business';
                         const name = isCompany ? (c.company_name || `${c.first_name} ${c.last_name}`) : `${c.first_name} ${c.last_name}`;
@@ -612,7 +633,8 @@ export default function CustomerIntelligenceWorkspace() {
                       )}
                     </div>
                   )}
-                </div>
+                </div>,
+                document.body
               )}
             </div>
             <div className="flex items-center gap-2 ml-auto shrink-0">
