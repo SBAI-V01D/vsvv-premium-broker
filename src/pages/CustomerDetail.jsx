@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client'
 import { useParams, useNavigate } from 'react-router-dom'
 import html2pdf from 'html2pdf.js'
 import { useAccessControl } from '@/hooks/useAccessControl'
-import { Edit, Users, FileText, Clock, Shield, Bot, Tag, Building2, Calendar, Trash2, Plus, XCircle, Phone, Mail } from 'lucide-react'
+import { Edit, Users, FileText, Clock, Shield, Bot, Tag, Building2, Calendar, Trash2, Plus, XCircle, Phone, Mail, Smartphone, MapPin, CreditCard } from 'lucide-react'
 import AiInsightsPanel from '../components/customers/AiInsightsPanel'
 import ActivityTimeline from '../components/customers/ActivityTimeline'
 import HouseholdContractsCockpit from '../components/customers/HouseholdContractsCockpit'
@@ -329,29 +329,90 @@ export default function CustomerDetail() {
 
         {/* ── Übersicht ─────────────────────────────────────────────── */}
         {activeSection === 'uebersicht' && (
-          <div className="space-y-8">
-            {/* Health Score — organisch eingebettet */}
-            <div className="space-y-3">
-              <SectionHeader
-                title="Gesundheitsstatus"
-                subtitle="Basierend auf Verträgen, Dokumenten, Tasks und Renewals"
-              />
-              <div className="relative">
-                {(() => {
-                  const health = calculateCustomerHealthScore(customer, relatedContracts, relatedDocuments, custTasks)
-                  return (
-                    <HealthScoreDetail
-                      state={health.state}
-                      score={health.score}
-                      factors={health.factors}
-                      showDetails
-                    />
-                  )
-                })()}
+          <div className="space-y-6">
+            {/* Stammdaten — kompakt */}
+            <div className="surface p-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-1">Kontakt</p>
+                  <div className="space-y-1 text-sm">
+                    {customer.email && <p className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-muted-foreground" /> <EmailLink email={customer.email} /></p>}
+                    {customer.phone && <p className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-muted-foreground" /> {customer.phone}</p>}
+                    {customer.mobile && <p className="flex items-center gap-1.5"><Smartphone className="w-3.5 h-3.5 text-muted-foreground" /> {customer.mobile}</p>}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-1">Adresse</p>
+                  <div className="space-y-1 text-sm">
+                    {customer.street && <p className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-muted-foreground" /> {customer.street}</p>}
+                    {(customer.zip_code || customer.city) && <p className="text-sm">{[customer.zip_code, customer.city].filter(Boolean).join(' ')}</p>}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-1">Persönliches</p>
+                  <div className="space-y-1 text-sm">
+                    {customer.birthdate && <p>Geburtsdatum: {formatDate(customer.birthdate)}</p>}
+                    {customer.profession && <p>Beruf: {customer.profession}</p>}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-1">Finanzen</p>
+                  <div className="space-y-1 text-sm">
+                    {customer.bank_account && <p className="flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5 text-muted-foreground" /> {customer.bank_account}</p>}
+                    {customer.total_premium > 0 && <p>Gesamtprämie: CHF {customer.total_premium.toLocaleString('de-CH')}</p>}
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Household Intelligence */}
+            {/* Zuständiger Berater */}
+            {(() => {
+              const advisorId = customer.primary_advisor_id || customer.advisor_id
+              let advisor = advisorId ? allAdvisors.find(a => a.id === advisorId || a.email === advisorId) : null
+              
+              if (!advisor && relatedContracts.length > 0) {
+                for (const c of relatedContracts) {
+                  if (c.advisor_id) {
+                    advisor = allAdvisors.find(a => a.id === c.advisor_id || a.email === c.advisor_id)
+                    if (advisor) break
+                  }
+                  if (c.assigned_broker) {
+                    advisor = allAdvisors.find(a => a.id === c.assigned_broker || a.email === c.assigned_broker)
+                    if (advisor) break
+                  }
+                }
+              }
+              
+              if (!advisor) return null
+              return (
+                <div className="surface p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
+                      {advisor.firstname?.[0]}{advisor.lastname?.[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold uppercase text-muted-foreground tracking-widest mb-0.5">Zuständiger Berater</p>
+                      <p className="text-sm font-bold text-foreground">{advisor.firstname} {advisor.lastname}</p>
+                      <p className="text-xs text-muted-foreground">{advisor.email}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {advisor.phone && (
+                        <a href={`tel:${advisor.phone}`} className="p-2 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Anrufen">
+                          <Phone className="w-4 h-4" />
+                        </a>
+                      )}
+                      {advisor.email && (
+                        <a href={`mailto:${advisor.email}`} className="p-2 text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded-lg transition-colors" title="E-Mail">
+                          <Mail className="w-4 h-4" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Haushalt & Beziehungen */}
             {(familyMembers.length > 1 || relatedContracts.length > 0) && (
               <div className="space-y-3">
                 <SectionHeader
@@ -366,84 +427,6 @@ export default function CustomerDetail() {
                 />
               </div>
             )}
-
-            {/* Stammdaten */}
-            <div className="space-y-3">
-              <SectionHeader
-                title="Stammdaten"
-                subtitle="Persönliche Angaben, Kontakt und Finanzen"
-              />
-              <CustomerStammdatenCard customer={customer} />
-            </div>
-
-            {/* Zuständiger Berater */}
-            {(() => {
-              // Priorität 1: Berater aus Kundenstamm
-              const advisorId = customer.primary_advisor_id || customer.advisor_id
-              let advisor = advisorId ? allAdvisors.find(a => a.id === advisorId || a.email === advisorId) : null
-              
-              // Priorität 2: Berater aus Verträgen (wenn Kunde keinen eigenen hat)
-              if (!advisor && relatedContracts.length > 0) {
-                for (const c of relatedContracts) {
-                  if (c.advisor_id) {
-                    advisor = allAdvisors.find(a => a.id === c.advisor_id || a.email === c.advisor_id)
-                    if (advisor) break
-                  }
-                  if (c.assigned_broker) {
-                    advisor = allAdvisors.find(a => a.id === c.assigned_broker || a.email === c.assigned_broker)
-                    if (advisor) break
-                  }
-                }
-              }
-              
-              // Priorität 3: Berater aus Anträgen
-              if (!advisor && relatedApplications.length > 0) {
-                for (const a of relatedApplications) {
-                  if (a.advisor_id) {
-                    advisor = allAdvisors.find(a2 => a2.id === a.advisor_id || a2.email === a.advisor_id)
-                    if (advisor) break
-                  }
-                  if (a.assigned_broker) {
-                    advisor = allAdvisors.find(a2 => a2.id === a.assigned_broker || a2.email === a.assigned_broker)
-                    if (advisor) break
-                  }
-                }
-              }
-              
-              if (!advisor) return null
-              return (
-                <div className="space-y-3">
-                  <SectionHeader
-                    title="Zuständiger Berater"
-                    subtitle="Ihr persönlicher Ansprechpartner"
-                  />
-                  <div className="surface p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-base font-bold text-primary flex-shrink-0">
-                        {advisor.firstname?.[0]}{advisor.lastname?.[0]}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-foreground">{advisor.firstname} {advisor.lastname}</p>
-                        <p className="text-xs text-muted-foreground">{advisor.email}</p>
-                        {advisor.phone && <p className="text-xs text-muted-foreground">{advisor.phone}</p>}
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        {advisor.phone && (
-                          <a href={`tel:${advisor.phone}`} className="p-2 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Anrufen">
-                            <Phone className="w-4 h-4" />
-                          </a>
-                        )}
-                        {advisor.email && (
-                          <a href={`mailto:${advisor.email}`} className="p-2 text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded-lg transition-colors" title="E-Mail">
-                            <Mail className="w-4 h-4" />
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })()}
 
             <CustomerDashboardCompact
               customer={customer}
