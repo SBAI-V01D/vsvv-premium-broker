@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import {
-  Plus, User, Building2, Upload, Download, Users,
+  Plus, User, Building2, Upload, Download, Users, Search, X,
   AlertTriangle, TrendingUp, Target, Calendar, ChevronRight
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -20,7 +20,6 @@ import CustomerMergeDialog from '@/components/customers/CustomerMergeDialog';
 import CustomerCard from '@/components/customers/CustomerCard';
 import { searchCustomers, scoreCustomer } from '@/lib/customerSearch';
 import EmptyState, { LoadingTable } from '@/components/shared/EmptyState';
-import GlobalSearch from '@/components/layout/GlobalSearch';
 import { cn } from '@/lib/utils';
 
 // Intelligence Components
@@ -470,7 +469,7 @@ export default function CustomerIntelligenceWorkspace() {
           {/* Title */}
           <div className="shrink-0">
             <h1 className="text-h2 font-bold text-[hsl(var(--primary))] tracking-tight">
-              {workspaceMode === 'private' ? 'Privatkunden' : 'Unternehmen'}
+              Kundenübersicht
             </h1>
             <p className="text-body-sm text-[hsl(var(--text-muted))] mt-0.5">
               {displayed.length} Kunden
@@ -561,8 +560,60 @@ export default function CustomerIntelligenceWorkspace() {
                 {search ? `${displayed.length} Treffer` : `${displayed.length} Kunden`}
               </span>
             </div>
-            <div className="flex-1 min-w-[240px] max-w-sm">
-              <GlobalSearch light={true} />
+            <div className="flex-1 min-w-[240px] max-w-md relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--text-subtle))] pointer-events-none" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Name, E-Mail, Kundennummer suchen…"
+                className="w-full pl-9 pr-8 py-1.5 text-[13px] border border-[hsl(var(--border-subtle))] rounded-xl bg-white text-[hsl(var(--text-heading))] placeholder:text-[hsl(var(--text-subtle))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))/0.15] focus:border-[hsl(var(--primary))] transition-all shadow-xs"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))]">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {/* Dropdown Suchergebnisse */}
+              {search.trim().length >= 2 && (
+                <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-white border border-[hsl(var(--border-default))] rounded-xl shadow-card-lg overflow-hidden">
+                  {displayed.length === 0 ? (
+                    <div className="px-4 py-3 text-[12px] text-[hsl(var(--text-muted))]">Keine Treffer für „{search}"</div>
+                  ) : (
+                    <div className="py-1 max-h-72 overflow-y-auto">
+                      {workspaceMode === 'private' && <p className="px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-widest text-[hsl(var(--text-muted))]">Privatkunden</p>}
+                      {workspaceMode === 'business' && <p className="px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-widest text-[hsl(var(--text-muted))]">Unternehmen</p>}
+                      {displayed.slice(0, 12).map(c => {
+                        const isCompany = c.customer_type === 'business';
+                        const name = isCompany ? (c.company_name || `${c.first_name} ${c.last_name}`) : `${c.first_name} ${c.last_name}`;
+                        return (
+                          <button
+                            key={c.id}
+                            onMouseDown={() => { navigate(`/kunden/${c.id}`); setSearch(''); }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-blue-50/60 transition-colors"
+                          >
+                            <div className={cn('w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 text-[10px] font-bold', isCompany ? 'bg-violet-50 text-violet-600' : 'bg-blue-50 text-blue-600')}>
+                              {isCompany ? (c.company_name || '?').slice(0,2).toUpperCase() : `${(c.first_name||'').charAt(0)}${(c.last_name||'').charAt(0)}`.toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[12px] font-medium text-[hsl(var(--text-heading))] truncate">{name}</p>
+                              <p className="text-[10px] text-[hsl(var(--text-muted))] truncate">
+                                {c.customer_number && <span className="font-mono mr-1">{c.customer_number}</span>}
+                                {c.email}
+                              </p>
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-[hsl(var(--text-subtle))] ml-auto shrink-0" />
+                          </button>
+                        );
+                      })}
+                      {displayed.length > 12 && (
+                        <div className="px-3 py-2 text-[10px] text-[hsl(var(--text-muted))] border-t border-[hsl(var(--border-subtle))]">
+                          +{displayed.length - 12} weitere — Suchbegriff verfeinern
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2 ml-auto shrink-0">
               <select
