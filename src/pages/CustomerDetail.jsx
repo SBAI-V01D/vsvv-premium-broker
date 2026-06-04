@@ -333,55 +333,103 @@ export default function CustomerDetail() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Linke Spalte: Kontakt, Adresse, Persönliche Daten, Haushalt */}
             <div className="lg:col-span-2 space-y-4">
-              {/* Kontakt & Haushalt */}
+              {/* Alles in einem Feld */}
               <div className="surface p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-bold text-foreground">Kontakt</h3>
-                  {familyMembers.length > 1 && (
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Users className="w-3 h-3" /> {familyMembers.length - 1} Haushaltsmitglied{familyMembers.length > 2 ? 'er' : ''}
-                    </span>
+                <h3 className="text-sm font-bold text-foreground mb-4">Kontakt & Daten</h3>
+                <div className="space-y-4">
+                  {/* Kontakt */}
+                  {(customer.email || customer.phone || customer.mobile) && (
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Kontakt</p>
+                      <div className="flex flex-wrap gap-4 text-sm">
+                        {customer.email && (
+                          <span className="flex items-center gap-1.5 text-slate-600">
+                            <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+                            <EmailLink email={customer.email} />
+                          </span>
+                        )}
+                        {customer.phone && (
+                          <span className="flex items-center gap-1.5 text-slate-600">
+                            <Phone className="w-3.5 h-3.5 text-muted-foreground" />
+                            {customer.phone}
+                          </span>
+                        )}
+                        {customer.mobile && (
+                          <span className="flex items-center gap-1.5 text-slate-600">
+                            <Smartphone className="w-3.5 h-3.5 text-muted-foreground" />
+                            {customer.mobile}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   )}
-                </div>
-                <div className="space-y-3">
-                  {/* Kontaktzeile */}
-                  <div className="flex flex-wrap gap-4 text-sm">
-                    {customer.email && (
-                      <span className="flex items-center gap-1.5 text-slate-600">
-                        <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-                        <EmailLink email={customer.email} />
-                      </span>
-                    )}
-                    {customer.phone && (
-                      <span className="flex items-center gap-1.5 text-slate-600">
-                        <Phone className="w-3.5 h-3.5 text-muted-foreground" />
-                        {customer.phone}
-                      </span>
-                    )}
-                    {customer.mobile && (
-                      <span className="flex items-center gap-1.5 text-slate-600">
-                        <Smartphone className="w-3.5 h-3.5 text-muted-foreground" />
-                        {customer.mobile}
-                      </span>
-                    )}
-                  </div>
-                  
+
+                  {/* Adresse */}
+                  {customer.street && (
+                    <div className="pt-2 border-t border-border">
+                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Adresse</p>
+                      <div className="flex items-start gap-2 text-sm text-slate-600">
+                        <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p>{customer.street}</p>
+                          {(customer.zip_code || customer.city) && <p>{[customer.zip_code, customer.city].filter(Boolean).join(' ')}</p>}
+                          {customer.canton && <p className="text-muted-foreground">Kanton {customer.canton}</p>}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Persönliche Daten */}
+                  {(customer.birthdate || customer.profession || customer.civil_status || customer.nationality) && (
+                    <div className="pt-2 border-t border-border">
+                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Persönliche Daten</p>
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                        {customer.birthdate && (
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Geburtsdatum</span>
+                            <span className="text-slate-700">{formatDate(customer.birthdate)}</span>
+                          </div>
+                        )}
+                        {customer.profession && (
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Beruf</span>
+                            <span className="text-slate-700">{customer.profession}</span>
+                          </div>
+                        )}
+                        {customer.civil_status && (
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Zivilstand</span>
+                            <span className="text-slate-700">{CIVIL_STATUS_LABELS[customer.civil_status] || customer.civil_status}</span>
+                          </div>
+                        )}
+                        {customer.nationality && (
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Nationalität</span>
+                            <span className="text-slate-700">{customer.nationality}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Haushaltsmitglieder */}
                   {familyMembers.length > 1 && (
-                    <div className="pt-3 border-t border-border">
-                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Haushaltsmitglieder</p>
+                    <div className="pt-2 border-t border-border">
+                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Haushalt</p>
                       <div className="flex flex-wrap gap-2">
                         {familyMembers.filter(m => m.id !== id).map(member => (
                           <button
                             key={member.id}
                             onClick={() => navigate(`/kunden/${member.id}`)}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"
+                            className="inline-flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"
                           >
-                            <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
                               {member.first_name?.[0]}{member.last_name?.[0]}
                             </div>
-                            <span className="text-xs font-medium">{member.first_name} {member.last_name}</span>
-                            <span className="text-[10px] text-muted-foreground">· {FAMILY_ROLE_LABELS[member.family_role] || 'Familie'}</span>
+                            <div className="flex flex-col items-start">
+                              <span className="text-xs font-medium">{member.first_name} {member.last_name}</span>
+                              <span className="text-[10px] text-muted-foreground">{FAMILY_ROLE_LABELS[member.family_role] || 'Familie'}</span>
+                            </div>
                           </button>
                         ))}
                       </div>
@@ -389,54 +437,6 @@ export default function CustomerDetail() {
                   )}
                 </div>
               </div>
-
-              {/* Adresse */}
-              {customer.street && (
-                <div className="surface p-5">
-                  <h3 className="text-sm font-bold text-foreground mb-3">Adresse</h3>
-                  <div className="flex items-start gap-2 text-sm text-slate-600">
-                    <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p>{customer.street}</p>
-                      {(customer.zip_code || customer.city) && <p>{[customer.zip_code, customer.city].filter(Boolean).join(' ')}</p>}
-                      {customer.canton && <p className="text-muted-foreground">Kanton {customer.canton}</p>}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Persönliche Daten */}
-              {(customer.birthdate || customer.profession || customer.civil_status || customer.nationality) && (
-                <div className="surface p-5">
-                  <h3 className="text-sm font-bold text-foreground mb-3">Persönliche Daten</h3>
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                    {customer.birthdate && (
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Geburtsdatum</span>
-                        <span className="text-slate-700">{formatDate(customer.birthdate)}</span>
-                      </div>
-                    )}
-                    {customer.profession && (
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Beruf</span>
-                        <span className="text-slate-700">{customer.profession}</span>
-                      </div>
-                    )}
-                    {customer.civil_status && (
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Zivilstand</span>
-                        <span className="text-slate-700">{CIVIL_STATUS_LABELS[customer.civil_status] || customer.civil_status}</span>
-                      </div>
-                    )}
-                    {customer.nationality && (
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Nationalität</span>
-                        <span className="text-slate-700">{customer.nationality}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Rechte Spalte: Berater, Finanzen, Quick Stats (klickbar) */}
@@ -462,7 +462,7 @@ export default function CustomerDetail() {
                 if (!advisor) return null
                 return (
                   <div className="surface p-4">
-                    <h3 className="text-xs font-bold text-foreground mb-3">Ihr Berater</h3>
+                    <h3 className="text-sm font-bold text-foreground mb-3">Berater</h3>
                     <div className="flex items-start gap-3">
                       <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
                         {advisor.firstname?.[0]}{advisor.lastname?.[0]}
@@ -492,7 +492,7 @@ export default function CustomerDetail() {
               {/* Finanzen */}
               {(customer.bank_account || customer.total_premium > 0 || customer.ahv_number) && (
                 <div className="surface p-5">
-                  <h3 className="text-sm font-bold text-foreground mb-3">Finanzen</h3>
+                  <h3 className="text-sm font-bold text-foreground mb-3">Finanzen & Daten</h3>
                   <div className="space-y-2 text-sm">
                     {customer.total_premium > 0 && (
                       <div className="flex justify-between items-center">
@@ -518,7 +518,7 @@ export default function CustomerDetail() {
 
               {/* Quick Stats - Klickbar */}
               <div className="surface p-4">
-                <h3 className="text-xs font-bold text-foreground mb-3">Übersicht</h3>
+                <h3 className="text-sm font-bold text-foreground mb-3">Navigation</h3>
                 <div className="space-y-2">
                   <button
                     onClick={() => setActiveSection('vertraege')}
