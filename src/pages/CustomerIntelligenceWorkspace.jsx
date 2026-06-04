@@ -586,7 +586,7 @@ export default function CustomerIntelligenceWorkspace() {
             ) : (
               <div className="py-1 max-h-80 overflow-y-auto">
                 <p className="px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-widest text-[hsl(var(--text-muted))]">
-                  {displayed.length} {workspaceMode === 'private' ? 'Privatkunden' : 'Unternehmen'}
+                  {workspaceMode === 'private' ? 'Privatkunden' : 'Unternehmen'}
                 </p>
                 {displayed.slice(0, 15).map(c => {
                   const isCompany = c.customer_type === 'business';
