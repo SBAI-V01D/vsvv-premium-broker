@@ -261,6 +261,15 @@ export default function CustomerIntelligenceWorkspace() {
     retry: false,
   });
 
+  const { data: leads = [] } = useQuery({
+    queryKey: ['customers_leads'],
+    queryFn: () => base44.entities.Lead.filter({ status: 'open' }),
+    enabled: !isLoading,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Customer.create(data),
     onSuccess: (newCustomer) => {
@@ -517,7 +526,11 @@ export default function CustomerIntelligenceWorkspace() {
               );
             })}
             <div className="w-px h-5 bg-[hsl(var(--border-subtle))] mx-1 shrink-0" />
-            {NAV_LINKS.map(link => {
+            {[
+              { label: 'Vertragsabläufe', path: '/vertragsablaeufe', icon: Calendar, count: contracts.filter(c => c.status === 'active' && c.end_date && new Date(c.end_date) <= new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)).length },
+              { label: 'Verkaufschancen', path: '/verkaufschancen', icon: TrendingUp, count: verkaufschancen.filter(v => !['won','lost'].includes(v.status)).length },
+              { label: 'Leads', path: '/leads', icon: Target, count: leads.length },
+            ].map(link => {
               const Icon = link.icon;
               return (
                 <button
@@ -527,6 +540,11 @@ export default function CustomerIntelligenceWorkspace() {
                 >
                   <Icon className="w-3.5 h-3.5" />
                   {link.label}
+                  {link.count > 0 && (
+                    <span className="text-[11px] px-1.5 py-0.5 rounded-full font-semibold bg-[hsl(var(--surface-3))] text-[hsl(var(--text-muted))]">
+                      {link.count}
+                    </span>
+                  )}
                 </button>
               );
             })}
