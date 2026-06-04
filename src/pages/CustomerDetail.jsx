@@ -108,6 +108,25 @@ export default function CustomerDetail() {
 
   const customer = customerDirect || allCustomers.find(x => x.id === id)
 
+  // Haushaltsverträge ZENTRAL laden: Alle Verträge des Haushalts in einer Query
+  const { data: householdContracts = [] } = useQuery({
+    queryKey: ['household-contracts-all', primaryCustomerId],
+    queryFn: async () => {
+      if (!primaryCustomerId) return []
+      // Alle Familienmitglieder laden
+      const members = await base44.entities.Customer.filter({ primary_customer_id: primaryCustomerId })
+      const memberIds = members.map(m => m.id)
+      const allIds = [primaryCustomerId, ...memberIds]
+      // Alle Verträge für alle Haushaltsmitglieder laden
+      const results = await Promise.all(
+        allIds.map(cid => base44.entities.Contract.filter({ customer_id: cid, archived: false }))
+      )
+      return results.flat()
+    },
+    enabled: !!primaryCustomerId,
+    staleTime: 5 * 60 * 1000,
+  })
+
   // Familienmitglieder immer laden (unabhängig von needAllCustomers)
   const { data: householdFamilyMembers = [] } = useQuery({
     queryKey: ['family-members', id],
@@ -180,23 +199,8 @@ export default function CustomerDetail() {
   const primaryCustomer = mergedHouseholdMembers.find(c => c.id === primaryCustomerId) || allCustomers.find(c => c.id === primaryCustomerId) || customer
   const householdMembers = mergedHouseholdMembers
   const familyMembers = householdMembers
-  const householdCustomerIds = householdMembers.map(m => m.id).filter(Boolean)
-
-  const { data: householdContractsExtra = [] } = useQuery({
-    queryKey: ['household-contracts', primaryCustomerId],
-    queryFn: async () => {
-      const otherIds = householdCustomerIds.filter(mid => mid !== id)
-      if (!otherIds.length) return []
-      const results = await Promise.all(
-        otherIds.map(mid => base44.entities.Contract.filter({ customer_id: mid, archived: false }))
-      )
-      return results.flat()
-    },
-    enabled: !!primaryCustomerId && householdCustomerIds.length > 0,
-    staleTime: 5 * 60 * 1000,
-  })
-
-  const allHouseholdContracts = [...relatedContracts, ...householdContractsExtra]
+  // Verträge direkt aus zentraler Query verwenden
+  const allHouseholdContracts = householdContracts
 
   const downloadPDFMutation = useMutation({
     mutationFn: async () => {
@@ -280,7 +284,7 @@ export default function CustomerDetail() {
     { id: 'vertraege', label: 'Verträge', icon: FileText, count: relatedContracts.length },
     { id: 'antraege', label: 'Anträge', icon: FileText, count: relatedApplications.length },
     { id: 'dokumente', label: 'Dokumente', icon: FileText, count: relatedDocuments.length },
-    { id: 'familie', label: 'Familie', icon: Users, count: familyMembers.length > 1 ? familyMembers.length - 1 : 0 },
+    { id: 'familie', label: 'Familie', icon: Users, count: familyMembers.length > 1 ? familyMembers.length : 0 },
     { id: 'betreuung', label: 'Betreuung', icon: Shield },
     { id: 'timeline', label: 'Timeline', icon: Clock },
     { id: 'ki-analyse', label: 'KI-Analyse', icon: Bot },
