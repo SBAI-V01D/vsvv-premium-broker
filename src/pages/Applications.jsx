@@ -46,11 +46,13 @@ export default function Applications() {
   const { data: statusDefs = [] } = useQuery({
     queryKey: ['statusDefinitions'],
     queryFn: () => base44.entities.StatusDefinition.filter({ type: 'application' }),
+    staleTime: 10 * 60 * 1000,
   })
 
   const { data: applications = [] } = useQuery({
     queryKey: ['applications'],
     queryFn: () => base44.entities.Application.filter({ archived: false }, '-created_date', 300),
+    staleTime: 2 * 60 * 1000,
   })
 
   const { data: customers = [] } = useQuery({
@@ -62,6 +64,7 @@ export default function Applications() {
   const { data: brokers = [] } = useQuery({
     queryKey: ['brokers'],
     queryFn: () => base44.entities.Broker.filter({ is_active: true }, '-created_date', 100),
+    staleTime: 10 * 60 * 1000,
   })
 
   const getCustomer = (customerId) => customers.find(c => c.id === customerId)
