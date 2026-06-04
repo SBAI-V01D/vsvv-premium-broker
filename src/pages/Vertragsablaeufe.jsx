@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 import {
   Repeat2, CheckCircle2, RefreshCw, AlertTriangle, Clock,
   TrendingUp, Zap, Target, Shield, X, CalendarClock,
-  User, ArrowRight, ClipboardCheck, Loader2, Info, FileText
+  User, ArrowRight, Loader2, FileText, Info
 } from 'lucide-react'
 import { format, addDays } from 'date-fns'
 import { Button } from '@/components/ui/button'
@@ -76,25 +76,39 @@ function CountdownBar({ days, maxDays = 180, color }) {
 }
 
 function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange, onFollowup, followupPending }) {
-  const { contract, topAction, actions } = item
+  const { contract, topAction, actions, isVvg, vvgNextDate } = item
   const cfg = SEV[topAction.severity] || SEV.process
   const endDays    = daysUntil(contract.end_date)
   const cancelDays = daysUntil(contract.cancellation_deadline)
   const ablaufAction     = actions.find(a => a.type === 'ablauf' || a.type === 'expired')
   const kuendigungAction = actions.find(a => a.type === 'kuendigung')
   const isExpired = contract.status === 'expired' || (endDays !== null && endDays < 0)
-  const isReview  = topAction.severity === 'review_required'
 
   const isExcluded = contract.exclude_from_renewal_statistics
 
   return (
     <div
-      className={cn('grid items-center border-b border-border/40 transition-colors cursor-pointer border-l-[3px]', cfg.rowBg, cfg.borderL, isExcluded && 'opacity-50')}
+      className={cn(
+        'grid items-center border-b border-border/40 transition-colors cursor-pointer border-l-[3px]',
+        cfg.rowBg,
+        isVvg ? 'border-l-violet-500 bg-violet-50/20' : cfg.borderL,
+        isExcluded && 'opacity-50'
+      )}
       style={{ gridTemplateColumns: '200px 140px 1fr 100px 100px 100px 160px 110px' }}
     >
       <div className="py-2.5 px-3 min-w-0" onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}/360`)}>
-        <p className="text-[12px] font-semibold truncate hover:text-primary transition-colors leading-tight">{contract.customer_name || '–'}</p>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <p className="text-[12px] font-semibold truncate hover:text-primary transition-colors leading-tight">{contract.customer_name || '–'}</p>
+          {isVvg && (
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 border border-violet-300 whitespace-nowrap">
+              <FileText className="w-2.5 h-2.5" /> § 35a
+            </span>
+          )}
+        </div>
         <p className="text-[10px] text-muted-foreground truncate">{contract.insurer || '–'} · {getSparteLabel(contract.sparte || contract.insurance_type) || '–'}</p>
+        {isVvg && vvgNextDate && (
+          <p className="text-[9px] text-violet-600 mt-0.5">VVG Kündigung: {vvgNextDate.toLocaleDateString('de-CH')}</p>
+        )}
         {isExcluded && (
           <span className="inline-block text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-500 font-semibold mt-0.5" title={contract.renewal_statistics_note || 'Aus Statistik ausgeschlossen'}>
             Statistik ausgeschl.
@@ -108,9 +122,7 @@ function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange, onFollowup, 
         )}
       </div>
       <div className="py-2.5 px-3 min-w-0 space-y-1">
-        {isReview ? (
-          <p className="text-[10px] text-amber-700 font-semibold">⚠ Datum prüfen</p>
-        ) : (
+        {(
           <>
             {ablaufAction && (
               <div>
@@ -139,11 +151,11 @@ function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange, onFollowup, 
         )}
       </div>
       <div className="py-2.5 px-2 text-center">
-        <p className="text-[11px] font-medium">{isReview ? '—' : fmtDate(contract.end_date)}</p>
+        <p className="text-[11px] font-medium">{fmtDate(contract.end_date)}</p>
         <p className="text-[9px] text-muted-foreground">Ablauf</p>
       </div>
       <div className="py-2.5 px-2 text-center">
-        <p className="text-[11px] font-medium">{isReview ? '—' : fmtDate(contract.cancellation_deadline)}</p>
+        <p className="text-[11px] font-medium">{fmtDate(contract.cancellation_deadline)}</p>
         <p className="text-[9px] text-muted-foreground">Kündigung bis</p>
       </div>
       <div className="py-2.5 px-2 text-center">
@@ -443,6 +455,15 @@ export default function Vertragsablaeufe() {
   }, [contracts])
 
   const actionableItems = useMemo(() => {
+    const today = new Date()
+    // Build VVG lookup
+    const vvgMap = new Map()
+    contracts.forEach(c => {
+      const dates = getVvgDates(c)
+      const next = dates.find(d => d >= today)
+      if (next) vvgMap.set(c.id, next)
+    })
+
     return contracts
       .filter(c => {
         if (!isContractActionable(c)) return false
@@ -451,16 +472,16 @@ export default function Vertragsablaeufe() {
       })
       .map(c => {
         const actions = analyzeContract(c)
-        return { contract: c, actions, topAction: actions[0] }
+        const isVvg = vvgMap.has(c.id)
+        const vvgNextDate = vvgMap.get(c.id) || null
+        return { contract: c, actions, topAction: actions[0], isVvg, vvgNextDate }
       })
-      .filter(item => item.actions.length > 0)
+      .filter(item => item.actions.length > 0 && item.topAction?.severity !== 'review_required')
       .sort((a, b) => {
-        // Aktionierbare zuerst — abgelaufene zuletzt (kann nicht mehr gehandelt werden)
-        const order = { critical: 0, urgent: 1, warning: 2, expired: 3, process: 4, early: 5, review_required: 6 }
+        const order = { expired: 0, critical: 1, urgent: 2, warning: 3, process: 4, early: 5 }
         const ao = order[a.topAction?.severity] ?? 9
         const bo = order[b.topAction?.severity] ?? 9
         if (ao !== bo) return ao - bo
-        // Innerhalb derselben Gruppe: nach tatsächlichem Ablaufdatum sortieren (zuerst fällig = zuerst angezeigt)
         const aDays = daysUntil(a.contract.end_date) ?? 999
         const bDays = daysUntil(b.contract.end_date) ?? 999
         return aDays - bDays
@@ -473,12 +494,9 @@ export default function Vertragsablaeufe() {
     if (hideExcluded && item.contract.exclude_from_renewal_statistics) return false
     if (filterSeverity !== 'all') {
       const sev = item.topAction?.severity
-      if (filterSeverity === 'review_required' && sev !== 'review_required') return false
-      if (filterSeverity === 'critical' && !['expired', 'critical'].includes(sev)) return false
-      if (filterSeverity === 'urgent'   && sev !== 'urgent')   return false
-      if (filterSeverity === 'warning'  && sev !== 'warning')  return false
-      if (filterSeverity === 'process'  && sev !== 'process')  return false
-      if (filterSeverity === 'early'    && sev !== 'early')    return false
+      if (filterSeverity === 'expired' && sev !== 'expired') return false
+      if (filterSeverity === 'process' && !['process', 'warning', 'urgent', 'critical'].includes(sev)) return false
+      if (filterSeverity === 'early'   && sev !== 'early') return false
     }
     if (filterProcessStatus !== 'all' && item.contract.process_status !== filterProcessStatus) return false
     if (search) {
@@ -490,24 +508,19 @@ export default function Vertragsablaeufe() {
   }), [actionableItems, filterSeverity, filterProcessStatus, search, hideExcluded])
 
   const stats = useMemo(() => ({
-    expired:         filtered.filter(i => i.topAction?.severity === 'expired').length,
-    critical:        filtered.filter(i => i.topAction?.severity === 'critical').length,
-    urgent:          filtered.filter(i => i.topAction?.severity === 'urgent').length,
-    warning:         filtered.filter(i => i.topAction?.severity === 'warning').length,
-    process:         filtered.filter(i => i.topAction?.severity === 'process').length,
-    early:           filtered.filter(i => i.topAction?.severity === 'early').length,
-    review_required: filtered.filter(i => i.topAction?.severity === 'review_required').length,
-    totalPremium:    filtered.filter(i => i.topAction?.severity !== 'review_required').reduce((s, i) => s + (i.contract.premium_yearly || 0), 0),
+    expired:      filtered.filter(i => i.topAction?.severity === 'expired').length,
+    critical:     filtered.filter(i => i.topAction?.severity === 'critical').length,
+    urgent:       filtered.filter(i => i.topAction?.severity === 'urgent').length,
+    warning:      filtered.filter(i => i.topAction?.severity === 'warning').length,
+    process:      filtered.filter(i => i.topAction?.severity === 'process').length,
+    early:        filtered.filter(i => i.topAction?.severity === 'early').length,
+    totalPremium: filtered.reduce((s, i) => s + (i.contract.premium_yearly || 0), 0),
   }), [filtered])
 
   const groups = {
-    review_required: filtered.filter(i => i.topAction?.severity === 'review_required'),
-    early:           filtered.filter(i => i.topAction?.severity === 'early'),
-    process:         filtered.filter(i => i.topAction?.severity === 'process'),
-    warning:         filtered.filter(i => i.topAction?.severity === 'warning'),
-    urgent:          filtered.filter(i => i.topAction?.severity === 'urgent'),
-    critical:        filtered.filter(i => i.topAction?.severity === 'critical'),
-    expired:         filtered.filter(i => i.topAction?.severity === 'expired'),
+    expired:  filtered.filter(i => i.topAction?.severity === 'expired'),
+    process:  filtered.filter(i => ['process', 'warning', 'urgent', 'critical'].includes(i.topAction?.severity)),
+    early:    filtered.filter(i => i.topAction?.severity === 'early'),
   }
 
   const handleCreateVs = (contract) => {
@@ -541,19 +554,16 @@ export default function Vertragsablaeufe() {
   const hasFilters = search || filterSeverity !== 'all' || filterProcessStatus !== 'all'
 
   const GROUP_LABELS = {
-    review_required: '⚠ Manuelle Datumsprüfung ausstehend — Platzhalter 9999-12-31',
-    early:           'Früh — 150 bis 180 Tage',
-    process:         'In Vorbereitung — 90 bis 150 Tage',
-    warning:         'Bald fällig — 60 bis 90 Tage',
-    urgent:          'Dringend — 30 bis 60 Tage',
-    critical:        'Kritisch — innerhalb 30 Tage',
-    expired:         'Bereits abgelaufen — sofort handeln',
+    expired: 'Bereits abgelaufen — sofort handeln',
+    process: 'In Vorbereitung — innerhalb 150 Tage',
+    early:   'Früh — 150 bis 180 Tage',
   }
 
   const renderGroup = (key) => {
     const items = groups[key]
     if (!items || items.length === 0) return null
-    const cfg = SEV[key]
+    // For "process" group, use process SEV style; for others use their own
+    const cfg = key === 'process' ? SEV.process : SEV[key]
     return (
       <div key={key}>
         <SectionDivider label={GROUP_LABELS[key]} count={items.length} cfg={cfg} />
@@ -599,15 +609,9 @@ export default function Vertragsablaeufe() {
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {/* KPI Strip */}
         <div className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
-          <KpiCard label="Kritisch"     sublabel="≤ 30 Tage"      value={stats.critical}        icon={Zap}           cfg={SEV.critical}        active={filterSeverity === 'critical'}        onClick={() => setFilterSeverity(f => f === 'critical' ? 'all' : 'critical')} />
-          <KpiCard label="Dringend"     sublabel="30–60 Tage"     value={stats.urgent}          icon={Clock}         cfg={SEV.urgent}          active={filterSeverity === 'urgent'}          onClick={() => setFilterSeverity(f => f === 'urgent' ? 'all' : 'urgent')} />
-          <KpiCard label="Bald fällig"  sublabel="60–90 Tage"     value={stats.warning}         icon={CalendarClock} cfg={SEV.warning}         active={filterSeverity === 'warning'}         onClick={() => setFilterSeverity(f => f === 'warning' ? 'all' : 'warning')} />
-          <KpiCard label="Abgelaufen"   sublabel="Sofort handeln" value={stats.expired}         icon={AlertTriangle} cfg={SEV.expired}         active={filterSeverity === 'expired'}         onClick={() => setFilterSeverity(f => f === 'expired' ? 'all' : 'expired')} />
-          <KpiCard label="Vorbereitung" sublabel="90–150 Tage"    value={stats.process}         icon={TrendingUp}    cfg={SEV.process}         active={filterSeverity === 'process'}         onClick={() => setFilterSeverity(f => f === 'process' ? 'all' : 'process')} />
-          <KpiCard label="Früh"         sublabel="150–180 Tage"   value={stats.early}           icon={CalendarClock} cfg={SEV.early}           active={filterSeverity === 'early'}           onClick={() => setFilterSeverity(f => f === 'early' ? 'all' : 'early')} />
-          {stats.review_required > 0 && (
-            <KpiCard label="Datumsprüfung" sublabel="Platzhalter gesetzt" value={stats.review_required} icon={ClipboardCheck} cfg={SEV.review_required} active={filterSeverity === 'review_required'} onClick={() => setFilterSeverity(f => f === 'review_required' ? 'all' : 'review_required')} />
-          )}
+          <KpiCard label="Abgelaufen"   sublabel="Sofort handeln" value={stats.expired}  icon={AlertTriangle} cfg={SEV.expired}  active={filterSeverity === 'expired'}  onClick={() => setFilterSeverity(f => f === 'expired' ? 'all' : 'expired')} />
+          <KpiCard label="Vorbereitung" sublabel="≤ 150 Tage"     value={stats.process + stats.warning + stats.urgent + stats.critical}  icon={TrendingUp}    cfg={SEV.process}  active={filterSeverity === 'process'}  onClick={() => setFilterSeverity(f => f === 'process' ? 'all' : 'process')} />
+          <KpiCard label="Früh"         sublabel="150–180 Tage"   value={stats.early}   icon={CalendarClock} cfg={SEV.early}    active={filterSeverity === 'early'}    onClick={() => setFilterSeverity(f => f === 'early' ? 'all' : 'early')} />
           {stats.totalPremium > 0 && (
             <div className="flex-1 min-w-[150px] p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-left">
               <TrendingUp className="w-3.5 h-3.5 text-emerald-600 mb-1" />
@@ -627,14 +631,11 @@ export default function Vertragsablaeufe() {
             <Input placeholder="Kunde, Versicherer, Police..." value={search} onChange={e => setSearch(e.target.value)} className="w-[220px] h-8 text-xs pl-3" />
           </div>
           <Select value={filterSeverity} onValueChange={setFilterSeverity}>
-            <SelectTrigger className="w-48 h-8 text-xs"><SelectValue placeholder="Dringlichkeit" /></SelectTrigger>
+            <SelectTrigger className="w-48 h-8 text-xs"><SelectValue placeholder="Kategorie" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle Dringlichkeiten</SelectItem>
-              <SelectItem value="review_required">⚠ Datumsprüfung ausstehend</SelectItem>
-              <SelectItem value="critical">Kritisch / Abgelaufen</SelectItem>
-              <SelectItem value="urgent">Dringend (30–60d)</SelectItem>
-              <SelectItem value="warning">Bald fällig (60–90d)</SelectItem>
-              <SelectItem value="process">Vorbereitung (90–150d)</SelectItem>
+              <SelectItem value="all">Alle Kategorien</SelectItem>
+              <SelectItem value="expired">Bereits abgelaufen</SelectItem>
+              <SelectItem value="process">In Vorbereitung (≤150d)</SelectItem>
               <SelectItem value="early">Früh (150–180d)</SelectItem>
             </SelectContent>
           </Select>
@@ -691,13 +692,16 @@ export default function Vertragsablaeufe() {
           <div className="rounded-xl border border-border overflow-hidden bg-card shadow-xs overflow-x-auto">
             <TableHeader />
             <div>
-              {['critical', 'urgent', 'warning', 'expired', 'process', 'early', 'review_required'].map(renderGroup)}
+              {['expired', 'process', 'early'].map(renderGroup)}
             </div>
           </div>
         )}
 
-        {/* VVG Art. 35a — Mehrjahresverträge mit gesetzlichen Kündigungsoptionen */}
-        <VvgPanel items={vvgItems} navigate={navigate} />
+        {/* VVG Info-Hinweis */}
+        <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-violet-50 border border-violet-200 text-[10px] text-violet-700">
+          <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-violet-500" />
+          <span><strong>§ 35a VVG</strong> (gültig seit 01.01.2022): Mehrjahresverträge (lila markiert) können nach 3 Versicherungsjahren ordentlich gekündigt werden — danach jährlich.</span>
+        </div>
       </div>
     </div>
   )

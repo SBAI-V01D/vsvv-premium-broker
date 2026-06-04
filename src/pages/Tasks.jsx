@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus, CheckCircle2, Circle, Clock, AlertCircle,
-  Calendar, User, Trash2, Pencil, ChevronRight
+  Calendar, User, Trash2, Pencil, ChevronRight, ClipboardCheck
 } from 'lucide-react';
 import { format, isToday, isPast, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -48,6 +49,7 @@ const EMPTY_FORM = {
 
 export default function Tasks() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('active');
@@ -60,6 +62,16 @@ export default function Tasks() {
     queryKey: ['tasks'],
     queryFn: () => base44.entities.Task.list('-created_date', 200),
   });
+
+  // Manuelle Datumsprüfung — Verträge mit Platzhalter-Datum
+  const { data: reviewContracts = [] } = useQuery({
+    queryKey: ['tasks_date_review'],
+    queryFn: () => base44.entities.Contract.filter({ archived: false }, '-updated_date', 500),
+    staleTime: 5 * 60 * 1000,
+  });
+  const dateReviewItems = reviewContracts.filter(c =>
+    c.end_date?.startsWith('9999') || c.end_date?.startsWith('0001') || !c.end_date
+  );
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Task.create(data),
@@ -186,6 +198,41 @@ export default function Tasks() {
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-6 space-y-5">
+
+      {/* Manuelle Datumsprüfung — separater Bereich, getrennt von klassischen Aufgaben */}
+      {dateReviewItems.length > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/30 overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-amber-200/70 bg-amber-50/60">
+            <ClipboardCheck className="w-4 h-4 text-amber-700" />
+            <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wide">Manuelle Datumsprüfung</span>
+            <span className="text-[10px] text-amber-700 font-semibold bg-amber-200/60 px-1.5 py-0.5 rounded-full ml-1">{dateReviewItems.length}</span>
+            <span className="ml-auto text-[10px] text-amber-600">Verträge mit Platzhalter-Ablaufdatum — bitte prüfen und korrigieren</span>
+          </div>
+          <div className="divide-y divide-amber-100">
+            {dateReviewItems.map(c => (
+              <div key={c.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50/60 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <span className="text-[12px] font-semibold">{c.customer_name || '–'}</span>
+                  <span className="text-muted-foreground mx-1.5 text-[11px]">·</span>
+                  <span className="text-[11px] text-muted-foreground">{c.insurer || '–'}</span>
+                  {c.policy_number && <span className="text-[10px] font-mono text-muted-foreground ml-2">{c.policy_number}</span>}
+                </div>
+                <span className="text-[10px] text-amber-700 font-semibold">
+                  {c.end_date ? c.end_date : 'Kein Datum'}
+                </span>
+                {c.customer_id && (
+                  <button
+                    onClick={() => navigate(`/kunden/${c.customer_id}/360`)}
+                    className="text-[10px] px-2 py-1 border border-amber-300 rounded text-amber-700 hover:bg-amber-100 transition-colors whitespace-nowrap"
+                  >
+                    Öffnen →
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <FilterBar
         search={search}
