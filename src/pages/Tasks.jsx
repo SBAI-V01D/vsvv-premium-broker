@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
@@ -55,6 +55,7 @@ export default function Tasks() {
   const [filterStatus, setFilterStatus] = useState('active');
   const [filterPriority, setFilterPriority] = useState('all');
   const [showForm, setShowForm] = useState(false);
+  const showFormRef = useRef(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
 
@@ -89,8 +90,8 @@ export default function Tasks() {
       queryClient.setQueryData(['tasks'], (old = []) =>
         old.map(t => t.id === updated.id ? updated : t)
       );
-      // Only close form if editing (not for inline status toggles)
-      if (showForm) closeForm();
+      // Only close form if the form dialog was open (not inline status toggles)
+      if (showFormRef.current) closeForm();
     },
   });
 
@@ -101,9 +102,9 @@ export default function Tasks() {
     },
   });
 
-  const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setShowForm(true); };
-  const openEdit = (task) => { setEditing(task); setForm({ ...EMPTY_FORM, ...task }); setShowForm(true); };
-  const closeForm = () => { setShowForm(false); setEditing(null); setForm(EMPTY_FORM); };
+  const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); showFormRef.current = true; setShowForm(true); };
+  const openEdit = (task) => { setEditing(task); setForm({ ...EMPTY_FORM, ...task }); showFormRef.current = true; setShowForm(true); };
+  const closeForm = () => { showFormRef.current = false; setShowForm(false); setEditing(null); setForm(EMPTY_FORM); };
 
   const handleSubmit = (e) => {
     e.preventDefault();
