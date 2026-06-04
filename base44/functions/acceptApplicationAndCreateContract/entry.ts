@@ -124,6 +124,25 @@ Deno.serve(async (req) => {
         linked_contract_id: newContract.id,
       });
 
+      // Berater-Zuordnung auf Kunden übernehmen
+      if (brokerId) {
+        try {
+          const customerToUpdate = await base44.entities.Customer.get(app.customer_id);
+          if (customerToUpdate) {
+            const updateData = {};
+            if (!customerToUpdate.primary_advisor_id) updateData.primary_advisor_id = brokerId;
+            const existingAdvisors = customerToUpdate.assigned_advisors || [];
+            if (!existingAdvisors.includes(brokerId)) updateData.assigned_advisors = [...existingAdvisors, brokerId];
+            if (app.assigned_broker && !customerToUpdate.assigned_broker) updateData.assigned_broker = app.assigned_broker;
+            if (Object.keys(updateData).length > 0) {
+              await base44.entities.Customer.update(app.customer_id, updateData);
+            }
+          }
+        } catch (e) {
+          console.warn(`[acceptApplicationAndCreateContract] Berater-Sync non-fatal: ${e.message}`);
+        }
+      }
+
       // ENTERPRISE GUARD: Kündigungsfrist synchronisieren (sofort, nicht warten)
       try {
         await base44.functions.invoke('syncCancellationDeadline', { contract_id: newContract.id });

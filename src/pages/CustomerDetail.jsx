@@ -391,8 +391,13 @@ export default function CustomerDetail() {
                     <div key={c.id} className={idx > 0 ? 'border-t border-border' : ''}>
                       <div className="grid grid-cols-1 md:grid-cols-[2fr_2fr_1.5fr_1.2fr_1fr_1fr_auto] gap-3 px-4 py-1.5 items-center hover:bg-muted/20 transition-colors">
                         <div className="min-w-0">
-                          <p className="font-semibold text-xs truncate">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</p>
-                          {customer.ahv_number && <p className="text-xs font-mono text-muted-foreground mt-0.5">{customer.ahv_number}</p>}
+                         <p className="font-semibold text-xs truncate">{customer.company_name || `${customer.first_name} ${customer.last_name}`}</p>
+                         {customer.ahv_number && <p className="text-xs font-mono text-muted-foreground mt-0.5">{customer.ahv_number}</p>}
+                         {(c.assigned_broker || c.advisor_id) && (
+                           <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                             {c.assigned_broker || allAdvisors.find(a => a.id === c.advisor_id)?.email || ''}
+                           </p>
+                         )}
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
@@ -644,6 +649,52 @@ export default function CustomerDetail() {
         {activeSection === 'betreuung' && (
           <div className="space-y-6">
             <AdvisorAssignmentPanel customerId={id} />
+
+            {/* Berater aus Anträgen & Verträgen */}
+            {(() => {
+              const brokerEmails = new Set()
+              relatedApplications.forEach(a => { if (a.assigned_broker) brokerEmails.add(a.assigned_broker) })
+              relatedContracts.forEach(c => { if (c.assigned_broker) brokerEmails.add(c.assigned_broker) })
+              const brokerIds = new Set()
+              relatedApplications.forEach(a => { if (a.advisor_id) brokerIds.add(a.advisor_id) })
+              relatedContracts.forEach(c => { if (c.advisor_id) brokerIds.add(c.advisor_id) })
+              const advisorsFromIds = allAdvisors.filter(a => brokerIds.has(a.id))
+              if (brokerEmails.size === 0 && advisorsFromIds.length === 0) return null
+              return (
+                <div className="surface p-4">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5" />Zuständige Berater (aus Anträgen &amp; Verträgen)
+                  </p>
+                  <div className="space-y-2">
+                    {advisorsFromIds.map(a => (
+                      <div key={a.id} className="flex items-center gap-3 p-2.5 bg-blue-50 border border-blue-100 rounded-lg">
+                        <div className="w-7 h-7 rounded-full bg-blue-200 flex items-center justify-center text-xs font-bold text-blue-800">
+                          {a.firstname?.[0]}{a.lastname?.[0]}
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold">{a.firstname} {a.lastname}</p>
+                          <p className="text-[11px] text-muted-foreground">{a.email}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {[...brokerEmails].filter(email => !advisorsFromIds.some(a => a.email === email)).map(email => {
+                      const advisor = allAdvisors.find(a => a.email === email)
+                      return (
+                        <div key={email} className="flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+                          <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                            {advisor ? `${advisor.firstname?.[0]}${advisor.lastname?.[0]}` : email[0]?.toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold">{advisor ? `${advisor.firstname} ${advisor.lastname}` : email}</p>
+                            <p className="text-[11px] text-muted-foreground">{email}</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         )}
 

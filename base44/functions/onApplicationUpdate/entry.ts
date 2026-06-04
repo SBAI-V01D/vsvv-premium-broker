@@ -303,6 +303,32 @@ Deno.serve(async (req) => {
         linked_contract_id: newContract.id,
       });
 
+      // Berater-Zuordnung auf Kunden übernehmen (wenn noch nicht gesetzt)
+      if (brokerId) {
+        try {
+          const customerToUpdate = await base44.asServiceRole.entities.Customer.get(app.customer_id);
+          if (customerToUpdate) {
+            const updateData = {};
+            if (!customerToUpdate.primary_advisor_id) {
+              updateData.primary_advisor_id = brokerId;
+            }
+            const existingAdvisors = customerToUpdate.assigned_advisors || [];
+            if (!existingAdvisors.includes(brokerId)) {
+              updateData.assigned_advisors = [...existingAdvisors, brokerId];
+            }
+            if (app.assigned_broker && !customerToUpdate.assigned_broker) {
+              updateData.assigned_broker = app.assigned_broker;
+            }
+            if (Object.keys(updateData).length > 0) {
+              await base44.asServiceRole.entities.Customer.update(app.customer_id, updateData);
+              console.log(`[onApplicationUpdate] Berater ${brokerId} auf Kunde ${app.customer_id} übernommen`);
+            }
+          }
+        } catch (advisorSyncErr) {
+          console.warn(`[onApplicationUpdate] Berater-Sync auf Kunde fehlgeschlagen (non-fatal): ${advisorSyncErr.message}`);
+        }
+      }
+
       // AUDIT LOG: Contract Created
       await base44.functions.invoke('auditLogWrite', {
         entity_type: 'Contract',
