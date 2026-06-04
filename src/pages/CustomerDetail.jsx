@@ -21,7 +21,7 @@ import DocumentsTab from '../components/documents/DocumentsTab'
 import ContractForm from '../components/contracts/ContractForm'
 import StatusChangeDialog from '@/components/status/StatusChangeDialog'
 import { calculateCustomerHealthScore } from '@/lib/customerHealthScore'
-import { FAMILY_ROLE_LABELS, label } from '@/lib/labels'
+import { FAMILY_ROLE_LABELS, CIVIL_STATUS_LABELS, label } from '@/lib/labels'
 import { getSparteLabel } from '@/lib/insuranceSparten'
 import StatusBadge from '@/components/status/StatusBadge'
 import PortalActivationPanel from '@/components/customers/PortalActivationPanel'
@@ -289,7 +289,7 @@ export default function CustomerDetail() {
     { id: 'familie', label: 'Familie', icon: Users, count: familyMembers.length > 1 ? familyMembers.length : 0 },
     { id: 'betreuung', label: 'Betreuung', icon: Shield },
     { id: 'timeline', label: 'Timeline', icon: Clock },
-    { id: 'ki-analyse', label: 'KI-Analyse', icon: Bot },
+    { id: 'beratungspotential', label: 'Beratungspotential', icon: Bot, count: verkaufschancen.length > 0 ? verkaufschancen.length : 0 },
   ]
 
   return (
@@ -329,128 +329,219 @@ export default function CustomerDetail() {
 
         {/* ── Übersicht ─────────────────────────────────────────────── */}
         {activeSection === 'uebersicht' && (
-          <div className="space-y-6">
-            {/* Stammdaten — kompakt */}
-            <div className="surface p-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-1">Kontakt</p>
-                  <div className="space-y-1 text-sm">
-                    {customer.email && <p className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-muted-foreground" /> <EmailLink email={customer.email} /></p>}
-                    {customer.phone && <p className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-muted-foreground" /> {customer.phone}</p>}
-                    {customer.mobile && <p className="flex items-center gap-1.5"><Smartphone className="w-3.5 h-3.5 text-muted-foreground" /> {customer.mobile}</p>}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Linke Spalte: Basis-Informationen */}
+            <div className="lg:col-span-2 space-y-4">
+              {/* Kontakt & Haushalt */}
+              <div className="surface p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold text-foreground">Kontakt</h3>
+                  {familyMembers.length > 1 && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Users className="w-3 h-3" /> {familyMembers.length - 1} Haushaltsmitglied{familyMembers.length > 2 ? 'er' : ''}
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  {/* Kontaktzeile */}
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    {customer.email && (
+                      <span className="flex items-center gap-1.5 text-slate-600">
+                        <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+                        <EmailLink email={customer.email} />
+                      </span>
+                    )}
+                    {customer.phone && (
+                      <span className="flex items-center gap-1.5 text-slate-600">
+                        <Phone className="w-3.5 h-3.5 text-muted-foreground" />
+                        {customer.phone}
+                      </span>
+                    )}
+                    {customer.mobile && (
+                      <span className="flex items-center gap-1.5 text-slate-600">
+                        <Smartphone className="w-3.5 h-3.5 text-muted-foreground" />
+                        {customer.mobile}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {/* Haushaltsmitglieder */}
+                  {familyMembers.length > 1 && (
+                    <div className="pt-3 border-t border-border">
+                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Haushaltsmitglieder</p>
+                      <div className="flex flex-wrap gap-2">
+                        {familyMembers.filter(m => m.id !== id).map(member => (
+                          <button
+                            key={member.id}
+                            onClick={() => navigate(`/kunden/${member.id}`)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"
+                          >
+                            <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
+                              {member.first_name?.[0]}{member.last_name?.[0]}
+                            </div>
+                            <span className="text-xs font-medium">{member.first_name} {member.last_name}</span>
+                            <span className="text-[10px] text-muted-foreground">· {FAMILY_ROLE_LABELS[member.family_role] || 'Familie'}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Adresse */}
+              {customer.street && (
+                <div className="surface p-5">
+                  <h3 className="text-sm font-bold text-foreground mb-3">Adresse</h3>
+                  <div className="flex items-start gap-2 text-sm text-slate-600">
+                    <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
+                    <div>
+                      <p>{customer.street}</p>
+                      {(customer.zip_code || customer.city) && <p>{[customer.zip_code, customer.city].filter(Boolean).join(' ')}</p>}
+                      {customer.canton && <p className="text-muted-foreground">Kanton {customer.canton}</p>}
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-1">Adresse</p>
-                  <div className="space-y-1 text-sm">
-                    {customer.street && <p className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-muted-foreground" /> {customer.street}</p>}
-                    {(customer.zip_code || customer.city) && <p className="text-sm">{[customer.zip_code, customer.city].filter(Boolean).join(' ')}</p>}
+              )}
+
+              {/* Persönliche Daten */}
+              {(customer.birthdate || customer.profession || customer.civil_status || customer.nationality) && (
+                <div className="surface p-5">
+                  <h3 className="text-sm font-bold text-foreground mb-3">Persönliche Daten</h3>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                    {customer.birthdate && (
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Geburtsdatum</span>
+                        <span className="text-slate-700">{formatDate(customer.birthdate)}</span>
+                      </div>
+                    )}
+                    {customer.profession && (
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Beruf</span>
+                        <span className="text-slate-700">{customer.profession}</span>
+                      </div>
+                    )}
+                    {customer.civil_status && (
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Zivilstand</span>
+                        <span className="text-slate-700">{CIVIL_STATUS_LABELS[customer.civil_status] || customer.civil_status}</span>
+                      </div>
+                    )}
+                    {customer.nationality && (
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Nationalität</span>
+                        <span className="text-slate-700">{customer.nationality}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-1">Persönliches</p>
-                  <div className="space-y-1 text-sm">
-                    {customer.birthdate && <p>Geburtsdatum: {formatDate(customer.birthdate)}</p>}
-                    {customer.profession && <p>Beruf: {customer.profession}</p>}
+              )}
+            </div>
+
+            {/* Rechte Spalte: Berater & Finanzen */}
+            <div className="space-y-4">
+              {/* Zuständiger Berater */}
+              {(() => {
+                const advisorId = customer.primary_advisor_id || customer.advisor_id
+                let advisor = advisorId ? allAdvisors.find(a => a.id === advisorId || a.email === advisorId) : null
+                
+                if (!advisor && relatedContracts.length > 0) {
+                  for (const c of relatedContracts) {
+                    if (c.advisor_id) {
+                      advisor = allAdvisors.find(a => a.id === c.advisor_id || a.email === c.advisor_id)
+                      if (advisor) break
+                    }
+                    if (c.assigned_broker) {
+                      advisor = allAdvisors.find(a => a.id === c.assigned_broker || a.email === c.assigned_broker)
+                      if (advisor) break
+                    }
+                  }
+                }
+                
+                if (!advisor) return null
+                return (
+                  <div className="surface p-4">
+                    <h3 className="text-xs font-bold text-foreground mb-3">Ihr Berater</h3>
+                    <div className="flex items-start gap-3">
+                      <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
+                        {advisor.firstname?.[0]}{advisor.lastname?.[0]}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-foreground truncate">{advisor.firstname} {advisor.lastname}</p>
+                        <p className="text-xs text-muted-foreground truncate">{advisor.email}</p>
+                        {advisor.phone && <p className="text-xs text-muted-foreground">{advisor.phone}</p>}
+                        <div className="flex items-center gap-1 mt-2">
+                          {advisor.phone && (
+                            <a href={`tel:${advisor.phone}`} className="p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded transition-colors" title="Anrufen">
+                              <Phone className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                          {advisor.email && (
+                            <a href={`mailto:${advisor.email}`} className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded transition-colors" title="E-Mail">
+                              <Mail className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Finanzen */}
+              {(customer.bank_account || customer.total_premium > 0 || customer.ahv_number) && (
+                <div className="surface p-5">
+                  <h3 className="text-sm font-bold text-foreground mb-3">Finanzen</h3>
+                  <div className="space-y-2 text-sm">
+                    {customer.total_premium > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Gesamtprämie</span>
+                        <span className="font-semibold text-foreground">CHF {customer.total_premium.toLocaleString('de-CH')}</span>
+                      </div>
+                    )}
+                    {customer.bank_account && (
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Konto</span>
+                        <span className="text-slate-700 font-mono text-xs">{customer.bank_account}</span>
+                      </div>
+                    )}
+                    {customer.ahv_number && (
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">AHV-Nr.</span>
+                        <span className="text-slate-700 font-mono text-xs">{customer.ahv_number}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-1">Finanzen</p>
-                  <div className="space-y-1 text-sm">
-                    {customer.bank_account && <p className="flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5 text-muted-foreground" /> {customer.bank_account}</p>}
-                    {customer.total_premium > 0 && <p>Gesamtprämie: CHF {customer.total_premium.toLocaleString('de-CH')}</p>}
+              )}
+
+              {/* Quick Stats */}
+              <div className="surface p-4">
+                <h3 className="text-xs font-bold text-foreground mb-3">Übersicht</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Verträge</span>
+                    <span className="font-semibold">{relatedContracts.length}</span>
                   </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Anträge</span>
+                    <span className="font-semibold">{relatedApplications.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Offene Tasks</span>
+                    <span className={`font-semibold ${custTasks.filter(t => t.status !== 'completed').length > 0 ? 'text-amber-600' : ''}`}>
+                      {custTasks.filter(t => t.status !== 'completed').length}
+                    </span>
+                  </div>
+                  {verkaufschancen.length > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Beratungspotential</span>
+                      <span className="font-semibold text-primary">{verkaufschancen.length}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-
-            {/* Zuständiger Berater */}
-            {(() => {
-              const advisorId = customer.primary_advisor_id || customer.advisor_id
-              let advisor = advisorId ? allAdvisors.find(a => a.id === advisorId || a.email === advisorId) : null
-              
-              if (!advisor && relatedContracts.length > 0) {
-                for (const c of relatedContracts) {
-                  if (c.advisor_id) {
-                    advisor = allAdvisors.find(a => a.id === c.advisor_id || a.email === c.advisor_id)
-                    if (advisor) break
-                  }
-                  if (c.assigned_broker) {
-                    advisor = allAdvisors.find(a => a.id === c.assigned_broker || a.email === c.assigned_broker)
-                    if (advisor) break
-                  }
-                }
-              }
-              
-              if (!advisor) return null
-              return (
-                <div className="surface p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
-                      {advisor.firstname?.[0]}{advisor.lastname?.[0]}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold uppercase text-muted-foreground tracking-widest mb-0.5">Zuständiger Berater</p>
-                      <p className="text-sm font-bold text-foreground">{advisor.firstname} {advisor.lastname}</p>
-                      <p className="text-xs text-muted-foreground">{advisor.email}</p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {advisor.phone && (
-                        <a href={`tel:${advisor.phone}`} className="p-2 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Anrufen">
-                          <Phone className="w-4 h-4" />
-                        </a>
-                      )}
-                      {advisor.email && (
-                        <a href={`mailto:${advisor.email}`} className="p-2 text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded-lg transition-colors" title="E-Mail">
-                          <Mail className="w-4 h-4" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })()}
-
-            {/* Haushalt & Beziehungen */}
-            {(familyMembers.length > 1 || relatedContracts.length > 0) && (
-              <div className="space-y-3">
-                <SectionHeader
-                  title="Haushalt & Beziehungen"
-                  subtitle="Beziehungen, gemeinsame Policen und Cross-Selling Potenzial"
-                />
-                <HouseholdIntelligencePanel
-                  primaryCustomer={primaryCustomer}
-                  familyMembers={familyMembers.filter(m => m.id !== id)}
-                  contracts={allHouseholdContracts}
-                  opportunities={verkaufschancen}
-                />
-              </div>
-            )}
-
-            <CustomerDashboardCompact
-              customer={customer}
-              familyMembers={familyMembers.filter(m => m.id !== id)}
-              contracts={relatedContracts}
-              tasks={custTasks}
-              opportunities={verkaufschancen}
-              onDownloadPDF={() => downloadPDFMutation.mutate()}
-              onNewOpportunity={() => {}}
-              onNewFamilyMember={() => setShowAddFamilyMember(true)}
-              isDownloading={downloadPDFMutation.isPending}
-            />
-            {relatedContracts.length > 0 && (
-              <div className="space-y-6">
-                <CoverageGapsPanel contracts={relatedContracts} onAddCoverage={() => {}} />
-                <ContractsBySparteGroup
-                  contracts={relatedContracts}
-                  familyMembers={familyMembers.filter(m => m.id !== id)}
-                  primaryCustomer={customer}
-                  onStartReview={() => {}}
-                  onCreateOpportunity={() => {}}
-                />
-              </div>
-            )}
           </div>
         )}
 
@@ -836,10 +927,40 @@ export default function CustomerDetail() {
           </div>
         )}
 
-        {/* ── KI-Analyse ────────────────────────────────────────────── */}
-        {activeSection === 'ki-analyse' && (
-          <div className="max-w-3xl">
-            <AiInsightsPanel customerId={id} />
+        {/* ── Beratungspotential ────────────────────────────────────────────── */}
+        {activeSection === 'beratungspotential' && (
+          <div className="space-y-6">
+            {verkaufschancen.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {verkaufschancen.map(chance => (
+                  <div key={chance.id} className="surface p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="text-sm font-bold text-foreground">{chance.title}</h3>
+                      <span className={`text-xs px-2 py-1 rounded font-semibold ${
+                        chance.priority === 'high' ? 'bg-red-50 text-red-600' :
+                        chance.priority === 'medium' ? 'bg-amber-50 text-amber-600' :
+                        'bg-blue-50 text-blue-600'
+                      }`}>
+                        {chance.priority === 'high' ? 'Hoch' : chance.priority === 'medium' ? 'Mittel' : 'Niedrig'}
+                      </span>
+                    </div>
+                    {chance.description && <p className="text-xs text-muted-foreground mb-2">{chance.description}</p>}
+                    {chance.estimated_premium && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-muted-foreground">Potenzial:</span>
+                        <span className="font-semibold text-green-600">CHF {chance.estimated_premium.toLocaleString('de-CH')}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptySection
+                icon={Bot}
+                title="Kein Beratungspotential erkannt"
+                subtitle="Derzeit wurden keine Verkaufschancen oder Beratungspotenziale für diesen Kunden identifiziert."
+              />
+            )}
           </div>
         )}
 
