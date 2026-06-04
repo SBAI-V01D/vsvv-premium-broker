@@ -351,7 +351,7 @@ export default function CustomerDetail() {
             {/* Linke Spalte: Kontakt, Adresse, Persönliche Daten, Haushalt */}
             <div className="lg:col-span-2 space-y-4">
               {/* Kontakt & Daten - gesamtes Feld */}
-              <div className="surface p-5 h-[480px] overflow-y-auto">
+              <div className="surface p-5 h-[280px]">
                 <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Kontakt & Daten</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Adresse */}
@@ -426,7 +426,7 @@ export default function CustomerDetail() {
               
               {/* Haushaltsmitglieder - eigenes Feld */}
               {familyMembers.length > 1 && (
-                <div className="surface p-5 h-[480px] overflow-y-auto">
+                <div className="surface p-5 h-[280px]">
                   <h3 className="text-xs font-bold text-foreground mb-3 uppercase tracking-widest">Haushaltsmitglieder</h3>
                   <div className="flex flex-wrap gap-2">
                     {familyMembers.filter(m => m.id !== id).map(member => (
@@ -471,7 +471,7 @@ export default function CustomerDetail() {
                 
                 if (!advisor) return null
                 return (
-                  <div className="surface p-4 h-[240px]">
+                  <div className="surface p-4 h-[180px]">
                     <h3 className="text-sm font-bold text-foreground mb-3">Berater</h3>
                     <div className="flex items-start gap-3">
                       <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
@@ -501,7 +501,7 @@ export default function CustomerDetail() {
 
               {/* Finanzen */}
               {(customer.bank_account || customer.total_premium > 0 || customer.ahv_number) && (
-                <div className="surface p-5 h-[240px] overflow-y-auto">
+                <div className="surface p-5 h-[180px]">
                   <h3 className="text-sm font-bold text-foreground mb-3">Finanzen & Daten</h3>
                   <div className="space-y-2 text-sm">
                     {customer.total_premium > 0 && (
@@ -527,7 +527,7 @@ export default function CustomerDetail() {
               )}
 
               {/* Navigation */}
-              <div className="surface p-5 h-[240px] overflow-y-auto">
+              <div className="surface p-5 h-[180px]">
                 <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Navigation</h3>
                 <div className="space-y-2">
                   <button
