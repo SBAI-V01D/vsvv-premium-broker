@@ -194,6 +194,21 @@ export default function CustomerDetail() {
     enabled: !!id,
   })
 
+  const [aiAnalysis, setAiAnalysis] = useState(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+
+  const runAiAnalysis = async () => {
+    setIsAnalyzing(true)
+    try {
+      const result = await base44.functions.invoke('aiCustomerInsights', { customer_id: id })
+      setAiAnalysis(result.data)
+    } catch (error) {
+      console.error('AI Analysis failed:', error)
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
+
   // Familienmitglieder: dedupliziert aus householdFamilyMembers (immer geladen) + allCustomers (lazy)
   const mergedHouseholdMembers = householdFamilyMembers.length > 0
     ? householdFamilyMembers
@@ -1018,35 +1033,174 @@ export default function CustomerDetail() {
         {/* ── Beratungspotential ────────────────────────────────────────────── */}
         {activeSection === 'beratungspotential' && (
           <div className="space-y-6">
-            {verkaufschancen.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {verkaufschancen.map(chance => (
-                  <div key={chance.id} className="surface p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-sm font-bold text-foreground">{chance.title}</h3>
-                      <span className={`text-xs px-2 py-1 rounded font-semibold ${
-                        chance.priority === 'high' ? 'bg-red-50 text-red-600' :
-                        chance.priority === 'medium' ? 'bg-amber-50 text-amber-600' :
-                        'bg-blue-50 text-blue-600'
-                      }`}>
-                        {chance.priority === 'high' ? 'Hoch' : chance.priority === 'medium' ? 'Mittel' : 'Niedrig'}
-                      </span>
-                    </div>
-                    {chance.description && <p className="text-xs text-muted-foreground mb-2">{chance.description}</p>}
-                    {chance.estimated_premium && (
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-muted-foreground">Potenzial:</span>
-                        <span className="font-semibold text-green-600">CHF {chance.estimated_premium.toLocaleString('de-CH')}</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
+            {/* KI Analyse Button */}
+            <div className="surface p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground mb-1">KI-Beratungsanalyse</h3>
+                  <p className="text-xs text-muted-foreground">Analysiere Kundenprofil, Verträge und Marktdaten für personalisierte Empfehlungen</p>
+                </div>
+                <button
+                  onClick={runAiAnalysis}
+                  disabled={isAnalyzing}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                      <span className="text-sm font-medium">Analysiere...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Bot className="w-4 h-4" />
+                      <span className="text-sm font-medium">Analyse starten</span>
+                    </>
+                  )}
+                </button>
               </div>
-            ) : (
+            </div>
+
+            {/* KI Analyse Ergebnisse */}
+            {aiAnalysis && aiAnalysis.insights && (
+              <div className="space-y-4">
+                {/* Zusammenfassung */}
+                <div className="surface p-4 border-l-4 border-l-primary">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="text-sm font-bold text-foreground">KI-Analyse Zusammenfassung</h3>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-1 rounded font-semibold ${
+                        aiAnalysis.insights.risk_level === 'kritisch' ? 'bg-red-50 text-red-600' :
+                        aiAnalysis.insights.risk_level === 'hoch' ? 'bg-amber-50 text-amber-600' :
+                        aiAnalysis.insights.risk_level === 'mittel' ? 'bg-blue-50 text-blue-600' :
+                        'bg-slate-100 text-slate-600'
+                      }`}>
+                        Risiko: {aiAnalysis.insights.risk_level}
+                      </span>
+                      <span className="text-xs font-bold text-primary">Score: {aiAnalysis.insights.priority_score}/100</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-slate-700 mb-3">{aiAnalysis.insights.summary}</p>
+                  {aiAnalysis.insights.next_review_days && (
+                    <p className="text-xs text-muted-foreground">
+                      Nächster Review empfohlen in <span className="font-semibold">{aiAnalysis.insights.next_review_days} Tagen</span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Risk Flags */}
+                {aiAnalysis.insights.risk_flags && aiAnalysis.insights.risk_flags.length > 0 && (
+                  <div className="surface p-4 border-l-4 border-l-red-500">
+                    <h3 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
+                      <span className="text-red-600">⚠</span> Kritische Hinweise
+                    </h3>
+                    <ul className="text-xs space-y-1">
+                      {aiAnalysis.insights.risk_flags.map((flag, i) => (
+                        <li key={i} className="text-red-700 flex items-start gap-1.5">
+                          <span>•</span>
+                          <span>{flag}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Deckungslücken */}
+                {aiAnalysis.insights.coverage_gaps && aiAnalysis.insights.coverage_gaps.length > 0 && (
+                  <div className="surface p-4">
+                    <h3 className="text-sm font-bold text-foreground mb-3">Fehlende Deckungen</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {aiAnalysis.insights.coverage_gaps.map((gap, idx) => (
+                        <div key={idx} className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          <p className="text-xs font-bold text-amber-800 mb-1">{gap.coverage}</p>
+                          <p className="text-xs text-amber-700 mb-2">{gap.reason}</p>
+                          {gap.estimated_premium && (
+                            <p className="text-xs text-amber-600 font-semibold">~CHF {gap.estimated_premium.toLocaleString('de-CH')}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Upsell Opportunities */}
+                {aiAnalysis.insights.upsell_opportunities && aiAnalysis.insights.upsell_opportunities.length > 0 && (
+                  <div className="surface p-4">
+                    <h3 className="text-sm font-bold text-foreground mb-3">Upsell-Potenziale</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {aiAnalysis.insights.upsell_opportunities.map((opp, idx) => (
+                        <div key={idx} className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <p className="text-xs font-bold text-green-800 mb-1">{opp.product}</p>
+                          <p className="text-xs text-green-700 mb-2">{opp.reason}</p>
+                          {opp.estimated_premium && (
+                            <p className="text-xs text-green-600 font-semibold">~CHF {opp.estimated_premium.toLocaleString('de-CH')}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sofortmassnahmen */}
+                {aiAnalysis.insights.immediate_actions && aiAnalysis.insights.immediate_actions.length > 0 && (
+                  <div className="surface p-4">
+                    <h3 className="text-sm font-bold text-foreground mb-3">Sofortmassnahmen</h3>
+                    <div className="space-y-2">
+                      {aiAnalysis.insights.immediate_actions.map((action, idx) => (
+                        <div key={idx} className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                          <div className={`w-2 h-2 rounded-full mt-1 ${
+                            action.urgency === 'high' ? 'bg-red-500' :
+                            action.urgency === 'medium' ? 'bg-amber-500' :
+                            'bg-blue-500'
+                          }`} />
+                          <div className="flex-1">
+                            <p className="text-xs font-semibold text-slate-700">{action.action}</p>
+                            {action.deadline && (
+                              <p className="text-xs text-muted-foreground mt-1">Frist: {action.deadline}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Verkaufschancen aus Entity */}
+            {verkaufschancen.length > 0 && (
+              <div>
+                <h3 className="text-sm font-bold text-foreground mb-3">Erkannte Verkaufschancen</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {verkaufschancen.map(chance => (
+                    <div key={chance.id} className="surface p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="text-sm font-bold text-foreground">{chance.title}</h3>
+                        <span className={`text-xs px-2 py-1 rounded font-semibold ${
+                          chance.priority === 'high' ? 'bg-red-50 text-red-600' :
+                          chance.priority === 'medium' ? 'bg-amber-50 text-amber-600' :
+                          'bg-blue-50 text-blue-600'
+                        }`}>
+                          {chance.priority === 'high' ? 'Hoch' : chance.priority === 'medium' ? 'Mittel' : 'Niedrig'}
+                        </span>
+                      </div>
+                      {chance.description && <p className="text-xs text-muted-foreground mb-2">{chance.description}</p>}
+                      {chance.estimated_premium && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-muted-foreground">Potenzial:</span>
+                          <span className="font-semibold text-green-600">CHF {chance.estimated_premium.toLocaleString('de-CH')}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!aiAnalysis && verkaufschancen.length === 0 && (
               <EmptySection
                 icon={Bot}
-                title="Kein Beratungspotential erkannt"
-                subtitle="Derzeit wurden keine Verkaufschancen oder Beratungspotenziale für diesen Kunden identifiziert."
+                title="Beratungspotential analysieren"
+                subtitle="Klicke auf 'Analyse starten' um KI-gestützte Empfehlungen für diesen Kunden zu erhalten."
               />
             )}
           </div>
