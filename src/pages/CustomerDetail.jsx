@@ -434,10 +434,10 @@ export default function CustomerDetail() {
                     </div>
                   )}
 
-                  {/* Haushaltsmitglieder - mit konsistentem Titel */}
+                  {/* Haushaltsmitglieder - mit konsistentem Titel und Trennung */}
                   {familyMembers.length > 1 && (
-                    <div className="pt-2 border-t border-border">
-                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Haushaltsmitglieder</p>
+                    <div className="pt-4 border-t border-border">
+                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-3">Haushaltsmitglieder</p>
                       <div className="flex flex-wrap gap-2">
                         {familyMembers.filter(m => m.id !== id).map(member => (
                           <button
@@ -449,8 +449,8 @@ export default function CustomerDetail() {
                               {member.first_name?.[0]}{member.last_name?.[0]}
                             </div>
                             <div className="flex flex-col items-start">
-                              <span className="text-xs font-medium">{member.first_name} {member.last_name}</span>
-                              <span className="text-[10px] text-muted-foreground">{FAMILY_ROLE_LABELS[member.family_role] || 'Familie'}</span>
+                              <span className="text-sm font-medium">{member.first_name} {member.last_name}</span>
+                              <span className="text-xs text-muted-foreground">{FAMILY_ROLE_LABELS[member.family_role] || 'Familie'}</span>
                             </div>
                           </button>
                         ))}
