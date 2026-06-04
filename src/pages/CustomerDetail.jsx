@@ -380,21 +380,33 @@ export default function CustomerDetail() {
             {(() => {
               // Priorität 1: Berater aus Kundenstamm
               const advisorId = customer.primary_advisor_id || customer.advisor_id
-              let advisor = advisorId ? allAdvisors.find(a => a.id === advisorId) : null
+              let advisor = advisorId ? allAdvisors.find(a => a.id === advisorId || a.email === advisorId) : null
               
               // Priorität 2: Berater aus Verträgen (wenn Kunde keinen eigenen hat)
               if (!advisor && relatedContracts.length > 0) {
-                const contractAdvisorId = relatedContracts[0].advisor_id || relatedContracts[0].assigned_broker
-                if (contractAdvisorId) {
-                  advisor = allAdvisors.find(a => a.id === contractAdvisorId || a.email === contractAdvisorId)
+                for (const c of relatedContracts) {
+                  if (c.advisor_id) {
+                    advisor = allAdvisors.find(a => a.id === c.advisor_id || a.email === c.advisor_id)
+                    if (advisor) break
+                  }
+                  if (c.assigned_broker) {
+                    advisor = allAdvisors.find(a => a.id === c.assigned_broker || a.email === c.assigned_broker)
+                    if (advisor) break
+                  }
                 }
               }
               
               // Priorität 3: Berater aus Anträgen
               if (!advisor && relatedApplications.length > 0) {
-                const appAdvisorId = relatedApplications[0].advisor_id || relatedApplications[0].assigned_broker
-                if (appAdvisorId) {
-                  advisor = allAdvisors.find(a => a.id === appAdvisorId || a.email === appAdvisorId)
+                for (const a of relatedApplications) {
+                  if (a.advisor_id) {
+                    advisor = allAdvisors.find(a2 => a2.id === a.advisor_id || a2.email === a.advisor_id)
+                    if (advisor) break
+                  }
+                  if (a.assigned_broker) {
+                    advisor = allAdvisors.find(a2 => a2.id === a.assigned_broker || a2.email === a.assigned_broker)
+                    if (advisor) break
+                  }
                 }
               }
               
@@ -739,76 +751,116 @@ export default function CustomerDetail() {
         {/* ── Betreuung ─────────────────────────────────────────────── */}
         {activeSection === 'betreuung' && (
           <div className="space-y-6">
-            {/* Direkt zugewiesener Berater (aus Kundenstamm) */}
-            {(customer.advisor_id || customer.primary_advisor_id) && (() => {
-              const advisorId = customer.primary_advisor_id || customer.advisor_id
-              const advisor = allAdvisors.find(a => a.id === advisorId)
-              return advisor ? (
-                <div className="surface p-4">
-                  <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5 text-primary" />Zuständiger Berater
-                  </p>
-                  <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-xl">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
-                      {advisor.firstname?.[0]}{advisor.lastname?.[0]}
+            {/* Alle Berater sammeln */}
+            {(() => {
+              const allBrokers = new Map()
+              
+              // 1. Berater aus Kundenstamm
+              const customerAdvisorId = customer.primary_advisor_id || customer.advisor_id
+              if (customerAdvisorId) {
+                const advisor = allAdvisors.find(a => a.id === customerAdvisorId || a.email === customerAdvisorId)
+                if (advisor) allBrokers.set(advisor.id, { advisor, source: 'Kundenstamm', primary: true })
+              }
+              
+              // 2. Berater aus Verträgen
+              relatedContracts.forEach(c => {
+                if (c.advisor_id) {
+                  const advisor = allAdvisors.find(a => a.id === c.advisor_id || a.email === c.advisor_id)
+                  if (advisor && !allBrokers.has(advisor.id)) {
+                    allBrokers.set(advisor.id, { advisor, source: 'Vertrag', primary: false })
+                  }
+                }
+                if (c.assigned_broker) {
+                  const advisor = allAdvisors.find(a => a.id === c.assigned_broker || a.email === c.assigned_broker)
+                  if (advisor && !allBrokers.has(advisor.id)) {
+                    allBrokers.set(advisor.id, { advisor, source: 'Vertrag', primary: false })
+                  }
+                }
+              })
+              
+              // 3. Berater aus Anträgen
+              relatedApplications.forEach(a => {
+                if (a.advisor_id) {
+                  const advisor = allAdvisors.find(a2 => a2.id === a.advisor_id || a2.email === a.advisor_id)
+                  if (advisor && !allBrokers.has(advisor.id)) {
+                    allBrokers.set(advisor.id, { advisor, source: 'Antrag', primary: false })
+                  }
+                }
+                if (a.assigned_broker) {
+                  const advisor = allAdvisors.find(a2 => a2.id === a.assigned_broker || a2.email === a.assigned_broker)
+                  if (advisor && !allBrokers.has(advisor.id)) {
+                    allBrokers.set(advisor.id, { advisor, source: 'Antrag', primary: false })
+                  }
+                }
+              })
+              
+              if (allBrokers.size === 0) return null
+              
+              const primaryBroker = Array.from(allBrokers.values()).find(b => b.primary)
+              const otherBrokers = Array.from(allBrokers.values()).filter(b => !b.primary)
+              
+              return (
+                <>
+                  {primaryBroker && (
+                    <div className="surface p-4">
+                      <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1.5">
+                        <Shield className="w-3.5 h-3.5 text-primary" />Hauptberater
+                      </p>
+                      <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-xl">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
+                          {primaryBroker.advisor.firstname?.[0]}{primaryBroker.advisor.lastname?.[0]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold">{primaryBroker.advisor.firstname} {primaryBroker.advisor.lastname}</p>
+                          <p className="text-xs text-muted-foreground">{primaryBroker.advisor.email}</p>
+                          {primaryBroker.advisor.phone && <p className="text-xs text-muted-foreground">{primaryBroker.advisor.phone}</p>}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {primaryBroker.advisor.phone && (
+                            <a href={`tel:${primaryBroker.advisor.phone}`} className="p-2 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Anrufen">
+                              <Phone className="w-4 h-4" />
+                            </a>
+                          )}
+                          {primaryBroker.advisor.email && (
+                            <a href={`mailto:${primaryBroker.advisor.email}`} className="p-2 text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded-lg transition-colors" title="E-Mail">
+                              <Mail className="w-4 h-4" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold">{advisor.firstname} {advisor.lastname}</p>
-                      <p className="text-xs text-muted-foreground">{advisor.email}</p>
-                      {advisor.phone && <p className="text-xs text-muted-foreground">{advisor.phone}</p>}
+                  )}
+                  
+                  {otherBrokers.length > 0 && (
+                    <div className="surface p-4">
+                      <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1.5">
+                        <Shield className="w-3.5 h-3.5" />Weitere Berater ({otherBrokers.length})
+                      </p>
+                      <div className="space-y-2">
+                        {otherBrokers.map(({ advisor, source }) => (
+                          <div key={advisor.id} className="flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+                            <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                              {advisor.firstname?.[0]}{advisor.lastname?.[0]}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold">{advisor.firstname} {advisor.lastname}</p>
+                              <p className="text-[11px] text-muted-foreground">{advisor.email} · {source}</p>
+                            </div>
+                            {advisor.phone && (
+                              <a href={`tel:${advisor.phone}`} className="p-2 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Anrufen">
+                                <Phone className="w-4 h-4" />
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ) : null
+                  )}
+                </>
+              )
             })()}
 
             <AdvisorAssignmentPanel customerId={id} />
-
-            {/* Berater aus Anträgen & Verträgen */}
-            {(() => {
-              const brokerEmails = new Set()
-              relatedApplications.forEach(a => { if (a.assigned_broker) brokerEmails.add(a.assigned_broker) })
-              relatedContracts.forEach(c => { if (c.assigned_broker) brokerEmails.add(c.assigned_broker) })
-              const brokerIds = new Set()
-              relatedApplications.forEach(a => { if (a.advisor_id) brokerIds.add(a.advisor_id) })
-              relatedContracts.forEach(c => { if (c.advisor_id) brokerIds.add(c.advisor_id) })
-              const advisorsFromIds = allAdvisors.filter(a => brokerIds.has(a.id))
-              if (brokerEmails.size === 0 && advisorsFromIds.length === 0) return null
-              return (
-                <div className="surface p-4">
-                  <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5" />Zuständige Berater (aus Anträgen &amp; Verträgen)
-                  </p>
-                  <div className="space-y-2">
-                    {advisorsFromIds.map(a => (
-                      <div key={a.id} className="flex items-center gap-3 p-2.5 bg-blue-50 border border-blue-100 rounded-lg">
-                        <div className="w-7 h-7 rounded-full bg-blue-200 flex items-center justify-center text-xs font-bold text-blue-800">
-                          {a.firstname?.[0]}{a.lastname?.[0]}
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold">{a.firstname} {a.lastname}</p>
-                          <p className="text-[11px] text-muted-foreground">{a.email}</p>
-                        </div>
-                      </div>
-                    ))}
-                    {[...brokerEmails].filter(email => !advisorsFromIds.some(a => a.email === email)).map(email => {
-                      const advisor = allAdvisors.find(a => a.email === email)
-                      return (
-                        <div key={email} className="flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
-                          <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
-                            {advisor ? `${advisor.firstname?.[0]}${advisor.lastname?.[0]}` : email[0]?.toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold">{advisor ? `${advisor.firstname} ${advisor.lastname}` : email}</p>
-                            <p className="text-[11px] text-muted-foreground">{email}</p>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })()}
           </div>
         )}
 
