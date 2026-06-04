@@ -350,28 +350,25 @@ export default function CustomerDetail() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Linke Spalte: Kontakt, Adresse, Persönliche Daten, Haushalt */}
             <div className="lg:col-span-2 space-y-4">
-              {/* Alles in einem Feld */}
+              {/* Kontakt & Daten - gesamtes Feld */}
               <div className="surface p-5">
-                <h3 className="text-sm font-bold text-foreground mb-4">Kontakt & Daten</h3>
-                <div className="space-y-4">
-                  {/* Adresse - zuerst */}
+                <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Kontakt & Daten</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Adresse */}
                   {customer.street && (
                     <div>
                       <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Adresse</p>
-                      <div className="flex items-start gap-2 text-sm text-slate-600">
-                        <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                        <div>
-                          <p>{customer.street}</p>
-                          {(customer.zip_code || customer.city) && <p>{[customer.zip_code, customer.city].filter(Boolean).join(' ')}</p>}
-                          {customer.canton && <p className="text-muted-foreground">Kanton {customer.canton}</p>}
-                        </div>
+                      <div className="text-sm text-slate-600">
+                        <p>{customer.street}</p>
+                        {(customer.zip_code || customer.city) && <p>{[customer.zip_code, customer.city].filter(Boolean).join(' ')}</p>}
+                        {customer.canton && <p className="text-muted-foreground">Kanton {customer.canton}</p>}
                       </div>
                     </div>
                   )}
 
-                  {/* Geburtsdatum - als zweites */}
+                  {/* Geburtsdatum */}
                   {customer.birthdate && (
-                    <div className="pt-2 border-t border-border">
+                    <div>
                       <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Geburtsdatum</p>
                       <div className="flex items-center gap-2 text-sm text-slate-600">
                         <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -380,61 +377,51 @@ export default function CustomerDetail() {
                     </div>
                   )}
 
-                  {/* Kontakt - als drittes */}
+                  {/* Kontakt */}
                   {(customer.email || customer.phone || customer.mobile) && (
-                    <div className="pt-2 border-t border-border">
+                    <div>
                       <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Kontakt</p>
-                      <div className="flex flex-wrap gap-4 text-sm">
+                      <div className="space-y-1.5 text-sm">
                         {customer.email && (
-                          <span className="flex items-center gap-1.5 text-slate-600">
-                            <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-                            <EmailLink email={customer.email} />
-                          </span>
+                          <EmailLink email={customer.email} />
                         )}
                         {customer.phone && (
-                          <span className="flex items-center gap-1.5 text-slate-600">
-                            <Phone className="w-3.5 h-3.5 text-muted-foreground" />
-                            {customer.phone}
-                          </span>
+                          <p className="text-slate-600">{customer.phone}</p>
                         )}
                         {customer.mobile && (
-                          <span className="flex items-center gap-1.5 text-slate-600">
-                            <Smartphone className="w-3.5 h-3.5 text-muted-foreground" />
-                            {customer.mobile}
-                          </span>
+                          <p className="text-slate-600">{customer.mobile}</p>
                         )}
                       </div>
                     </div>
                   )}
-
-                  {/* Persönliche Daten */}
-                  {(customer.profession || customer.civil_status || customer.nationality) && (
-                    <div className="pt-2 border-t border-border">
-                      <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Persönliche Daten</p>
-                      <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                        {customer.profession && (
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Beruf</span>
-                            <span className="text-slate-700">{customer.profession}</span>
-                          </div>
-                        )}
-                        {customer.civil_status && (
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Zivilstand</span>
-                            <span className="text-slate-700">{CIVIL_STATUS_LABELS[customer.civil_status] || customer.civil_status}</span>
-                          </div>
-                        )}
-                        {customer.nationality && (
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Nationalität</span>
-                            <span className="text-slate-700">{customer.nationality}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
                 </div>
+
+                {/* Persönliche Daten - separate Zeile */}
+                {(customer.profession || customer.civil_status || customer.nationality) && (
+                  <div className="pt-4 mt-4 border-t border-border">
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-3">Persönliche Daten</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                      {customer.profession && (
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Beruf</span>
+                          <span className="text-slate-700">{customer.profession}</span>
+                        </div>
+                      )}
+                      {customer.civil_status && (
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Zivilstand</span>
+                          <span className="text-slate-700">{CIVIL_STATUS_LABELS[customer.civil_status] || customer.civil_status}</span>
+                        </div>
+                      )}
+                      {customer.nationality && (
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest">Nationalität</span>
+                          <span className="text-slate-700">{customer.nationality}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Haushaltsmitglieder - eigenes Feld */}
