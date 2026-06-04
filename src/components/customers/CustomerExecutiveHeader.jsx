@@ -183,9 +183,23 @@ export default function CustomerExecutiveHeader({
               )
             })()}
             {advisor && (
-              <span className="flex items-center gap-1.5 text-slate-500">
-                <Shield className="w-3 h-3" /> {advisor.firstname} {advisor.lastname}
-              </span>
+              <div className="flex items-center gap-2 px-2.5 py-1.5 bg-primary/5 border border-primary/20 rounded-lg">
+                <Shield className="w-3.5 h-3.5 text-primary" />
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Berater</span>
+                  <span className="text-xs font-bold text-slate-700 truncate">{advisor.firstname} {advisor.lastname}</span>
+                </div>
+                {advisor.email && (
+                  <a href={`mailto:${advisor.email}`} className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded transition-colors" title="E-Mail">
+                    <Mail className="w-3.5 h-3.5" />
+                  </a>
+                )}
+                {advisor.phone && (
+                  <a href={`tel:${advisor.phone}`} className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors" title="Anrufen">
+                    <Phone className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
             )}
           </div>
         </div>

@@ -751,114 +751,87 @@ export default function CustomerDetail() {
         {/* ── Betreuung ─────────────────────────────────────────────── */}
         {activeSection === 'betreuung' && (
           <div className="space-y-6">
-            {/* Alle Berater sammeln */}
-            {(() => {
-              const allBrokers = new Map()
+            <div className="surface p-5">
+              <p className="text-xs font-semibold text-muted-foreground mb-4">
+                <strong className="font-bold text-foreground">Zuständiger Berater:</strong> {(() => {
+                  const aid = customer.primary_advisor_id || customer.advisor_id
+                  const adv = allAdvisors.find(a => a.id === aid || a.email === aid)
+                  return adv ? `${adv.firstname} ${adv.lastname} (${adv.email})` : 'Kein Berater im Kundenstamm hinterlegt'
+                })()}
+              </p>
               
-              // 1. Berater aus Kundenstamm
-              const customerAdvisorId = customer.primary_advisor_id || customer.advisor_id
-              if (customerAdvisorId) {
-                const advisor = allAdvisors.find(a => a.id === customerAdvisorId || a.email === customerAdvisorId)
-                if (advisor) allBrokers.set(advisor.id, { advisor, source: 'Kundenstamm', primary: true })
-              }
-              
-              // 2. Berater aus Verträgen
-              relatedContracts.forEach(c => {
-                if (c.advisor_id) {
-                  const advisor = allAdvisors.find(a => a.id === c.advisor_id || a.email === c.advisor_id)
-                  if (advisor && !allBrokers.has(advisor.id)) {
-                    allBrokers.set(advisor.id, { advisor, source: 'Vertrag', primary: false })
-                  }
-                }
-                if (c.assigned_broker) {
-                  const advisor = allAdvisors.find(a => a.id === c.assigned_broker || a.email === c.assigned_broker)
-                  if (advisor && !allBrokers.has(advisor.id)) {
-                    allBrokers.set(advisor.id, { advisor, source: 'Vertrag', primary: false })
-                  }
-                }
-              })
-              
-              // 3. Berater aus Anträgen
-              relatedApplications.forEach(a => {
-                if (a.advisor_id) {
-                  const advisor = allAdvisors.find(a2 => a2.id === a.advisor_id || a2.email === a.advisor_id)
-                  if (advisor && !allBrokers.has(advisor.id)) {
-                    allBrokers.set(advisor.id, { advisor, source: 'Antrag', primary: false })
-                  }
-                }
-                if (a.assigned_broker) {
-                  const advisor = allAdvisors.find(a2 => a2.id === a.assigned_broker || a2.email === a.assigned_broker)
-                  if (advisor && !allBrokers.has(advisor.id)) {
-                    allBrokers.set(advisor.id, { advisor, source: 'Antrag', primary: false })
-                  }
-                }
-              })
-              
-              if (allBrokers.size === 0) return null
-              
-              const primaryBroker = Array.from(allBrokers.values()).find(b => b.primary)
-              const otherBrokers = Array.from(allBrokers.values()).filter(b => !b.primary)
-              
-              return (
-                <>
-                  {primaryBroker && (
-                    <div className="surface p-4">
-                      <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1.5">
-                        <Shield className="w-3.5 h-3.5 text-primary" />Hauptberater
-                      </p>
-                      <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-xl">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
-                          {primaryBroker.advisor.firstname?.[0]}{primaryBroker.advisor.lastname?.[0]}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold">{primaryBroker.advisor.firstname} {primaryBroker.advisor.lastname}</p>
-                          <p className="text-xs text-muted-foreground">{primaryBroker.advisor.email}</p>
-                          {primaryBroker.advisor.phone && <p className="text-xs text-muted-foreground">{primaryBroker.advisor.phone}</p>}
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          {primaryBroker.advisor.phone && (
-                            <a href={`tel:${primaryBroker.advisor.phone}`} className="p-2 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Anrufen">
-                              <Phone className="w-4 h-4" />
-                            </a>
-                          )}
-                          {primaryBroker.advisor.email && (
-                            <a href={`mailto:${primaryBroker.advisor.email}`} className="p-2 text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded-lg transition-colors" title="E-Mail">
-                              <Mail className="w-4 h-4" />
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {otherBrokers.length > 0 && (
-                    <div className="surface p-4">
-                      <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1.5">
-                        <Shield className="w-3.5 h-3.5" />Weitere Berater ({otherBrokers.length})
-                      </p>
-                      <div className="space-y-2">
-                        {otherBrokers.map(({ advisor, source }) => (
-                          <div key={advisor.id} className="flex items-center gap-3 p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
-                            <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
-                              {advisor.firstname?.[0]}{advisor.lastname?.[0]}
+              <p className="text-xs font-semibold text-muted-foreground mb-4">
+                <strong className="font-bold text-foreground">Betreuungsteam:</strong> Alle Berater die in Verträgen oder Anträgen dieses Kunden eingetragen sind.
+              </p>
+
+              {relatedContracts.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                    Aus Verträgen ({relatedContracts.length})
+                  </p>
+                  <div className="space-y-1.5">
+                    {relatedContracts.map(c => {
+                      const adv = allAdvisors.find(a => a.id === c.advisor_id || a.email === c.advisor_id || a.id === c.assigned_broker || a.email === c.assigned_broker)
+                      if (!adv) return null
+                      return (
+                        <div key={c.id} className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                              {adv.firstname?.[0]}{adv.lastname?.[0]}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold">{advisor.firstname} {advisor.lastname}</p>
-                              <p className="text-[11px] text-muted-foreground">{advisor.email} · {source}</p>
+                            <div>
+                              <p className="text-xs font-semibold">{adv.firstname} {adv.lastname}</p>
+                              <p className="text-[10px] text-muted-foreground">{c.insurer} · {getSparteLabel(c.sparte || c.insurance_type)}</p>
                             </div>
-                            {advisor.phone && (
-                              <a href={`tel:${advisor.phone}`} className="p-2 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Anrufen">
-                                <Phone className="w-4 h-4" />
-                              </a>
-                            )}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )
-            })()}
+                          {adv.phone && (
+                            <a href={`tel:${adv.phone}`} className="p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded transition-colors">
+                              <Phone className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {relatedApplications.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                    Aus Anträgen ({relatedApplications.length})
+                  </p>
+                  <div className="space-y-1.5">
+                    {relatedApplications.map(a => {
+                      const adv = allAdvisors.find(a2 => a2.id === a.advisor_id || a2.email === a.advisor_id || a2.id === a.assigned_broker || a2.email === a.assigned_broker)
+                      if (!adv) return null
+                      return (
+                        <div key={a.id} className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                              {adv.firstname?.[0]}{adv.lastname?.[0]}
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold">{adv.firstname} {adv.lastname}</p>
+                              <p className="text-[10px] text-muted-foreground">{a.insurer} · {getSparteLabel(a.sparte || a.insurance_type)}</p>
+                            </div>
+                          </div>
+                          {adv.phone && (
+                            <a href={`tel:${adv.phone}`} className="p-1.5 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded transition-colors">
+                              <Phone className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {relatedContracts.length === 0 && relatedApplications.length === 0 && (
+                <p className="text-xs text-muted-foreground italic">Keine Verträge oder Anträge vorhanden</p>
+              )}
+            </div>
 
             <AdvisorAssignmentPanel customerId={id} />
           </div>
