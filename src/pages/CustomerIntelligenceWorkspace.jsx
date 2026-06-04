@@ -485,8 +485,8 @@ export default function CustomerIntelligenceWorkspace() {
             </p>
           </div>
 
-          {/* Workspace Modes + Nav Links */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+          {/* Workspace Modes + Nav Links + Suche */}
+          <div className="flex items-center gap-1 overflow-x-auto pb-1 flex-1">
             {WORKSPACE_MODES.map(mode => {
               const Icon = mode.icon;
               return (
@@ -519,72 +519,23 @@ export default function CustomerIntelligenceWorkspace() {
                 </button>
               );
             })}
-          </div>
-
-          {(
-            <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-              <button onClick={handleExport} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Export">
-                <Download className="w-4 h-4" />
-              </button>
-              <button onClick={() => setShowMerge(true)} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Zusammenführen">
-                <Users className="w-4 h-4" />
-              </button>
-              <button onClick={() => setShowImport(true)} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Import">
-                <Upload className="w-4 h-4" />
-              </button>
-              <div className="w-px h-4 bg-[hsl(var(--border-subtle))] mx-0.5" />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" className="rounded-md h-8 text-[12.5px]">
-                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Neuer Kunde
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}>
-                    <User className="w-4 h-4 mr-2 text-[hsl(var(--text-muted))]" /> Privatkunde
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}>
-                    <Building2 className="w-4 h-4 mr-2 text-[hsl(var(--text-muted))]" /> Firmenkunde
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Main Content Area ───────────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto overflow-x-visible bg-[hsl(var(--surface-1))] min-h-[70vh]">
-        <>
-          {/* Intelligence Panel — nur im Privatkunden-Tab */}
-          {workspaceMode === 'private' && renderIntelligencePanel()}
-
-          {/* Suchleiste + Sortierung */}
-          <div className="px-6 py-3 bg-white border-b border-[hsl(var(--border-subtle))] flex items-center gap-4 flex-wrap overflow-visible z-10 relative">
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="text-[13px] font-semibold text-[hsl(var(--text-heading))]">
-                {workspaceMode === 'private' ? 'Privatkunden' : 'Unternehmen'}
-              </span>
-              <span className="text-[11px] text-[hsl(var(--text-muted))]">
-                {search ? `${displayed.length} Treffer` : `${displayed.length} Kunden`}
-              </span>
-            </div>
-            <div className="flex-1 min-w-[240px] max-w-md relative">
+            <div className="w-px h-5 bg-[hsl(var(--border-subtle))] mx-1 shrink-0" />
+            {/* Suchfeld direkt in der Toolbar */}
+            <div className="relative w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[hsl(var(--text-subtle))] pointer-events-none" />
               <input
                 ref={searchInputRef}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                onBlur={() => setTimeout(() => setSearch(s => s), 150)}
-                placeholder="Name, E-Mail, Kundennummer suchen…"
-                className="w-full pl-9 pr-8 py-1.5 text-[13px] border border-[hsl(var(--border-subtle))] rounded-xl bg-white text-[hsl(var(--text-heading))] placeholder:text-[hsl(var(--text-subtle))] focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-all shadow-xs"
+                placeholder="Kunde suchen…"
+                className="w-full pl-9 pr-8 py-1.5 text-[13px] border border-[hsl(var(--border-subtle))] rounded-lg bg-white text-[hsl(var(--text-heading))] placeholder:text-[hsl(var(--text-subtle))] focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-all shadow-xs"
               />
               {search && (
                 <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))]">
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
-              {/* Dropdown via Portal — nicht durch overflow-y-auto abgeschnitten */}
+              {/* Dropdown via Portal */}
               {search.trim().length >= 2 && searchInputRef.current && ReactDOM.createPortal(
                 <div
                   style={{
@@ -637,7 +588,52 @@ export default function CustomerIntelligenceWorkspace() {
                 document.body
               )}
             </div>
-            <div className="flex items-center gap-2 ml-auto shrink-0">
+          </div>
+
+          {(
+            <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+              <button onClick={handleExport} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Export">
+                <Download className="w-4 h-4" />
+              </button>
+              <button onClick={() => setShowMerge(true)} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Zusammenführen">
+                <Users className="w-4 h-4" />
+              </button>
+              <button onClick={() => setShowImport(true)} className="p-2 text-[hsl(var(--text-subtle))] hover:text-[hsl(var(--text-heading))] hover:bg-[hsl(var(--surface-2))] rounded-md transition-colors" title="Import">
+                <Upload className="w-4 h-4" />
+              </button>
+              <div className="w-px h-4 bg-[hsl(var(--border-subtle))] mx-0.5" />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" className="rounded-md h-8 text-[12.5px]">
+                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Neuer Kunde
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('private'); setShowForm(true); }}>
+                    <User className="w-4 h-4 mr-2 text-[hsl(var(--text-muted))]" /> Privatkunde
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setEditing(null); setNewCustomerType('business'); setShowForm(true); }}>
+                    <Building2 className="w-4 h-4 mr-2 text-[hsl(var(--text-muted))]" /> Firmenkunde
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Main Content Area ───────────────────────────────────────────── */}
+      <div className="flex-1 overflow-y-auto overflow-x-visible bg-[hsl(var(--surface-1))] min-h-[70vh]">
+        <>
+          {/* Intelligence Panel — nur im Privatkunden-Tab */}
+          {workspaceMode === 'private' && renderIntelligencePanel()}
+
+          {/* Sortierung */}
+          <div className="px-6 py-2 bg-white border-b border-[hsl(var(--border-subtle))] flex items-center gap-3">
+            <span className="text-[12px] text-[hsl(var(--text-muted))]">
+              {workspaceMode === 'private' ? 'Privatkunden' : 'Unternehmen'} · {displayed.length}
+            </span>
+            <div className="ml-auto">
               <select
                 value={sortBy}
                 onChange={e => setSortBy(e.target.value)}
