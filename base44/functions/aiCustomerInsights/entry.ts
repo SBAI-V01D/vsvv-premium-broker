@@ -25,17 +25,38 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'customer_id erforderlich' }, { status: 400 });
     }
 
-    // Fetch only customer-specific data in parallel using filter
-    const [customer, contracts, tasks, applications, documents] = await Promise.all([
-      base44.entities.Customer.get(customer_id),
-      base44.entities.Contract.filter({ customer_id }),
-      base44.entities.Task.filter({ customer_id }),
-      base44.entities.Application.filter({ customer_id }),
-      base44.entities.Document.filter({ customer_id }),
-    ]);
-
+    // Fetch customer data
+    const customer = await base44.entities.Customer.get(customer_id);
     if (!customer) {
       return Response.json({ error: 'Kunde nicht gefunden' }, { status: 404 });
+    }
+
+    // Wenn Hauptkontakt: Alle Familienmitglieder und deren Daten laden
+    const isPrimaryCustomer = !customer.is_family_member;
+    let contracts = [], tasks = [], applications = [], documents = [];
+    let householdMembers = [customer];
+
+    if (isPrimaryCustomer) {
+      // Alle Familienmitglieder finden
+      const members = await base44.entities.Customer.filter({ primary_customer_id: customer_id });
+      householdMembers = [customer, ...members];
+      const memberIds = householdMembers.map(m => m.id);
+      
+      // Alle Daten für alle Haushaltsmitglieder laden
+      [contracts, tasks, applications, documents] = await Promise.all([
+        Promise.all(memberIds.map(id => base44.entities.Contract.filter({ customer_id: id }))).then(results => results.flat()),
+        Promise.all(memberIds.map(id => base44.entities.Task.filter({ customer_id: id }))).then(results => results.flat()),
+        Promise.all(memberIds.map(id => base44.entities.Application.filter({ customer_id: id }))).then(results => results.flat()),
+        Promise.all(memberIds.map(id => base44.entities.Document.filter({ customer_id: id }))).then(results => results.flat()),
+      ]);
+    } else {
+      // Nur individuelle Daten für Familienmitglied
+      [contracts, tasks, applications, documents] = await Promise.all([
+        base44.entities.Contract.filter({ customer_id }),
+        base44.entities.Task.filter({ customer_id }),
+        base44.entities.Application.filter({ customer_id }),
+        base44.entities.Document.filter({ customer_id }),
+      ]);
     }
 
     const activeContracts = contracts.filter(c => c.status === 'active');
@@ -69,13 +90,17 @@ Deno.serve(async (req) => {
     );
 
     // Build context for AI
+    const householdInfo = isPrimaryCustomer && householdMembers.length > 1 
+      ? `\nHAUSHALT: ${householdMembers.length} Personen (Hauptkontakt + ${householdMembers.length - 1} Familienmitglieder)`
+      : '';
+    
     const customerContext = `
 KUNDE:
 Name: ${customer.company_name || `${customer.first_name} ${customer.last_name}`}
 Geburtsdatum: ${customer.birthdate || 'unbekannt'}
 Beruf: ${customer.profession || 'unbekannt'}
-Status: ${customer.status}
-Gesamtprämie: CHF ${totalYearlyPremium.toFixed(2)}/Jahr
+Status: ${customer.status}${householdInfo}
+Gesamtprämie Haushalt: CHF ${totalYearlyPremium.toFixed(2)}/Jahr
 
 AKTIVE VERTRÄGE (${activeContracts.length}):
 ${activeContracts.map(c => `- ${c.insurer}: ${c.sparte || c.insurance_type || c.product || 'Versicherung'}, CHF ${c.premium_yearly || 0}/J., Ablauf: ${c.end_date || '–'}`).join('\n') || 'Keine aktiven Verträge'}

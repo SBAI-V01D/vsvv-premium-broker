@@ -200,7 +200,9 @@ export default function CustomerDetail() {
   const runAiAnalysis = async () => {
     setIsAnalyzing(true)
     try {
-      const result = await base44.functions.invoke('aiCustomerInsights', { customer_id: id })
+      // Bei Hauptkontakt: Analyse für gesamte Familie, bei Familienmitglied: nur individuell
+      const analysisCustomerId = customer?.is_family_member ? id : primaryCustomerId
+      const result = await base44.functions.invoke('aiCustomerInsights', { customer_id: analysisCustomerId })
       setAiAnalysis(result.data)
     } catch (error) {
       console.error('AI Analysis failed:', error)
@@ -1043,7 +1045,13 @@ export default function CustomerDetail() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-bold text-foreground mb-1">KI-Beratungsanalyse</h3>
-                  <p className="text-xs text-muted-foreground">Analysiere Kundenprofil, Verträge und Marktdaten für personalisierte Empfehlungen</p>
+                  <p className="text-xs text-muted-foreground">
+                    {customer?.is_family_member 
+                      ? 'Individuelle Analyse für diese Person'
+                      : familyMembers.length > 1 
+                        ? `Gesamtanalyse für ${familyMembers.length} Haushaltsmitglieder`
+                        : 'Analyse für diesen Kunden'}
+                  </p>
                 </div>
                 <button
                   onClick={runAiAnalysis}
