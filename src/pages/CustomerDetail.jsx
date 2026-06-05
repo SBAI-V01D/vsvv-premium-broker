@@ -350,45 +350,34 @@ export default function CustomerDetail() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             {/* Kachel 1: Kontakt & Adresse */}
             <div className="surface p-6">
-              <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Kontakt & Adresse</h3>
+              <h3 className="text-xs font-semibold text-muted-foreground mb-4 uppercase tracking-widest">Kontakt & Adresse</h3>
               <div className="space-y-4">
-                {/* Adresse */}
                 {customer.street && (
                   <div>
-                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Adresse</p>
-                    <div className="text-sm text-slate-600">
-                      <p>{customer.street}</p>
-                      {(customer.zip_code || customer.city) && <p>{[customer.zip_code, customer.city].filter(Boolean).join(' ')}</p>}
-                      {customer.canton && <p className="text-muted-foreground">Kanton {customer.canton}</p>}
+                    <p className="text-xs font-semibold uppercase text-muted-foreground tracking-widest mb-2">Adresse</p>
+                    <div className="space-y-0.5">
+                      <p className="text-xs text-slate-700">{customer.street}</p>
+                      {(customer.zip_code || customer.city) && <p className="text-xs text-slate-700">{[customer.zip_code, customer.city].filter(Boolean).join(' ')}</p>}
+                      {customer.canton && <p className="text-xs text-muted-foreground">Kanton {customer.canton}</p>}
                     </div>
                   </div>
                 )}
-
-                {/* Persönliche Daten integriert */}
                 {(customer.profession || customer.civil_status || customer.nationality || customer.birthdate) && (
                   <div>
-                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Persönliche Daten</p>
-                    <div className="space-y-2 text-sm">
+                    <p className="text-xs font-semibold uppercase text-muted-foreground tracking-widest mb-2">Persönliche Daten</p>
+                    <div className="space-y-1">
                       {customer.birthdate && (
                         <div className="flex items-center gap-2">
                           <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                          <span className="text-slate-700">{formatDate(customer.birthdate)}</span>
+                          <span className="text-xs text-slate-700">{formatDate(customer.birthdate)}</span>
                         </div>
                       )}
-                      {customer.profession && (
-                        <p className="text-slate-700">{customer.profession}</p>
-                      )}
-                      {customer.civil_status && (
-                        <p className="text-slate-700">{CIVIL_STATUS_LABELS[customer.civil_status] || customer.civil_status}</p>
-                      )}
-                      {customer.nationality && (
-                        <p className="text-slate-700">{customer.nationality}</p>
-                      )}
+                      {customer.profession && <p className="text-xs text-slate-700">{customer.profession}</p>}
+                      {customer.civil_status && <p className="text-xs text-slate-700">{CIVIL_STATUS_LABELS[customer.civil_status] || customer.civil_status}</p>}
+                      {customer.nationality && <p className="text-xs text-slate-700">{customer.nationality}</p>}
                     </div>
                   </div>
                 )}
-
-                {/* Fallback wenn keine Daten */}
                 {!customer.street && !customer.birthdate && !customer.profession && !customer.civil_status && !customer.nationality && (
                   <p className="text-xs text-muted-foreground">Keine Stammdaten hinterlegt</p>
                 )}
@@ -397,49 +386,34 @@ export default function CustomerDetail() {
 
             {/* Kachel 2: Quick Links */}
             <div className="surface p-6">
-              <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Quick Links</h3>
+              <h3 className="text-xs font-semibold text-muted-foreground mb-4 uppercase tracking-widest">Quick Links</h3>
               <div className="space-y-1.5">
-                <button
-                  onClick={() => setActiveSection('vertraege')}
-                  className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
-                >
-                  <span className="text-muted-foreground">Verträge</span>
-                  <span className="font-semibold">{relatedContracts.length}</span>
+                <button onClick={() => setActiveSection('vertraege')} className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors">
+                  <span className="text-slate-600">Verträge</span>
+                  <span className="text-xs font-semibold text-slate-800">{relatedContracts.length}</span>
                 </button>
-                <button
-                  onClick={() => setActiveSection('antraege')}
-                  className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
-                >
-                  <span className="text-muted-foreground">Offene Anträge</span>
-                  <span className="font-semibold">{relatedApplications.filter(a => {
+                <button onClick={() => setActiveSection('antraege')} className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors">
+                  <span className="text-slate-600">Offene Anträge</span>
+                  <span className="text-xs font-semibold text-slate-800">{relatedApplications.filter(a => {
                     const status = (a.custom_status || a.status || '').toLowerCase().trim()
                     const OPEN_KEYS = ['neu', 'new', 'eingereicht', 'in_pruefung', 'rueckfrage', 'vorbehalt', 'risikopruefung', 'under_review', 'in_progress', 'warten']
                     return OPEN_KEYS.includes(status)
                   }).length}</span>
                 </button>
-                <button
-                  onClick={() => setActiveSection('aufgaben')}
-                  className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
-                >
-                  <span className="text-muted-foreground">Offene Aufgaben</span>
-                  <span className={`font-semibold ${custTasks.filter(t => t.status !== 'completed').length > 0 ? 'text-amber-600' : ''}`}>
+                <button onClick={() => setActiveSection('aufgaben')} className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors">
+                  <span className="text-slate-600">Offene Aufgaben</span>
+                  <span className={`text-xs font-semibold ${custTasks.filter(t => t.status !== 'completed').length > 0 ? 'text-amber-600' : 'text-slate-800'}`}>
                     {custTasks.filter(t => t.status !== 'completed').length}
                   </span>
                 </button>
-                <button
-                  onClick={() => setActiveSection('dokumente')}
-                  className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
-                >
-                  <span className="text-muted-foreground">Dokumente</span>
-                  <span className="font-semibold">{relatedDocuments.length}</span>
+                <button onClick={() => setActiveSection('dokumente')} className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors">
+                  <span className="text-slate-600">Dokumente</span>
+                  <span className="text-xs font-semibold text-slate-800">{relatedDocuments.length}</span>
                 </button>
                 {verkaufschancen.length > 0 && (
-                  <button
-                    onClick={() => setActiveSection('beratungspotential')}
-                    className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
-                  >
-                    <span className="text-muted-foreground">Beratungspotential</span>
-                    <span className="font-semibold text-primary">{verkaufschancen.length}</span>
+                  <button onClick={() => setActiveSection('beratungspotential')} className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors">
+                    <span className="text-slate-600">Beratungspotential</span>
+                    <span className="text-xs font-semibold text-primary">{verkaufschancen.length}</span>
                   </button>
                 )}
               </div>
@@ -447,10 +421,10 @@ export default function CustomerDetail() {
 
             {/* Kachel 3: Haushaltsmitglieder */}
             <div className="surface p-6">
-              <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Haushaltsmitglieder</h3>
+              <h3 className="text-xs font-semibold text-muted-foreground mb-4 uppercase tracking-widest">Haushaltsmitglieder</h3>
               {familyMembers.length > 1 ? (
                 <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">{familyMembers.length} Personen im Haushalt</p>
+                  <p className="text-xs text-muted-foreground">{familyMembers.length} Personen im Haushalt</p>
                   <div className="flex flex-wrap gap-2">
                     {familyMembers.filter(m => m.id !== id).map(member => (
                       <button
@@ -462,7 +436,7 @@ export default function CustomerDetail() {
                           {member.first_name?.[0]}{member.last_name?.[0]}
                         </div>
                         <div className="flex flex-col items-start">
-                          <span className="text-sm font-medium">{member.first_name} {member.last_name}</span>
+                          <span className="text-xs font-medium text-slate-700">{member.first_name} {member.last_name}</span>
                           <span className="text-xs text-muted-foreground">{FAMILY_ROLE_LABELS[member.family_role] || 'Familie'}</span>
                         </div>
                       </button>
