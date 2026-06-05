@@ -347,9 +347,9 @@ export default function CustomerDetail() {
 
         {/* ── Übersicht ─────────────────────────────────────────────── */}
         {activeSection === 'uebersicht' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             {/* Kachel 1: Kontakt & Adresse */}
-            <div className="surface p-6 h-[340px]">
+            <div className="surface p-6">
               <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Kontakt & Adresse</h3>
               <div className="space-y-4">
                 {/* Adresse */}
@@ -405,11 +405,16 @@ export default function CustomerDetail() {
                     </div>
                   </div>
                 )}
+
+                {/* Fallback wenn keine Daten */}
+                {!customer.street && !customer.email && !customer.phone && !customer.mobile && !customer.birthdate && !customer.profession && !customer.civil_status && !customer.nationality && (
+                  <p className="text-xs text-muted-foreground">Keine Kontaktdaten hinterlegt</p>
+                )}
               </div>
             </div>
 
             {/* Kachel 2: Berater */}
-            <div className="surface p-6 h-[340px]">
+            <div className="surface p-6">
               <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Berater</h3>
               {(() => {
                 const advisorId = customer.primary_advisor_id || customer.advisor_id
@@ -496,7 +501,7 @@ export default function CustomerDetail() {
                   )
                 }
                 return (
-                  <div className="flex items-center justify-center h-full">
+                  <div className="py-6 text-center">
                     <p className="text-xs text-muted-foreground">Kein Berater zugewiesen</p>
                   </div>
                 )
@@ -504,7 +509,7 @@ export default function CustomerDetail() {
             </div>
 
             {/* Kachel 3: Haushaltsmitglieder */}
-            <div className="surface p-6 h-[340px]">
+            <div className="surface p-6">
               <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Haushaltsmitglieder</h3>
               {familyMembers.length > 1 ? (
                 <div className="space-y-4">
@@ -528,7 +533,7 @@ export default function CustomerDetail() {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-full">
+                <div className="py-6 text-center">
                   <p className="text-xs text-muted-foreground">Keine weiteren Haushaltsmitglieder</p>
                 </div>
               )}
