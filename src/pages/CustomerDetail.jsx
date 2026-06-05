@@ -395,99 +395,54 @@ export default function CustomerDetail() {
               </div>
             </div>
 
-            {/* Kachel 2: Berater */}
+            {/* Kachel 2: Quick Links */}
             <div className="surface p-6">
-              <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Berater</h3>
-              {(() => {
-                const advisorId = customer.primary_advisor_id || customer.advisor_id
-                let advisor = advisorId ? allAdvisors.find(a => a.id === advisorId || a.email === advisorId) : null
-                if (!advisor && relatedContracts.length > 0) {
-                  for (const c of relatedContracts) {
-                    if (c.advisor_id || c.assigned_broker) {
-                      advisor = allAdvisors.find(a => a.id === c.advisor_id || a.email === c.advisor_id || a.id === c.assigned_broker || a.email === c.assigned_broker)
-                      if (advisor) break
-                    }
-                  }
-                }
-                if (advisor) {
-                  return (
-                    <div className="space-y-4">
-                      <div>
-                        <div className="flex items-start gap-3 mb-3">
-                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary flex-shrink-0">
-                            {advisor.firstname?.[0]}{advisor.lastname?.[0]}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-foreground truncate">{advisor.firstname} {advisor.lastname}</p>
-                            <p className="text-xs text-muted-foreground truncate">{advisor.email}</p>
-                            {advisor.phone && <p className="text-xs text-muted-foreground">{advisor.phone}</p>}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {advisor.phone && (
-                            <a href={`tel:${advisor.phone}`} className="p-2 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded transition-colors" title="Anrufen">
-                              <Phone className="w-4 h-4" />
-                            </a>
-                          )}
-                          {advisor.email && (
-                            <a href={`mailto:${advisor.email}`} className="p-2 text-muted-foreground hover:text-foreground hover:bg-slate-100 rounded transition-colors" title="E-Mail">
-                              <Mail className="w-4 h-4" />
-                            </a>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Navigation / Quick Links */}
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Quick Links</p>
-                        <div className="space-y-1.5">
-                          <button
-                            onClick={() => setActiveSection('vertraege')}
-                            className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
-                          >
-                            <span className="text-muted-foreground">Verträge</span>
-                            <span className="font-semibold">{relatedContracts.length}</span>
-                          </button>
-                          <button
-                            onClick={() => setActiveSection('antraege')}
-                            className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
-                          >
-                            <span className="text-muted-foreground">Anträge</span>
-                            <span className="font-semibold">{relatedApplications.filter(a => {
-                              const status = (a.custom_status || a.status || '').toLowerCase().trim()
-                              const OPEN_KEYS = ['neu', 'new', 'eingereicht', 'in_pruefung', 'rueckfrage', 'vorbehalt', 'risikopruefung', 'under_review', 'in_progress', 'warten']
-                              return OPEN_KEYS.includes(status)
-                            }).length}</span>
-                          </button>
-                          <button
-                            onClick={() => setActiveSection('aufgaben')}
-                            className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
-                          >
-                            <span className="text-muted-foreground">Aufgaben</span>
-                            <span className={`font-semibold ${custTasks.filter(t => t.status !== 'completed').length > 0 ? 'text-amber-600' : ''}`}>
-                              {custTasks.filter(t => t.status !== 'completed').length}
-                            </span>
-                          </button>
-                          {verkaufschancen.length > 0 && (
-                            <button
-                              onClick={() => setActiveSection('beratungspotential')}
-                              className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
-                            >
-                              <span className="text-muted-foreground">Potential</span>
-                              <span className="font-semibold text-primary">{verkaufschancen.length}</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                }
-                return (
-                  <div className="py-6 text-center">
-                    <p className="text-xs text-muted-foreground">Kein Berater zugewiesen</p>
-                  </div>
-                )
-              })()}
+              <h3 className="text-xs font-bold text-foreground mb-4 uppercase tracking-widest">Quick Links</h3>
+              <div className="space-y-1.5">
+                <button
+                  onClick={() => setActiveSection('vertraege')}
+                  className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
+                >
+                  <span className="text-muted-foreground">Verträge</span>
+                  <span className="font-semibold">{relatedContracts.length}</span>
+                </button>
+                <button
+                  onClick={() => setActiveSection('antraege')}
+                  className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
+                >
+                  <span className="text-muted-foreground">Offene Anträge</span>
+                  <span className="font-semibold">{relatedApplications.filter(a => {
+                    const status = (a.custom_status || a.status || '').toLowerCase().trim()
+                    const OPEN_KEYS = ['neu', 'new', 'eingereicht', 'in_pruefung', 'rueckfrage', 'vorbehalt', 'risikopruefung', 'under_review', 'in_progress', 'warten']
+                    return OPEN_KEYS.includes(status)
+                  }).length}</span>
+                </button>
+                <button
+                  onClick={() => setActiveSection('aufgaben')}
+                  className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
+                >
+                  <span className="text-muted-foreground">Offene Aufgaben</span>
+                  <span className={`font-semibold ${custTasks.filter(t => t.status !== 'completed').length > 0 ? 'text-amber-600' : ''}`}>
+                    {custTasks.filter(t => t.status !== 'completed').length}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setActiveSection('dokumente')}
+                  className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
+                >
+                  <span className="text-muted-foreground">Dokumente</span>
+                  <span className="font-semibold">{relatedDocuments.length}</span>
+                </button>
+                {verkaufschancen.length > 0 && (
+                  <button
+                    onClick={() => setActiveSection('beratungspotential')}
+                    className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors"
+                  >
+                    <span className="text-muted-foreground">Beratungspotential</span>
+                    <span className="font-semibold text-primary">{verkaufschancen.length}</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Kachel 3: Haushaltsmitglieder */}

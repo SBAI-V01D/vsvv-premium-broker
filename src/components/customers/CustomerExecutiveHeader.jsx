@@ -258,6 +258,36 @@ export default function CustomerExecutiveHeader({
         <div className="w-px h-5 bg-[hsl(var(--border-default))]" shrink-0 />
         <KpiPill label="Renewal" value={expiringCount > 0 ? expiringCount : '—'} warn={expiringCount > 0} />
       </div>
+
+      {/* Berater — unter den KPIs */}
+      {advisor && (
+        <div className="px-6 pb-4 border-t border-[hsl(var(--border-subtle))] pt-3">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+              {advisor.firstname?.[0]}{advisor.lastname?.[0]}
+            </div>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 shrink-0">Berater</span>
+              <span className="text-xs font-semibold text-slate-700 truncate">{advisor.firstname} {advisor.lastname}</span>
+              {advisor.email && (
+                <span className="text-xs text-slate-400 truncate hidden sm:inline">{advisor.email}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-1 ml-auto shrink-0">
+              {advisor.phone && (
+                <a href={`tel:${advisor.phone}`} className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors" title={advisor.phone}>
+                  <Phone className="w-3.5 h-3.5" />
+                </a>
+              )}
+              {advisor.email && (
+                <a href={`mailto:${advisor.email}`} className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded transition-colors" title={advisor.email}>
+                  <Mail className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
