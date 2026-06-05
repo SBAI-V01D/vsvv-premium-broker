@@ -388,27 +388,9 @@ export default function CustomerDetail() {
                   </div>
                 )}
 
-                {/* Kontakt */}
-                {(customer.email || customer.phone || customer.mobile) && (
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-widest mb-2">Kontakt</p>
-                    <div className="space-y-1.5 text-sm">
-                      {customer.email && (
-                        <EmailLink email={customer.email} />
-                      )}
-                      {customer.phone && (
-                        <p className="text-slate-600">{customer.phone}</p>
-                      )}
-                      {customer.mobile && (
-                        <p className="text-slate-600">{customer.mobile}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 {/* Fallback wenn keine Daten */}
-                {!customer.street && !customer.email && !customer.phone && !customer.mobile && !customer.birthdate && !customer.profession && !customer.civil_status && !customer.nationality && (
-                  <p className="text-xs text-muted-foreground">Keine Kontaktdaten hinterlegt</p>
+                {!customer.street && !customer.birthdate && !customer.profession && !customer.civil_status && !customer.nationality && (
+                  <p className="text-xs text-muted-foreground">Keine Stammdaten hinterlegt</p>
                 )}
               </div>
             </div>
