@@ -6,10 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, ChevronDown } from 'lucide-react';
+import { Search, ChevronDown, X } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import SpartenFormulare from './SpartenFormulare';
 
 const SPARTEN = [
   'Motorfahrzeug','Motorrad','Oldtimer','Flotte','Haushalt','Privathaftpflicht',
@@ -210,12 +209,15 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
           ))}
         </div>
         {form.sparten.length > 0 && (
-          <div className="mt-4">
-            <SpartenFormulare
-              sparten={form.sparten}
-              data={form.risiko_daten || {}}
-              onChange={d => set('risiko_daten', d)}
-            />
+          <div className="flex flex-wrap gap-1 mt-2">
+            {form.sparten.map(s => (
+              <Badge key={s} variant="secondary" className="gap-1 pr-1">
+                {s}
+                <button type="button" onClick={() => toggleSparte(s)} className="ml-1 rounded-full hover:bg-slate-300 p-0.5">
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </Badge>
+            ))}
           </div>
         )}
       </div>
