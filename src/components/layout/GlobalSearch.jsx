@@ -5,15 +5,6 @@ import { base44 } from '@/api/base44Client';
 import { Search, User, Building2, X, FileText, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-function useDebounce(value, delay) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-  return debounced;
-}
-
 export default function GlobalSearch({ collapsed, light = false }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
@@ -21,7 +12,6 @@ export default function GlobalSearch({ collapsed, light = false }) {
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
-  const debouncedQuery = useDebounce(query, 300);
 
   const { data: customers = [] } = useQuery({
     queryKey: ['sidebar_customers_slim'],
@@ -45,8 +35,8 @@ export default function GlobalSearch({ collapsed, light = false }) {
   });
 
   const { customerResults, contractResults, applicationResults } = useMemo(() => {
-    if (!debouncedQuery || debouncedQuery.length < 3) return { customerResults: [], contractResults: [], applicationResults: [] };
-    const q = debouncedQuery.toLowerCase();
+    if (!query || query.length < 3) return { customerResults: [], contractResults: [], applicationResults: [] };
+    const q = query.toLowerCase();
 
     const customerResults = customers.filter(c => {
       const fullName = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
@@ -57,23 +47,41 @@ export default function GlobalSearch({ collapsed, light = false }) {
         ((c.phone || '') + (c.mobile || '')).replace(/\s/g, '').includes(q) ||
         (c.customer_number || '').toLowerCase().startsWith(q)
       );
-    }).slice(0, 8);
+    }).sort((a, b) => {
+      const aFullName = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase();
+      const bFullName = `${b.first_name || ''} ${b.last_name || ''}`.toLowerCase();
+      const aCompanyName = (a.company_name || '').toLowerCase();
+      const bCompanyName = (b.company_name || '').toLowerCase();
+      const aStartsWith = aFullName.startsWith(q) || aCompanyName.startsWith(q) || (a.first_name || '').toLowerCase().startsWith(q);
+      const bStartsWith = bFullName.startsWith(q) || bCompanyName.startsWith(q) || (b.first_name || '').toLowerCase().startsWith(q);
+      if (aStartsWith && !bStartsWith) return -1;
+      if (!aStartsWith && bStartsWith) return 1;
+      return aFullName.indexOf(q) - bFullName.indexOf(q);
+    });
 
     const contractResults = contracts.filter(c =>
       (c.customer_name || '').toLowerCase().includes(q) ||
       (c.insurer || '').toLowerCase().includes(q) ||
       (c.policy_number || '').toLowerCase().includes(q) ||
       (c.product || '').toLowerCase().includes(q)
-    ).slice(0, 4);
+    ).sort((a, b) => {
+      const aName = (a.customer_name || '').toLowerCase();
+      const bName = (b.customer_name || '').toLowerCase();
+      return aName.indexOf(q) - bName.indexOf(q);
+    });
 
     const applicationResults = applications.filter(a =>
       (a.customer_name || '').toLowerCase().includes(q) ||
       (a.insurer || '').toLowerCase().includes(q) ||
       (a.product || '').toLowerCase().includes(q)
-    ).slice(0, 4);
+    ).sort((a, b) => {
+      const aName = (a.customer_name || '').toLowerCase();
+      const bName = (b.customer_name || '').toLowerCase();
+      return aName.indexOf(q) - bName.indexOf(q);
+    });
 
     return { customerResults, contractResults, applicationResults };
-  }, [debouncedQuery, customers, contracts, applications]);
+  }, [query, customers, contracts, applications]);
 
   const privateCustomers = customerResults.filter(c => c.customer_type !== 'business');
   const businessCustomers = customerResults.filter(c => c.customer_type === 'business');
@@ -136,7 +144,7 @@ export default function GlobalSearch({ collapsed, light = false }) {
     return c.email || c.phone || '';
   };
 
-  const showDropdown = open && debouncedQuery.length >= 3 && hasResults !== undefined;
+  const showDropdown = open && query.length >= 3 && hasResults !== undefined;
 
   return (
     <div className={cn('relative', light ? '' : 'px-3 py-2')} ref={dropdownRef}>
@@ -151,9 +159,9 @@ export default function GlobalSearch({ collapsed, light = false }) {
           ref={inputRef}
           value={query}
           onChange={e => { setQuery(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => { setOpen(true); inputRef.current?.select(); }}
           onKeyDown={handleKeyDown}
-          placeholder="Kunde suchen… (⌘K)"
+          placeholder="Kunde suchen… (z.B. 'Adam')"
           className={cn(
             'flex-1 bg-transparent text-[12px] outline-none min-w-0',
             light
