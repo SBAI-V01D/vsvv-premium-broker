@@ -52,7 +52,7 @@ export default function Ausschreibungen() {
     const user = await base44.auth.me();
     let organization_id = data.organization_id;
     if (!organization_id && data.customer_id) {
-      const customer = await base44.entities.Customer.filter({ id: data.customer_id }, null, 1).then(r => r?.[0]);
+      const customer = await base44.entities.Customer.get(data.customer_id).catch(() => null);
       organization_id = customer?.organization_id;
     }
     if (!organization_id) {

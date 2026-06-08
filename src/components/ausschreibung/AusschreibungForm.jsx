@@ -89,7 +89,14 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
 
   const handleCustomer = (id) => {
     const c = customers.find(x => x.id === id);
-    if (c) { set('customer_id', id); set('customer_name', c.first_name + ' ' + c.last_name); }
+    if (c) {
+      setForm(f => ({
+        ...f,
+        customer_id: id,
+        customer_name: c.company_name || `${c.first_name} ${c.last_name}`.trim(),
+        organization_id: c.organization_id || f.organization_id || '',
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
