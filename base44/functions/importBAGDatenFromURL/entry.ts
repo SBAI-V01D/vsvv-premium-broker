@@ -16,71 +16,79 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Keine Datei-URL angegeben' }, { status: 400 });
     }
 
-    // Datei herunterladen
-    const fileResponse = await fetch(file_url);
+    // Datei herunterladen mit Timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    const fileResponse = await fetch(file_url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    
+    if (!fileResponse.ok) {
+      return Response.json({ error: 'Datei konnte nicht heruntergeladen werden' }, { status: 400 });
+    }
+    
     const arrayBuffer = await fileResponse.arrayBuffer();
-    const workbook = read(new Uint8Array(arrayBuffer));
+    
+    // Excel parsen mit minimalen Optionen
+    const workbook = read(new Uint8Array(arrayBuffer), { 
+      cellDates: false,
+      cellNF: false,
+      cellText: true
+    });
     
     if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
       return Response.json({ error: 'Ungültige Excel-Datei' }, { status: 400 });
     }
 
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const data = utils.sheet_to_json(sheet);
+    const data = utils.sheet_to_json(sheet, { raw: true });
 
-    const importResults = {
-      gesamt: 0,
-      erfolgreich: 0,
-      fehler: 0
-    };
-
-    // Versicherer-Mapping (Versicherer-ID zu Name)
+    // Mapping-Tabellen
     const versichererMap = {
       1: 'CSS', 2: 'Helsana', 3: 'Sanitas', 4: 'Swica', 5: 'ÖKK',
       6: 'Visana', 7: 'KPT', 8: 'Agrisano', 9: 'Concordia', 10: 'Atupri',
       11: 'Assura', 12: 'Intras', 13: 'Sympany', 14: 'bkk mobilise', 15: 'Galenus', 16: 'Groupe Mutuel'
     };
 
-    // Tarif-Mapping - nur relevante Tarife für KVG Grundversicherung
-    // TAR-STD = Standard, TAR-TEL = Telmed, TAR-HAM = Hausarzt, TAR-HMO = HMO
-    const modellMapping = {
-      'TAR-STD': 'standard',
-      'TAR-TEL': 'telmed',
-      'TAR-HAM': 'hausarzt',
-      'TAR-HMO': 'hmo'
+    const modellMap = {
+      'TAR-STD': 'standard', 'TAR-TEL': 'telmed', 'TAR-HAM': 'hausarzt', 'TAR-HMO': 'hmo',
+      'standard': 'standard', 'telmed': 'telmed', 'hausarzt': 'hausarzt', 'hmo': 'hmo'
     };
 
-    // Bulk-Create für bessere Performance
-    const batchData = [];
+    let erfolgreich = 0;
+    let fehler = 0;
+    const batch = [];
+    const BATCH_SIZE = 50;
 
     for (const row of data) {
-      importResults.gesamt++;
-      
       try {
         const versichererId = parseInt(row['Versicherer'] || '0');
         const kantonCode = row['Kanton'] || 'CH';
         const regionCode = row['Region'] || 'PR-REG CH0';
         const altersklasse = row['Altersklasse'] || 'AKL-ERW';
-        const unfalleinschluss = row['Unfalleinschluss'] || 'MIT-UNF';
-        const tariftyp = row['Tariftyp'] || '';
+        const unfalleinschluss = row['Unfalleinschluss'] || 'OHNE-UNF';
+        const tarifTyp = row['Tariftyp'] || 'TAR-STD';
         const franchiseCode = row['Franchise'] || 'FRA-300';
         const praemie = parseFloat(row['Prämie'] || row['Praemie'] || '0');
-        const geschaeftsjahr = parseInt(row['Geschäftsjahr'] || row['Geschaeftsjahr'] || '2026');
+        const geschaeftsjahr = parseInt(row['Geschäftsjahr'] || row['Geschaeftsjahr'] || jahr);
         
-        // Filter: Nur Erwachsene, ohne Unfall, 2026, relevante Tarife
+        // Filter: Nur Erwachsene, ohne Unfall
         if (altersklasse !== 'AKL-ERW') continue;
         if (unfalleinschluss !== 'OHNE-UNF') continue;
-        if (!modellMapping[tariftyp]) continue;
         
+        const modell = modellMap[tarifTyp] || 'standard';
+        if (!['standard', 'telmed', 'hausarzt', 'hmo'].includes(modell)) continue;
+
         const krankenkasse = versichererMap[versichererId] || `VK-${versichererId}`;
-        
-        batchData.push({
-          jahr: geschaeftsjahr || jahr,
+        const franchise = parseInt(franchiseCode.replace('FRA-', '')) || 300;
+
+        batch.push({
+          jahr: geschaeftsjahr,
           krankenkasse,
           kanton: kantonCode,
           region: regionCode,
-          modell: modellMapping[tariftyp],
-          franchise: mapFranchise(franchiseCode),
+          modell,
+          franchise,
           unfall: false,
           praemie_erwachsene: praemie,
           praemie_kinder: 0,
@@ -90,47 +98,40 @@ Deno.serve(async (req) => {
           datenquelle: 'BAG',
           importiert_am: new Date().toISOString(),
           importiert_von: user.id,
-          gueltig_ab: `${jahr}-01-01`,
-          gueltig_bis: `${jahr}-12-31`,
+          gueltig_ab: `${geschaeftsjahr}-01-01`,
+          gueltig_bis: `${geschaeftsjahr}-12-31`,
           aktiv: true
         });
         
+        // Batch-weise speichern für bessere Performance
+        if (batch.length >= BATCH_SIZE) {
+          await base44.entities.BAGPraemienDaten.bulkCreate(batch);
+          erfolgreich += batch.length;
+          batch.length = 0;
+        }
       } catch (error) {
-        importResults.fehler++;
+        fehler++;
       }
     }
 
-    // Bulk import in batches von 100
-    const BATCH_SIZE = 100;
-    for (let i = 0; i < batchData.length; i += BATCH_SIZE) {
-      const batch = batchData.slice(i, i + BATCH_SIZE);
+    // Restliche Daten speichern
+    if (batch.length > 0) {
       await base44.entities.BAGPraemienDaten.bulkCreate(batch);
-      importResults.erfolgreich += batch.length;
+      erfolgreich += batch.length;
     }
 
     return Response.json({
       success: true,
-      results: importResults,
-      message: `${importResults.erfolgreich} von ${importResults.gesamt} Datensätzen erfolgreich importiert`
+      results: {
+        gesamt: data.length,
+        erfolgreich,
+        fehler
+      },
+      message: `${erfolgreich} von ${data.length} Datensätzen importiert`
     });
 
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('BAG Import Error:', error);
+    return Response.json({ error: error.message || 'Import fehlgeschlagen' }, { status: 500 });
   }
 });
-
-function mapFranchise(franchiseCode) {
-  const mapping = {
-    'FRA-0': 0,
-    'FRA-100': 100,
-    'FRA-200': 200,
-    'FRA-300': 300,
-    'FRA-400': 400,
-    'FRA-500': 500,
-    'FRA-1000': 1000,
-    'FRA-1500': 1500,
-    'FRA-2000': 2000,
-    'FRA-2500': 2500
-  };
-  return mapping[franchiseCode] || (parseInt(franchiseCode.replace('FRA-', '')) || 300);
-}
