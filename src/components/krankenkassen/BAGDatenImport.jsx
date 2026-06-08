@@ -19,15 +19,16 @@ const ALLE_KANTONE = [
   'ZH', 'BE', 'LU', 'UR', 'SZ', 'OW', 'NW', 'GL', 'ZG', 'FR', 'SO', 'BS', 'BL', 'SH', 'AR', 'AI', 'SG', 'GR', 'AG', 'TG', 'TI', 'VD', 'VS', 'NE', 'GE', 'JU'
 ];
 
-const ZENTRALE_KANTONE = ['BS', 'BL', 'AG', 'SO', 'BE', 'ZH', 'SG', 'SZ', 'LU', 'OW', 'NW', 'TG', 'SH', 'GR', 'UR'];
+// Alle 26 Kantone für den Import
+const ALLE_26_KANTONE = ['ZH', 'BE', 'LU', 'UR', 'SZ', 'OW', 'NW', 'GL', 'ZG', 'FR', 'SO', 'BS', 'BL', 'SH', 'AR', 'AI', 'SG', 'GR', 'AG', 'TG', 'TI', 'VD', 'VS', 'NE', 'GE', 'JU'];
 
 export default function BAGDatenImport() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [jahr, setJahr] = useState('2026');
-  const [importModus, setImportModus] = useState('zentral');
-  const [selectedKantone, setSelectedKantone] = useState(ZENTRALE_KANTONE);
+  const [importModus, setImportModus] = useState('alle_26');
+  const [selectedKantone, setSelectedKantone] = useState(ALLE_26_KANTONE);
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
@@ -60,7 +61,7 @@ export default function BAGDatenImport() {
       const response = await base44.functions.invoke('importBAGDatenFromURL', {
         file_url: fileUrl,
         jahr: parseInt(jahr),
-        kantone: importModus === 'zentral' ? selectedKantone : null
+        kantone: importModus === 'auswahl' ? selectedKantone : null
       });
 
       if (response.data?.success) {
@@ -144,40 +145,40 @@ export default function BAGDatenImport() {
               <div className="flex gap-2 mt-2">
                 <Button
                   type="button"
-                  variant={importModus === 'zentral' ? 'default' : 'outline'}
+                  variant={importModus === 'alle_26' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => {
-                    setImportModus('zentral');
-                    setSelectedKantone(ZENTRALE_KANTONE);
+                    setImportModus('alle_26');
+                    setSelectedKantone(ALLE_26_KANTONE);
                   }}
                   className="flex-1"
                 >
-                  Zentrale Kantone (15)
+                  Alle 26 Kantone
                 </Button>
                 <Button
                   type="button"
-                  variant={importModus === 'alle' ? 'default' : 'outline'}
+                  variant={importModus === 'auswahl' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => {
-                    setImportModus('alle');
-                    setSelectedKantone(ALLE_KANTONE);
+                    setImportModus('auswahl');
+                    setSelectedKantone([]);
                   }}
                   className="flex-1"
                 >
-                  Alle Kantone (26)
+                  Auswahl
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {importModus === 'zentral' 
-                  ? 'BS, BL, AG, SO, BE, ZH, SG, SZ, LU, OW, NW, TG, SH, GR, UR'
-                  : 'Alle 26 Schweizer Kantone'}
+                {importModus === 'alle_26' 
+                  ? 'Alle Schweizer Kantone werden importiert'
+                  : 'Wählen Sie spezifische Kantone aus'}
               </p>
             </div>
 
-            {importModus === 'zentral' && (
+            {importModus === 'auswahl' && (
               <div>
                 <Label>Kantone auswählen</Label>
-                <div className="grid grid-cols-5 gap-2 mt-2 max-h-40 overflow-auto border rounded-lg p-2">
+                <div className="grid grid-cols-6 gap-2 mt-2 max-h-48 overflow-auto border rounded-lg p-3">
                   {ALLE_KANTONE.map(kanton => (
                     <Button
                       key={kanton}
@@ -191,6 +192,9 @@ export default function BAGDatenImport() {
                     </Button>
                   ))}
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedKantone.length} Kantone ausgewählt
+                </p>
               </div>
             )}
 

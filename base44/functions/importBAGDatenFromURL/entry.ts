@@ -13,8 +13,8 @@ Deno.serve(async (req) => {
 
     if (!file_url) return Response.json({ error: 'Keine Datei-URL' }, { status: 400 });
 
-    // Kanton-Filter
-    const kantonFilter = kantone || ['BS', 'BL', 'AG', 'SO', 'BE', 'ZH', 'SG', 'SZ', 'LU', 'OW', 'NW', 'TG', 'SH', 'GR', 'UR'];
+    // Kanton-Filter: null = alle Kantone, Array = spezifische Kantone
+    const kantonFilter = kantone || null;
 
     // Datei herunterladen
     const fileResponse = await fetch(file_url);
@@ -62,8 +62,8 @@ Deno.serve(async (req) => {
         const franchiseCode = row[11];
         const praemie = row[13];
 
-        // Kanton-Filter
-        if (!kantonFilter.includes(kantonCode)) {
+        // Kanton-Filter (nur wenn spezifische Kantone angegeben)
+        if (kantonFilter && !kantonFilter.includes(kantonCode)) {
           kanton_filtered++;
           continue;
         }
@@ -132,9 +132,11 @@ Deno.serve(async (req) => {
         fehler, 
         skipped,
         kanton_filtered,
-        kantone: kantonFilter.join(', ')
+        kantone: kantonFilter ? kantonFilter.join(', ') : 'Alle'
       },
-      message: `${erfolgreich} Datensätze für ${kantonFilter.length} Kantone importiert`
+      message: kantonFilter 
+        ? `${erfolgreich} Datensätze für ${kantonFilter.length} Kantone importiert`
+        : `${erfolgreich} Datensätze für alle Kantone importiert`
     });
 
   } catch (error) {
