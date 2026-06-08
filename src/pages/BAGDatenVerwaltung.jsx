@@ -153,6 +153,10 @@ export default function BAGDatenVerwaltung() {
               )}
             </CardContent>
           </Card>
+
+          <div className="mt-6">
+            <BAGDatenImport />
+          </div>
         </>
       )}
     </div>
