@@ -1,0 +1,717 @@
+{
+  "export_meta": {
+    "app": "KrankenkassenVergleich CRM",
+    "platform": "Base44",
+    "exported_at": "2026-06-08",
+    "version": "1.0",
+    "total_entities": 37
+  },
+  "entities": {
+    "Customer": {
+      "name": "Customer",
+      "type": "object",
+      "required": ["first_name", "last_name", "email", "organization_id"],
+      "rls": {
+        "create": { "$or": [{ "user_condition": { "role": "admin" } }, { "user_condition": { "role": "broker" } }, { "user_condition": { "role": "assistenz" } }] },
+        "read": { "$or": [{ "user_condition": { "role": "admin" } }, { "data.primary_advisor_id": "{{user.id}}" }, { "data.assigned_advisors": { "$in": ["{{user.id}}"] } }, { "data.customer_id": "{{user.id}}" }] },
+        "update": { "$or": [{ "user_condition": { "role": "admin" } }, { "data.primary_advisor_id": "{{user.id}}" }] },
+        "delete": { "user_condition": { "role": "admin" } }
+      },
+      "properties": {
+        "customer_number": { "type": "string" },
+        "first_name": { "type": "string" },
+        "last_name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "mobile": { "type": "string" },
+        "street": { "type": "string" },
+        "zip_code": { "type": "string" },
+        "city": { "type": "string" },
+        "canton": { "type": "string", "enum": ["AG","AI","AR","BE","BL","BS","FR","GE","GL","GR","JU","LU","NE","NW","OW","SG","SH","SO","SZ","TG","TI","UR","VD","VS","ZG","ZH"] },
+        "birthdate": { "type": "string", "format": "date" },
+        "ahv_number": { "type": "string" },
+        "civil_status": { "type": "string", "enum": ["single","married","divorced","widowed","registered_partnership","dissolved_partnership"] },
+        "profession": { "type": "string" },
+        "nationality": { "type": "string" },
+        "customer_type": { "type": "string", "enum": ["private","business"], "default": "private" },
+        "status": { "type": "string", "enum": ["active","inactive","prospect"], "default": "active" },
+        "mandate_status": { "type": "string", "enum": ["valid","invalid","pending","expired"], "default": "pending" },
+        "association_membership": { "type": "string", "enum": ["vsvv","skv","reka","vfs","pro_life","none"] },
+        "permit_type": { "type": "string", "enum": ["b_permit","l_permit","c_permit","ec_permit","ci_permit","g_permit","none"] },
+        "is_family_member": { "type": "boolean", "default": false },
+        "primary_customer_id": { "type": "string" },
+        "family_role": { "type": "string", "enum": ["primary","spouse","child","parent","other"], "default": "primary" },
+        "notes": { "type": "string" },
+        "organization_id": { "type": "string" },
+        "primary_advisor_id": { "type": "string" },
+        "assigned_advisors": { "type": "array", "items": { "type": "string" } },
+        "assigned_assistants": { "type": "array", "items": { "type": "string" } },
+        "access_level": { "type": "string", "enum": ["public_admin_only","assigned_advisors_only","team_visible","all_internal"], "default": "assigned_advisors_only" },
+        "total_premium": { "type": "number", "default": 0 },
+        "portal_enabled": { "type": "boolean", "default": false },
+        "portal_must_change_password": { "type": "boolean", "default": true },
+        "portal_last_login": { "type": "string", "format": "date-time" },
+        "company_name": { "type": "string" },
+        "legal_form": { "type": "string" },
+        "uid_number": { "type": "string" },
+        "contact_person_firstname": { "type": "string" },
+        "contact_person_lastname": { "type": "string" },
+        "import_batch_id": { "type": "string" },
+        "archived": { "type": "boolean", "default": false },
+        "archived_at": { "type": "string", "format": "date-time" },
+        "change_history": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "Contract": {
+      "name": "Contract",
+      "type": "object",
+      "required": ["customer_id", "insurer", "insurance_type", "organization_id"],
+      "rls": {
+        "create": { "$or": [{ "user_condition": { "role": "admin" } }, { "user_condition": { "role": "broker" } }, { "user_condition": { "role": "assistenz" } }] },
+        "read": { "$or": [{ "user_condition": { "role": "admin" } }, { "data.primary_broker_id": "{{user.id}}" }, { "data.assigned_brokers": { "$in": ["{{user.id}}"] } }, { "data.customer_id": "{{user.id}}" }] },
+        "update": { "$or": [{ "user_condition": { "role": "admin" } }, { "data.primary_broker_id": "{{user.id}}" }, { "data.assigned_brokers": { "$in": ["{{user.id}}"] } }] },
+        "delete": { "user_condition": { "role": "admin" } }
+      },
+      "properties": {
+        "customer_id": { "type": "string" },
+        "customer_name": { "type": "string" },
+        "organization_id": { "type": "string" },
+        "advisor_id": { "type": "string" },
+        "insurer": { "type": "string" },
+        "insurance_type": { "type": "string", "enum": ["life","health","property","liability","motor","other"] },
+        "policy_number": { "type": "string" },
+        "version_number": { "type": "number", "default": 1 },
+        "parent_policy_id": { "type": "string" },
+        "product": { "type": "string" },
+        "premium_monthly": { "type": "number" },
+        "premium_yearly": { "type": "number" },
+        "premium_current": { "type": "number" },
+        "premium_previous": { "type": "number" },
+        "start_date": { "type": "string", "format": "date" },
+        "end_date": { "type": "string", "format": "date" },
+        "acceptance_date": { "type": "string", "format": "date" },
+        "renewal_date": { "type": "string", "format": "date" },
+        "auto_renew": { "type": "boolean", "default": true },
+        "cancellation_deadline": { "type": "string", "format": "date" },
+        "cancel_date": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["active","pending","cancelled","expired","archived"], "default": "active" },
+        "process_status": { "type": "string", "enum": ["neu","pruefung_offen","kunde_kontaktieren","verlaengerung_vorbereiten","beratung_erfolgt","erledigt"], "default": "neu" },
+        "sparte": { "type": "string" },
+        "sparte_data": { "type": "object" },
+        "commission_rate": { "type": "number" },
+        "commission_amount": { "type": "number" },
+        "renewal_status": { "type": "string", "enum": ["none","notified","in_progress","completed"], "default": "none" },
+        "renewal_priority": { "type": "string", "enum": ["low","medium","high"], "default": "low" },
+        "renewal_stage": { "type": "string", "enum": ["early","contact","offer","negotiation","renewed","lost"], "default": "early" },
+        "renewal_offer_status": { "type": "string", "enum": ["none","pending","sent","accepted","rejected"], "default": "none" },
+        "upsell_stage": { "type": "string", "enum": ["identified","contact","offer","negotiation","won","lost"], "default": "identified" },
+        "cancellation_status": { "type": "string", "enum": ["none","submitted","confirmed","rejected","completed","switch_planned"], "default": "none" },
+        "cancellation_type": { "type": "string", "enum": ["customer_initiated","insurer_initiated","mutual","legal","death","internal_switch"] },
+        "cancellation_structured_reason": { "type": "string", "enum": ["premium_too_high","switch_competitor","service_dissatisfaction","double_coverage","relocation","death","internal_product_switch","other"] },
+        "cancellation_submitted_at": { "type": "string", "format": "date" },
+        "cancellation_effective_date": { "type": "string", "format": "date" },
+        "primary_broker_id": { "type": "string" },
+        "assigned_brokers": { "type": "array", "items": { "type": "string" } },
+        "access_level": { "type": "string", "enum": ["public_admin_only","assigned_brokers_only","team_visible","all_internal"], "default": "assigned_brokers_only" },
+        "pricing_status": { "type": "string", "enum": ["normal","high","optimized"], "default": "normal" },
+        "successor_contract_id": { "type": "string" },
+        "archived": { "type": "boolean", "default": false },
+        "change_history": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "Application": {
+      "name": "Application",
+      "type": "object",
+      "required": ["customer_id", "insurer", "organization_id"],
+      "properties": {
+        "customer_id": { "type": "string" },
+        "customer_name": { "type": "string" },
+        "organization_id": { "type": "string" },
+        "advisor_id": { "type": "string" },
+        "kundentyp": { "type": "string", "enum": ["privat","firma"], "default": "privat" },
+        "sparte": { "type": "string" },
+        "sparte_data": { "type": "object" },
+        "insurance_type": { "type": "string" },
+        "product": { "type": "string" },
+        "insurer": { "type": "string" },
+        "status": { "type": "string", "enum": ["new","in_progress","waiting","approved","rejected","archived"], "default": "new" },
+        "status_changed_at": { "type": "string", "format": "date-time" },
+        "status_history": { "type": "array", "items": { "type": "object" } },
+        "estimated_premium_monthly": { "type": "number" },
+        "estimated_premium_yearly": { "type": "number" },
+        "requested_start_date": { "type": "string", "format": "date" },
+        "policy_number": { "type": "string" },
+        "linked_contract_id": { "type": "string" },
+        "abloese_contract_id": { "type": "string" },
+        "notes": { "type": "string" },
+        "archived": { "type": "boolean", "default": false }
+      }
+    },
+    "Task": {
+      "name": "Task",
+      "type": "object",
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "customer_id": { "type": "string" },
+        "customer_name": { "type": "string" },
+        "contract_id": { "type": "string" },
+        "application_id": { "type": "string" },
+        "application_name": { "type": "string" },
+        "assigned_to": { "type": "string" },
+        "priority": { "type": "string", "enum": ["low","medium","high","urgent"], "default": "medium" },
+        "status": { "type": "string", "enum": ["open","in_progress","completed"], "default": "open" },
+        "due_date": { "type": "string", "format": "date" },
+        "completion_date": { "type": "string", "format": "date" },
+        "task_type": { "type": "string", "enum": ["onboarding","renewal","follow_up","consultation","general","health_declaration"], "default": "general" },
+        "notes": { "type": "string" }
+      }
+    },
+    "Document": {
+      "name": "Document",
+      "type": "object",
+      "required": ["name", "file_url"],
+      "properties": {
+        "name": { "type": "string" },
+        "file_url": { "type": "string" },
+        "customer_id": { "type": "string" },
+        "customer_name": { "type": "string" },
+        "primary_customer_id": { "type": "string" },
+        "is_family_member": { "type": "boolean", "default": false },
+        "processing_stage": { "type": "string", "enum": ["uploaded","parsed","entities_detected","customer_mapped","application_created","policy_created"], "default": "uploaded" },
+        "policy_holder_name": { "type": "string" },
+        "category": { "type": "string", "enum": ["contract","application","identification","correspondence","other"] },
+        "doc_type": { "type": "string", "enum": ["antrag","anlage","unbekannt"], "default": "unbekannt" },
+        "classification_status": { "type": "string", "enum": ["ausstehend","klassifiziert","pruefung_erforderlich","manuell"], "default": "ausstehend" },
+        "classification_confidence": { "type": "number" },
+        "linked_contract_id": { "type": "string" },
+        "linked_application_id": { "type": "string" },
+        "uploaded_by": { "type": "string" },
+        "uploaded_at": { "type": "string", "format": "date-time" },
+        "file_hash": { "type": "string" },
+        "version": { "type": "number", "default": 1 },
+        "immutable": { "type": "boolean", "default": false },
+        "access_level": { "type": "string", "enum": ["public_admin_only","assigned_advisors_only","team_visible","all_internal"], "default": "assigned_advisors_only" }
+      }
+    },
+    "BAGPraemienDaten": {
+      "name": "BAGPraemienDaten",
+      "type": "object",
+      "required": ["jahr","krankenkasse","kanton","modell","franchise","praemie_erwachsene"],
+      "properties": {
+        "jahr": { "type": "number" },
+        "krankenkasse": { "type": "string" },
+        "kanton": { "type": "string" },
+        "region": { "type": "string" },
+        "modell": { "type": "string", "enum": ["standard","telmed","hausarzt","hmo"] },
+        "franchise": { "type": "number", "enum": [300,500,1000,1500,2000,2500] },
+        "unfall": { "type": "boolean", "default": true },
+        "praemie_erwachsene": { "type": "number" },
+        "praemie_kinder": { "type": "number" },
+        "geschlecht": { "type": "string", "enum": ["m","w"] },
+        "alter_von": { "type": "number" },
+        "alter_bis": { "type": "number" },
+        "datenquelle": { "type": "string", "default": "BAG" },
+        "importiert_am": { "type": "string", "format": "date-time" },
+        "importiert_von": { "type": "string" },
+        "gueltig_ab": { "type": "string", "format": "date" },
+        "gueltig_bis": { "type": "string", "format": "date" },
+        "aktiv": { "type": "boolean", "default": true }
+      }
+    },
+    "KrankenkassenVergleich": {
+      "name": "KrankenkassenVergleich",
+      "type": "object",
+      "required": ["customer_id","organization_id","vergleichsdatum"],
+      "properties": {
+        "customer_id": { "type": "string" },
+        "customer_name": { "type": "string" },
+        "advisor_id": { "type": "string" },
+        "advisor_name": { "type": "string" },
+        "organization_id": { "type": "string" },
+        "vergleichsdatum": { "type": "string", "format": "date-time" },
+        "persoenliche_daten": {
+          "type": "object",
+          "properties": {
+            "vorname": { "type": "string" }, "nachname": { "type": "string" },
+            "geburtsdatum": { "type": "string", "format": "date" },
+            "wohnort": { "type": "string" }, "plz": { "type": "string" },
+            "kanton": { "type": "string" }, "geschlecht": { "type": "string", "enum": ["m","w"] }
+          }
+        },
+        "aktuelle_versicherung": {
+          "type": "object",
+          "properties": {
+            "krankenkasse": { "type": "string" }, "modell": { "type": "string" },
+            "franchise": { "type": "number" }, "unfall": { "type": "boolean" }
+          }
+        },
+        "vergleichsoptionen": { "type": "object" },
+        "vergleichsergebnisse": { "type": "array", "items": { "type": "object" } },
+        "ki_analyse": {
+          "type": "object",
+          "properties": {
+            "sparpotenzial": { "type": "number" },
+            "wechsel_empfohlen": { "type": "boolean" },
+            "empfehlung_text": { "type": "string" },
+            "empfohlene_krankenkasse": { "type": "string" },
+            "empfohlenes_modell": { "type": "string" }
+          }
+        },
+        "status": { "type": "string", "enum": ["entwurf","durchgefuehrt","gespeichert","praesentiert"], "default": "durchgefuehrt" },
+        "pdf_url": { "type": "string" },
+        "wiedervorlage_datum": { "type": "string", "format": "date" },
+        "notizen": { "type": "string" }
+      }
+    },
+    "Organization": {
+      "name": "Organization",
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["strukturvertrieb","broker","partner","sonstiges"], "default": "broker" },
+        "status": { "type": "string", "enum": ["active","inactive"], "default": "active" },
+        "finma_number": { "type": "string" },
+        "street": { "type": "string" }, "zip_code": { "type": "string" }, "city": { "type": "string" },
+        "phone": { "type": "string" }, "email": { "type": "string" }, "website": { "type": "string" },
+        "works_with_address_brokers": { "type": "boolean", "default": false },
+        "notes": { "type": "string" }
+      }
+    },
+    "Ausschreibung": {
+      "name": "Ausschreibung",
+      "type": "object",
+      "required": ["titel","customer_id","organization_id"],
+      "properties": {
+        "ausschreibung_nummer": { "type": "string" },
+        "titel": { "type": "string" },
+        "customer_id": { "type": "string" },
+        "customer_name": { "type": "string" },
+        "broker_id": { "type": "string" },
+        "organization_id": { "type": "string" },
+        "versicherungsbereich": { "type": "string", "enum": ["privat","gewerbe","industrie","landwirtschaft"] },
+        "sparten": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["entwurf","vorbereitung","versendet","offerten_ausstehend","teilweise_erhalten","vollstaendig_erhalten","in_analyse","praesentation_erstellt","praesentiert","entscheidung_ausstehend","gewonnen","verloren","abgeschlossen"], "default": "entwurf" },
+        "prioritaet": { "type": "string", "enum": ["niedrig","mittel","hoch","dringend"], "default": "mittel" },
+        "ausschreibungsdatum": { "type": "string", "format": "date" },
+        "fristdatum": { "type": "string", "format": "date" },
+        "praesentationsdatum": { "type": "string", "format": "date" },
+        "risiko_daten": { "type": "object" },
+        "ausgewaehlte_versicherer": { "type": "array", "items": { "type": "object" } },
+        "ki_analyse": { "type": "object" },
+        "ki_empfehlung_text": { "type": "string" },
+        "ki_empfohlener_versicherer": { "type": "string" },
+        "gewinner_versicherer": { "type": "string" },
+        "offerten_count": { "type": "number", "default": 0 },
+        "laufende_praemie": { "type": "number" },
+        "dokument_urls": { "type": "array", "items": { "type": "string" } },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "bemerkungen": { "type": "string" }
+      }
+    },
+    "Offerte": {
+      "name": "Offerte",
+      "type": "object",
+      "required": ["ausschreibung_id","versicherer_name","organization_id"],
+      "properties": {
+        "ausschreibung_id": { "type": "string" },
+        "ausschreibung_titel": { "type": "string" },
+        "versicherer_id": { "type": "string" },
+        "versicherer_name": { "type": "string" },
+        "customer_id": { "type": "string" },
+        "organization_id": { "type": "string" },
+        "offert_nummer": { "type": "string" },
+        "praemie_jaehrlich": { "type": "number" },
+        "praemie_monatlich": { "type": "number" },
+        "selbstbehalt": { "type": "string" },
+        "deckung_beschreibung": { "type": "string" },
+        "status": { "type": "string", "enum": ["ausstehend","erhalten","analysiert","empfohlen","abgelehnt","angenommen"], "default": "ausstehend" },
+        "erfassungsdatum": { "type": "string", "format": "date" },
+        "gueltig_bis": { "type": "string", "format": "date" },
+        "ki_score": { "type": "number" },
+        "ki_preis_score": { "type": "number" },
+        "ki_deckungs_score": { "type": "number" },
+        "ki_risiko_score": { "type": "number" },
+        "ki_analyse_text": { "type": "string" },
+        "ki_staerken": { "type": "array", "items": { "type": "string" } },
+        "ki_schwaechen": { "type": "array", "items": { "type": "string" } },
+        "ist_empfohlen": { "type": "boolean", "default": false },
+        "ist_guenstigste": { "type": "boolean", "default": false },
+        "ist_beste_deckung": { "type": "boolean", "default": false },
+        "sparten_daten": { "type": "object" }
+      }
+    },
+    "VersichererDB": {
+      "name": "VersichererDB",
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "kurzname": { "type": "string" },
+        "kontaktperson": { "type": "string" },
+        "funktion": { "type": "string" },
+        "email": { "type": "string" },
+        "telefon": { "type": "string" },
+        "adresse": { "type": "string" },
+        "plz": { "type": "string" },
+        "ort": { "type": "string" },
+        "website": { "type": "string" },
+        "aktiv": { "type": "boolean", "default": true },
+        "bewertung": { "type": "number" },
+        "spezialisierungen": { "type": "array", "items": { "type": "string" } },
+        "bevorzugter_kanal": { "type": "string", "enum": ["email","portal","telefon","post"] },
+        "portal_url": { "type": "string" },
+        "bearbeitungszeit_tage": { "type": "number" },
+        "ausschreibungen_gesamt": { "type": "number", "default": 0 },
+        "ausschreibungen_gewonnen": { "type": "number", "default": 0 },
+        "logo_url": { "type": "string" }
+      }
+    },
+    "CommissionEntry": {
+      "name": "CommissionEntry",
+      "type": "object",
+      "properties": {
+        "contract_id": { "type": "string" },
+        "customer_id": { "type": "string" },
+        "advisor_id": { "type": "string" },
+        "organization_id": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending","approved","paid","storniert"] },
+        "type": { "type": "string", "enum": ["courtage","provision","storno"] },
+        "period_start": { "type": "string", "format": "date" },
+        "period_end": { "type": "string", "format": "date" },
+        "paid_at": { "type": "string", "format": "date-time" },
+        "storno_reason": { "type": "string" }
+      }
+    },
+    "AuditLog": {
+      "name": "AuditLog",
+      "type": "object",
+      "required": ["audit_schema_version","audit_id","timestamp","trigger_type","actor_type","entity_type","entity_id","action"],
+      "properties": {
+        "audit_schema_version": { "type": "string", "default": "1.0" },
+        "audit_id": { "type": "string" },
+        "audit_level": { "type": "number", "enum": [1,2,3,4], "default": 2 },
+        "audit_level_name": { "type": "string", "enum": ["critical_business","lifecycle_transition","guard_decision","debug_verbose"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "trigger_type": { "type": "string", "enum": ["entity_create","entity_update","entity_delete","scheduled","manual","api","migration"] },
+        "trigger_source": { "type": "string" },
+        "actor_type": { "type": "string", "enum": ["user","automation","scheduler","system","migration","api"] },
+        "actor_id": { "type": "string" },
+        "actor_name": { "type": "string" },
+        "process_id": { "type": "string" },
+        "process_type": { "type": "string" },
+        "event_type": { "type": "string" },
+        "entity_type": { "type": "string", "enum": ["customer","application","contract","commission","task","document","organization","advisor"] },
+        "entity_id": { "type": "string" },
+        "action": { "type": "string", "enum": ["create","update","delete","archive","restore","block","skip","allow","reject"] },
+        "decision_code": { "type": "string" },
+        "guard_result": { "type": "string", "enum": ["allowed","blocked","skipped","error"] },
+        "previous_state_summary": { "type": "object" },
+        "new_state_summary": { "type": "object" },
+        "side_effects": { "type": "array", "items": { "type": "object" } },
+        "business_impact_financial_chf": { "type": "number" },
+        "correlation_id": { "type": "string" },
+        "duration_ms": { "type": "number" },
+        "error_message": { "type": "string" }
+      }
+    },
+    "GovernanceRule": {
+      "name": "GovernanceRule",
+      "type": "object",
+      "required": ["name","description","rule_version","effective_from","entity_type","event_types","layer","business_criticality","enforcement_mode","simulate_only","error_message","rule_status","rule_scope"],
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "rule_version": { "type": "string", "default": "1.0" },
+        "effective_from": { "type": "string", "format": "date-time" },
+        "effective_to": { "type": "string", "format": "date-time" },
+        "entity_type": { "type": "string" },
+        "event_types": { "type": "array", "items": { "type": "string", "enum": ["create","update","delete","read"] } },
+        "layer": { "type": "string", "enum": ["WARNING","VALIDATION","GOVERNANCE_BLOCK","SECURITY_BLOCK"] },
+        "business_criticality": { "type": "string", "enum": ["LOW","MEDIUM","HIGH","CRITICAL"], "default": "MEDIUM" },
+        "enforcement_mode": { "type": "string", "enum": ["monitor","enforce","strict"], "default": "monitor" },
+        "simulate_only": { "type": "boolean", "default": true },
+        "condition_json": { "type": "object" },
+        "custom_validator_function_name": { "type": "string" },
+        "error_message": { "type": "string" },
+        "resolution_guidance": { "type": "string" },
+        "rule_status": { "type": "string", "enum": ["draft","testing","active","deprecated","archived"], "default": "draft" },
+        "rule_scope": { "type": "string", "enum": ["GLOBAL","ORGANIZATION","ENTITY","FEATURE"], "default": "GLOBAL" },
+        "violation_count": { "type": "number", "default": 0 },
+        "execution_count": { "type": "number", "default": 0 },
+        "timeout_ms": { "type": "number", "default": 50 }
+      }
+    },
+    "EnterpriseIncident": {
+      "name": "EnterpriseIncident",
+      "type": "object",
+      "required": ["severity","category","title","description"],
+      "properties": {
+        "priority": { "type": "string", "enum": ["low","medium","high","critical"], "default": "medium" },
+        "severity": { "type": "string", "enum": ["info","warning","critical","blocking"], "default": "warning" },
+        "category": { "type": "string", "enum": ["export_gate","approval","snapshots","tenant_isolation","data_integrity","audit_trail","pdf_integrity","security","document_integrity","recovery","performance","sla_breach","other"] },
+        "module": { "type": "string" },
+        "entity_type": { "type": "string" },
+        "entity_id": { "type": "string" },
+        "organization_id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "root_cause": { "type": "string" },
+        "recommended_action": { "type": "string" },
+        "auto_fix_possible": { "type": "boolean", "default": false },
+        "manual_review_required": { "type": "boolean", "default": true },
+        "governance_block": { "type": "boolean", "default": false },
+        "status": { "type": "string", "enum": ["open","investigating","root_cause_identified","mitigation_active","in_progress","resolved","closed","rejected","accepted_risk","auto_fixed"], "default": "open" },
+        "root_cause_cluster": { "type": "string", "enum": ["approval_metadata","audit_trail_integrity","storno_financial_audit","data_relationship_integrity","governance_architecture","ai_transparency","security_boundaries","incident_management","none"], "default": "none" },
+        "impact_governance": { "type": "number" },
+        "impact_financial": { "type": "number" },
+        "impact_compliance": { "type": "number" },
+        "impact_operational": { "type": "number" },
+        "impact_reputation": { "type": "number" },
+        "strategic_impact_score": { "type": "number" },
+        "assigned_to": { "type": "string" },
+        "sla_due_at": { "type": "string", "format": "date-time" },
+        "sla_status": { "type": "string", "enum": ["ok","warning","breached"], "default": "ok" },
+        "resolved_at": { "type": "string", "format": "date-time" },
+        "resolved_by": { "type": "string" },
+        "resolution_notes": { "type": "string" },
+        "incident_audit_log": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "GovernanceScoreSnapshot": {
+      "name": "GovernanceScoreSnapshot",
+      "type": "object",
+      "required": ["overall","computed_at"],
+      "properties": {
+        "snapshot_date": { "type": "string", "format": "date" },
+        "overall": { "type": "number" },
+        "risk_level": { "type": "string", "enum": ["low","medium","high","critical"] },
+        "domains": { "type": "object" },
+        "alerts": { "type": "array", "items": { "type": "object" } },
+        "weights": { "type": "object" },
+        "computed_at": { "type": "string", "format": "date-time" },
+        "computed_by": { "type": "string" },
+        "previous_overall": { "type": "number" },
+        "trend": { "type": "string", "enum": ["up","down","stable"] },
+        "trend_delta": { "type": "number" }
+      }
+    },
+    "AdvisoryDossier": {
+      "name": "AdvisoryDossier",
+      "type": "object",
+      "properties": {
+        "customer_id": { "type": "string" },
+        "advisor_id": { "type": "string" },
+        "organization_id": { "type": "string" },
+        "status": { "type": "string" },
+        "ki_analyse": { "type": "object" },
+        "pdf_url": { "type": "string" },
+        "modules": { "type": "object" },
+        "approved_by": { "type": "string" },
+        "approved_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Lead": {
+      "name": "Lead",
+      "type": "object",
+      "properties": {
+        "first_name": { "type": "string" },
+        "last_name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "source": { "type": "string" },
+        "status": { "type": "string", "enum": ["new","contacted","qualified","converted","lost"] },
+        "score": { "type": "number" },
+        "organization_id": { "type": "string" },
+        "assigned_to": { "type": "string" },
+        "converted_customer_id": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "Verkaufschance": {
+      "name": "Verkaufschance",
+      "type": "object",
+      "properties": {
+        "customer_id": { "type": "string" },
+        "customer_name": { "type": "string" },
+        "organization_id": { "type": "string" },
+        "title": { "type": "string" },
+        "stage": { "type": "string", "enum": ["identified","contact","offer","negotiation","won","lost"] },
+        "probability": { "type": "number" },
+        "expected_value": { "type": "number" },
+        "score": { "type": "number" },
+        "assigned_to": { "type": "string" },
+        "due_date": { "type": "string", "format": "date" }
+      }
+    },
+    "Partner": {
+      "name": "Partner",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "status": { "type": "string", "enum": ["active","inactive"] },
+        "organization_id": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "Advisor": {
+      "name": "Advisor",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "organization_id": { "type": "string" },
+        "first_name": { "type": "string" },
+        "last_name": { "type": "string" },
+        "email": { "type": "string" },
+        "finma_number": { "type": "string" },
+        "status": { "type": "string", "enum": ["active","inactive"] },
+        "role": { "type": "string", "enum": ["broker","assistenz","teamlead"] },
+        "teamlead_id": { "type": "string" }
+      }
+    },
+    "EmailTemplate": {
+      "name": "EmailTemplate",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "subject": { "type": "string" },
+        "body": { "type": "string" },
+        "type": { "type": "string", "enum": ["renewal","birthday","onboarding","campaign","general"] },
+        "organization_id": { "type": "string" },
+        "variables": { "type": "array", "items": { "type": "string" } },
+        "active": { "type": "boolean", "default": true }
+      }
+    },
+    "EmailCampaign": {
+      "name": "EmailCampaign",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "template_id": { "type": "string" },
+        "organization_id": { "type": "string" },
+        "status": { "type": "string", "enum": ["draft","scheduled","sending","sent","cancelled"] },
+        "scheduled_at": { "type": "string", "format": "date-time" },
+        "sent_at": { "type": "string", "format": "date-time" },
+        "recipient_count": { "type": "number" },
+        "sent_count": { "type": "number" },
+        "filter_criteria": { "type": "object" }
+      }
+    },
+    "InsuranceKnowledgePattern": {
+      "name": "InsuranceKnowledgePattern",
+      "type": "object",
+      "required": ["insurer","pattern_type","signal","maps_to"],
+      "properties": {
+        "insurer": { "type": "string" },
+        "document_type": { "type": "string" },
+        "pattern_type": { "type": "string", "enum": ["field_signal","role_mapping","product_indicator","layout_rule","date_format","premium_location"] },
+        "signal": { "type": "string" },
+        "maps_to": { "type": "string" },
+        "maps_to_value": { "type": "string" },
+        "confidence_boost": { "type": "number" },
+        "correction_count": { "type": "number", "default": 1 },
+        "is_active": { "type": "boolean", "default": true },
+        "validated_by_admin": { "type": "boolean", "default": false }
+      }
+    },
+    "AiReview": {
+      "name": "AiReview",
+      "type": "object",
+      "required": ["level","findings","reviewed_at","reviewed_by"],
+      "properties": {
+        "level": { "type": "string", "enum": ["quick","operational","enterprise"] },
+        "status": { "type": "string", "enum": ["completed","in_progress"], "default": "completed" },
+        "findings": { "type": "array", "items": { "type": "object" } },
+        "finding_count": { "type": "number" },
+        "critical_count": { "type": "number" },
+        "warning_count": { "type": "number" },
+        "reviewed_at": { "type": "string", "format": "date-time" },
+        "reviewed_by": { "type": "string" }
+      }
+    },
+    "AiFinding": {
+      "name": "AiFinding",
+      "type": "object",
+      "required": ["finding_type","severity","organization_id"],
+      "properties": {
+        "review_id": { "type": "string" },
+        "organization_id": { "type": "string" },
+        "finding_type": { "type": "string", "enum": ["tenant_violation","missing_required_field","orphan_relationship","compliance_gap","data_quality","sla_risk","approval_missing","audit_gap","financial_inconsistency","duplicate_detected","pricing_anomaly","churn_risk","coverage_gap","other"] },
+        "severity": { "type": "string", "enum": ["info","warning","critical","blocking"], "default": "warning" },
+        "confidence_score": { "type": "number" },
+        "evidence_strength": { "type": "string", "enum": ["weak","moderate","strong","conclusive"] },
+        "governance_risk_score": { "type": "number" },
+        "explanation": { "type": "object" },
+        "evidence": { "type": "array", "items": { "type": "object" } },
+        "status": { "type": "string", "enum": ["new","under_review","confirmed","resolved","false_positive","accepted_risk"], "default": "new" },
+        "linked_incident_id": { "type": "string" }
+      }
+    },
+    "EnterpriseImprovement": {
+      "name": "EnterpriseImprovement",
+      "type": "object",
+      "required": ["audit_id","title","priority","area","current_state","target_state","status"],
+      "properties": {
+        "audit_id": { "type": "string" },
+        "title": { "type": "string" },
+        "priority": { "type": "string", "enum": ["critical","high","medium","low"] },
+        "area": { "type": "string", "enum": ["performance","relationship_integrity","ai_quality","query_governance","design","mobile","workflow"] },
+        "current_state": { "type": "string" },
+        "target_state": { "type": "string" },
+        "ki_recommendation": { "type": "string" },
+        "implementation_steps": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["proposed","approved","in_progress","implemented","verified","rejected"], "default": "proposed" },
+        "estimated_impact": { "type": "object" }
+      }
+    },
+    "Claim": {
+      "name": "Claim",
+      "type": "object",
+      "properties": {
+        "customer_id": { "type": "string" },
+        "contract_id": { "type": "string" },
+        "organization_id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["open","in_progress","closed","rejected"] },
+        "amount": { "type": "number" },
+        "incident_date": { "type": "string", "format": "date" },
+        "reported_date": { "type": "string", "format": "date" }
+      }
+    },
+    "Notification": {
+      "name": "Notification",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["info","warning","success","error"] },
+        "read": { "type": "boolean", "default": false },
+        "link": { "type": "string" },
+        "entity_type": { "type": "string" },
+        "entity_id": { "type": "string" }
+      }
+    },
+    "BackupLog": {
+      "name": "BackupLog",
+      "type": "object",
+      "properties": {
+        "backup_type": { "type": "string", "enum": ["full","incremental","longterm"] },
+        "status": { "type": "string", "enum": ["running","completed","failed"] },
+        "started_at": { "type": "string", "format": "date-time" },
+        "completed_at": { "type": "string", "format": "date-time" },
+        "entity_count": { "type": "number" },
+        "record_count": { "type": "number" },
+        "file_url": { "type": "string" },
+        "created_by": { "type": "string" }
+      }
+    }
+  }
+}
