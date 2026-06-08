@@ -57,6 +57,7 @@ const MOTORFAHRZEUG_SECTIONS = [
     title: 'Vertragsbedingungen',
     fields: [
       { key: 'vertrag_beginn', label: 'Beginn', type: 'date' },
+      { key: 'vertrag_laufzeit', label: 'Vertragslaufzeit', type: 'laufzeit' },
       { key: 'vertrag_ablauf', label: 'Ablauf', type: 'date' },
       { key: 'zahlungsart', label: 'Zahlungsart', type: 'select', options: ['Jährlich', 'Halbjährlich', 'Vierteljährlich', 'Monatlich'] },
       { key: 'jaehrliches_kuendigungsrecht', label: 'Jährliches Kündigungsrecht', type: 'select', options: ['Ja', 'Nein'] },
@@ -116,7 +117,20 @@ const FORMS = {
 
 export default function RisikoFormular({ sparten = [], data = {}, onChange, onSave, saving, saved }) {
   const set = (sparte, key, val) => {
-    onChange({ ...data, [sparte]: { ...(data[sparte] || {}), [key]: val } });
+    const updated = { ...data, [sparte]: { ...(data[sparte] || {}), [key]: val } };
+    // Auto-berechnung Ablauf wenn Beginn + Laufzeit gesetzt
+    if (key === 'vertrag_beginn' || key === 'vertrag_laufzeit') {
+      const beginn = key === 'vertrag_beginn' ? val : (data[sparte]?.vertrag_beginn || '');
+      const laufzeit = key === 'vertrag_laufzeit' ? val : (data[sparte]?.vertrag_laufzeit || '');
+      if (beginn && laufzeit && laufzeit !== 'maximal') {
+        const years = parseInt(laufzeit, 10);
+        const d = new Date(beginn);
+        d.setFullYear(d.getFullYear() + years);
+        d.setDate(d.getDate() - 1); // letzter Tag der Laufzeit
+        updated[sparte].vertrag_ablauf = d.toISOString().split('T')[0];
+      }
+    }
+    onChange(updated);
   };
 
   const activeForms = sparten.filter(s => FORMS[s]);
@@ -128,7 +142,17 @@ export default function RisikoFormular({ sparten = [], data = {}, onChange, onSa
   const renderField = (sparte, field) => (
     <div key={field.key} className={(field.type === 'textarea' || field.fullWidth) ? 'col-span-2' : ''}>
       <Label className="mb-1 block">{field.label}</Label>
-      {field.type === 'marke' ? (
+      {field.type === 'laufzeit' ? (
+        <Select value={data[sparte]?.[field.key] || ''} onValueChange={v => set(sparte, field.key, v)}>
+          <SelectTrigger><SelectValue placeholder="Laufzeit wählen..." /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1">1 Jahr</SelectItem>
+            <SelectItem value="3">3 Jahre</SelectItem>
+            <SelectItem value="5">5 Jahre</SelectItem>
+            <SelectItem value="maximal">Maximal</SelectItem>
+          </SelectContent>
+        </Select>
+      ) : field.type === 'marke' ? (
         <Select value={data[sparte]?.[field.key] || ''} onValueChange={v => set(sparte, field.key, v)}>
           <SelectTrigger><SelectValue placeholder="Marke wählen..." /></SelectTrigger>
           <SelectContent className="max-h-60">
