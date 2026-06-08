@@ -38,6 +38,7 @@ export default function AusschreibungDetail() {
   const [showOfferteDialog, setShowOfferteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingOfferte, setEditingOfferte] = useState(null);
+  const [savingRisiko, setSavingRisiko] = useState(false);
 
   const load = async () => {
     const [list, o] = await Promise.all([
@@ -125,8 +126,17 @@ export default function AusschreibungDetail() {
         <TabsContent value="risiko" className="mt-4">
           <div className="surface p-6">
             <h3 className="text-subheading mb-4">Risikoerfassung</h3>
-            <RisikoFormular sparten={ausschreibung.sparten || []} data={ausschreibung.risiko_daten || {}}
-              onChange={async (d) => { await base44.entities.Ausschreibung.update(id, { risiko_daten: d }); load(); }} />
+            <RisikoFormular
+              sparten={ausschreibung.sparten || []}
+              data={ausschreibung.risiko_daten || {}}
+              onChange={(d) => setAusschreibung(a => ({ ...a, risiko_daten: d }))}
+              onSave={async () => {
+                setSavingRisiko(true);
+                await base44.entities.Ausschreibung.update(id, { risiko_daten: ausschreibung.risiko_daten });
+                setSavingRisiko(false);
+              }}
+              saving={savingRisiko}
+            />
           </div>
         </TabsContent>
 

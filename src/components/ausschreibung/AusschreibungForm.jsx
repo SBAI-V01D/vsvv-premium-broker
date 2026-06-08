@@ -115,7 +115,7 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
           <Label>Titel *</Label>
-          <Input value={form.titel} onChange={e => set('titel', e.target.value)} required placeholder="z.B. Motorfahrzeugversicherung Privathaushalt 2026" />
+          <Input autoFocus tabIndex={1} value={form.titel} onChange={e => set('titel', e.target.value)} required placeholder="z.B. Motorfahrzeugversicherung Privathaushalt 2026" />
         </div>
         <div ref={customerRef} className="relative">
           <Label>Kunde *</Label>
@@ -163,7 +163,7 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
         </div>
         <div>
           <Label>Ansprechpartner</Label>
-          <Input value={form.ansprechpartner} onChange={e => set('ansprechpartner', e.target.value)} placeholder="Name Ansprechpartner" />
+          <Input tabIndex={3} value={form.ansprechpartner} onChange={e => set('ansprechpartner', e.target.value)} placeholder="Name Ansprechpartner" />
         </div>
         <div>
           <Label>Versicherungsbereich</Label>
@@ -191,11 +191,11 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
         </div>
         <div>
           <Label>Fristdatum</Label>
-          <Input type="date" value={form.fristdatum} onChange={e => set('fristdatum', e.target.value)} />
+          <Input tabIndex={6} type="date" value={form.fristdatum} onChange={e => set('fristdatum', e.target.value)} />
         </div>
         <div>
           <Label>Laufende Jahresprämie (CHF)</Label>
-          <Input type="number" value={form.laufende_praemie} onChange={e => set('laufende_praemie', e.target.value)} placeholder="z.B. 2400" />
+          <Input tabIndex={7} type="number" value={form.laufende_praemie} onChange={e => set('laufende_praemie', e.target.value)} placeholder="z.B. 2400" />
         </div>
       </div>
 
@@ -222,7 +222,7 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
 
       <div>
         <Label>Bemerkungen</Label>
-        <Textarea value={form.bemerkungen} onChange={e => set('bemerkungen', e.target.value)} rows={3} placeholder="Interne Notizen zur Ausschreibung..." />
+        <Textarea tabIndex={8} value={form.bemerkungen} onChange={e => set('bemerkungen', e.target.value)} rows={3} placeholder="Interne Notizen zur Ausschreibung..." />
       </div>
 
       <div className="flex gap-3 justify-end pt-2">

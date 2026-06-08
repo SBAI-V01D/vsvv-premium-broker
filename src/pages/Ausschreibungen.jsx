@@ -6,8 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Search, FileText, Clock, Trophy, BarChart3, Sparkles, AlertCircle, CheckCircle2, ChevronRight, Calendar, Building2 } from 'lucide-react';
+import { Plus, Search, FileText, Clock, Trophy, BarChart3, Sparkles, AlertCircle, CheckCircle2, ChevronRight, Calendar, Building2, Trash2 } from 'lucide-react';
 import AusschreibungForm from '@/components/ausschreibung/AusschreibungForm';
+import { ConfirmDialog } from '@/components/shared';
 
 const STATUS_LABELS = {
   entwurf:'Entwurf', vorbereitung:'In Vorbereitung', versendet:'Versendet',
@@ -39,6 +40,7 @@ export default function Ausschreibungen() {
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('alle');
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const load = async () => {
     const data = await base44.entities.Ausschreibung.list('-created_date', 200);
@@ -47,6 +49,13 @@ export default function Ausschreibungen() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const deleteAusschreibung = async () => {
+    if (!confirmDelete) return;
+    await base44.entities.Ausschreibung.delete(confirmDelete.id);
+    setConfirmDelete(null);
+    load();
+  };
 
   const createAusschreibung = async (data) => {
     const user = await base44.auth.me();
@@ -136,12 +145,11 @@ export default function Ausschreibungen() {
             const offerten_ausstehend = versichererCount > 0 ? Math.max(0, versichererCount - offertenErhalten) : null;
 
             return (
-              <div key={a.id} onClick={() => navigate('/ausschreibungen/' + a.id)}
-                className="surface p-0 cursor-pointer hover:shadow-card-md transition-all group overflow-hidden">
+              <div key={a.id} className="surface p-0 hover:shadow-card-md transition-all group overflow-hidden relative">
                 {/* Farbbalken oben je Priorität */}
                 <div className={`h-1 w-full ${a.prioritaet === 'dringend' ? 'bg-rose-500' : a.prioritaet === 'hoch' ? 'bg-amber-400' : a.prioritaet === 'mittel' ? 'bg-blue-400' : 'bg-slate-200'}`} />
 
-                <div className="p-4">
+                <div className="p-4" onClick={() => navigate('/ausschreibungen/' + a.id)} style={{cursor:'pointer'}}>
                   <div className="flex items-start justify-between gap-3">
                     {/* Links: Info */}
                     <div className="min-w-0 flex-1">
@@ -197,6 +205,13 @@ export default function Ausschreibungen() {
 
                       <Badge className={STATUS_COLORS[a.status]}>{STATUS_LABELS[a.status]}</Badge>
                       <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <button
+                        onClick={e => { e.stopPropagation(); setConfirmDelete(a); }}
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                        title="Löschen"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
 
@@ -218,6 +233,16 @@ export default function Ausschreibungen() {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onOpenChange={open => { if (!open) setConfirmDelete(null); }}
+        title="Ausschreibung löschen"
+        description={`«${confirmDelete?.titel}» wird unwiderruflich gelöscht. Fortfahren?`}
+        confirmLabel="Löschen"
+        variant="danger"
+        onConfirm={deleteAusschreibung}
+      />
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
