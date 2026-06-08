@@ -2,11 +2,8 @@ import React, { useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { 
   Upload, 
@@ -18,19 +15,30 @@ import {
   Info
 } from 'lucide-react';
 
-const KANTONE = [
+const ALLE_KANTONE = [
   'ZH', 'BE', 'LU', 'UR', 'SZ', 'OW', 'NW', 'GL', 'ZG', 'FR', 'SO', 'BS', 'BL', 'SH', 'AR', 'AI', 'SG', 'GR', 'AG', 'TG', 'TI', 'VD', 'VS', 'NE', 'GE', 'JU'
 ];
+
+const ZENTRALE_KANTONE = ['BS', 'BL', 'AG', 'SO', 'BE', 'ZH', 'SG', 'SZ', 'LU', 'OW', 'NW', 'TG', 'SH', 'GR', 'UR'];
 
 export default function BAGDatenImport() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [jahr, setJahr] = useState('2026');
-  const [kanton, setKanton] = useState('');
+  const [importModus, setImportModus] = useState('zentral');
+  const [selectedKantone, setSelectedKantone] = useState(ZENTRALE_KANTONE);
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
+
+  const toggleKanton = (kanton) => {
+    setSelectedKantone(prev => 
+      prev.includes(kanton) 
+        ? prev.filter(k => k !== kanton)
+        : [...prev, kanton]
+    );
+  };
 
   const handleFileSelect = (event) => {
     const file = event.target.files?.[0];
@@ -46,14 +54,13 @@ export default function BAGDatenImport() {
     setUploading(true);
     
     try {
-      // Datei hochladen und URL holen
       const uploadResponse = await base44.integrations.Core.UploadFile({ file: selectedFile });
       const fileUrl = uploadResponse.file_url;
 
-      // Import über URL-Funktion (besser für grosse Dateien)
       const response = await base44.functions.invoke('importBAGDatenFromURL', {
         file_url: fileUrl,
-        jahr
+        jahr: parseInt(jahr),
+        kantone: importModus === 'zentral' ? selectedKantone : null
       });
 
       if (response.data?.success) {
@@ -133,20 +140,59 @@ export default function BAGDatenImport() {
             </div>
 
             <div>
-              <Label>Kanton (optional)</Label>
-              <Select value={kanton} onValueChange={setKanton}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Alle Kantone" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={null}>Alle Kantone</SelectItem>
-                  {KANTONE.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label>Import-Modus</Label>
+              <div className="flex gap-2 mt-2">
+                <Button
+                  type="button"
+                  variant={importModus === 'zentral' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setImportModus('zentral');
+                    setSelectedKantone(ZENTRALE_KANTONE);
+                  }}
+                  className="flex-1"
+                >
+                  Zentrale Kantone (15)
+                </Button>
+                <Button
+                  type="button"
+                  variant={importModus === 'alle' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setImportModus('alle');
+                    setSelectedKantone(ALLE_KANTONE);
+                  }}
+                  className="flex-1"
+                >
+                  Alle Kantone (26)
+                </Button>
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Lassen Sie leer, wenn die Datei mehrere Kantone enthält
+                {importModus === 'zentral' 
+                  ? 'BS, BL, AG, SO, BE, ZH, SG, SZ, LU, OW, NW, TG, SH, GR, UR'
+                  : 'Alle 26 Schweizer Kantone'}
               </p>
             </div>
+
+            {importModus === 'zentral' && (
+              <div>
+                <Label>Kantone auswählen</Label>
+                <div className="grid grid-cols-5 gap-2 mt-2 max-h-40 overflow-auto border rounded-lg p-2">
+                  {ALLE_KANTONE.map(kanton => (
+                    <Button
+                      key={kanton}
+                      type="button"
+                      variant={selectedKantone.includes(kanton) ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => toggleKanton(kanton)}
+                      className={`text-xs ${!selectedKantone.includes(kanton) && 'opacity-50'}`}
+                    >
+                      {kanton}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div>
               <Label>Excel-Datei</Label>
