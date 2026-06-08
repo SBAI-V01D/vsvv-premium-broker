@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQueryClient } from '@tanstack/react-query';
-import { read, utils } from 'npm:xlsx@0.18.5';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -71,26 +70,15 @@ export default function BAGDatenImport() {
     }
   };
 
-  const downloadTemplate = () => {
-    const template = [
-      {
-        'Krankenkasse': 'CSS',
-        'Kanton': 'ZH',
-        'Region': 'Gesamt',
-        'Modell': 'Standard',
-        'Franchise': 300,
-        'Praemie_Erwachsene': 420.50,
-        'Praemie_Kinder': 120.00,
-        'Geschlecht': 'm',
-        'Alter_Von': 26,
-        'Alter_Bis': 99
+  const downloadTemplate = async () => {
+    try {
+      const response = await base44.functions.invoke('generateBAGTemplate', {});
+      if (response.data?.fileUrl) {
+        window.open(response.data.fileUrl, '_blank');
       }
-    ];
-
-    const ws = utils.json_to_sheet(template);
-    const wb = utils.book_new();
-    utils.book_append_sheet(wb, ws, 'BAG_Daten');
-    utils.writeFile(wb, 'BAG_Praemien_Template.xlsx');
+    } catch (error) {
+      console.error('Template download failed:', error);
+    }
   };
 
   return (
