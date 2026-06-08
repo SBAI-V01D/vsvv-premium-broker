@@ -33,11 +33,11 @@ Deno.serve(async (req) => {
       gesamt: 0,
       erfolgreich: 0,
       fehler: 0,
-      details: [] as any[]
+      details: []
     };
 
     // Versicherer-Mapping (Versicherer-ID zu Name) basierend auf BAG-Excel
-    const versichererMap: Record<number, string> = {
+    const versichererMap = {
       1: 'CSS', 2: 'Helsana', 3: 'Sanitas', 4: 'Swica', 5: 'ÖKK',
       6: 'Visana', 7: 'KPT', 8: 'Agrisano', 9: 'Concordia', 10: 'Atupri',
       11: 'Assura', 12: 'Intras', 13: 'Sympany', 14: 'bkk mobilise', 15: 'Galenus', 16: 'Groupe Mutuel',
