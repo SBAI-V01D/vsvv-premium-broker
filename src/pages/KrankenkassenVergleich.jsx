@@ -339,8 +339,8 @@ export default function KrankenkassenVergleich() {
                 </div>
                 <div>
                   <Label>Aktuelle Franchise</Label>
-                  <Select value={formData.aktuelle_franchise} onValueChange={v => setFormData({...formData, aktuelle_franchise: parseInt(v)})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select value={formData.aktuelle_franchise.toString()} onValueChange={v => setFormData({...formData, aktuelle_franchise: parseInt(v, 10)})}>
+                    <SelectTrigger><SelectValue placeholder="Franchise wählen" /></SelectTrigger>
                     <SelectContent>
                       {FRANCHISEN.map(f => <SelectItem key={f} value={f.toString()}>CHF {f.toLocaleString('de-CH')}</SelectItem>)}
                     </SelectContent>
