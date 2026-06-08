@@ -220,6 +220,116 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
         )}
       </div>
 
+      {/* ── Antragsfragen ─────────────────────────────────────── */}
+      <div className="border-t border-slate-200 pt-5">
+        <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-primary inline-block" />
+          Antragsfragen
+        </h3>
+        <div className="grid grid-cols-2 gap-4">
+          {/* 1. Vorversicherer */}
+          <div>
+            <Label>Vorversicherer vorhanden?</Label>
+            <Select value={form.antrag_vorversicherer || ''} onValueChange={v => set('antrag_vorversicherer', v)}>
+              <SelectTrigger><SelectValue placeholder="Bitte wählen..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ja">Ja</SelectItem>
+                <SelectItem value="nein">Nein</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {form.antrag_vorversicherer === 'ja' && (
+            <div>
+              <Label>Name Vorversicherer</Label>
+              <Input value={form.antrag_vorversicherer_name || ''} onChange={e => set('antrag_vorversicherer_name', e.target.value)} placeholder="z.B. Mobiliar, AXA..." />
+            </div>
+          )}
+
+          {/* 2. Schäden letzte 5 Jahre */}
+          <div className="col-span-2">
+            <Label>Schäden in den letzten 5 Jahren</Label>
+            <Textarea value={form.antrag_schaeden || ''} onChange={e => set('antrag_schaeden', e.target.value)} rows={2} placeholder="Anzahl, Datum, Betrag (CHF), kurze Beschreibung..." />
+          </div>
+
+          {/* 3. Antrag abgelehnt */}
+          <div>
+            <Label>Antrag durch Versicherer abgelehnt?</Label>
+            <Select value={form.antrag_abgelehnt || ''} onValueChange={v => set('antrag_abgelehnt', v)}>
+              <SelectTrigger><SelectValue placeholder="Bitte wählen..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="nein">Nein</SelectItem>
+                <SelectItem value="ja">Ja</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {form.antrag_abgelehnt === 'ja' && (
+            <div>
+              <Label>Kommentar zur Ablehnung</Label>
+              <Textarea value={form.antrag_abgelehnt_kommentar || ''} onChange={e => set('antrag_abgelehnt_kommentar', e.target.value)} rows={2} placeholder="Wann, weshalb abgelehnt..." />
+            </div>
+          )}
+
+          {/* 4. Führerausweisdatum */}
+          <div>
+            <Label>Führerausweisdatum (Versicherungsnehmer)</Label>
+            <Input type="date" value={form.antrag_fuehrerausweis_datum || ''} onChange={e => set('antrag_fuehrerausweis_datum', e.target.value)} />
+          </div>
+        </div>
+
+        {/* 5. Weitere Lenker */}
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <Label>Weitere Lenker</Label>
+            <button type="button" onClick={() => {
+              const lenker = form.antrag_weitere_lenker || [];
+              set('antrag_weitere_lenker', [...lenker, { name: '', vorname: '', geburtsdatum: '', fuehrerausweis_datum: '' }]);
+            }} className="text-xs text-primary hover:underline font-medium">+ Lenker hinzufügen</button>
+          </div>
+          {(form.antrag_weitere_lenker || []).map((l, i) => (
+            <div key={i} className="grid grid-cols-4 gap-2 mb-2 items-end">
+              <div>
+                <Label className="text-xs">Nachname</Label>
+                <Input value={l.name} onChange={e => {
+                  const arr = [...(form.antrag_weitere_lenker || [])];
+                  arr[i] = { ...arr[i], name: e.target.value };
+                  set('antrag_weitere_lenker', arr);
+                }} placeholder="Nachname" />
+              </div>
+              <div>
+                <Label className="text-xs">Vorname</Label>
+                <Input value={l.vorname} onChange={e => {
+                  const arr = [...(form.antrag_weitere_lenker || [])];
+                  arr[i] = { ...arr[i], vorname: e.target.value };
+                  set('antrag_weitere_lenker', arr);
+                }} placeholder="Vorname" />
+              </div>
+              <div>
+                <Label className="text-xs">Geburtsdatum</Label>
+                <Input type="date" value={l.geburtsdatum} onChange={e => {
+                  const arr = [...(form.antrag_weitere_lenker || [])];
+                  arr[i] = { ...arr[i], geburtsdatum: e.target.value };
+                  set('antrag_weitere_lenker', arr);
+                }} />
+              </div>
+              <div className="flex gap-1">
+                <div className="flex-1">
+                  <Label className="text-xs">Führerausweis</Label>
+                  <Input type="date" value={l.fuehrerausweis_datum} onChange={e => {
+                    const arr = [...(form.antrag_weitere_lenker || [])];
+                    arr[i] = { ...arr[i], fuehrerausweis_datum: e.target.value };
+                    set('antrag_weitere_lenker', arr);
+                  }} />
+                </div>
+                <button type="button" onClick={() => {
+                  const arr = (form.antrag_weitere_lenker || []).filter((_, idx) => idx !== i);
+                  set('antrag_weitere_lenker', arr);
+                }} className="mt-5 text-rose-500 hover:text-rose-700 px-1">✕</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div>
         <Label>Bemerkungen</Label>
         <Textarea tabIndex={8} value={form.bemerkungen} onChange={e => set('bemerkungen', e.target.value)} rows={3} placeholder="Interne Notizen zur Ausschreibung..." />
