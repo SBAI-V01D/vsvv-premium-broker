@@ -1,0 +1,197 @@
+{
+  "name": "KrankenkassenVergleich",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "advisor_id": {
+      "type": "string"
+    },
+    "advisor_name": {
+      "type": "string"
+    },
+    "organization_id": {
+      "type": "string"
+    },
+    "vergleichsdatum": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "persoenliche_daten": {
+      "type": "object",
+      "properties": {
+        "vorname": {
+          "type": "string"
+        },
+        "nachname": {
+          "type": "string"
+        },
+        "geburtsdatum": {
+          "type": "string",
+          "format": "date"
+        },
+        "wohnort": {
+          "type": "string"
+        },
+        "plz": {
+          "type": "string"
+        },
+        "kanton": {
+          "type": "string"
+        },
+        "geschlecht": {
+          "type": "string",
+          "enum": [
+            "m",
+            "w"
+          ]
+        }
+      }
+    },
+    "aktuelle_versicherung": {
+      "type": "object",
+      "properties": {
+        "krankenkasse": {
+          "type": "string"
+        },
+        "modell": {
+          "type": "string"
+        },
+        "franchise": {
+          "type": "number"
+        },
+        "unfall": {
+          "type": "boolean"
+        }
+      }
+    },
+    "vergleichsoptionen": {
+      "type": "object",
+      "properties": {
+        "nur_guenstigste": {
+          "type": "boolean"
+        },
+        "nur_bestehende_kasse": {
+          "type": "boolean"
+        },
+        "alle_modelle": {
+          "type": "boolean"
+        },
+        "nur_gleiche_franchise": {
+          "type": "boolean"
+        },
+        "zeige_telmed": {
+          "type": "boolean"
+        },
+        "zeige_hausarzt": {
+          "type": "boolean"
+        },
+        "zeige_hmo": {
+          "type": "boolean"
+        },
+        "zeige_standard": {
+          "type": "boolean"
+        }
+      }
+    },
+    "vergleichsergebnisse": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "krankenkasse": {
+            "type": "string"
+          },
+          "modell": {
+            "type": "string"
+          },
+          "franchise": {
+            "type": "number"
+          },
+          "praemie_monatlich": {
+            "type": "number"
+          },
+          "praemie_jaehrlich": {
+            "type": "number"
+          },
+          "ersparnis_monatlich": {
+            "type": "number"
+          },
+          "ersparnis_jaehrlich": {
+            "type": "number"
+          },
+          "ersparnis_prozent": {
+            "type": "number"
+          },
+          "ist_aktuell": {
+            "type": "boolean"
+          },
+          "ist_guenstigste": {
+            "type": "boolean"
+          },
+          "ist_empfohlen": {
+            "type": "boolean"
+          },
+          "rang": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "ki_analyse": {
+      "type": "object",
+      "properties": {
+        "sparpotenzial": {
+          "type": "number"
+        },
+        "wechsel_empfohlen": {
+          "type": "boolean"
+        },
+        "franschise_optimierung": {
+          "type": "string"
+        },
+        "modell_optimierung": {
+          "type": "string"
+        },
+        "empfehlung_text": {
+          "type": "string"
+        },
+        "empfohlene_krankenkasse": {
+          "type": "string"
+        },
+        "empfohlenes_modell": {
+          "type": "string"
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "entwurf",
+        "durchgefuehrt",
+        "gespeichert",
+        "praesentiert"
+      ],
+      "default": "durchgefuehrt"
+    },
+    "pdf_url": {
+      "type": "string"
+    },
+    "wiedervorlage_datum": {
+      "type": "string",
+      "format": "date"
+    },
+    "notizen": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "customer_id",
+    "organization_id",
+    "vergleichsdatum"
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "name": "BAGPraemienDaten",
+  "type": "object",
+  "properties": {
+    "jahr": {
+      "type": "number",
+      "description": "Pr\u00e4mienjahr"
+    },
+    "krankenkasse": {
+      "type": "string",
+      "description": "Name der Krankenkasse"
+    },
+    "kanton": {
+      "type": "string",
+      "description": "Kanton"
+    },
+    "region": {
+      "type": "string",
+      "description": "Pr\u00e4mienregion"
+    },
+    "modell": {
+      "type": "string",
+      "enum": [
+        "standard",
+        "telmed",
+        "hausarzt",
+        "hmo"
+      ],
+      "description": "Versicherungsmodell"
+    },
+    "franchise": {
+      "type": "number",
+      "enum": [
+        300,
+        500,
+        1000,
+        1500,
+        2000,
+        2500
+      ],
+      "description": "Franchise in CHF"
+    },
+    "unfall": {
+      "type": "boolean",
+      "default": true,
+      "description": "Mit Unfalldeckung"
+    },
+    "praemie_erwachsene": {
+      "type": "number",
+      "description": "Monatspr\u00e4mie Erwachsene"
+    },
+    "praemie_kinder": {
+      "type": "number",
+      "description": "Monatspr\u00e4mie Kinder"
+    },
+    "geschlecht": {
+      "type": "string",
+      "enum": [
+        "m",
+        "w"
+      ],
+      "description": "Geschlecht (falls relevant)"
+    },
+    "alter_von": {
+      "type": "number",
+      "description": "Alter von"
+    },
+    "alter_bis": {
+      "type": "number",
+      "description": "Alter bis"
+    },
+    "datenquelle": {
+      "type": "string",
+      "default": "BAG",
+      "description": "Datenquelle"
+    },
+    "importiert_am": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "importiert_von": {
+      "type": "string"
+    },
+    "gueltig_ab": {
+      "type": "string",
+      "format": "date"
+    },
+    "gueltig_bis": {
+      "type": "string",
+      "format": "date"
+    },
+    "aktiv": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "jahr",
+    "krankenkasse",
+    "kanton",
+    "modell",
+    "franchise",
+    "praemie_erwachsene"
+  ]
+}

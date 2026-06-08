@@ -50,6 +50,7 @@ import DocumentExtractor from './pages/DocumentExtractor'
 import Ausschreibungen from './pages/Ausschreibungen'
 import AusschreibungDetail from './pages/AusschreibungDetail'
 import VersichererDBPage from './pages/VersichererDBPage'
+import KrankenkassenVergleich from './pages/KrankenkassenVergleich'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -147,6 +148,7 @@ const AuthenticatedApp = () => {
         <Route path="/ausschreibungen" element={<Ausschreibungen />} />
         <Route path="/ausschreibungen/:id" element={<AusschreibungDetail />} />
         <Route path="/ausschreibungen/versicherer" element={<VersichererDBPage />} />
+        <Route path="/krankenkassen-vergleich" element={<KrankenkassenVergleich />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
