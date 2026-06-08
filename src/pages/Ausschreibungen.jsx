@@ -50,7 +50,8 @@ export default function Ausschreibungen() {
 
   const createAusschreibung = async (data) => {
     const user = await base44.auth.me();
-    await base44.entities.Ausschreibung.create({ ...data, broker_name: user?.full_name, broker_id: user?.id });
+    const organization_id = data.organization_id || user?.data?.organization_id;
+    await base44.entities.Ausschreibung.create({ ...data, broker_name: user?.full_name, broker_id: user?.id, organization_id });
     setShowForm(false);
     load();
   };
