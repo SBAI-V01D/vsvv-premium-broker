@@ -4,11 +4,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Search, X } from 'lucide-react'
+import { Search, X, AlertTriangle } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
 import { DialogFooter } from '@/components/ui/dialog'
 import { ALL_SPARTEN, SPARTEN_PRIVAT, SPARTEN_FIRMA, getFieldsForSparte, FRANCHISE_OPTIONS, getSparteLabel } from '@/lib/insuranceSparten'
 import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '@/lib/AuthContext'
 
 // Commission estimates by sparte
 const COMMISSION_ESTIMATES = {
@@ -84,6 +85,21 @@ function AdvisorSelect({ value, onChange }) {
 }
 
 export default function ApplicationForm({ application, customers = [], brokers = [], onSave, onCancel, saving, classificationDebug }) {
+  const { user } = useAuth()
+
+  // Advisors für Standardberater-Lookup
+  const { data: advisors = [] } = useQuery({
+    queryKey: ['advisors-all'],
+    queryFn: () => base44.entities.Advisor.list(),
+    staleTime: 60_000,
+  })
+
+  // Standardberater: eingeloggter User → passenden Advisor suchen
+  const defaultAdvisorId = useMemo(() => {
+    if (!user || !advisors.length) return ''
+    const match = advisors.find(a => a.email === user.email)
+    return match?.id || ''
+  }, [user, advisors])
 
   const [form, setForm] = useState(() => {
     if (application) {
@@ -124,6 +140,25 @@ export default function ApplicationForm({ application, customers = [], brokers =
       notes: '',
       sparte_data: {},
     }
+  })
+
+  // Standardberater setzen sobald verfügbar (nur für neue Anträge)
+  useEffect(() => {
+    if (!application && defaultAdvisorId && !form.assigned_broker) {
+      setForm(prev => ({ ...prev, assigned_broker: defaultAdvisorId }))
+    }
+  }, [defaultAdvisorId])
+
+  // Ablöse-Workflow State
+  const [abloeseActive, setAbloeseActive] = useState(false)
+  const [abloeseContractId, setAbloeseContractId] = useState('')
+
+  // Verträge des gewählten Kunden für Ablöse-Auswahl
+  const { data: customerContracts = [] } = useQuery({
+    queryKey: ['contracts-for-customer', form.customer_id],
+    queryFn: () => base44.entities.Contract.filter({ customer_id: form.customer_id, archived: false }),
+    enabled: !!form.customer_id && abloeseActive,
+    staleTime: 30_000,
   })
 
   // Sparte ist gesperrt wenn sie bereits klassifiziert wurde
@@ -233,6 +268,7 @@ export default function ApplicationForm({ application, customers = [], brokers =
       acceptance_date: form.acceptance_date || '',
       assigned_broker: form.assigned_broker || '',
       notes: form.notes || '',
+      abloese_contract_id: (abloeseActive && abloeseContractId) ? abloeseContractId : null,
     })
   }
 
@@ -489,6 +525,51 @@ export default function ApplicationForm({ application, customers = [], brokers =
             <Input type="date" value={form.contract_end_date} onChange={e => set('contract_end_date', e.target.value)} className="mt-1" />
           </div>
         </div>
+      </div>
+
+      {/* ── Ablöse-Workflow ─────────────────────────────────────────── */}
+      <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 space-y-3">
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="abloese-check"
+            checked={abloeseActive}
+            onChange={e => { setAbloeseActive(e.target.checked); if (!e.target.checked) setAbloeseContractId('') }}
+            className="w-4 h-4 cursor-pointer accent-amber-600"
+          />
+          <label htmlFor="abloese-check" className="text-sm font-semibold text-amber-800 cursor-pointer flex items-center gap-1.5">
+            <AlertTriangle className="w-4 h-4" />
+            Dieser Antrag löst einen bestehenden Vertrag ab
+          </label>
+        </div>
+        {abloeseActive && (
+          <div className="ml-6 space-y-2">
+            <p className="text-xs text-amber-700">
+              Bei Annahme wird automatisch eine Aufgabe «Kündigung einreichen» erstellt. Der Berater entscheidet und handelt manuell.
+            </p>
+            {!form.customer_id ? (
+              <p className="text-xs text-amber-600 italic">Bitte zuerst einen Kunden auswählen.</p>
+            ) : customerContracts.length === 0 ? (
+              <p className="text-xs text-amber-600 italic">Keine aktiven Verträge für diesen Kunden gefunden.</p>
+            ) : (
+              <div>
+                <Label className="text-xs text-amber-700">Abzulösender Vertrag *</Label>
+                <Select value={abloeseContractId} onValueChange={setAbloeseContractId}>
+                  <SelectTrigger className="mt-1 bg-white border-amber-300"><SelectValue placeholder="Vertrag auswählen..." /></SelectTrigger>
+                  <SelectContent>
+                    {customerContracts.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.insurer} · {getSparteLabel(c.sparte || c.insurance_type)}
+                        {c.policy_number ? ` · ${c.policy_number}` : ''}
+                        {c.end_date && !c.end_date.startsWith('9999') ? ` (bis ${c.end_date})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Berater — aus Advisor-Entity */}

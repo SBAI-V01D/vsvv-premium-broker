@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Search, FileText, Clock, Trophy, BarChart3, Sparkles } from 'lucide-react';
+import { Plus, Search, FileText, Clock, Trophy, BarChart3, Sparkles, AlertCircle, CheckCircle2, ChevronRight, Calendar, Building2 } from 'lucide-react';
 import AusschreibungForm from '@/components/ausschreibung/AusschreibungForm';
 
 const STATUS_LABELS = {
@@ -114,26 +114,98 @@ export default function Ausschreibungen() {
           <Button size="sm" className="mt-4" onClick={() => setShowForm(true)}>Erste Ausschreibung erstellen</Button>
         </div>
       ) : (
-        <div className="space-y-2">
-          {filtered.map(a => (
-            <div key={a.id} onClick={() => navigate('/ausschreibungen/' + a.id)}
-              className="surface p-4 flex items-center justify-between cursor-pointer hover:shadow-card-md transition-all group">
-              <div className="flex items-center gap-4 min-w-0">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="font-semibold truncate group-hover:text-primary transition-colors">{a.titel}</p>
-                    {a.ki_empfohlener_versicherer && <Sparkles className="w-3.5 h-3.5 text-primary flex-shrink-0" />}
+        <div className="space-y-3">
+          {filtered.map(a => {
+            const today = new Date();
+            const frist = a.fristdatum ? new Date(a.fristdatum) : null;
+            const daysTillFrist = frist ? Math.ceil((frist - today) / 86400000) : null;
+            const fristDringend = daysTillFrist !== null && daysTillFrist <= 7 && daysTillFrist >= 0;
+            const fristAbgelaufen = daysTillFrist !== null && daysTillFrist < 0;
+            const offertenErhalten = (a.offerten_count || 0);
+            const versichererCount = (a.ausgewaehlte_versicherer || []).length;
+            const offerten_ausstehend = versichererCount > 0 ? Math.max(0, versichererCount - offertenErhalten) : null;
+
+            return (
+              <div key={a.id} onClick={() => navigate('/ausschreibungen/' + a.id)}
+                className="surface p-0 cursor-pointer hover:shadow-card-md transition-all group overflow-hidden">
+                {/* Farbbalken oben je Priorität */}
+                <div className={`h-1 w-full ${a.prioritaet === 'dringend' ? 'bg-rose-500' : a.prioritaet === 'hoch' ? 'bg-amber-400' : a.prioritaet === 'mittel' ? 'bg-blue-400' : 'bg-slate-200'}`} />
+
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    {/* Links: Info */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-semibold text-sm truncate group-hover:text-primary transition-colors">{a.titel}</p>
+                        {a.ki_empfohlener_versicherer && <Sparkles className="w-3.5 h-3.5 text-primary flex-shrink-0" title="KI-Empfehlung vorhanden" />}
+                      </div>
+                      <div className="flex items-center flex-wrap gap-x-3 gap-y-1">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Building2 className="w-3 h-3" />{a.customer_name || '—'}
+                        </span>
+                        {a.ausschreibung_nummer && (
+                          <span className="text-xs font-mono text-muted-foreground">{a.ausschreibung_nummer}</span>
+                        )}
+                        {(a.sparten||[]).slice(0,3).map(s => (
+                          <span key={s} className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{s}</span>
+                        ))}
+                        {(a.sparten||[]).length > 3 && (
+                          <span className="text-xs text-muted-foreground">+{a.sparten.length - 3}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Rechts: Status + Ampel */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Offerten-Ampel */}
+                      {offerten_ausstehend !== null && (
+                        <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg ${
+                          offerten_ausstehend === 0 ? 'bg-emerald-50 text-emerald-700' :
+                          offerten_ausstehend <= 1 ? 'bg-amber-50 text-amber-700' :
+                          'bg-rose-50 text-rose-700'
+                        }`}>
+                          {offerten_ausstehend === 0
+                            ? <><CheckCircle2 className="w-3 h-3" /> Alle erhalten</>
+                            : <><AlertCircle className="w-3 h-3" /> {offerten_ausstehend} ausstehend</>
+                          }
+                        </div>
+                      )}
+
+                      {/* Frist-Badge */}
+                      {frist && (
+                        <div className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg ${
+                          fristAbgelaufen ? 'bg-rose-100 text-rose-700 font-semibold' :
+                          fristDringend ? 'bg-amber-100 text-amber-700 font-semibold' :
+                          'bg-slate-100 text-slate-500'
+                        }`}>
+                          <Calendar className="w-3 h-3" />
+                          {fristAbgelaufen ? `Frist abgelaufen` :
+                           fristDringend ? `Frist in ${daysTillFrist}d` :
+                           a.fristdatum}
+                        </div>
+                      )}
+
+                      <Badge className={STATUS_COLORS[a.status]}>{STATUS_LABELS[a.status]}</Badge>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">{a.customer_name} · {a.ausschreibung_nummer} · {(a.sparten||[]).slice(0,3).join(', ')}</p>
+
+                  {/* Laufende Prämie wenn vorhanden */}
+                  {a.laufende_praemie > 0 && (
+                    <div className="mt-2 pt-2 border-t border-border/50 flex items-center gap-4">
+                      <span className="text-xs text-muted-foreground">Laufende Jahresprämie:</span>
+                      <span className="text-xs font-semibold text-slate-700">CHF {Number(a.laufende_praemie).toLocaleString('de-CH')}</span>
+                      {a.ki_empfohlener_versicherer && (
+                        <span className="text-xs text-primary flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" /> Empfehlung: {a.ki_empfohlener_versicherer}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${PRIO_COLORS[a.prioritaet] || PRIO_COLORS.mittel}`}>{a.prioritaet}</span>
-                <Badge className={STATUS_COLORS[a.status]}>{STATUS_LABELS[a.status]}</Badge>
-                {a.fristdatum && <span className="text-xs text-muted-foreground hidden lg:block">{a.fristdatum}</span>}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

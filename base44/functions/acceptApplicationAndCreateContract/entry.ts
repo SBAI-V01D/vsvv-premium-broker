@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
 
     console.log(`[acceptApplicationAndCreateContract] START app=${application_id} user=${user.email}`);
 
-    // 1. Application laden
+    // 1. Application laden — abloese_contract_id ist auf dem Antrag gespeichert
     const app = await base44.entities.Application.get(application_id);
     if (!app) return Response.json({ error: 'Antrag nicht gefunden' }, { status: 404 });
 
@@ -151,21 +151,81 @@ Deno.serve(async (req) => {
         console.warn(`[acceptApplicationAndCreateContract] syncCancellationDeadline failed (non-blocking): ${syncErr.message}`);
       }
 
+      // Ablöse-Task auch im Fallback-Pfad
+      const abloeseIdFallback = app.abloese_contract_id;
+      if (abloeseIdFallback) {
+        try {
+          const abloeseC = await base44.entities.Contract.get(abloeseIdFallback);
+          if (abloeseC) {
+            let frist = '';
+            if (abloeseC.end_date && !abloeseC.end_date.startsWith('9999')) {
+              const d = new Date(abloeseC.end_date);
+              d.setMonth(d.getMonth() - 3);
+              frist = d.toISOString().split('T')[0];
+            }
+            await base44.entities.Task.create({
+              title: `⚠️ Kündigung einreichen — ${abloeseC.insurer} · ${abloeseC.insurance_type || abloeseC.sparte || ''}${abloeseC.policy_number ? ' · ' + abloeseC.policy_number : ''}`,
+              description: `Antrag ${app.insurer || ''} wurde angenommen und löst diesen Vertrag ab.\n\nBitte Kündigung manuell beim Versicherer einreichen.\n\nNeuer Vertrag-ID: ${newContract.id}`,
+              customer_id: app.customer_id, customer_name: app.customer_name,
+              contract_id: abloeseIdFallback, application_id: application_id,
+              task_type: 'general', priority: 'high', status: 'open',
+              due_date: frist || undefined,
+              assigned_to: app.assigned_broker || user.email,
+            });
+          }
+        } catch (_) {}
+      }
+
       return Response.json({
         success: true,
         application_id,
         contract_id: newContract.id,
         message: 'Antrag angenommen und Vertrag erstellt',
+        abloese_task_created: !!abloeseIdFallback,
       });
     }
 
     console.log(`[acceptApplicationAndCreateContract] ✅ Contract erstellt: ${contractId}`);
+
+    // Ablöse-Task: Kündigung-Erinnerung erstellen (nie automatisch kündigen!)
+    const abloeseContractId = app.abloese_contract_id;
+    if (abloeseContractId) {
+      try {
+        const abloeseContract = await base44.entities.Contract.get(abloeseContractId);
+        if (abloeseContract) {
+          // Kündigungsfrist berechnen: Standard 3 Monate vor Vertragsende
+          let kuendigungsfrist = '';
+          if (abloeseContract.end_date && !abloeseContract.end_date.startsWith('9999')) {
+            const endDate = new Date(abloeseContract.end_date);
+            endDate.setMonth(endDate.getMonth() - 3);
+            kuendigungsfrist = endDate.toISOString().split('T')[0];
+          }
+          await base44.entities.Task.create({
+            title: `⚠️ Kündigung einreichen — ${abloeseContract.insurer} · ${abloeseContract.insurance_type || abloeseContract.sparte || ''}${abloeseContract.policy_number ? ' · ' + abloeseContract.policy_number : ''}`,
+            description: `Antrag ${app.insurer || ''} (${app.sparte || app.insurance_type || ''}) wurde angenommen und löst diesen Vertrag ab.\n\nBitte Kündigung manuell beim Versicherer einreichen und danach Vertragsstatus aktualisieren.\n\nNeuer Vertrag-ID: ${contractId}`,
+            customer_id: app.customer_id,
+            customer_name: app.customer_name,
+            contract_id: abloeseContractId,
+            application_id: application_id,
+            task_type: 'general',
+            priority: 'high',
+            status: 'open',
+            due_date: kuendigungsfrist || undefined,
+            assigned_to: app.assigned_broker || user.email,
+          });
+          console.log(`[acceptApplicationAndCreateContract] ✅ Ablöse-Kündigungs-Task erstellt für Vertrag ${abloeseContractId}`);
+        }
+      } catch (taskErr) {
+        console.warn(`[acceptApplicationAndCreateContract] Ablöse-Task non-fatal: ${taskErr.message}`);
+      }
+    }
 
     return Response.json({
       success: true,
       application_id,
       contract_id: contractId,
       message: 'Antrag angenommen und Vertrag erstellt',
+      abloese_task_created: !!abloeseContractId,
     });
 
   } catch (error) {

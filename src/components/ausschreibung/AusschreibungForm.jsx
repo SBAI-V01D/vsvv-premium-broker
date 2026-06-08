@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { X, Search, ChevronDown } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
+import { useQuery } from '@tanstack/react-query';
 
 const SPARTEN = [
   'Motorfahrzeug','Motorrad','Oldtimer','Flotte','Haushalt','Privathaftpflicht',
@@ -23,14 +25,29 @@ const STATUS_OPTIONS = [
 ];
 
 export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
+  const { user } = useAuth();
   const [customers, setCustomers] = useState([]);
   const [customerSearch, setCustomerSearch] = useState('');
   const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
   const customerRef = useRef(null);
+
+  // Advisor des eingeloggten Users automatisch vorausfüllen
+  const { data: advisors = [] } = useQuery({
+    queryKey: ['advisors-all'],
+    queryFn: () => base44.entities.Advisor.list(),
+    staleTime: 60_000,
+  });
+  const defaultBrokerName = React.useMemo(() => {
+    if (!user || !advisors.length) return user?.full_name || '';
+    const match = advisors.find(a => a.email === user.email);
+    return match ? `${match.firstname} ${match.lastname}` : (user?.full_name || '');
+  }, [user, advisors]);
+
   const [form, setForm] = useState({
     titel: '', customer_id: '', customer_name: '', ansprechpartner: '',
     versicherungsbereich: 'privat', sparten: [], status: 'entwurf',
     prioritaet: 'mittel', fristdatum: '', bemerkungen: '', laufende_praemie: '',
+    broker_name: '',
     ...ausschreibung,
   });
   const [spartInput, setSpartInput] = useState('');
@@ -39,6 +56,13 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
   useEffect(() => {
     base44.entities.Customer.list().then(setCustomers).catch(() => {});
   }, []);
+
+  // Standardberater setzen (nur für neue Ausschreibungen)
+  useEffect(() => {
+    if (!ausschreibung?.id && defaultBrokerName && !form.broker_name) {
+      setForm(f => ({ ...f, broker_name: defaultBrokerName }));
+    }
+  }, [defaultBrokerName]);
 
   useEffect(() => {
     const handleClick = (e) => {

@@ -124,6 +124,10 @@
     "linked_contract_id": {
       "type": "string"
     },
+    "abloese_contract_id": {
+      "type": "string",
+      "description": "ID des abzul\u00f6senden Vertrags \u2014 bei Annahme wird K\u00fcndigung-Task erstellt"
+    },
     "notes": {
       "type": "string"
     },
