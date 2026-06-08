@@ -104,6 +104,10 @@ export default function KrankenkassenVergleich() {
     
     if (geschlecht === 'w' && alter >= 18 && alter <= 45) praemie *= 1.03;
     
+    // Vergütung abziehen (monatliche Rückzahlung durch Krankenkasse: Umweltabgabe + Reserveabbau)
+    const verguetung = 5.15;
+    praemie -= verguetung;
+    
     return Math.round(praemie * 100) / 100;
   };
 
