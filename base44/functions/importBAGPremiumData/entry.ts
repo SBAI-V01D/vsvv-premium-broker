@@ -36,23 +36,47 @@ Deno.serve(async (req) => {
       details: [] as any[]
     };
 
+    // Versicherer-Mapping (Versicherer-ID zu Name) - muss mit BAG-Excel übereinstimmen
+    // Hinweis: IDs können je nach BAG-Datensatz variieren, wird dynamisch gemappt
+    const versichererMap: Record<number, string> = {
+      1: 'CSS', 2: 'Helsana', 3: 'Sanitas', 4: 'Swica', 5: 'ÖKK',
+      6: 'Visana', 7: 'KPT', 8: 'Agrisano', 9: 'Concordia', 10: 'Atupri',
+      11: 'Assura', 12: 'Intras', 13: 'Sympany', 14: 'bkk mobilise', 15: 'Galenus', 16: 'Groupe Mutuel'
+    };
+
     for (const row of data) {
       importResults.gesamt++;
       
       try {
+        // BAG-Excel Spaltenmapping
+        const versichererId = parseInt(row['Versicherer'] || '0');
+        const kantonCode = row['Kanton'] || 'CH';
+        const regionCode = row['Region'] || 'PR-REG CH0';
+        const altersklasse = row['Altersklasse'] || 'AKL-ERW';
+        const unfalleinschluss = row['Unfalleinschluss'] || 'MIT-UNF';
+        const tarifTyp = row['Tariftyp'] || 'TAR-STD';
+        const franchiseCode = row['Franchise'] || 'FRA-300';
+        const praemie = parseFloat(row['Prämie'] || row['Praemie'] || '0');
+        const geschaeftsjahr = parseInt(row['Geschäftsjahr'] || row['Geschaeftsjahr'] || '2026');
+        
+        // Nur Erwachsene (26+) und ohne Unfall für Vergleich
+        if (altersklasse !== 'AKL-ERW') continue;
+        
+        const krankenkasse = versichererMap[versichererId] || `VK-${versichererId}`;
+        
         const praemienDaten = {
-          jahr,
-          krankenkasse: row['Krankenkasse'] || row['krankenkasse'] || row['Versicherer'],
-          kanton: kanton || row['Kanton'] || row['kanton'],
-          region: row['Region'] || row['region'] || 'Gesamt',
-          modell: mapModell(row['Modell'] || row['modell'] || 'Standard'),
-          franchise: parseInt(row['Franchise'] || row['franchise'] || '300'),
-          unfall: row['Unfall'] !== false && row['unfall'] !== false,
-          praemie_erwachsene: parseFloat(row['Praemie_Erwachsene'] || row['praemie_erwachsene'] || row['Monatspraemie'] || '0'),
-          praemie_kinder: parseFloat(row['Praemie_Kinder'] || row['praemie_kinder'] || '0'),
-          geschlecht: row['Geschlecht'] ? row['Geschlecht'].toLowerCase() : 'm',
-          alter_von: parseInt(row['Alter_Von'] || row['alter_von'] || '26'),
-          alter_bis: parseInt(row['Alter_Bis'] || row['alter_bis'] || '99'),
+          jahr: geschaeftsjahr || jahr,
+          krankenkasse,
+          kanton: kantonCode,
+          region: regionCode,
+          modell: mapModellFromTariftyp(tarifTyp),
+          franchise: mapFranchise(franchiseCode),
+          unfall: unfalleinschluss === 'MIT-UNF',
+          praemie_erwachsene: praemie,
+          praemie_kinder: 0,
+          geschlecht: 'm',
+          alter_von: 26,
+          alter_bis: 99,
           datenquelle: 'BAG',
           importiert_am: new Date().toISOString(),
           importiert_von: user.id,
@@ -89,16 +113,34 @@ Deno.serve(async (req) => {
   }
 });
 
-function mapModell(modell: string): string {
+function mapModellFromTariftyp(tariftyp: string): string {
+  // BAG Tariftyp Mapping: TAR-TEL (Telmed), TAR-HAM (Hausarzt), TAR-HMO (HMO), TAR-STD (Standard)
   const mapping: Record<string, string> = {
-    'Standard': 'standard',
+    'TAR-STD': 'standard',
+    'TAR-TEL': 'telmed',
+    'TAR-HAM': 'hausarzt',
+    'TAR-HMO': 'hmo',
     'standard': 'standard',
-    'Telmed': 'telmed',
     'telmed': 'telmed',
-    'Hausarzt': 'hausarzt',
     'hausarzt': 'hausarzt',
-    'HMO': 'hmo',
     'hmo': 'hmo'
   };
-  return mapping[modell] || 'standard';
+  return mapping[tariftyp] || 'standard';
+}
+
+function mapFranchise(franchiseCode: string): number {
+  // BAG Franchise Codes: FRA-0 (0), FRA-100 (100), FRA-300 (300), etc.
+  const mapping: Record<string, number> = {
+    'FRA-0': 0,
+    'FRA-100': 100,
+    'FRA-200': 200,
+    'FRA-300': 300,
+    'FRA-400': 400,
+    'FRA-500': 500,
+    'FRA-1000': 1000,
+    'FRA-1500': 1500,
+    'FRA-2000': 2000,
+    'FRA-2500': 2500
+  };
+  return mapping[franchiseCode] || (parseInt(franchiseCode.replace('FRA-', '')) || 300);
 }

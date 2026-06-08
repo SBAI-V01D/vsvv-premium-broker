@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -101,14 +101,45 @@ export default function KrankenkassenVergleich() {
 
   const [ergebnisse, setErgebnisse] = useState([]);
   const [kiAnalyse, setKiAnalyse] = useState(null);
+  const [bagDaten, setBagDaten] = useState([]);
+
+  // BAG-Daten laden für exakte Prämienberechnung
+  useEffect(() => {
+    const loadBagDaten = async () => {
+      try {
+        const data = await base44.entities.BAGPraemienDaten.filter({ 
+          jahr: 2026, 
+          aktiv: true,
+          unfall: false 
+        });
+        setBagDaten(data || []);
+      } catch (error) {
+        console.error('Fehler beim Laden der BAG-Daten:', error);
+      }
+    };
+    loadBagDaten();
+  }, []);
 
   const alter = formData.geburtsdatum ? 
     Math.floor((new Date() - new Date(formData.geburtsdatum)) / (365.25 * 24 * 60 * 60 * 1000)) : null;
 
-  const berechnePraemie = (kk, modell, franchise, alter, kanton, geschlecht, plz) => {
-    // Basisprämien kalibriert auf BAG-Daten 2026 (Region 2, Erwachsene, Telmed, Franchise 2500, OHNE Unfall)
-    // Referenz: KPT = 365.20 CHF (BAG) - 5.15 CHF (Vergütung) = 360.05 CHF netto
-    // Agrisano sollte ähnlich sein wie KPT
+  const berechnePraemie = (kk, modell, franchise, alter, kanton, geschlecht, plz, bagDaten = []) => {
+    // Versuche BAG-Daten zu verwenden falls verfügbar
+    const region = getPraemienregion(plz);
+    const bagPraemie = bagDaten.find(d => 
+      d.krankenkasse === kk && 
+      d.modell === modell && 
+      d.franchise === franchise &&
+      d.kanton === kanton &&
+      !d.unfall
+    );
+    
+    if (bagPraemie && bagPraemie.praemie_erwachsene) {
+      // Exakte BAG-Prämie verwenden, dann Vergütung abziehen
+      return Math.round((bagPraemie.praemie_erwachsene - 5.15) * 100) / 100;
+    }
+    
+    // Fallback: Berechnung mit Basisprämien (wird überschrieben wenn BAG-Daten geladen sind)
     const basisPraemien = {
       'CSS': 448, 'Helsana': 441, 'Sanitas': 455, 'Swica': 431, 'ÖKK': 468,
       'Visana': 445, 'KPT': 408, 'Groupe Mutuel': 438, 'Concordia': 451, 'Atupri': 458,
@@ -116,34 +147,18 @@ export default function KrankenkassenVergleich() {
     };
     
     let praemie = basisPraemien[kk] || 400;
-    
-    // Franchise-Abzug (Differenz zur maximalen Franchise 2500)
     const franchiseAbzug = (2500 - franchise) * 0.08;
     praemie -= franchiseAbzug;
-    
-    // Modell-Abzug (Telmed = 38 CHF günstiger als Standard)
     const modellAbzug = { standard: 0, telmed: 38, hausarzt: 48, hmo: 58 };
     praemie -= modellAbzug[modell] || 0;
-    
-    // Altersfaktor (58 Jahre: kein Aufschlag, erst ab 65)
     if (alter > 65) praemie *= 1.12;
     if (alter > 80) praemie *= 1.20;
-    
-    // Prämienregion-Faktor (Region 2 = Basis, keine Anpassung für BL/4304)
-    const region = getPraemienregion(plz);
     const regionFaktoren = { '1': 1.08, '2': 1.0, '3': 0.92 };
     praemie *= regionFaktoren[region] || 1.0;
-    
-    // Kanton-Faktor (BL hat keine zusätzliche Anpassung)
     const kantonFaktoren = { 'ZH': 1.02, 'GE': 1.05, 'BS': 1.03, 'BE': 0.98, 'TI': 1.02 };
     praemie *= kantonFaktoren[kanton] || 1.0;
-    
-    // Geschlecht-Faktor (männlich 43 Jahre: kein Aufschlag)
     if (geschlecht === 'w' && alter >= 18 && alter <= 45) praemie *= 1.02;
-    
-    // Vergütung abziehen (monatliche Rückzahlung: Umweltabgabe + Reserveabbau = CHF 5.15)
-    const verguetung = 5.15;
-    praemie -= verguetung;
+    praemie -= 5.15;
     
     return Math.round(praemie * 100) / 100;
   };
@@ -158,7 +173,8 @@ export default function KrankenkassenVergleich() {
       alter,
       formData.kanton,
       formData.geschlecht,
-      formData.plz
+      formData.plz,
+      bagDaten
     );
 
     const vergleiche = KRANKENKASSEN.flatMap(kk => {
@@ -176,7 +192,7 @@ export default function KrankenkassenVergleich() {
           : FRANCHISEN;
 
         return franschen.map(franchise => {
-          const praemie = berechnePraemie(kk, modell, franchise, alter, formData.kanton, formData.geschlecht, formData.plz);
+          const praemie = berechnePraemie(kk, modell, franchise, alter, formData.kanton, formData.geschlecht, formData.plz, bagDaten);
           const ersparnisMonat = aktuellePraemie - praemie;
           const ersparnisJahr = ersparnisMonat * 12;
           
