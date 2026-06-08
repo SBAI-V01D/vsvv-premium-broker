@@ -6,6 +6,10 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
+    if (!user) {
+      return Response.json({ error: 'Nicht authentifiziert' }, { status: 401 });
+    }
+
     if (user?.role !== 'admin') {
       return Response.json({ error: 'Nur Admins können BAG-Daten importieren' }, { status: 403 });
     }
@@ -18,23 +22,35 @@ Deno.serve(async (req) => {
 
     // Datei herunterladen mit Timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s Timeout
     
-    const fileResponse = await fetch(file_url, { signal: controller.signal });
+    let fileResponse;
+    try {
+      fileResponse = await fetch(file_url, { signal: controller.signal });
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      return Response.json({ error: 'Download fehlgeschlagen: ' + fetchError.message }, { status: 400 });
+    }
+    
     clearTimeout(timeoutId);
     
     if (!fileResponse.ok) {
-      return Response.json({ error: 'Datei konnte nicht heruntergeladen werden' }, { status: 400 });
+      return Response.json({ error: 'Datei konnte nicht heruntergeladen werden (' + fileResponse.status + ')' }, { status: 400 });
     }
     
     const arrayBuffer = await fileResponse.arrayBuffer();
     
-    // Excel parsen mit minimalen Optionen
-    const workbook = read(new Uint8Array(arrayBuffer), { 
-      cellDates: false,
-      cellNF: false,
-      cellText: true
-    });
+    // Excel parsen
+    let workbook;
+    try {
+      workbook = read(new Uint8Array(arrayBuffer), { 
+        cellDates: false,
+        cellNF: false,
+        cellText: true
+      });
+    } catch (excelError) {
+      return Response.json({ error: 'Excel-Parsing fehlgeschlagen: ' + excelError.message }, { status: 400 });
+    }
     
     if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
       return Response.json({ error: 'Ungültige Excel-Datei' }, { status: 400 });
@@ -42,6 +58,10 @@ Deno.serve(async (req) => {
 
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = utils.sheet_to_json(sheet, { raw: true });
+
+    if (!data || data.length === 0) {
+      return Response.json({ error: 'Excel-Datei ist leer' }, { status: 400 });
+    }
 
     // Mapping-Tabellen
     const versichererMap = {
@@ -58,9 +78,10 @@ Deno.serve(async (req) => {
     let erfolgreich = 0;
     let fehler = 0;
     const batch = [];
-    const BATCH_SIZE = 50;
+    const BATCH_SIZE = 20; // Kleinere Batches für bessere Stabilität
 
-    for (const row of data) {
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
       try {
         const versichererId = parseInt(row['Versicherer'] || '0');
         const kantonCode = row['Kanton'] || 'CH';
@@ -103,11 +124,13 @@ Deno.serve(async (req) => {
           aktiv: true
         });
         
-        // Batch-weise speichern für bessere Performance
+        // Batch-weise speichern
         if (batch.length >= BATCH_SIZE) {
           await base44.entities.BAGPraemienDaten.bulkCreate(batch);
           erfolgreich += batch.length;
           batch.length = 0;
+          // Kurze Pause zwischen Batches
+          await new Promise(resolve => setTimeout(resolve, 50));
         }
       } catch (error) {
         fehler++;
