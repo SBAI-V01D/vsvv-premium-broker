@@ -110,13 +110,14 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('BAG Import Error:', error);
+    return Response.json({ error: error.message || 'Import fehlgeschlagen' }, { status: 500 });
   }
 });
 
-function mapModellFromTariftyp(tariftyp: string): string {
+function mapModellFromTariftyp(tariftyp) {
   // BAG Tariftyp Mapping: TAR-TEL (Telmed), TAR-HAM (Hausarzt), TAR-HMO (HMO), TAR-STD (Standard)
-  const mapping: Record<string, string> = {
+  const mapping = {
     'TAR-STD': 'standard',
     'TAR-TEL': 'telmed',
     'TAR-HAM': 'hausarzt',
@@ -129,9 +130,9 @@ function mapModellFromTariftyp(tariftyp: string): string {
   return mapping[tariftyp] || 'standard';
 }
 
-function mapFranchise(franchiseCode: string): number {
+function mapFranchise(franchiseCode) {
   // BAG Franchise Codes: FRA-0 (0), FRA-100 (100), FRA-300 (300), etc.
-  const mapping: Record<string, number> = {
+  const mapping = {
     'FRA-0': 0,
     'FRA-100': 100,
     'FRA-200': 200,
