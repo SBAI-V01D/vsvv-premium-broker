@@ -53,23 +53,51 @@ export default function BAGDatenImport() {
     if (!selectedFile) return;
 
     setUploading(true);
+    const kantoneToImport = importModus === 'auswahl' ? selectedKantone : ALLE_26_KANTONE;
+    const results = { gesamt: 0, erfolgreich: 0, fehler: 0 };
+    let errorText = null;
     
     try {
       const uploadResponse = await base44.integrations.Core.UploadFile({ file: selectedFile });
       const fileUrl = uploadResponse.file_url;
 
-      const response = await base44.functions.invoke('importBAGDatenFromURL', {
-        file_url: fileUrl,
-        jahr: parseInt(jahr),
-        kantone: importModus === 'auswahl' ? selectedKantone : null
-      });
+      // Kantone sequentiell importieren (Memory-Limit beachten)
+      for (const kanton of kantoneToImport) {
+        try {
+          const response = await base44.functions.invoke('importBAGDatenFromURL', {
+            file_url: fileUrl,
+            jahr: parseInt(jahr),
+            kanton: kanton
+          });
 
-      if (response.data?.success) {
-        setUploadResult(response.data);
-        queryClient.invalidateQueries({ queryKey: ['bag-praemien-stats'] });
-      } else {
-        setUploadResult({ error: response.data?.error || 'Import fehlgeschlagen' });
+          if (response.data?.success) {
+            results.erfolgreich += response.data.results?.erfolgreich || 0;
+            results.fehler += response.data.results?.fehler || 0;
+            console.log(`Kanton ${kanton}: ${response.data.results?.erfolgreich} importiert`);
+          } else {
+            results.fehler++;
+            errorText = response.data?.error || errorText;
+          }
+        } catch (err) {
+          results.fehler++;
+          errorText = err.message;
+          console.error(`Kanton ${kanton} failed:`, err.message);
+        }
+        
+        // Kurze Pause zwischen Kantonen
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
+
+      results.gesamt = results.erfolgreich + results.fehler;
+      
+      setUploadResult({
+        success: true,
+        results,
+        message: `${results.erfolgreich} Datensätze importiert`,
+        error: errorText
+      });
+      queryClient.invalidateQueries({ queryKey: ['bag-praemien-stats'] });
+      
     } catch (error) {
       setUploadResult({ error: error.message });
     } finally {
