@@ -46,17 +46,14 @@ export default function BAGDatenImport() {
     setUploading(true);
     
     try {
-      // Convert file to base64
-      const base64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.readAsDataURL(selectedFile);
-      });
+      // Datei hochladen und URL holen
+      const uploadResponse = await base44.integrations.Core.UploadFile({ file: selectedFile });
+      const fileUrl = uploadResponse.file_url;
 
-      const response = await base44.functions.invoke('importBAGPremiumData', {
-        file: base64,
-        jahr,
-        kanton
+      // Import über URL-Funktion (besser für grosse Dateien)
+      const response = await base44.functions.invoke('importBAGDatenFromURL', {
+        file_url: fileUrl,
+        jahr
       });
 
       if (response.data?.success) {
