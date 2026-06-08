@@ -81,7 +81,7 @@ const FORMS = {
   ],
 };
 
-export default function RisikoFormular({ sparten = [], data = {}, onChange, onSave, saving }) {
+export default function RisikoFormular({ sparten = [], data = {}, onChange, onSave, saving, saved }) {
   const set = (sparte, key, val) => {
     onChange({ ...data, [sparte]: { ...(data[sparte] || {}), [key]: val } });
   };
@@ -133,7 +133,8 @@ export default function RisikoFormular({ sparten = [], data = {}, onChange, onSa
       ))}
 
       {onSave && (
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-end items-center gap-3 pt-2">
+          {saved && <span className="text-sm text-emerald-600 font-medium">✓ Gespeichert</span>}
           <Button onClick={onSave} disabled={saving}>
             {saving ? 'Speichern...' : 'Risikodaten speichern'}
           </Button>

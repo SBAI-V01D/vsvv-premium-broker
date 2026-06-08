@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Plus, Sparkles, FileText, Edit } from 'lucide-react';
+import { ArrowLeft, Plus, Sparkles, FileText, Edit, Download } from 'lucide-react';
 import OfferteForm from '@/components/ausschreibung/OfferteForm';
 import VergleichsMatrix from '@/components/ausschreibung/VergleichsMatrix';
 import KIEmpfehlung from '@/components/ausschreibung/KIEmpfehlung';
 import RisikoFormular from '@/components/ausschreibung/RisikoFormular';
 import AusschreibungForm from '@/components/ausschreibung/AusschreibungForm';
+import { exportOffertanfragePDF } from '@/components/ausschreibung/offertanfragePdfExport';
 
 const STATUS_LABELS = {
   entwurf:'Entwurf', vorbereitung:'In Vorbereitung', versendet:'Versendet',
@@ -29,6 +30,40 @@ const STATUS_COLORS = {
   verloren:'badge-danger', abgeschlossen:'badge-neutral',
 };
 
+// Separate component to avoid stale closure on risiko save
+function RisikoTab({ id, ausschreibung, setAusschreibung }) {
+  const [saving, setSaving] = React.useState(false);
+  const [saved, setSaved] = React.useState(false);
+  const risikoRef = React.useRef(ausschreibung.risiko_daten || {});
+
+  const handleChange = (d) => {
+    risikoRef.current = d;
+    setAusschreibung(a => ({ ...a, risiko_daten: d }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    await base44.entities.Ausschreibung.update(id, { risiko_daten: risikoRef.current });
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  return (
+    <div className="surface p-6">
+      <h3 className="text-subheading mb-4">Risikoerfassung</h3>
+      <RisikoFormular
+        sparten={ausschreibung.sparten || []}
+        data={ausschreibung.risiko_daten || {}}
+        onChange={handleChange}
+        onSave={handleSave}
+        saving={saving}
+        saved={saved}
+      />
+    </div>
+  );
+}
+
 export default function AusschreibungDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -39,14 +74,19 @@ export default function AusschreibungDetail() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingOfferte, setEditingOfferte] = useState(null);
   const [savingRisiko, setSavingRisiko] = useState(false);
+  const [customer, setCustomer] = useState(null);
 
   const load = async () => {
     const [list, o] = await Promise.all([
       base44.entities.Ausschreibung.filter({ id }),
       base44.entities.Offerte.filter({ ausschreibung_id: id }),
     ]);
-    setAusschreibung(list[0] || null);
+    const a = list[0] || null;
+    setAusschreibung(a);
     setOfferten(o);
+    if (a?.customer_id) {
+      base44.entities.Customer.filter({ id: a.customer_id }).then(res => setCustomer(res[0] || null));
+    }
     setLoading(false);
   };
 
@@ -83,6 +123,7 @@ export default function AusschreibungDetail() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => exportOffertanfragePDF(ausschreibung, customer)} className="gap-1"><Download className="w-3.5 h-3.5" />Offertanfrage PDF</Button>
           <Button variant="outline" size="sm" onClick={() => setShowEditDialog(true)} className="gap-1"><Edit className="w-3.5 h-3.5" />Bearbeiten</Button>
           <Button size="sm" onClick={() => { setEditingOfferte(null); setShowOfferteDialog(true); }} className="gap-1"><Plus className="w-3.5 h-3.5" />Offerte</Button>
         </div>
@@ -124,20 +165,7 @@ export default function AusschreibungDetail() {
         </TabsContent>
 
         <TabsContent value="risiko" className="mt-4">
-          <div className="surface p-6">
-            <h3 className="text-subheading mb-4">Risikoerfassung</h3>
-            <RisikoFormular
-              sparten={ausschreibung.sparten || []}
-              data={ausschreibung.risiko_daten || {}}
-              onChange={(d) => setAusschreibung(a => ({ ...a, risiko_daten: d }))}
-              onSave={async () => {
-                setSavingRisiko(true);
-                await base44.entities.Ausschreibung.update(id, { risiko_daten: ausschreibung.risiko_daten });
-                setSavingRisiko(false);
-              }}
-              saving={savingRisiko}
-            />
-          </div>
+          <RisikoTab id={id} ausschreibung={ausschreibung} setAusschreibung={setAusschreibung} />
         </TabsContent>
 
         <TabsContent value="offerten" className="mt-4 space-y-3">
