@@ -104,24 +104,34 @@ export default function KrankenkassenVergleich() {
   const [bagDaten, setBagDaten] = useState(null);
   const [loadingDaten, setLoadingDaten] = useState(true);
 
-  // BAG-Daten laden für exakte Prämienberechnung
+  // BAG-Daten laden für exakte Prämienberechnung - nur für ausgewählten Kanton
   useEffect(() => {
+    if (!formData.kanton) {
+      setBagDaten([]);
+      return;
+    }
+
     const loadBagDaten = async () => {
       try {
         setLoadingDaten(true);
-        // Lade ALLE aktiven BAG-Daten für 2026 (ohne Filter für bessere Performance)
-        const data = await base44.entities.BAGPraemienDaten.filter({ jahr: 2026, aktiv: true });
-        console.log('BAG-Daten geladen:', data?.length || 0, 'Datensätze für 2026');
+        // Lade NUR BAG-Daten für den ausgewählten Kanton 2026
+        const data = await base44.entities.BAGPraemienDaten.filter(
+          { jahr: 2026, aktiv: true, kanton: formData.kanton },
+          '-created_date',
+          500 // Maximal 500 Datensätze pro Kanton
+        );
+        console.log(`BAG-Daten geladen für ${formData.kanton}:`, data?.length || 0, 'Datensätze');
         setBagDaten(data || []);
       } catch (error) {
-        console.error('Fehler beim Laden der BAG-Daten:', error);
+        console.error('Fehler beim Laden der BAG-Daten:', error.message);
         setBagDaten([]);
       } finally {
         setLoadingDaten(false);
       }
     };
+    
     loadBagDaten();
-  }, []);
+  }, [formData.kanton]);
 
   const alter = formData.geburtsdatum ? 
     Math.floor((new Date() - new Date(formData.geburtsdatum)) / (365.25 * 24 * 60 * 60 * 1000)) : null;
