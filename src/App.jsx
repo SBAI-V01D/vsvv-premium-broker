@@ -54,6 +54,7 @@ import KrankenkassenVergleich from './pages/KrankenkassenVergleich'
 import BAGDatenAdmin from './pages/BAGDatenAdmin'
 import BAGDatenVerwaltungPage from './pages/BAGDatenVerwaltung'
 import TestKrankenkassenVergleich from './pages/TestKrankenkassenVergleich'
+import ComplianceSchreiben from './pages/ComplianceSchreiben'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -155,6 +156,7 @@ const AuthenticatedApp = () => {
         <Route path="/admin/bag-daten" element={<BAGDatenAdmin />} />
         <Route path="/bag-daten" element={<BAGDatenVerwaltungPage />} />
         <Route path="/test/kkv" element={<TestKrankenkassenVergleich />} />
+        <Route path="/compliance-schreiben" element={<ComplianceSchreiben />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
