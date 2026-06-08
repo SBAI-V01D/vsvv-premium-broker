@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Search, User, Plus, Check, MapPin } from 'lucide-react';
+import { Search, User, Plus, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const SWISS_ZIP_CODES = {
@@ -85,22 +85,18 @@ const KANTONE = [
   'ZH', 'BE', 'LU', 'UR', 'SZ', 'OW', 'NW', 'GL', 'ZG', 'FR', 'SO', 'BS', 'BL', 'SH', 'AR', 'AI', 'SG', 'GR', 'AG', 'TG', 'TI', 'VD', 'VS', 'NE', 'GE', 'JU'
 ];
 
-export default function CustomerSelector({ formData, setFormData }) {
+export default function CustomerSelector({ formData, setFormData, selectedCustomer, setSelectedCustomer }) {
   const [showDialog, setShowDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   const { data: customers = [] } = useQuery({
-    queryKey: ['krankenkassen_customer_search', searchQuery],
-    queryFn: () => {
-      if (searchQuery.length < 2) return [];
-      return base44.entities.Customer.filter({ archived: false }, 'last_name', 100);
-    },
+    queryKey: ['krankenkassen_customer_all'],
+    queryFn: () => base44.entities.Customer.filter({ archived: false }, 'last_name', 500),
     staleTime: 5 * 60 * 1000,
-    enabled: searchQuery.length >= 2,
   });
 
   const filteredCustomers = customers.filter(c => {
+    if (!searchQuery) return [];
     const q = searchQuery.toLowerCase();
     const fullName = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
     return fullName.includes(q) || (c.email || '').toLowerCase().includes(q);
@@ -167,6 +163,7 @@ export default function CustomerSelector({ formData, setFormData }) {
               size="sm"
               onClick={() => {
                 setSelectedCustomer(null);
+                setSearchQuery('');
                 setFormData({
                   ...formData,
                   vorname: '',
@@ -178,31 +175,10 @@ export default function CustomerSelector({ formData, setFormData }) {
                 });
               }}
             >
-              <Search className="w-4 h-4" />
+              <X className="w-4 h-4" />
             </Button>
           )}
         </div>
-
-        {!selectedCustomer && (
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Vorname</Label>
-              <Input
-                value={formData.vorname}
-                onChange={e => setFormData({...formData, vorname: e.target.value})}
-                placeholder="Vorname"
-              />
-            </div>
-            <div>
-              <Label>Nachname</Label>
-              <Input
-                value={formData.nachname}
-                onChange={e => setFormData({...formData, nachname: e.target.value})}
-                placeholder="Nachname"
-              />
-            </div>
-          </div>
-        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -244,7 +220,7 @@ export default function CustomerSelector({ formData, setFormData }) {
           <DialogHeader>
             <DialogTitle>Kunde auswählen</DialogTitle>
             <DialogDescription>
-              Wählen Sie einen bestehenden Kunden oder erfassen Sie neue Daten
+              Suchen Sie nach Name oder E-Mail
             </DialogDescription>
           </DialogHeader>
 
@@ -254,20 +230,20 @@ export default function CustomerSelector({ formData, setFormData }) {
               <Input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Kunde suchen (Name oder E-Mail)"
+                placeholder="Suchen... (z.B. 'Adam')"
                 className="pl-10"
                 autoFocus
               />
             </div>
 
-            {searchQuery.length >= 2 && (
-              <div className="max-h-60 overflow-y-auto border rounded-lg">
-                {filteredCustomers.length > 0 ? (
+            <div className="max-h-60 overflow-y-auto border rounded-lg">
+              {searchQuery ? (
+                filteredCustomers.length > 0 ? (
                   filteredCustomers.map(customer => (
                     <button
                       key={customer.id}
                       onClick={() => handleSelectCustomer(customer)}
-                      className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 border-b last:border-b-0 transition-colors text-left"
+                      className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 border-b last:border-b-0 transition-colors text-left group"
                     >
                       <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                         <User className="w-4 h-4 text-blue-600" />
@@ -280,25 +256,23 @@ export default function CustomerSelector({ formData, setFormData }) {
                           {customer.email} {customer.city && `· ${customer.city}`}
                         </p>
                       </div>
-                      <Check className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                      <Check className="w-4 h-4 text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
                   ))
                 ) : (
                   <div className="p-4 text-center text-sm text-muted-foreground">
-                    Keine Kunden gefunden
+                    Keine Kunden gefunden für "{searchQuery}"
                   </div>
-                )}
-              </div>
-            )}
-
-            {searchQuery.length < 2 && (
-              <div className="p-8 text-center">
-                <Search className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  Geben Sie mindestens 2 Zeichen ein, um Kunden zu suchen
-                </p>
-              </div>
-            )}
+                )
+              ) : (
+                <div className="p-8 text-center">
+                  <Search className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    Geben Sie einen Suchbegriff ein
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           <DialogFooter>

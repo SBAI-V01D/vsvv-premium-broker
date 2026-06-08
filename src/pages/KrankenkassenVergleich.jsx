@@ -51,9 +51,9 @@ const FRANCHISEN = [300, 500, 1000, 1500, 2000, 2500];
 export default function KrankenkassenVergleich() {
   const queryClient = useQueryClient();
   const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [selectedKunde, setSelectedKunde] = useState(null);
   const [loading, setLoading] = useState(false);
   const [vergleichId, setVergleichId] = useState(null);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
   
   const [formData, setFormData] = useState({
     vorname: '',
@@ -76,7 +76,6 @@ export default function KrankenkassenVergleich() {
     zeige_hmo: true,
     zeige_standard: true,
   });
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   const [ergebnisse, setErgebnisse] = useState([]);
   const [kiAnalyse, setKiAnalyse] = useState(null);
@@ -188,28 +187,7 @@ export default function KrankenkassenVergleich() {
   const saveVergleich = async () => {
     const user = await base44.auth.me();
     
-    let customerId = selectedCustomer?.id;
-    if (!customerId && formData.vorname && formData.nachname) {
-      const kundeResult = await base44.entities.Customer.filter({ 
-        first_name: formData.vorname,
-        last_name: formData.nachname
-      });
-      customerId = kundeResult[0]?.id;
-      
-      if (!customerId) {
-        const newCustomer = await base44.entities.Customer.create({
-          first_name: formData.vorname,
-          last_name: formData.nachname,
-          email: '',
-          zip_code: formData.plz,
-          city: formData.wohnort,
-          canton: formData.kanton,
-          birthdate: formData.geburtsdatum,
-          organization_id: '69f9ece91b7c06b90471a6b1'
-        });
-        customerId = newCustomer.id;
-      }
-    }
+    const customerId = selectedCustomer?.id;
     
     const newVergleich = await base44.entities.KrankenkassenVergleich.create({
       customer_id: customerId,
