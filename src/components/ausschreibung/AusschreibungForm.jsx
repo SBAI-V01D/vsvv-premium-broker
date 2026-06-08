@@ -6,9 +6,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, ChevronDown, X } from 'lucide-react';
+import { Search, ChevronDown, X, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
+import RisikoFormular from './RisikoFormular';
 
 const SPARTEN = [
   'Motorfahrzeug','Motorrad','Oldtimer','Flotte','Haushalt','Privathaftpflicht',
@@ -30,6 +31,11 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
   const [customerSearch, setCustomerSearch] = useState('');
   const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
   const customerRef = useRef(null);
+
+  const [sparteSearch, setSparteSearch] = useState('');
+  const [sparteDropdownOpen, setSparteDropdownOpen] = useState(false);
+  const sparteRef = useRef(null);
+  const [expandedSparte, setExpandedSparte] = useState(null);
 
   // Advisor des eingeloggten Users automatisch vorausfüllen
   const { data: advisors = [] } = useQuery({
@@ -67,6 +73,9 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
     const handleClick = (e) => {
       if (customerRef.current && !customerRef.current.contains(e.target)) {
         setCustomerDropdownOpen(false);
+      }
+      if (sparteRef.current && !sparteRef.current.contains(e.target)) {
+        setSparteDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClick);
@@ -198,16 +207,78 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
         </div>
       </div>
 
-      <div>
+      <div ref={sparteRef} className="relative">
         <Label className="mb-2 block">Sparten</Label>
-        <div className="flex flex-wrap gap-1.5">
-          {SPARTEN.map(s => (
-            <button key={s} type="button" onClick={() => toggleSparte(s)}
-              className={`text-xs px-2.5 py-1 rounded-full border transition-all ${form.sparten.includes(s) ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary'}`}>
-              {s}
-            </button>
-          ))}
-        </div>
+        {/* Suchfeld */}
+        <button
+          type="button"
+          onClick={() => { setSparteDropdownOpen(o => !o); setSparteSearch(''); }}
+          className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm text-left"
+        >
+          <span className="text-muted-foreground">
+            {form.sparten.length > 0 ? `${form.sparten.length} Sparte(n) gewählt` : 'Sparte suchen & wählen...'}
+          </span>
+          <Search className="w-4 h-4 text-muted-foreground" />
+        </button>
+        {sparteDropdownOpen && (
+          <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg">
+            <div className="p-2 border-b border-slate-100">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  autoFocus
+                  value={sparteSearch}
+                  onChange={e => setSparteSearch(e.target.value)}
+                  placeholder="Sparte suchen..."
+                  className="pl-8 h-8 text-sm"
+                />
+              </div>
+            </div>
+            <div className="max-h-52 overflow-y-auto p-1">
+              {SPARTEN.filter(s => s.toLowerCase().includes(sparteSearch.toLowerCase())).map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => { toggleSparte(s); setSparteSearch(''); }}
+                  className={`w-full text-left px-3 py-2 text-sm rounded-md flex items-center justify-between hover:bg-slate-50 ${form.sparten.includes(s) ? 'text-primary font-medium' : 'text-slate-700'}`}
+                >
+                  {s}
+                  {form.sparten.includes(s) && <span className="text-primary text-xs">✓</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {/* Gewählte Sparten als Chips */}
+        {form.sparten.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {form.sparten.map(s => (
+              <div key={s} className="flex flex-col w-full">
+                <div
+                  className="flex items-center justify-between px-3 py-2 rounded-lg border border-primary/30 bg-primary/5 cursor-pointer hover:bg-primary/10"
+                  onClick={() => setExpandedSparte(expandedSparte === s ? null : s)}
+                >
+                  <span className="text-sm font-medium text-primary flex items-center gap-2">
+                    <ChevronRight className={`w-3.5 h-3.5 transition-transform ${expandedSparte === s ? 'rotate-90' : ''}`} />
+                    {s}
+                  </span>
+                  <button type="button" onClick={e => { e.stopPropagation(); toggleSparte(s); if (expandedSparte === s) setExpandedSparte(null); }} className="text-slate-400 hover:text-rose-500 p-0.5">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                {expandedSparte === s && (
+                  <div className="mt-1 ml-4 pl-3 border-l-2 border-primary/20">
+                    <RisikoFormular
+                      sparten={[s]}
+                      data={form.risiko_daten || {}}
+                      onChange={d => set('risiko_daten', d)}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Antragsfragen ─────────────────────────────────────── */}
