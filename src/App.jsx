@@ -56,6 +56,7 @@ import BAGDatenVerwaltungPage from './pages/BAGDatenVerwaltung'
 import TestKrankenkassenVergleich from './pages/TestKrankenkassenVergleich'
 import ComplianceSchreiben from './pages/ComplianceSchreiben'
 import ChatExport from './pages/ChatExport'
+import ArchiveDownload from './pages/ArchiveDownload'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -159,6 +160,7 @@ const AuthenticatedApp = () => {
         <Route path="/test/kkv" element={<TestKrankenkassenVergleich />} />
         <Route path="/compliance-schreiben" element={<ComplianceSchreiben />} />
         <Route path="/chat-export" element={<ChatExport />} />
+        <Route path="/archive-download" element={<ArchiveDownload />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
