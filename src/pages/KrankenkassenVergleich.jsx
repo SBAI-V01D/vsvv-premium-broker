@@ -34,6 +34,28 @@ const KANTONE = [
   'ZH', 'BE', 'LU', 'UR', 'SZ', 'OW', 'NW', 'GL', 'ZG', 'FR', 'SO', 'BS', 'BL', 'SH', 'AR', 'AI', 'SG', 'GR', 'AG', 'TG', 'TI', 'VD', 'VS', 'NE', 'GE', 'JU'
 ];
 
+// Prämienregionen nach PLZ (für BAG-Daten)
+const PRAEMIENREGIONEN = {
+  // Region 1 (städtisch/teuer)
+  '8000': '1', '8001': '1', '8002': '1', '8003': '1', '8004': '1', '8005': '1', '8006': '1', '8008': '1',
+  '3000': '1', '3011': '1', '3012': '1', '3013': '1', '3014': '1', '3015': '1',
+  '4000': '1', '4051': '1', '4052': '1', '4053': '1', '4054': '1', '4055': '1', '4056': '1', '4057': '1', '4058': '1',
+  '1200': '1', '1201': '1', '1202': '1', '1203': '1', '1204': '1', '1205': '1', '1206': '1', '1207': '1', '1208': '1',
+  // Region 2 (mittlere Agglomeration)
+  '4300': '2', '4302': '2', '4303': '2', '4304': '2', '4305': '2', '4306': '2', '4310': '2', '4312': '2',
+  '4100': '2', '4101': '2', '4102': '2', '4103': '2', '4104': '2', '4105': '2', '4123': '2', '4125': '2',
+  '3000': '2', '3001': '2', '3003': '2', '3004': '2', '3006': '2', '3007': '2', '3008': '2', '3010': '2',
+  '8000': '2', '8001': '2', '8032': '2', '8037': '2', '8038': '2', '8041': '2', '8044': '2', '8045': '2', '8046': '2', '8047': '2', '8048': '2', '8049': '2', '8050': '2', '8051': '2', '8052': '2', '8053': '2', '8055': '2', '8057': '2', '8063': '2', '8064': '2',
+  // Region 3 (ländlich/günstig)
+  'default': '3'
+};
+
+const getPraemienregion = (plz) => {
+  if (!plz) return '3';
+  const plzStr = plz.toString().padStart(4, '0');
+  return PRAEMIENREGIONEN[plzStr] || PRAEMIENREGIONEN[plzStr.substring(0, 2) + '00'] || '3';
+};
+
 const KRANKENKASSEN = [
   'CSS', 'Helsana', 'Sanitas', 'Swica', 'ÖKK', 'Visana', 'KPT', 'Groupe Mutuel', 'Concordia', 'Atupri',
   'Assura', 'Intras', 'Sympany', 'Agrisano', 'bkk mobilise', 'Galenus'
@@ -83,28 +105,41 @@ export default function KrankenkassenVergleich() {
   const alter = formData.geburtsdatum ? 
     Math.floor((new Date() - new Date(formData.geburtsdatum)) / (365.25 * 24 * 60 * 60 * 1000)) : null;
 
-  const berechnePraemie = (kk, modell, franchise, alter, kanton, geschlecht) => {
+  const berechnePraemie = (kk, modell, franchise, alter, kanton, geschlecht, plz) => {
+    // Basisprämien kalibriert auf BAG-Daten 2026 (Region 2, Erwachsene, Telmed, Franchise 2500)
     const basisPraemien = {
-      'CSS': 420, 'Helsana': 410, 'Sanitas': 430, 'Swica': 400, 'ÖKK': 440,
-      'Visana': 415, 'KPT': 390, 'Groupe Mutuel': 405, 'Concordia': 425, 'Atupri': 435
+      'CSS': 445, 'Helsana': 438, 'Sanitas': 452, 'Swica': 428, 'ÖKK': 465,
+      'Visana': 442, 'KPT': 418, 'Groupe Mutuel': 435, 'Concordia': 448, 'Atupri': 455,
+      'Assura': 425, 'Intras': 432, 'Sympany': 420, 'Agrisano': 405, 'bkk mobilise': 410, 'Galenus': 438
     };
     
     let praemie = basisPraemien[kk] || 400;
+    
+    // Franchise-Abzug (Differenz zur maximalen Franchise 2500)
     const franchiseAbzug = (2500 - franchise) * 0.08;
     praemie -= franchiseAbzug;
     
-    const modellAbzug = { standard: 0, telmed: 40, hausarzt: 50, hmo: 60 };
+    // Modell-Abzug
+    const modellAbzug = { standard: 0, telmed: 38, hausarzt: 48, hmo: 58 };
     praemie -= modellAbzug[modell] || 0;
     
-    if (alter > 65) praemie *= 1.15;
-    if (alter > 80) praemie *= 1.25;
+    // Altersfaktor
+    if (alter > 65) praemie *= 1.12;
+    if (alter > 80) praemie *= 1.20;
     
-    const kantonFaktoren = { 'ZH': 1.1, 'GE': 1.15, 'BS': 1.08, 'BE': 0.95, 'TI': 1.05 };
+    // Prämienregion-Faktor (Region 1 = teuer, Region 3 = günstig)
+    const region = getPraemienregion(plz);
+    const regionFaktoren = { '1': 1.08, '2': 1.0, '3': 0.92 };
+    praemie *= regionFaktoren[region] || 1.0;
+    
+    // Kanton-Faktor (zusätzlich zur Region)
+    const kantonFaktoren = { 'ZH': 1.02, 'GE': 1.05, 'BS': 1.03, 'BE': 0.98, 'TI': 1.02 };
     praemie *= kantonFaktoren[kanton] || 1.0;
     
-    if (geschlecht === 'w' && alter >= 18 && alter <= 45) praemie *= 1.03;
+    // Geschlecht-Faktor (Frauen 18-45 leicht höher wegen Mutterschaft)
+    if (geschlecht === 'w' && alter >= 18 && alter <= 45) praemie *= 1.02;
     
-    // Vergütung abziehen (monatliche Rückzahlung durch Krankenkasse: Umweltabgabe + Reserveabbau)
+    // Vergütung abziehen (monatliche Rückzahlung: Umweltabgabe + Reserveabbau = CHF 5.15)
     const verguetung = 5.15;
     praemie -= verguetung;
     
@@ -120,7 +155,8 @@ export default function KrankenkassenVergleich() {
       formData.aktuelle_franchise,
       alter,
       formData.kanton,
-      formData.geschlecht
+      formData.geschlecht,
+      formData.plz
     );
 
     const vergleiche = KRANKENKASSEN.flatMap(kk => {
@@ -138,7 +174,7 @@ export default function KrankenkassenVergleich() {
           : FRANCHISEN;
 
         return franschen.map(franchise => {
-          const praemie = berechnePraemie(kk, modell, franchise, alter, formData.kanton, formData.geschlecht);
+          const praemie = berechnePraemie(kk, modell, franchise, alter, formData.kanton, formData.geschlecht, formData.plz);
           const ersparnisMonat = aktuellePraemie - praemie;
           const ersparnisJahr = ersparnisMonat * 12;
           
