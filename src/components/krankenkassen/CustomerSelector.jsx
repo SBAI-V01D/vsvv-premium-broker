@@ -109,7 +109,7 @@ export default function CustomerSelector({ formData, setFormData, selectedCustom
     if (aStartsWith && !bStartsWith) return -1;
     if (!aStartsWith && bStartsWith) return 1;
     return aFullName.indexOf(q) - bFullName.indexOf(q);
-  }).slice(0, 10);
+  });
 
   const handleSelectCustomer = (customer) => {
     setSelectedCustomer(customer);
