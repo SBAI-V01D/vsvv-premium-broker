@@ -2,28 +2,35 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileSpreadsheet, Database, TrendingUp, Calendar } from 'lucide-react';
+import { FileSpreadsheet, Database, TrendingUp, Calendar, AlertCircle, RefreshCcw } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import BAGDatenImport from '@/components/krankenkassen/BAGDatenImport';
 
 export default function BAGDatenVerwaltung() {
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, error, refetch } = useQuery({
     queryKey: ['bag-praemien-stats'],
     queryFn: async () => {
-      const data = await base44.entities.BAGPraemienDaten.list();
-      const jahre = [...new Set(data.map(d => d.jahr))].sort((a, b) => b - a);
-      const kantone = [...new Set(data.map(d => d.kanton))].sort();
-      const krankenkassen = [...new Set(data.map(d => d.krankenkasse))].sort();
-      
-      return {
-        gesamtDatensätze: data.length,
-        jahre,
-        kantone: kantone.length,
-        krankenkassen: krankenkassen.length,
-        latestJahr: jahre[0] || null
-      };
-    }
+      try {
+        const data = await base44.entities.BAGPraemienDaten.list();
+        const jahre = [...new Set(data.map(d => d.jahr))].sort((a, b) => b - a);
+        const kantone = [...new Set(data.map(d => d.kanton))].sort();
+        const krankenkassen = [...new Set(data.map(d => d.krankenkasse))].sort();
+        
+        return {
+          gesamtDatensätze: data.length,
+          jahre,
+          kantone: kantone.length,
+          krankenkassen: krankenkassen.length,
+          latestJahr: jahre[0] || null
+        };
+      } catch (err) {
+        console.error('BAG Daten Fehler:', err);
+        throw err;
+      }
+    },
+    retry: 1,
+    staleTime: 30000
   });
 
   return (
@@ -34,7 +41,12 @@ export default function BAGDatenVerwaltung() {
             <h1 className="text-2xl font-bold text-foreground mb-1">BAG-Prämiendaten</h1>
             <p className="text-muted-foreground">Offizielle Krankenkassen-Prämien vom Bundesamt für Gesundheit</p>
           </div>
-          <BAGDatenImport />
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Aktualisieren
+            </Button>
+            <BAGDatenImport />
+          </div>
         </div>
       </div>
 
@@ -42,6 +54,21 @@ export default function BAGDatenVerwaltung() {
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Lade Daten...</p>
         </div>
+      ) : error ? (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="py-6">
+            <div className="flex items-center gap-3 text-red-700">
+              <AlertCircle className="w-5 h-5" />
+              <div>
+                <p className="font-semibold">Fehler beim Laden der Daten</p>
+                <p className="text-sm">{error.message}</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" className="mt-4" onClick={() => refetch()}>
+              Erneut versuchen
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
