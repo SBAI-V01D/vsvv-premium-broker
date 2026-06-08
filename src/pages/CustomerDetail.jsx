@@ -59,18 +59,8 @@ export default function CustomerDetail() {
   const [editingApp, setEditingApp] = useState(null)
   const queryClient = useQueryClient()
 
-  useEffect(() => {
-    const unsubscribe = base44.entities.Contract.subscribe((event) => {
-      if (event.type === 'create' || event.type === 'update') {
-        const cid = event.data?.customer_id
-        if (cid) {
-          queryClient.invalidateQueries({ queryKey: ['contracts', cid] })
-          queryClient.invalidateQueries({ queryKey: ['household-contracts', cid] })
-        }
-      }
-    })
-    return unsubscribe
-  }, [queryClient])
+  // Globale Real-time Subscriptions sind in lib/query-client.js registriert —
+  // keine lokale Subscription notwendig.
 
   // Fast: nur aktuellen Kunden laden
   const { data: customerDirect } = useQuery({

@@ -18,11 +18,8 @@ async function logQueryError(error, query) {
 export const queryClientInstance = new QueryClient({
   defaultOptions: {
     queries: {
-      // refetchOnMount: true — beim Navigieren werden veraltete Daten im Hintergrund aktualisiert
-      // Gecachte Daten werden sofort angezeigt, dann still im Hintergrund aktualisiert (stale-while-revalidate)
       refetchOnMount: true,
       refetchOnWindowFocus: true,
-      // 0 staleTime — Daten sofort als veraltet markieren für schnelle Reaktionszeit
       staleTime: 0,
       gcTime: 30 * 60 * 1000,
       retry: (failureCount, error) => {
@@ -43,10 +40,68 @@ export const queryClientInstance = new QueryClient({
 queryClientInstance.getQueryCache().subscribe((event) => {
   if (event?.type === 'updated' && event?.query?.state?.status === 'error') {
     const error = event.query.state.error;
-    // Nur echte Fehler — nicht 401/403
     const status = error?.response?.status || error?.status;
     if (status !== 401 && status !== 403) {
       logQueryError(error, event.query);
     }
   }
 });
+
+// ── Globale Real-time Subscriptions ──────────────────────────────────────────
+// Alle kritischen Entities werden per Subscription überwacht.
+// Bei jeder Änderung (create/update/delete) werden SOFORT alle betroffenen
+// Query-Keys invalidiert — appweit, ohne manuelles Invalidieren in jeder Komponente.
+
+function setupGlobalSubscriptions() {
+  // Contract: Invalidiert alle contract-bezogenen Queries sofort
+  base44.entities.Contract.subscribe((event) => {
+    queryClientInstance.invalidateQueries({ queryKey: ['contracts'] });
+    if (event.data?.customer_id) {
+      queryClientInstance.invalidateQueries({ queryKey: ['contracts', event.data.customer_id] });
+      queryClientInstance.invalidateQueries({ queryKey: ['household-contracts', event.data.customer_id] });
+      queryClientInstance.invalidateQueries({ queryKey: ['household-contracts-all', event.data.customer_id] });
+      // Auch primary_customer_id falls vorhanden
+      if (event.data?.primary_customer_id) {
+        queryClientInstance.invalidateQueries({ queryKey: ['household-contracts-all', event.data.primary_customer_id] });
+      }
+    }
+  });
+
+  // Application: Invalidiert alle application-bezogenen Queries sofort
+  base44.entities.Application.subscribe((event) => {
+    queryClientInstance.invalidateQueries({ queryKey: ['applications'] });
+    if (event.data?.customer_id) {
+      queryClientInstance.invalidateQueries({ queryKey: ['applications', event.data.customer_id] });
+    }
+  });
+
+  // Document: Invalidiert alle document-bezogenen Queries sofort
+  base44.entities.Document.subscribe((event) => {
+    queryClientInstance.invalidateQueries({ queryKey: ['documents'] });
+    if (event.data?.customer_id) {
+      queryClientInstance.invalidateQueries({ queryKey: ['documents', event.data.customer_id] });
+    }
+  });
+
+  // Task: Invalidiert alle task-bezogenen Queries sofort
+  base44.entities.Task.subscribe((event) => {
+    queryClientInstance.invalidateQueries({ queryKey: ['tasks'] });
+    if (event.data?.customer_id) {
+      queryClientInstance.invalidateQueries({ queryKey: ['tasks', event.data.customer_id] });
+    }
+  });
+
+  // Customer: Invalidiert Kundendaten sofort
+  base44.entities.Customer.subscribe((event) => {
+    queryClientInstance.invalidateQueries({ queryKey: ['customers'] });
+    if (event.data?.id) {
+      queryClientInstance.invalidateQueries({ queryKey: ['customer', event.data.id] });
+    }
+    if (event.data?.primary_customer_id) {
+      queryClientInstance.invalidateQueries({ queryKey: ['family-members', event.data.primary_customer_id] });
+    }
+  });
+}
+
+// Subscriptions starten — einmalig beim App-Start
+setupGlobalSubscriptions();

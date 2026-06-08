@@ -65,7 +65,12 @@ export default function Contracts() {
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Contract.create(data),
     onSuccess: (newContract) => {
+      // Sofort lokal cachen + globale Invalidierung via Subscription
       queryClient.setQueryData(['contracts'], (old = []) => [newContract, ...old]);
+      if (newContract?.customer_id) {
+        queryClient.invalidateQueries({ queryKey: ['contracts', newContract.customer_id] });
+        queryClient.invalidateQueries({ queryKey: ['household-contracts-all', newContract.customer_id] });
+      }
       setShowForm(false); setEditing(null);
     },
   })
@@ -76,6 +81,10 @@ export default function Contracts() {
       queryClient.setQueryData(['contracts'], (old = []) =>
         old.map(c => c.id === updated.id ? updated : c)
       );
+      if (updated?.customer_id) {
+        queryClient.invalidateQueries({ queryKey: ['contracts', updated.customer_id] });
+        queryClient.invalidateQueries({ queryKey: ['household-contracts-all', updated.customer_id] });
+      }
       setShowForm(false); setEditing(null);
     },
   })
