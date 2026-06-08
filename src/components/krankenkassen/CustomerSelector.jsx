@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Search, User, Plus, Check, X } from 'lucide-react';
+import { Search, User, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const SWISS_ZIP_CODES = {
@@ -86,8 +85,9 @@ const KANTONE = [
 ];
 
 export default function CustomerSelector({ formData, setFormData, selectedCustomer, setSelectedCustomer }) {
-  const [showDialog, setShowDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const inputRef = React.useRef(null);
 
   const { data: customers = [] } = useQuery({
     queryKey: ['krankenkassen_customer_all'],
@@ -104,6 +104,8 @@ export default function CustomerSelector({ formData, setFormData, selectedCustom
 
   const handleSelectCustomer = (customer) => {
     setSelectedCustomer(customer);
+    setSearchQuery('');
+    setShowDropdown(false);
     setFormData({
       ...formData,
       vorname: customer.first_name || '',
@@ -114,21 +116,24 @@ export default function CustomerSelector({ formData, setFormData, selectedCustom
       kanton: customer.canton || '',
       geschlecht: customer.gender || formData.geschlecht
     });
-    setShowDialog(false);
   };
 
-  const handleNewCustomer = () => {
-    setSelectedCustomer(null);
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    setShowDropdown(true);
+    if (selectedCustomer) {
+      setSelectedCustomer(null);
+    }
     setFormData({
       ...formData,
-      vorname: '',
+      vorname: value,
       nachname: '',
       geburtsdatum: '',
       wohnort: '',
       plz: '',
       kanton: ''
     });
-    setShowDialog(false);
   };
 
   const handlePlzChange = (plz) => {
@@ -143,40 +148,84 @@ export default function CustomerSelector({ formData, setFormData, selectedCustom
     }
   };
 
+  React.useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (inputRef.current && !inputRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <>
       <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setShowDialog(true)}
-            className="flex-1 justify-start"
-          >
-            <User className="w-4 h-4 mr-2" />
-            {selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : 'Kunde wählen...'}
-          </Button>
-          {selectedCustomer && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSelectedCustomer(null);
-                setSearchQuery('');
-                setFormData({
-                  ...formData,
-                  vorname: '',
-                  nachname: '',
-                  geburtsdatum: '',
-                  wohnort: '',
-                  plz: '',
-                  kanton: ''
-                });
-              }}
-            >
-              <X className="w-4 h-4" />
-            </Button>
+        <div className="relative">
+          <div className="flex items-center gap-2">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : searchQuery}
+              onChange={handleInputChange}
+              onFocus={() => { setShowDropdown(true); inputRef.current?.select(); }}
+              placeholder="Kunde suchen (z.B. 'Adam')..."
+              className="flex h-9 w-full rounded-md border border-input bg-transparent pl-10 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+            />
+            {selectedCustomer && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedCustomer(null);
+                  setSearchQuery('');
+                  setShowDropdown(false);
+                  setFormData({
+                    ...formData,
+                    vorname: '',
+                    nachname: '',
+                    geburtsdatum: '',
+                    wohnort: '',
+                    plz: '',
+                    kanton: ''
+                  });
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+
+          {showDropdown && searchQuery && !selectedCustomer && (
+            <div className="absolute top-full left-0 right-0 mt-1 z-50 max-h-60 overflow-y-auto rounded-md border bg-popover p-1 shadow-lg">
+              {filteredCustomers.length > 0 ? (
+                filteredCustomers.map(customer => (
+                  <button
+                    key={customer.id}
+                    onClick={() => handleSelectCustomer(customer)}
+                    className="w-full flex items-center gap-3 p-2 hover:bg-accent rounded-sm transition-colors text-left"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                      <User className="w-3.5 h-3.5 text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">
+                        {customer.first_name} {customer.last_name}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {customer.email} {customer.city && `· ${customer.city}`}
+                      </p>
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  Keine Kunden gefunden
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -214,78 +263,6 @@ export default function CustomerSelector({ formData, setFormData, selectedCustom
           </Select>
         </div>
       </div>
-
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Kunde auswählen</DialogTitle>
-            <DialogDescription>
-              Suchen Sie nach Name oder E-Mail
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Suchen... (z.B. 'Adam')"
-                className="pl-10"
-                autoFocus
-              />
-            </div>
-
-            <div className="max-h-60 overflow-y-auto border rounded-lg">
-              {searchQuery ? (
-                filteredCustomers.length > 0 ? (
-                  filteredCustomers.map(customer => (
-                    <button
-                      key={customer.id}
-                      onClick={() => handleSelectCustomer(customer)}
-                      className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 border-b last:border-b-0 transition-colors text-left group"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                        <User className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm">
-                          {customer.first_name} {customer.last_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {customer.email} {customer.city && `· ${customer.city}`}
-                        </p>
-                      </div>
-                      <Check className="w-4 h-4 text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </button>
-                  ))
-                ) : (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    Keine Kunden gefunden für "{searchQuery}"
-                  </div>
-                )
-              ) : (
-                <div className="p-8 text-center">
-                  <Search className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Geben Sie einen Suchbegriff ein
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={handleNewCustomer}>
-              <Plus className="w-4 h-4 mr-2" />
-              Neuer Kunde
-            </Button>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>
-              Abbrechen
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
