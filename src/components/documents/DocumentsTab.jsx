@@ -55,13 +55,18 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Document.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['documents', customerId] }),
+    onMutate: (id) => {
+      // Optimistic: sofort aus Liste entfernen
+      queryClient.setQueryData(['documents', customerId], (old = []) => old.filter(d => d.id !== id));
+    },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Document.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents', customerId] });
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['documents', customerId], (old = []) =>
+        old.map(d => d.id === updated.id ? updated : d)
+      );
       setEditingDoc(null);
     },
   });
@@ -110,7 +115,7 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
     if (!file) return;
     setUploading(true);
     const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    await base44.entities.Document.create({
+    const newDoc = await base44.entities.Document.create({
       customer_id: customerId,
       customer_name: customerName,
       name: form.name,
@@ -122,7 +127,8 @@ export default function DocumentsTab({ customerId, customerName, contracts = [],
       uploaded_by_role: 'broker',
       visible_in_portal: form.visible_in_portal,
     });
-    queryClient.invalidateQueries({ queryKey: ['documents', customerId] });
+    // Sofort lokal einfügen — kein Warten auf Refetch
+    queryClient.setQueryData(['documents', customerId], (old = []) => [newDoc, ...old]);
     setUploading(false);
     setShowUpload(false);
     setFile(null);

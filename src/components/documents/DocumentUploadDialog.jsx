@@ -204,10 +204,9 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess, pr
 
       setUploadProgress(100)
       setStep('success')
-      setTimeout(() => {
-        onSuccess()
-        handleClose()
-      }, 1200)
+      // Sofort schliessen und Callback auslösen — kein künstliches Delay
+      onSuccess()
+      handleClose()
     } catch (uploadErr) {
       console.error('[DocumentUpload] Upload failed:', uploadErr)
       const status = uploadErr?.response?.status || uploadErr?.status
