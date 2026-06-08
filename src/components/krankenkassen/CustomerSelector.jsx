@@ -123,7 +123,7 @@ export default function CustomerSelector({ formData, setFormData, selectedCustom
       wohnort: customer.city || '',
       plz: customer.zip_code || '',
       kanton: customer.canton || '',
-      geschlecht: customer.gender || formData.geschlecht
+      geschlecht: customer.geschlecht || formData.geschlecht
     });
   };
 

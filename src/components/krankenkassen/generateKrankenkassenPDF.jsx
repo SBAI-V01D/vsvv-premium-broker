@@ -203,10 +203,10 @@ function addSection(doc, title, y, pageH, margin) {
 }
 
 function addRow(doc, label, value, y, pageH, margin, isEven) {
+  y = checkPage(doc, y, 10, pageH);
   const val = value != null && value !== '' ? String(value) : '—';
   const lines = doc.splitTextToSize(val, 90);
   const rowH = Math.max(8, lines.length * 5);
-  if (y + rowH > pageH - 15) { doc.addPage(); y = 20; }
   
   if (isEven) {
     doc.setFillColor(246, 249, 255);
@@ -222,7 +222,7 @@ function addRow(doc, label, value, y, pageH, margin, isEven) {
   doc.setTextColor(20, 20, 20);
   doc.text(lines, margin + 82, y);
   
-  return y + rowH;
+  return y + rowH + 1;
 }
 
 function checkPage(doc, y, needed, pageH) {

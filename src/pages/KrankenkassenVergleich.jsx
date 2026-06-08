@@ -83,7 +83,7 @@ export default function KrankenkassenVergleich() {
   const alter = formData.geburtsdatum ? 
     Math.floor((new Date() - new Date(formData.geburtsdatum)) / (365.25 * 24 * 60 * 60 * 1000)) : null;
 
-  const berechnePraemie = (kk, modell, franchise, alter, kanton) => {
+  const berechnePraemie = (kk, modell, franchise, alter, kanton, geschlecht) => {
     const basisPraemien = {
       'CSS': 420, 'Helsana': 410, 'Sanitas': 430, 'Swica': 400, 'ÖKK': 440,
       'Visana': 415, 'KPT': 390, 'Groupe Mutuel': 405, 'Concordia': 425, 'Atupri': 435
@@ -102,6 +102,8 @@ export default function KrankenkassenVergleich() {
     const kantonFaktoren = { 'ZH': 1.1, 'GE': 1.15, 'BS': 1.08, 'BE': 0.95, 'TI': 1.05 };
     praemie *= kantonFaktoren[kanton] || 1.0;
     
+    if (geschlecht === 'w' && alter >= 18 && alter <= 45) praemie *= 1.03;
+    
     return Math.round(praemie * 100) / 100;
   };
 
@@ -113,7 +115,8 @@ export default function KrankenkassenVergleich() {
       formData.aktuelles_modell,
       formData.aktuelle_franchise,
       alter,
-      formData.kanton
+      formData.kanton,
+      formData.geschlecht
     );
 
     const vergleiche = KRANKENKASSEN.flatMap(kk => {
@@ -131,7 +134,7 @@ export default function KrankenkassenVergleich() {
           : FRANCHISEN;
 
         return franschen.map(franchise => {
-          const praemie = berechnePraemie(kk, modell, franchise, alter, formData.kanton);
+          const praemie = berechnePraemie(kk, modell, franchise, alter, formData.kanton, formData.geschlecht);
           const ersparnisMonat = aktuellePraemie - praemie;
           const ersparnisJahr = ersparnisMonat * 12;
           
@@ -188,13 +191,14 @@ export default function KrankenkassenVergleich() {
     const user = await base44.auth.me();
     
     const customerId = selectedCustomer?.id;
+    const organizationId = selectedCustomer?.organization_id || user.data?.organization_id;
     
     const newVergleich = await base44.entities.KrankenkassenVergleich.create({
       customer_id: customerId,
       customer_name: `${formData.vorname} ${formData.nachname}`,
       advisor_id: user.id,
       advisor_name: user.full_name || user.email,
-      organization_id: '69f9ece91b7c06b90471a6b1',
+      organization_id: organizationId,
       vergleichsdatum: new Date().toISOString(),
       persoenliche_daten: {
         vorname: formData.vorname,
