@@ -10,16 +10,37 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Nur Admins können BAG-Daten importieren' }, { status: 403 });
     }
 
-    const formData = await req.formData();
-    const file = formData.get('file');
-    const jahr = parseInt(formData.get('jahr') || '2026');
-    const kanton = formData.get('kanton');
+    // Parse multipart form data manually
+    const contentType = req.headers.get('content-type') || '';
+    
+    let file, jahr, kanton;
+    
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData();
+      file = formData.get('file');
+      jahr = parseInt(formData.get('jahr') || '2026');
+      kanton = formData.get('kanton');
+    } else {
+      // JSON with base64 file
+      const body = await req.json();
+      jahr = parseInt(body.jahr || '2026');
+      kanton = body.kanton;
+      
+      // Decode base64 to Uint8Array
+      const base64Data = body.file.split(',')[1] || body.file;
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      file = bytes.buffer;
+    }
 
     if (!file) {
       return Response.json({ error: 'Keine Datei hochgeladen' }, { status: 400 });
     }
 
-    const arrayBuffer = await file.arrayBuffer();
+    const arrayBuffer = file;
     const workbook = read(new Uint8Array(arrayBuffer));
     
     if (!workbook.SheetNames || workbook.SheetNames.length === 0) {

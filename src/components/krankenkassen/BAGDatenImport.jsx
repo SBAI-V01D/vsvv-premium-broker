@@ -44,24 +44,26 @@ export default function BAGDatenImport() {
     if (!selectedFile) return;
 
     setUploading(true);
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('jahr', jahr);
-    formData.append('kanton', kanton);
-
+    
     try {
-      const response = await fetch('/functions/importBAGPremiumData', {
-        method: 'POST',
-        body: formData
+      // Convert file to base64
+      const base64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(selectedFile);
       });
 
-      const result = await response.json();
-      
-      if (response.ok) {
-        setUploadResult(result);
-        queryClient.invalidateQueries({ queryKey: ['bag-praemien'] });
+      const response = await base44.functions.invoke('importBAGPremiumData', {
+        file: base64,
+        jahr,
+        kanton
+      });
+
+      if (response.data?.success) {
+        setUploadResult(response.data);
+        queryClient.invalidateQueries({ queryKey: ['bag-praemien-stats'] });
       } else {
-        setUploadResult({ error: result.error });
+        setUploadResult({ error: response.data?.error || 'Import fehlgeschlagen' });
       }
     } catch (error) {
       setUploadResult({ error: error.message });
