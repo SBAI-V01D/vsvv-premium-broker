@@ -101,20 +101,27 @@ export default function KrankenkassenVergleich() {
 
   const [ergebnisse, setErgebnisse] = useState([]);
   const [kiAnalyse, setKiAnalyse] = useState(null);
-  const [bagDaten, setBagDaten] = useState([]);
+  const [bagDaten, setBagDaten] = useState(null);
+  const [loadingDaten, setLoadingDaten] = useState(true);
 
   // BAG-Daten laden für exakte Prämienberechnung
   useEffect(() => {
     const loadBagDaten = async () => {
       try {
-        const data = await base44.entities.BAGPraemienDaten.filter({ 
-          jahr: 2026, 
-          aktiv: true,
-          unfall: false 
-        });
-        setBagDaten(data || []);
+        setLoadingDaten(true);
+        // Lade ALLE aktiven BAG-Daten für 2025 und 2026
+        const [data2026, data2025] = await Promise.all([
+          base44.entities.BAGPraemienDaten.filter({ jahr: 2026, aktiv: true, unfall: false }),
+          base44.entities.BAGPraemienDaten.filter({ jahr: 2025, aktiv: true, unfall: false })
+        ]);
+        const alleDaten = [...(data2026 || []), ...(data2025 || [])];
+        console.log('BAG-Daten geladen:', alleDaten.length, 'Datensätze');
+        setBagDaten(alleDaten);
       } catch (error) {
         console.error('Fehler beim Laden der BAG-Daten:', error);
+        setBagDaten([]);
+      } finally {
+        setLoadingDaten(false);
       }
     };
     loadBagDaten();
@@ -123,80 +130,76 @@ export default function KrankenkassenVergleich() {
   const alter = formData.geburtsdatum ? 
     Math.floor((new Date() - new Date(formData.geburtsdatum)) / (365.25 * 24 * 60 * 60 * 1000)) : null;
 
-  const berechnePraemie = (kk, modell, franchise, alter, kanton, geschlecht, plz, bagDaten = []) => {
-    // Versuche BAG-Daten zu verwenden falls verfügbar
-    const region = getPraemienregion(plz);
-    const bagPraemie = bagDaten.find(d => 
-      d.krankenkasse === kk && 
-      d.modell === modell && 
-      d.franchise === franchise &&
-      d.kanton === kanton &&
-      !d.unfall
-    );
-    
-    if (bagPraemie && bagPraemie.praemie_erwachsene) {
-      // Exakte BAG-Prämie verwenden, dann Vergütung abziehen
-      return Math.round((bagPraemie.praemie_erwachsene - 5.15) * 100) / 100;
+  const berechnePraemie = (kk, modell, franchise, kanton, bagDaten) => {
+    // Suche exakte BAG-Prämie für diese Kombination
+    if (bagDaten && bagDaten.length > 0) {
+      const match = bagDaten.find(d => 
+        d.krankenkasse === kk && 
+        d.modell === modell && 
+        d.franchise === franchise &&
+        d.kanton === kanton
+      );
+      
+      if (match && match.praemie_erwachsene) {
+        // Exakte BAG-Prämie minus 5.15 CHF Vergütung
+        return Math.round((match.praemie_erwachsene - 5.15) * 100) / 100;
+      }
     }
     
-    // Fallback: Berechnung mit Basisprämien (wird überschrieben wenn BAG-Daten geladen sind)
-    const basisPraemien = {
-      'CSS': 448, 'Helsana': 441, 'Sanitas': 455, 'Swica': 431, 'ÖKK': 468,
-      'Visana': 445, 'KPT': 408, 'Groupe Mutuel': 438, 'Concordia': 451, 'Atupri': 458,
-      'Assura': 428, 'Intras': 435, 'Sympany': 408, 'Agrisano': 408, 'bkk mobilise': 413, 'Galenus': 441
-    };
-    
-    let praemie = basisPraemien[kk] || 400;
-    const franchiseAbzug = (2500 - franchise) * 0.08;
-    praemie -= franchiseAbzug;
-    const modellAbzug = { standard: 0, telmed: 38, hausarzt: 48, hmo: 58 };
-    praemie -= modellAbzug[modell] || 0;
-    if (alter > 65) praemie *= 1.12;
-    if (alter > 80) praemie *= 1.20;
-    const regionFaktoren = { '1': 1.08, '2': 1.0, '3': 0.92 };
-    praemie *= regionFaktoren[region] || 1.0;
-    const kantonFaktoren = { 'ZH': 1.02, 'GE': 1.05, 'BS': 1.03, 'BE': 0.98, 'TI': 1.02 };
-    praemie *= kantonFaktoren[kanton] || 1.0;
-    if (geschlecht === 'w' && alter >= 18 && alter <= 45) praemie *= 1.02;
-    praemie -= 5.15;
-    
-    return Math.round(praemie * 100) / 100;
+    // Kein Match gefunden - return null um diese Option auszublenden
+    return null;
   };
 
   const handleVergleich = async () => {
+    if (!bagDaten || bagDaten.length === 0) {
+      alert('BAG-Daten werden noch geladen. Bitte warten...');
+      return;
+    }
+
     setLoading(true);
     
+    // Aktuelle Prämie berechnen
     const aktuellePraemie = berechnePraemie(
       formData.aktuelle_krankenkasse,
       formData.aktuelles_modell,
       formData.aktuelle_franchise,
-      alter,
       formData.kanton,
-      formData.geschlecht,
-      formData.plz,
       bagDaten
     );
 
-    const vergleiche = KRANKENKASSEN.flatMap(kk => {
-      if (formData.nur_bestehende_kasse && kk !== formData.aktuelle_krankenkasse) return [];
+    if (!aktuellePraemie) {
+      alert(`Keine BAG-Daten verfügbar für ${formData.aktuelle_krankenkasse} im Kanton ${formData.kanton}`);
+      setLoading(false);
+      return;
+    }
+
+    const vergleiche = [];
+
+    // Alle Kombinationen durchgehen
+    KRANKENKASSEN.forEach(kk => {
+      if (formData.nur_bestehende_kasse && kk !== formData.aktuelle_krankenkasse) return;
       
       const modelle = [];
-      if (formData.zeige_standard || formData.alle_modelle) modelle.push('standard');
-      if (formData.zeige_telmed || formData.alle_modelle) modelle.push('telmed');
-      if (formData.zeige_hausarzt || formData.alle_modelle) modelle.push('hausarzt');
-      if (formData.zeige_hmo || formData.alle_modelle) modelle.push('hmo');
+      if (formData.zeige_standard) modelle.push('standard');
+      if (formData.zeige_telmed) modelle.push('telmed');
+      if (formData.zeige_hausarzt) modelle.push('hausarzt');
+      if (formData.zeige_hmo) modelle.push('hmo');
 
-      return modelle.map(modell => {
+      modelle.forEach(modell => {
         const franschen = formData.nur_gleiche_franchise 
           ? [formData.aktuelle_franchise] 
           : FRANCHISEN;
 
-        return franschen.map(franchise => {
-          const praemie = berechnePraemie(kk, modell, franchise, alter, formData.kanton, formData.geschlecht, formData.plz, bagDaten);
+        franschen.forEach(franchise => {
+          const praemie = berechnePraemie(kk, modell, franchise, formData.kanton, bagDaten);
+          
+          // Nur Optionen mit verfügbaren BAG-Daten anzeigen
+          if (praemie === null) return;
+          
           const ersparnisMonat = aktuellePraemie - praemie;
           const ersparnisJahr = ersparnisMonat * 12;
           
-          return {
+          vergleiche.push({
             krankenkasse: kk,
             modell,
             franchise,
@@ -208,13 +211,12 @@ export default function KrankenkassenVergleich() {
             ist_aktuell: kk === formData.aktuelle_krankenkasse && 
                         modell === formData.aktuelles_modell && 
                         franchise === formData.aktuelle_franchise,
-          };
+          });
         });
-      }).flat();
-    }).flat();
+      });
+    });
 
     const sortiert = vergleiche
-      .filter(e => e.praemie_monatlich > 0)
       .sort((a, b) => b.ersparnis_jaehrlich - a.ersparnis_jaehrlich)
       .map((e, idx) => ({
         ...e,
@@ -236,7 +238,7 @@ export default function KrankenkassenVergleich() {
         modell_optimierung: formData.aktuelles_modell === 'standard'
           ? 'Ein Telmed- oder Hausarztmodell könnte Prämien sparen'
           : 'Modell ist gut gewählt',
-        empfehlung_text: `Durch einen Wechsel von ${formData.aktuelle_krankenkasse} ${MODELLE[formData.aktuelles_modell]} zu ${besteOption.krankenkasse} ${MODELLE[besteOption.modell]} können Sie CHF ${besteOption.ersparnis_jaehrlich.toLocaleString('de-CH')} pro Jahr sparen. Das entspricht einer monatlichen Ersparnis von CHF ${besteOption.ersparnis_monatlich.toFixed(2)}.`,
+        empfehlung_text: `Durch einen Wechsel zu ${besteOption.krankenkasse} ${MODELLE[besteOption.modell]} können Sie CHF ${besteOption.ersparnis_jaehrlich.toLocaleString('de-CH')} pro Jahr sparen.`,
         empfohlene_krankenkasse: besteOption.krankenkasse,
         empfohlenes_modell: besteOption.modell
       });
@@ -445,10 +447,10 @@ export default function KrankenkassenVergleich() {
             className="w-full" 
             size="lg"
             onClick={handleVergleich}
-            disabled={loading || !formData.kanton || !formData.aktuelle_krankenkasse}
+            disabled={loading || loadingDaten || !formData.kanton || !formData.aktuelle_krankenkasse || !bagDaten}
           >
-            {loading ? 'Berechne...' : 'Vergleich durchführen'}
-            {!loading && <ArrowRight className="w-4 h-4 ml-2" />}
+            {loadingDaten ? 'Lade BAG-Daten...' : loading ? 'Berechne...' : 'Vergleich durchführen'}
+            {!loading && !loadingDaten && <ArrowRight className="w-4 h-4 ml-2" />}
           </Button>
         </div>
 
