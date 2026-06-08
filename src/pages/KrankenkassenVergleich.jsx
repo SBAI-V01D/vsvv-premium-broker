@@ -36,7 +36,7 @@ const KANTONE = [
 
 const KRANKENKASSEN = [
   'CSS', 'Helsana', 'Sanitas', 'Swica', 'ÖKK', 'Visana', 'KPT', 'Groupe Mutuel', 'Concordia', 'Atupri',
-  'Klara', 'Assura', 'Intras', 'Remedica', 'Sympany', 'Hospitass', 'Agrisano', 'Santésuisse', 'bkk mobilise', 'Galenus'
+  'Assura', 'Intras', 'Sympany', 'Agrisano', 'bkk mobilise', 'Galenus'
 ];
 
 const MODELLE = {
