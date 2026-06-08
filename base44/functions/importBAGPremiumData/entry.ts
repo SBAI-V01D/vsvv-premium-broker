@@ -1,49 +1,104 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { read, utils } from 'npm:xlsx@0.18.5';
 
-/**
- * Lädt aktuelle BAG-Prämiendaten von der offiziellen API
- * Dokumentation: https://www.bag.admin.ch/bag/de/home/versicherungen/krankenversicherung/krankenversicherung-praemien/praemien-datenbank.html
- */
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
-    if (!user || user.role !== 'admin') {
+    if (user?.role !== 'admin') {
       return Response.json({ error: 'Nur Admins können BAG-Daten importieren' }, { status: 403 });
     }
 
-    // BAG API Endpoints (offizielle Quellen)
-    const currentYear = new Date().getFullYear();
-    const bagBaseUrl = 'https://www.priminfo.admin.ch/api';
+    const formData = await req.formData();
+    const file = formData.get('file');
+    const jahr = parseInt(formData.get('jahr') || '2026');
+    const kanton = formData.get('kanton');
+
+    if (!file) {
+      return Response.json({ error: 'Keine Datei hochgeladen' }, { status: 400 });
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const workbook = read(new Uint8Array(arrayBuffer));
     
-    // Hinweis: Die BAG API hat kein einfaches öffentliches REST-API
-    // Wir verwenden daher einen strukturierten Import-Ansatz:
-    // 1. Admin lädt CSV von BAG-Website herunter
-    // 2. CSV wird über import_data Funktion importiert
-    // 3. Diese Funktion validiert und strukturiert die Daten
-    
-    // Für automatische Updates: Periodischer Job der BAG-Datenbank abfragen
-    // Dies erfordert Web-Scraping oder Zugang zur BAG-Datenbank
-    
-    // Return Info über den Import-Prozess
+    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+      return Response.json({ error: 'Ungültige Excel-Datei' }, { status: 400 });
+    }
+
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const data = utils.sheet_to_json(sheet);
+
+    const importResults = {
+      gesamt: 0,
+      erfolgreich: 0,
+      fehler: 0,
+      details: [] as any[]
+    };
+
+    for (const row of data) {
+      importResults.gesamt++;
+      
+      try {
+        const praemienDaten = {
+          jahr,
+          krankenkasse: row['Krankenkasse'] || row['krankenkasse'] || row['Versicherer'],
+          kanton: kanton || row['Kanton'] || row['kanton'],
+          region: row['Region'] || row['region'] || 'Gesamt',
+          modell: mapModell(row['Modell'] || row['modell'] || 'Standard'),
+          franchise: parseInt(row['Franchise'] || row['franchise'] || '300'),
+          unfall: row['Unfall'] !== false && row['unfall'] !== false,
+          praemie_erwachsene: parseFloat(row['Praemie_Erwachsene'] || row['praemie_erwachsene'] || row['Monatspraemie'] || '0'),
+          praemie_kinder: parseFloat(row['Praemie_Kinder'] || row['praemie_kinder'] || '0'),
+          geschlecht: row['Geschlecht'] ? row['Geschlecht'].toLowerCase() : 'm',
+          alter_von: parseInt(row['Alter_Von'] || row['alter_von'] || '26'),
+          alter_bis: parseInt(row['Alter_Bis'] || row['alter_bis'] || '99'),
+          datenquelle: 'BAG',
+          importiert_am: new Date().toISOString(),
+          importiert_von: user.id,
+          gueltig_ab: `${jahr}-01-01`,
+          gueltig_bis: `${jahr}-12-31`,
+          aktiv: true
+        };
+
+        if (!praemienDaten.krankenkasse || !praemienDaten.praemie_erwachsene) {
+          throw new Error('Fehlende Pflichtfelder');
+        }
+
+        await base44.entities.BAGPraemienDaten.create(praemienDaten);
+        importResults.erfolgreich++;
+        
+      } catch (error) {
+        importResults.fehler++;
+        importResults.details.push({
+          row: importResults.gesamt,
+          error: error.message,
+          data: row
+        });
+      }
+    }
+
     return Response.json({
-      message: 'BAG-Datenimport bereit',
-      info: {
-        quelle: 'Bundesamt für Gesundheit (BAG)',
-        jahr: currentYear,
-        hinweis: 'Bitte laden Sie die aktuellen Prämiendaten als CSV von der BAG-Website herunter und importieren Sie diese über die Import-Funktion.',
-        bag_url: 'https://www.bag.admin.ch/bag/de/home/versicherungen/krankenversicherung/krankenversicherung-praemien/praemien-datenbank.html',
-        priminfo_url: 'https://www.priminfo.admin.ch/de/praemienrechner.html'
-      },
-      naechste_schritte: [
-        '1. CSV-Datei von BAG-Website herunterladen',
-        '2. Über Import-Funktion in BAGPraemienDaten-Entity laden',
-        '3. Daten werden automatisch validiert und strukturiert'
-      ]
+      success: true,
+      results: importResults,
+      message: `${importResults.erfolgreich} von ${importResults.gesamt} Datensätzen erfolgreich importiert`
     });
 
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
+
+function mapModell(modell: string): string {
+  const mapping: Record<string, string> = {
+    'Standard': 'standard',
+    'standard': 'standard',
+    'Telmed': 'telmed',
+    'telmed': 'telmed',
+    'Hausarzt': 'hausarzt',
+    'hausarzt': 'hausarzt',
+    'HMO': 'hmo',
+    'hmo': 'hmo'
+  };
+  return mapping[modell] || 'standard';
+}

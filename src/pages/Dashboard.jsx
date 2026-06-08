@@ -18,7 +18,7 @@ import {
   ChevronDown, ChevronUp, ChevronRight,
   TrendingUp, Target, RefreshCw,
   AlertTriangle, Zap, BarChart2, Building2, User, Plus, Loader2,
-  Users, FolderOpen, Wallet, Shield
+  Users, FolderOpen, Wallet, Shield, Icon
 } from 'lucide-react'
 
 import TodayDashboard from '@/components/dashboard/TodayDashboard'
@@ -26,6 +26,7 @@ import GlobalSearch from '@/components/layout/GlobalSearch'
 import MoneyDashboard from '@/components/dashboard/MoneyDashboard'
 import AiInsightsPanel from '@/components/intelligence/AiInsightsPanel'
 import BirthdaySection from '@/components/customers/BirthdaySection'
+import KrankenkassenCockpit from '@/components/krankenkassen/KrankenkassenCockpit'
 
 function KpiTile({ label, value, sub, icon: Icon, colorClass, bgClass, borderClass, onClick, urgent }) {
   return (
@@ -486,6 +487,9 @@ export default function Dashboard() {
 
           {/* Geburtstage */}
           <BirthdaySection />
+
+          {/* Krankenkassen Cockpit */}
+          <KrankenkassenCockpit />
 
           {/* AI Intelligence Panel */}
           <AiInsightsPanel />
