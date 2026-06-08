@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Search, User, Building2, X } from 'lucide-react';
+import { Search, User, Building2, X, FileText, ClipboardList } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 function useDebounce(value, delay) {
@@ -30,36 +30,57 @@ export default function GlobalSearch({ collapsed, light = false }) {
     refetchOnWindowFocus: false,
   });
 
-  const results = useMemo(() => {
-    if (!debouncedQuery || debouncedQuery.length < 3) return [];
+  const { data: contracts = [] } = useQuery({
+    queryKey: ['sidebar_contracts_slim'],
+    queryFn: () => base44.entities.Contract.filter({ archived: false }, '-created_date', 500),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: applications = [] } = useQuery({
+    queryKey: ['sidebar_applications_slim'],
+    queryFn: () => base44.entities.Application.filter({ archived: false }, '-created_date', 300),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  const { customerResults, contractResults, applicationResults } = useMemo(() => {
+    if (!debouncedQuery || debouncedQuery.length < 3) return { customerResults: [], contractResults: [], applicationResults: [] };
     const q = debouncedQuery.toLowerCase();
-    return customers
-      .filter(c => {
-        const firstName = (c.first_name || '').toLowerCase();
-        const lastName = (c.last_name || '').toLowerCase();
-        const fullName = `${firstName} ${lastName}`;
-        const company = (c.company_name || '').toLowerCase();
-        const email = (c.email || '').toLowerCase();
-        const phone = ((c.phone || '') + (c.mobile || '')).replace(/\s/g, '');
-        const num = (c.customer_number || '').toLowerCase();
-        return (
-          firstName.includes(q) ||
-          lastName.includes(q) ||
-          company.includes(q) ||
-          fullName.includes(q) ||
-          email.startsWith(q) ||
-          phone.includes(q) ||
-          num.startsWith(q)
-        );
-      })
-      .slice(0, 12);
-  }, [debouncedQuery, customers]);
 
-  const privateCustomers = results.filter(c => c.customer_type !== 'business');
-  const businessCustomers = results.filter(c => c.customer_type === 'business');
-  const flatResults = [...privateCustomers, ...businessCustomers];
+    const customerResults = customers.filter(c => {
+      const fullName = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
+      return (
+        fullName.includes(q) ||
+        (c.company_name || '').toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().startsWith(q) ||
+        ((c.phone || '') + (c.mobile || '')).replace(/\s/g, '').includes(q) ||
+        (c.customer_number || '').toLowerCase().startsWith(q)
+      );
+    }).slice(0, 8);
 
-  useEffect(() => { setActiveIdx(0); }, [results]);
+    const contractResults = contracts.filter(c =>
+      (c.customer_name || '').toLowerCase().includes(q) ||
+      (c.insurer || '').toLowerCase().includes(q) ||
+      (c.policy_number || '').toLowerCase().includes(q) ||
+      (c.product || '').toLowerCase().includes(q)
+    ).slice(0, 4);
+
+    const applicationResults = applications.filter(a =>
+      (a.customer_name || '').toLowerCase().includes(q) ||
+      (a.insurer || '').toLowerCase().includes(q) ||
+      (a.product || '').toLowerCase().includes(q)
+    ).slice(0, 4);
+
+    return { customerResults, contractResults, applicationResults };
+  }, [debouncedQuery, customers, contracts, applications]);
+
+  const privateCustomers = customerResults.filter(c => c.customer_type !== 'business');
+  const businessCustomers = customerResults.filter(c => c.customer_type === 'business');
+  const flatResults = [...privateCustomers, ...businessCustomers, ...contractResults, ...applicationResults];
+  const hasResults = privateCustomers.length > 0 || businessCustomers.length > 0 || contractResults.length > 0 || applicationResults.length > 0;
+
+  useEffect(() => { setActiveIdx(0); }, [flatResults]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -83,8 +104,10 @@ export default function GlobalSearch({ collapsed, light = false }) {
     return () => document.removeEventListener('keydown', handler);
   }, []);
 
-  const goTo = (customer) => {
-    navigate(`/kunden/${customer.id}/360`);
+  const goTo = (item, type = 'customer') => {
+    if (type === 'contract') navigate(`/kunden/${item.customer_id}`);
+    else if (type === 'application') navigate(`/antraege`);
+    else navigate(`/kunden/${item.id}/360`);
     setQuery('');
     setOpen(false);
     inputRef.current?.blur();
@@ -113,7 +136,7 @@ export default function GlobalSearch({ collapsed, light = false }) {
     return c.email || c.phone || '';
   };
 
-  const showDropdown = open && debouncedQuery.length >= 3;
+  const showDropdown = open && debouncedQuery.length >= 3 && hasResults !== undefined;
 
   return (
     <div className={cn('relative', light ? '' : 'px-3 py-2')} ref={dropdownRef}>
@@ -161,73 +184,78 @@ export default function GlobalSearch({ collapsed, light = false }) {
               : '0 8px 32px -4px rgba(0,0,0,0.4)',
           }}
         >
-          {flatResults.length === 0 ? (
+          {!hasResults ? (
             <div className={cn('px-4 py-3 text-[11px]', light ? 'text-muted-foreground' : 'text-[hsl(var(--sidebar-item-icon))]')}>
               Keine Ergebnisse
             </div>
           ) : (
-            <div className="py-1 max-h-72 overflow-y-auto scrollbar-none">
+            <div className="py-1 max-h-80 overflow-y-auto scrollbar-none">
               {privateCustomers.length > 0 && (
                 <>
-                  <p className={cn('px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-widest', light ? 'text-muted-foreground' : 'text-[hsl(var(--sidebar-label))]')}>
-                    Privatkunden
-                  </p>
-                  {privateCustomers.map(c => {
-                    const idx = flatResults.indexOf(c);
-                    return (
-                      <button
-                        key={c.id}
-                        onMouseEnter={() => setActiveIdx(idx)}
-                        onMouseDown={() => goTo(c)}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors',
-                          activeIdx === idx
-                            ? light ? 'bg-primary/8' : 'bg-[hsl(var(--primary))/0.2]'
-                            : light ? 'hover:bg-blue-50/60' : 'hover:bg-[hsl(220,30%,22%)]'
-                        )}
-                      >
-                        <div className={cn('w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0', light ? 'bg-blue-50' : 'bg-blue-500/20')}>
-                          <User className={cn('w-3 h-3', light ? 'text-blue-500' : 'text-blue-400')} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className={cn('text-[12px] font-medium truncate', light ? 'text-foreground' : 'text-white')}>{getCustomerLabel(c)}</p>
-                          {getCustomerSub(c) && <p className={cn('text-[10px] truncate', light ? 'text-muted-foreground' : 'text-[hsl(var(--sidebar-item-icon))]')}>{getCustomerSub(c)}</p>}
-                        </div>
-                      </button>
-                    );
-                  })}
+                  <p className={cn('px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-widest', light ? 'text-muted-foreground' : 'text-[hsl(var(--sidebar-label))]')}>Privatkunden</p>
+                  {privateCustomers.map(c => (
+                    <button key={c.id} onMouseEnter={() => setActiveIdx(flatResults.indexOf(c))} onMouseDown={() => goTo(c, 'customer')}
+                      className={cn('w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors', activeIdx === flatResults.indexOf(c) ? (light ? 'bg-blue-50' : 'bg-[hsl(220,30%,22%)]') : (light ? 'hover:bg-blue-50/60' : 'hover:bg-[hsl(220,30%,22%)]'))}>
+                      <div className={cn('w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0', light ? 'bg-blue-50' : 'bg-blue-500/20')}>
+                        <User className={cn('w-3 h-3', light ? 'text-blue-500' : 'text-blue-400')} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className={cn('text-[12px] font-medium truncate', light ? 'text-foreground' : 'text-white')}>{getCustomerLabel(c)}</p>
+                        {getCustomerSub(c) && <p className={cn('text-[10px] truncate', light ? 'text-muted-foreground' : 'text-[hsl(var(--sidebar-item-icon))]')}>{getCustomerSub(c)}</p>}
+                      </div>
+                    </button>
+                  ))}
                 </>
               )}
-
               {businessCustomers.length > 0 && (
                 <>
-                  <p className={cn('px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-widest', light ? 'text-muted-foreground' : 'text-[hsl(var(--sidebar-label))]')}>
-                    Unternehmen
-                  </p>
-                  {businessCustomers.map(c => {
-                    const idx = flatResults.indexOf(c);
-                    return (
-                      <button
-                        key={c.id}
-                        onMouseEnter={() => setActiveIdx(idx)}
-                        onMouseDown={() => goTo(c)}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors',
-                          activeIdx === idx
-                            ? light ? 'bg-primary/8' : 'bg-[hsl(var(--primary))/0.2]'
-                            : light ? 'hover:bg-violet-50/60' : 'hover:bg-[hsl(220,30%,22%)]'
-                        )}
-                      >
-                        <div className={cn('w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0', light ? 'bg-violet-50' : 'bg-violet-500/20')}>
-                          <Building2 className={cn('w-3 h-3', light ? 'text-violet-500' : 'text-violet-400')} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className={cn('text-[12px] font-medium truncate', light ? 'text-foreground' : 'text-white')}>{getCustomerLabel(c)}</p>
-                          {getCustomerSub(c) && <p className={cn('text-[10px] truncate', light ? 'text-muted-foreground' : 'text-[hsl(var(--sidebar-item-icon))]')}>{getCustomerSub(c)}</p>}
-                        </div>
-                      </button>
-                    );
-                  })}
+                  <p className={cn('px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-widest', light ? 'text-muted-foreground' : 'text-[hsl(var(--sidebar-label))]')}>Unternehmen</p>
+                  {businessCustomers.map(c => (
+                    <button key={c.id} onMouseEnter={() => setActiveIdx(flatResults.indexOf(c))} onMouseDown={() => goTo(c, 'customer')}
+                      className={cn('w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors', activeIdx === flatResults.indexOf(c) ? (light ? 'bg-violet-50' : 'bg-[hsl(220,30%,22%)]') : (light ? 'hover:bg-violet-50/60' : 'hover:bg-[hsl(220,30%,22%)]'))}>
+                      <div className={cn('w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0', light ? 'bg-violet-50' : 'bg-violet-500/20')}>
+                        <Building2 className={cn('w-3 h-3', light ? 'text-violet-500' : 'text-violet-400')} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className={cn('text-[12px] font-medium truncate', light ? 'text-foreground' : 'text-white')}>{getCustomerLabel(c)}</p>
+                        {getCustomerSub(c) && <p className={cn('text-[10px] truncate', light ? 'text-muted-foreground' : 'text-[hsl(var(--sidebar-item-icon))]')}>{getCustomerSub(c)}</p>}
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
+              {contractResults.length > 0 && (
+                <>
+                  <p className={cn('px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-widest border-t mt-1', light ? 'text-muted-foreground border-border' : 'text-[hsl(var(--sidebar-label))] border-white/10')}>Verträge</p>
+                  {contractResults.map(c => (
+                    <button key={c.id} onMouseDown={() => goTo(c, 'contract')}
+                      className={cn('w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors', light ? 'hover:bg-emerald-50/60' : 'hover:bg-[hsl(220,30%,22%)]')}>
+                      <div className={cn('w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0', light ? 'bg-emerald-50' : 'bg-emerald-500/20')}>
+                        <FileText className={cn('w-3 h-3', light ? 'text-emerald-600' : 'text-emerald-400')} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className={cn('text-[12px] font-medium truncate', light ? 'text-foreground' : 'text-white')}>{c.customer_name} · {c.insurer}</p>
+                        <p className={cn('text-[10px] truncate', light ? 'text-muted-foreground' : 'text-[hsl(var(--sidebar-item-icon))]')}>{c.policy_number || c.product || 'Vertrag'}</p>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
+              {applicationResults.length > 0 && (
+                <>
+                  <p className={cn('px-3 pt-2 pb-1 text-[9px] font-bold uppercase tracking-widest border-t mt-1', light ? 'text-muted-foreground border-border' : 'text-[hsl(var(--sidebar-label))] border-white/10')}>Anträge</p>
+                  {applicationResults.map(a => (
+                    <button key={a.id} onMouseDown={() => goTo(a, 'application')}
+                      className={cn('w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors', light ? 'hover:bg-amber-50/60' : 'hover:bg-[hsl(220,30%,22%)]')}>
+                      <div className={cn('w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0', light ? 'bg-amber-50' : 'bg-amber-500/20')}>
+                        <ClipboardList className={cn('w-3 h-3', light ? 'text-amber-600' : 'text-amber-400')} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className={cn('text-[12px] font-medium truncate', light ? 'text-foreground' : 'text-white')}>{a.customer_name} · {a.insurer}</p>
+                        <p className={cn('text-[10px] truncate', light ? 'text-muted-foreground' : 'text-[hsl(var(--sidebar-item-icon))]')}>{a.product || 'Antrag'}</p>
+                      </div>
+                    </button>
+                  ))}
                 </>
               )}
             </div>

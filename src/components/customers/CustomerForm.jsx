@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { base44 } from '@/api/base44Client'
+import { useAuth } from '@/lib/AuthContext'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -140,6 +141,8 @@ const COUNTRIES = [
 ]
 
 export default function CustomerForm({ customer, primaryCustomers = [], onSave, onCancel, saving }) {
+  const { user } = useAuth()
+
   const normalizeCustomer = (c) => {
     if (!c) return {
       first_name: '', last_name: '', email: '', phone: '', mobile: '',
@@ -261,6 +264,14 @@ export default function CustomerForm({ customer, primaryCustomers = [], onSave, 
      queryKey: ['advisors'],
      queryFn: () => base44.entities.Advisor.filter({ status: 'active' }),
    })
+
+  // Auto-fill Berater aus eingeloggtem User (nur bei neuen Kunden)
+  useEffect(() => {
+    if (!customer?.id && user && advisors.length > 0 && !form.advisor_id) {
+      const match = advisors.find(a => a.email === user.email)
+      if (match) setForm(prev => ({ ...prev, advisor_id: match.id }))
+    }
+  }, [advisors, user, customer?.id])
 
   const isNewCustomer = !customer?.id
   const [advisorError, setAdvisorError] = useState('')

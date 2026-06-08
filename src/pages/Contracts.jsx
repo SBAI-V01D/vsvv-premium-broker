@@ -25,6 +25,7 @@ export default function Contracts() {
   const [editing, setEditing] = useState(null)
   const [search, setSearch] = useState('')
   const [filterReviewOnly, setFilterReviewOnly] = useState(false)
+  const [filterYear, setFilterYear] = useState('all')
   const [statusChanging, setStatusChanging] = useState(null)
   const [expandedDocs, setExpandedDocs] = useState(null)
   const [expandedCancellation, setExpandedCancellation] = useState(null)
@@ -98,8 +99,15 @@ export default function Contracts() {
 
   const getCustomer = (id) => customers.find(c => c.id === id)
 
+  const currentYear = new Date().getFullYear()
+  const availableYears = [...new Set(contracts.map(c => c.end_date ? new Date(c.end_date).getFullYear() : null).filter(y => y && y >= currentYear && y <= currentYear + 5))].sort()
+
   const filtered = contracts.filter(c => {
     if (filterReviewOnly && !c.requires_review) return false
+    if (filterYear !== 'all') {
+      if (!c.end_date || c.end_date.startsWith('9999')) return false
+      if (new Date(c.end_date).getFullYear() !== parseInt(filterYear)) return false
+    }
     if (!search.trim()) return true
     const customer = getCustomer(c.customer_id)
     const customerFullName = customer ? `${customer.first_name} ${customer.last_name}` : ''
@@ -210,7 +218,19 @@ export default function Contracts() {
       </div>
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
 
-      <FilterBar search={search} onSearchChange={setSearch} placeholder="Suche (Kunde, Versicherer, Police...)" />
+      <div className="flex flex-wrap items-center gap-2">
+        <FilterBar search={search} onSearchChange={setSearch} placeholder="Suche (Kunde, Versicherer, Police...)" />
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button onClick={() => setFilterYear('all')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${filterYear === 'all' ? 'bg-primary text-white border-primary' : 'bg-card text-muted-foreground border-border hover:bg-muted/40'}`}>Alle</button>
+          {availableYears.map(year => (
+            <button key={year} onClick={() => setFilterYear(filterYear === String(year) ? 'all' : String(year))}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${filterYear === String(year) ? 'bg-primary text-white border-primary' : 'bg-card text-muted-foreground border-border hover:bg-muted/40'}`}>
+              Ablauf {year}
+              <span className="ml-1.5 opacity-70">({contracts.filter(c => c.end_date && !c.end_date.startsWith('9999') && new Date(c.end_date).getFullYear() === year).length})</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {reviewCount > 0 && (
         <div className="px-0 mb-3">
