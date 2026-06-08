@@ -7,108 +7,57 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, User, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const SWISS_ZIP_CODES = {
-  '8000': { ort: 'Zürich', kanton: 'ZH' }, '8001': { ort: 'Zürich', kanton: 'ZH' }, '8002': { ort: 'Zürich', kanton: 'ZH' },
-  '8003': { ort: 'Zürich', kanton: 'ZH' }, '8004': { ort: 'Zürich', kanton: 'ZH' }, '8005': { ort: 'Zürich', kanton: 'ZH' },
-  '8006': { ort: 'Zürich', kanton: 'ZH' }, '8008': { ort: 'Zürich', kanton: 'ZH' }, '8032': { ort: 'Zürich', kanton: 'ZH' },
-  '8037': { ort: 'Zürich', kanton: 'ZH' }, '8038': { ort: 'Zürich', kanton: 'ZH' }, '8041': { ort: 'Zürich', kanton: 'ZH' },
-  '8044': { ort: 'Zürich', kanton: 'ZH' }, '8045': { ort: 'Zürich', kanton: 'ZH' }, '8046': { ort: 'Zürich', kanton: 'ZH' },
-  '8047': { ort: 'Zürich', kanton: 'ZH' }, '8048': { ort: 'Zürich', kanton: 'ZH' }, '8049': { ort: 'Zürich', kanton: 'ZH' },
-  '8050': { ort: 'Zürich', kanton: 'ZH' }, '8051': { ort: 'Zürich', kanton: 'ZH' }, '8052': { ort: 'Zürich', kanton: 'ZH' },
-  '8053': { ort: 'Zürich', kanton: 'ZH' }, '8055': { ort: 'Zürich', kanton: 'ZH' }, '8057': { ort: 'Zürich', kanton: 'ZH' },
-  '8063': { ort: 'Zürich', kanton: 'ZH' }, '8064': { ort: 'Zürich', kanton: 'ZH' }, '8092': { ort: 'Zürich', kanton: 'ZH' },
-  '3000': { ort: 'Bern', kanton: 'BE' }, '3001': { ort: 'Bern', kanton: 'BE' }, '3003': { ort: 'Bern', kanton: 'BE' },
-  '3004': { ort: 'Bern', kanton: 'BE' }, '3005': { ort: 'Bern', kanton: 'BE' }, '3006': { ort: 'Bern', kanton: 'BE' },
-  '3007': { ort: 'Bern', kanton: 'BE' }, '3008': { ort: 'Bern', kanton: 'BE' }, '3010': { ort: 'Bern', kanton: 'BE' },
-  '3011': { ort: 'Bern', kanton: 'BE' }, '3012': { ort: 'Bern', kanton: 'BE' }, '3013': { ort: 'Bern', kanton: 'BE' },
-  '3014': { ort: 'Bern', kanton: 'BE' }, '3015': { ort: 'Bern', kanton: 'BE' }, '3018': { ort: 'Bern', kanton: 'BE' },
-  '3019': { ort: 'Bern', kanton: 'BE' }, '3027': { ort: 'Bern', kanton: 'BE' }, '3028': { ort: 'Bern', kanton: 'BE' },
-  '4000': { ort: 'Basel', kanton: 'BS' }, '4001': { ort: 'Basel', kanton: 'BS' }, '4002': { ort: 'Basel', kanton: 'BS' },
-  '4003': { ort: 'Basel', kanton: 'BS' }, '4004': { ort: 'Basel', kanton: 'BS' }, '4005': { ort: 'Basel', kanton: 'BS' },
-  '4006': { ort: 'Basel', kanton: 'BS' }, '4007': { ort: 'Basel', kanton: 'BS' }, '4008': { ort: 'Basel', kanton: 'BS' },
-  '4009': { ort: 'Basel', kanton: 'BS' }, '4010': { ort: 'Basel', kanton: 'BS' }, '4011': { ort: 'Basel', kanton: 'BS' },
-  '4012': { ort: 'Basel', kanton: 'BS' }, '4013': { ort: 'Basel', kanton: 'BS' }, '4014': { ort: 'Basel', kanton: 'BS' },
-  '4015': { ort: 'Basel', kanton: 'BS' }, '4016': { ort: 'Basel', kanton: 'BS' }, '4017': { ort: 'Basel', kanton: 'BS' },
-  '4018': { ort: 'Basel', kanton: 'BS' }, '4019': { ort: 'Basel', kanton: 'BS' }, '4020': { ort: 'Basel', kanton: 'BS' },
-  '4021': { ort: 'Basel', kanton: 'BS' }, '4022': { ort: 'Basel', kanton: 'BS' }, '4023': { ort: 'Basel', kanton: 'BS' },
-  '4024': { ort: 'Basel', kanton: 'BS' }, '4025': { ort: 'Basel', kanton: 'BS' }, '4026': { ort: 'Basel', kanton: 'BS' },
-  '4027': { ort: 'Basel', kanton: 'BS' }, '4028': { ort: 'Basel', kanton: 'BS' }, '4029': { ort: 'Basel', kanton: 'BS' },
-  '4030': { ort: 'Basel', kanton: 'BS' }, '4031': { ort: 'Basel', kanton: 'BS' }, '4051': { ort: 'Basel', kanton: 'BS' },
-  '4052': { ort: 'Basel', kanton: 'BS' }, '4053': { ort: 'Basel', kanton: 'BS' }, '4054': { ort: 'Basel', kanton: 'BS' },
-  '4055': { ort: 'Basel', kanton: 'BS' }, '4056': { ort: 'Basel', kanton: 'BS' }, '4057': { ort: 'Basel', kanton: 'BS' },
-  '4058': { ort: 'Basel', kanton: 'BS' }, '4059': { ort: 'Basel', kanton: 'BS' }, '4100': { ort: 'Basel', kanton: 'BS' },
-  '6000': { ort: 'Luzern', kanton: 'LU' }, '6002': { ort: 'Luzern', kanton: 'LU' }, '6003': { ort: 'Luzern', kanton: 'LU' },
-  '6004': { ort: 'Luzern', kanton: 'LU' }, '6005': { ort: 'Luzern', kanton: 'LU' }, '6006': { ort: 'Luzern', kanton: 'LU' },
-  '6010': { ort: 'Luzern', kanton: 'LU' }, '6014': { ort: 'Luzern', kanton: 'LU' },
-  '9000': { ort: 'St. Gallen', kanton: 'SG' }, '9001': { ort: 'St. Gallen', kanton: 'SG' }, '9004': { ort: 'St. Gallen', kanton: 'SG' },
-  '9006': { ort: 'St. Gallen', kanton: 'SG' }, '9007': { ort: 'St. Gallen', kanton: 'SG' }, '9008': { ort: 'St. Gallen', kanton: 'SG' },
-  '9010': { ort: 'St. Gallen', kanton: 'SG' }, '9011': { ort: 'St. Gallen', kanton: 'SG' }, '9014': { ort: 'St. Gallen', kanton: 'SG' },
-  '9015': { ort: 'St. Gallen', kanton: 'SG' }, '9016': { ort: 'St. Gallen', kanton: 'SG' }, '9020': { ort: 'St. Gallen', kanton: 'SG' },
-  '9022': { ort: 'St. Gallen', kanton: 'SG' }, '9023': { ort: 'St. Gallen', kanton: 'SG' }, '9024': { ort: 'St. Gallen', kanton: 'SG' },
-  '9026': { ort: 'St. Gallen', kanton: 'SG' }, '9027': { ort: 'St. Gallen', kanton: 'SG' }, '9030': { ort: 'St. Gallen', kanton: 'SG' },
-  '9032': { ort: 'St. Gallen', kanton: 'SG' }, '9034': { ort: 'St. Gallen', kanton: 'SG' }, '9036': { ort: 'St. Gallen', kanton: 'SG' },
-  '9037': { ort: 'St. Gallen', kanton: 'SG' }, '9038': { ort: 'St. Gallen', kanton: 'SG' }, '9039': { ort: 'St. Gallen', kanton: 'SG' },
-  '9042': { ort: 'St. Gallen', kanton: 'SG' }, '9044': { ort: 'St. Gallen', kanton: 'SG' }, '9046': { ort: 'St. Gallen', kanton: 'SG' },
-  '9047': { ort: 'St. Gallen', kanton: 'SG' }, '9048': { ort: 'St. Gallen', kanton: 'SG' }, '9049': { ort: 'St. Gallen', kanton: 'SG' },
-  '9050': { ort: 'St. Gallen', kanton: 'SG' }, '9052': { ort: 'St. Gallen', kanton: 'SG' }, '9053': { ort: 'St. Gallen', kanton: 'SG' },
-  '9054': { ort: 'St. Gallen', kanton: 'SG' }, '9055': { ort: 'St. Gallen', kanton: 'SG' }, '9056': { ort: 'St. Gallen', kanton: 'SG' },
-  '9057': { ort: 'St. Gallen', kanton: 'SG' }, '9058': { ort: 'St. Gallen', kanton: 'SG' }, '9059': { ort: 'St. Gallen', kanton: 'SG' },
-  '9062': { ort: 'St. Gallen', kanton: 'SG' }, '9063': { ort: 'St. Gallen', kanton: 'SG' }, '9064': { ort: 'St. Gallen', kanton: 'SG' },
-  '9065': { ort: 'St. Gallen', kanton: 'SG' }, '9066': { ort: 'St. Gallen', kanton: 'SG' }, '9067': { ort: 'St. Gallen', kanton: 'SG' },
-  '9500': { ort: 'Wil', kanton: 'SG' }, '9501': { ort: 'Wil', kanton: 'SG' }, '9503': { ort: 'Wil', kanton: 'SG' },
-  '9504': { ort: 'Wil', kanton: 'SG' }, '9505': { ort: 'Wil', kanton: 'SG' }, '9506': { ort: 'Wil', kanton: 'SG' },
-  '9507': { ort: 'Wil', kanton: 'SG' }, '9508': { ort: 'Wil', kanton: 'SG' }, '9510': { ort: 'Wil', kanton: 'SG' },
-  '9512': { ort: 'Wil', kanton: 'SG' }, '9514': { ort: 'Wil', kanton: 'SG' }, '9515': { ort: 'Wil', kanton: 'SG' },
-  '9522': { ort: 'Wil', kanton: 'SG' }, '9523': { ort: 'Wil', kanton: 'SG' }, '9524': { ort: 'Wil', kanton: 'SG' },
-  '9525': { ort: 'Wil', kanton: 'SG' }, '9526': { ort: 'Wil', kanton: 'SG' }, '9527': { ort: 'Wil', kanton: 'SG' },
-  '9532': { ort: 'Wil', kanton: 'SG' }, '9533': { ort: 'Wil', kanton: 'SG' }, '9534': { ort: 'Wil', kanton: 'SG' },
-  '9535': { ort: 'Wil', kanton: 'SG' }, '9536': { ort: 'Wil', kanton: 'SG' }, '9542': { ort: 'Wil', kanton: 'SG' },
-  '9543': { ort: 'Wil', kanton: 'SG' }, '9544': { ort: 'Wil', kanton: 'SG' }, '9545': { ort: 'Wil', kanton: 'SG' },
-  '9546': { ort: 'Wil', kanton: 'SG' }, '9547': { ort: 'Wil', kanton: 'SG' }, '9548': { ort: 'Wil', kanton: 'SG' },
-  '9551': { ort: 'Wil', kanton: 'SG' }, '9552': { ort: 'Wil', kanton: 'SG' }, '9553': { ort: 'Wil', kanton: 'SG' },
-  '9554': { ort: 'Wil', kanton: 'SG' }, '9555': { ort: 'Wil', kanton: 'SG' }, '9556': { ort: 'Wil', kanton: 'SG' },
-  '9557': { ort: 'Wil', kanton: 'SG' }, '9562': { ort: 'Wil', kanton: 'SG' }, '9564': { ort: 'Wil', kanton: 'SG' },
-  '9565': { ort: 'Wil', kanton: 'SG' }, '9600': { ort: 'Wil', kanton: 'SG' }, '9601': { ort: 'Wil', kanton: 'SG' },
-  '9602': { ort: 'Wil', kanton: 'SG' }, '9604': { ort: 'Wil', kanton: 'SG' }, '9605': { ort: 'Wil', kanton: 'SG' },
-  '9606': { ort: 'Wil', kanton: 'SG' }, '9607': { ort: 'Wil', kanton: 'SG' }, '9608': { ort: 'Wil', kanton: 'SG' },
-  '9612': { ort: 'Wil', kanton: 'SG' }, '9613': { ort: 'Wil', kanton: 'SG' }, '9614': { ort: 'Wil', kanton: 'SG' },
-  '9615': { ort: 'Wil', kanton: 'SG' }, '9616': { ort: 'Wil', kanton: 'SG' }, '9620': { ort: 'Wil', kanton: 'SG' },
-  '9621': { ort: 'Wil', kanton: 'SG' }, '9622': { ort: 'Wil', kanton: 'SG' }, '9623': { ort: 'Wil', kanton: 'SG' },
-  '9624': { ort: 'Wil', kanton: 'SG' }, '9625': { ort: 'Wil', kanton: 'SG' }, '9630': { ort: 'Wil', kanton: 'SG' },
-  '9631': { ort: 'Wil', kanton: 'SG' }, '9632': { ort: 'Wil', kanton: 'SG' }, '9633': { ort: 'Wil', kanton: 'SG' },
-  '9634': { ort: 'Wil', kanton: 'SG' }, '9635': { ort: 'Wil', kanton: 'SG' }, '9636': { ort: 'Wil', kanton: 'SG' },
-};
+import { SWISS_ZIP_CODES } from '@/lib/swissZipCodes';
 
 const KANTONE = [
   'ZH', 'BE', 'LU', 'UR', 'SZ', 'OW', 'NW', 'GL', 'ZG', 'FR', 'SO', 'BS', 'BL', 'SH', 'AR', 'AI', 'SG', 'GR', 'AG', 'TG', 'TI', 'VD', 'VS', 'NE', 'GE', 'JU'
 ];
 
 export default function CustomerSelector({ formData, setFormData, selectedCustomer, setSelectedCustomer }) {
+  const { data: customers = [] } = useQuery({
+    queryKey: ['krankenkassen_customer_all'],
+    queryFn: () => base44.entities.Customer.filter({ archived: false }, 'last_name', 1000),
+    staleTime: 5 * 60 * 1000,
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const inputRef = React.useRef(null);
 
-  const { data: customers = [] } = useQuery({
-    queryKey: ['krankenkassen_customer_all'],
-    queryFn: () => base44.entities.Customer.filter({ archived: false }, 'last_name', 500),
-    staleTime: 5 * 60 * 1000,
-  });
-
   const filteredCustomers = customers.filter(c => {
-    if (!searchQuery) return [];
-    const q = searchQuery.toLowerCase();
-    const fullName = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
-    return fullName.includes(q) || (c.email || '').toLowerCase().includes(q);
+    if (!searchQuery || searchQuery.length < 2) return [];
+    const q = searchQuery.toLowerCase().trim();
+    const firstName = (c.first_name || '').toLowerCase();
+    const lastName = (c.last_name || '').toLowerCase();
+    const email = (c.email || '').toLowerCase();
+    const customerNumber = (c.customer_number || '').toLowerCase();
+    const company = (c.company_name || '').toLowerCase();
+    
+    // Suche in: Vorname, Nachname, Firma, Kundennummer, E-Mail
+    const matchesFirstName = firstName.startsWith(q) || firstName.includes(q);
+    const matchesLastName = lastName.startsWith(q) || lastName.includes(q);
+    const matchesEmail = email.includes(q);
+    const matchesCustomerNumber = customerNumber.includes(q);
+    const matchesCompany = company.includes(q);
+    
+    return matchesFirstName || matchesLastName || matchesEmail || matchesCustomerNumber || matchesCompany;
   }).sort((a, b) => {
-    const q = searchQuery.toLowerCase();
-    const aFullName = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase();
-    const bFullName = `${b.first_name || ''} ${b.last_name || ''}`.toLowerCase();
-    const aStartsWith = aFullName.startsWith(q) || (a.first_name || '').toLowerCase().startsWith(q);
-    const bStartsWith = bFullName.startsWith(q) || (b.first_name || '').toLowerCase().startsWith(q);
+    const q = searchQuery.toLowerCase().trim();
+    const aFirstName = (a.first_name || '').toLowerCase();
+    const aLastName = (a.last_name || '').toLowerCase();
+    const bFirstName = (b.first_name || '').toLowerCase();
+    const bLastName = (b.last_name || '').toLowerCase();
+    
+    const aStartsWith = aFirstName.startsWith(q) || aLastName.startsWith(q);
+    const bStartsWith = bFirstName.startsWith(q) || bLastName.startsWith(q);
+    
+    // Priorität: Beginnt mit Suchbegriff > Enthält Suchbegriff
     if (aStartsWith && !bStartsWith) return -1;
     if (!aStartsWith && bStartsWith) return 1;
-    return aFullName.indexOf(q) - bFullName.indexOf(q);
+    
+    // Sekundäre Sortierung: Alphabetisch
+    const aFullName = `${aFirstName} ${aLastName}`;
+    const bFullName = `${bFirstName} ${bLastName}`;
+    return aFullName.localeCompare(bFullName);
   });
 
   const handleSelectCustomer = (customer) => {
