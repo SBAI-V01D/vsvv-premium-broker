@@ -13,6 +13,7 @@ import {
   Sparkles,
   Upload
 } from 'lucide-react';
+import BAGDatenImport from './BAGDatenImport';
 
 export default function KrankenkassenCockpit() {
   const { data: stats, isLoading } = useQuery({
@@ -138,12 +139,7 @@ export default function KrankenkassenCockpit() {
               Neuer Vergleich
             </a>
           </Button>
-          <Button variant="outline" size="sm" asChild>
-            <a href="/admin/bag-daten">
-              <Upload className="w-3.5 h-3.5 mr-2" />
-              BAG-Daten importieren
-            </a>
-          </Button>
+          <BAGDatenImport />
         </div>
       </CardContent>
     </Card>
