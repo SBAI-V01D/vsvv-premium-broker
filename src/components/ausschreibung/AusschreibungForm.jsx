@@ -6,9 +6,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { X, Search, ChevronDown } from 'lucide-react';
+import { Search, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useQuery } from '@tanstack/react-query';
+import SpartenFormulare from './SpartenFormulare';
 
 const SPARTEN = [
   'Motorfahrzeug','Motorrad','Oldtimer','Flotte','Haushalt','Privathaftpflicht',
@@ -47,10 +48,9 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
     titel: '', customer_id: '', customer_name: '', ansprechpartner: '',
     versicherungsbereich: 'privat', sparten: [], status: 'entwurf',
     prioritaet: 'mittel', fristdatum: '', bemerkungen: '', laufende_praemie: '',
-    broker_name: '',
+    broker_name: '', risiko_daten: {},
     ...ausschreibung,
   });
-  const [spartInput, setSpartInput] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -210,12 +210,12 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
           ))}
         </div>
         {form.sparten.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
-            {form.sparten.map(s => (
-              <Badge key={s} variant="secondary" className="gap-1">
-                {s} <X className="w-3 h-3 cursor-pointer" onClick={() => toggleSparte(s)} />
-              </Badge>
-            ))}
+          <div className="mt-4">
+            <SpartenFormulare
+              sparten={form.sparten}
+              data={form.risiko_daten || {}}
+              onChange={d => set('risiko_daten', d)}
+            />
           </div>
         )}
       </div>
