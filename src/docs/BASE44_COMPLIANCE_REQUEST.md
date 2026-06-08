@@ -1,6 +1,6 @@
 # Sicherheits- und Compliance-Anfrage für Versicherungsdaten (Schweiz)
 
-**Absender:** [Dein Name/Firma]  
+**Absender:** VSV ManaGE  
 **Datum:** 2026-06-08  
 **Betreff:** Compliance-Anfrage für CRM-System im Versicherungsbereich (FINMA-relevant)
 
@@ -134,7 +134,7 @@ Freundliche Grüsse
 [Deine Position]  
 [Firma]  
 [Kontakt]
-
+pETER mARTIN aDAM, gESCHÄFTSFÜHRER
 ---
 
 ## Anlage: Geplante Datenkategorien
