@@ -35,6 +35,7 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
   const [sparteSearch, setSparteSearch] = useState('');
   const [sparteDropdownOpen, setSparteDropdownOpen] = useState(false);
   const sparteRef = useRef(null);
+  const sparteInputRef = useRef(null);
   const [expandedSparte, setExpandedSparte] = useState(null);
 
   // Advisor des eingeloggten Users automatisch vorausfüllen
@@ -212,7 +213,7 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
         {/* Suchfeld */}
         <button
           type="button"
-          onClick={() => { setSparteDropdownOpen(o => !o); setSparteSearch(''); }}
+          onClick={() => { setSparteDropdownOpen(o => { if (!o) setTimeout(() => sparteInputRef.current?.focus(), 0); return !o; }); setSparteSearch(''); }}
           className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm text-left"
         >
           <span className="text-muted-foreground">
@@ -226,7 +227,7 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
                 <Input
-                  autoFocus
+                  ref={sparteInputRef}
                   value={sparteSearch}
                   onChange={e => setSparteSearch(e.target.value)}
                   placeholder="Sparte suchen..."
