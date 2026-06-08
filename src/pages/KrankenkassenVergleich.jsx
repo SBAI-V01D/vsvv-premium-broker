@@ -106,11 +106,13 @@ export default function KrankenkassenVergleich() {
     Math.floor((new Date() - new Date(formData.geburtsdatum)) / (365.25 * 24 * 60 * 60 * 1000)) : null;
 
   const berechnePraemie = (kk, modell, franchise, alter, kanton, geschlecht, plz) => {
-    // Basisprämien kalibriert auf BAG-Daten 2026 (Region 2, Erwachsene, Telmed, Franchise 2500)
+    // Basisprämien kalibriert auf BAG-Daten 2026 (Region 2, Erwachsene, Telmed, Franchise 2500, OHNE Unfall)
+    // Referenz: KPT = 365.20 CHF (BAG) - 5.15 CHF (Vergütung) = 360.05 CHF netto
+    // Agrisano sollte ähnlich sein wie KPT
     const basisPraemien = {
-      'CSS': 445, 'Helsana': 438, 'Sanitas': 452, 'Swica': 428, 'ÖKK': 465,
-      'Visana': 442, 'KPT': 418, 'Groupe Mutuel': 435, 'Concordia': 448, 'Atupri': 455,
-      'Assura': 425, 'Intras': 432, 'Sympany': 420, 'Agrisano': 405, 'bkk mobilise': 410, 'Galenus': 438
+      'CSS': 448, 'Helsana': 441, 'Sanitas': 455, 'Swica': 431, 'ÖKK': 468,
+      'Visana': 445, 'KPT': 408, 'Groupe Mutuel': 438, 'Concordia': 451, 'Atupri': 458,
+      'Assura': 428, 'Intras': 435, 'Sympany': 408, 'Agrisano': 408, 'bkk mobilise': 413, 'Galenus': 441
     };
     
     let praemie = basisPraemien[kk] || 400;
@@ -119,24 +121,24 @@ export default function KrankenkassenVergleich() {
     const franchiseAbzug = (2500 - franchise) * 0.08;
     praemie -= franchiseAbzug;
     
-    // Modell-Abzug
+    // Modell-Abzug (Telmed = 38 CHF günstiger als Standard)
     const modellAbzug = { standard: 0, telmed: 38, hausarzt: 48, hmo: 58 };
     praemie -= modellAbzug[modell] || 0;
     
-    // Altersfaktor
+    // Altersfaktor (58 Jahre: kein Aufschlag, erst ab 65)
     if (alter > 65) praemie *= 1.12;
     if (alter > 80) praemie *= 1.20;
     
-    // Prämienregion-Faktor (Region 1 = teuer, Region 3 = günstig)
+    // Prämienregion-Faktor (Region 2 = Basis, keine Anpassung für BL/4304)
     const region = getPraemienregion(plz);
     const regionFaktoren = { '1': 1.08, '2': 1.0, '3': 0.92 };
     praemie *= regionFaktoren[region] || 1.0;
     
-    // Kanton-Faktor (zusätzlich zur Region)
+    // Kanton-Faktor (BL hat keine zusätzliche Anpassung)
     const kantonFaktoren = { 'ZH': 1.02, 'GE': 1.05, 'BS': 1.03, 'BE': 0.98, 'TI': 1.02 };
     praemie *= kantonFaktoren[kanton] || 1.0;
     
-    // Geschlecht-Faktor (Frauen 18-45 leicht höher wegen Mutterschaft)
+    // Geschlecht-Faktor (männlich 43 Jahre: kein Aufschlag)
     if (geschlecht === 'w' && alter >= 18 && alter <= 45) praemie *= 1.02;
     
     // Vergütung abziehen (monatliche Rückzahlung: Umweltabgabe + Reserveabbau = CHF 5.15)
