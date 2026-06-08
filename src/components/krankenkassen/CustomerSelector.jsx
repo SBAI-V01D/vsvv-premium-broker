@@ -100,6 +100,15 @@ export default function CustomerSelector({ formData, setFormData, selectedCustom
     const q = searchQuery.toLowerCase();
     const fullName = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
     return fullName.includes(q) || (c.email || '').toLowerCase().includes(q);
+  }).sort((a, b) => {
+    const q = searchQuery.toLowerCase();
+    const aFullName = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase();
+    const bFullName = `${b.first_name || ''} ${b.last_name || ''}`.toLowerCase();
+    const aStartsWith = aFullName.startsWith(q) || (a.first_name || '').toLowerCase().startsWith(q);
+    const bStartsWith = bFullName.startsWith(q) || (b.first_name || '').toLowerCase().startsWith(q);
+    if (aStartsWith && !bStartsWith) return -1;
+    if (!aStartsWith && bStartsWith) return 1;
+    return aFullName.indexOf(q) - bFullName.indexOf(q);
   }).slice(0, 10);
 
   const handleSelectCustomer = (customer) => {
