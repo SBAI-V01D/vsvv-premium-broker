@@ -200,7 +200,7 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
 
       <div>
         <Label className="mb-2 block">Sparten</Label>
-        <div className="flex flex-wrap gap-1.5 mb-2">
+        <div className="flex flex-wrap gap-1.5">
           {SPARTEN.map(s => (
             <button key={s} type="button" onClick={() => toggleSparte(s)}
               className={`text-xs px-2.5 py-1 rounded-full border transition-all ${form.sparten.includes(s) ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary'}`}>
@@ -208,18 +208,6 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
             </button>
           ))}
         </div>
-        {form.sparten.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            {form.sparten.map(s => (
-              <Badge key={s} variant="secondary" className="gap-1 pr-1">
-                {s}
-                <button type="button" onClick={() => toggleSparte(s)} className="ml-1 rounded-full hover:bg-slate-300 p-0.5">
-                  <X className="w-2.5 h-2.5" />
-                </button>
-              </Badge>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* ── Antragsfragen ─────────────────────────────────────── */}
