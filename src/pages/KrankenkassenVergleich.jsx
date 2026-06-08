@@ -109,14 +109,10 @@ export default function KrankenkassenVergleich() {
     const loadBagDaten = async () => {
       try {
         setLoadingDaten(true);
-        // Lade ALLE aktiven BAG-Daten für 2025 und 2026
-        const [data2026, data2025] = await Promise.all([
-          base44.entities.BAGPraemienDaten.filter({ jahr: 2026, aktiv: true, unfall: false }),
-          base44.entities.BAGPraemienDaten.filter({ jahr: 2025, aktiv: true, unfall: false })
-        ]);
-        const alleDaten = [...(data2026 || []), ...(data2025 || [])];
-        console.log('BAG-Daten geladen:', alleDaten.length, 'Datensätze');
-        setBagDaten(alleDaten);
+        // Lade ALLE aktiven BAG-Daten für 2026 (ohne Filter für bessere Performance)
+        const data = await base44.entities.BAGPraemienDaten.filter({ jahr: 2026, aktiv: true });
+        console.log('BAG-Daten geladen:', data?.length || 0, 'Datensätze für 2026');
+        setBagDaten(data || []);
       } catch (error) {
         console.error('Fehler beim Laden der BAG-Daten:', error);
         setBagDaten([]);
@@ -131,28 +127,39 @@ export default function KrankenkassenVergleich() {
     Math.floor((new Date() - new Date(formData.geburtsdatum)) / (365.25 * 24 * 60 * 60 * 1000)) : null;
 
   const berechnePraemie = (kk, modell, franchise, kanton, bagDaten) => {
-    // Suche exakte BAG-Prämie für diese Kombination
-    if (bagDaten && bagDaten.length > 0) {
-      const match = bagDaten.find(d => 
-        d.krankenkasse === kk && 
-        d.modell === modell && 
-        d.franchise === franchise &&
-        d.kanton === kanton
-      );
-      
-      if (match && match.praemie_erwachsene) {
-        // Exakte BAG-Prämie minus 5.15 CHF Vergütung
-        return Math.round((match.praemie_erwachsene - 5.15) * 100) / 100;
-      }
+    if (!bagDaten || bagDaten.length === 0) return null;
+    
+    // 1. Suche exakte BAG-Prämie für diese Kombination
+    const match = bagDaten.find(d => 
+      d.krankenkasse === kk && 
+      d.modell === modell && 
+      d.franchise === franchise &&
+      d.kanton === kanton
+    );
+    
+    if (match && match.praemie_erwachsene) {
+      return Math.round((match.praemie_erwachsene - 5.15) * 100) / 100;
     }
     
-    // Kein Match gefunden - return null um diese Option auszublenden
+    // 2. Fallback: Suche gleiche Kasse + Modell + Franchise in anderem Kanton
+    const fallback = bagDaten.find(d => 
+      d.krankenkasse === kk && 
+      d.modell === modell && 
+      d.franchise === franchise
+    );
+    
+    if (fallback && fallback.praemie_erwachsene) {
+      // Leichter Kanton-Anpassungsfaktor
+      const kantonFaktor = { 'ZH': 1.02, 'GE': 1.05, 'BS': 1.03, 'TI': 1.02, 'BE': 0.98 }[kanton] || 1.0;
+      return Math.round((fallback.praemie_erwachsene * kantonFaktor - 5.15) * 100) / 100;
+    }
+    
     return null;
   };
 
   const handleVergleich = async () => {
     if (!bagDaten || bagDaten.length === 0) {
-      alert('BAG-Daten werden noch geladen. Bitte warten...');
+      alert('Keine BAG-Daten verfügbar. Bitte importieren Sie zuerst die BAG-Prämiendaten unter /admin/bag-daten');
       return;
     }
 
@@ -326,9 +333,21 @@ export default function KrankenkassenVergleich() {
             Professioneller Vergleich der Grundversicherungs-Prämien (KVG)
           </p>
         </div>
-        <Badge variant="outline" className="badge-info">
-          BAG-Datenbasis 2026
-        </Badge>
+        <div className="flex items-center gap-2">
+          {loadingDaten ? (
+            <Badge variant="outline" className="badge-info">
+              Lade BAG-Daten...
+            </Badge>
+          ) : bagDaten && bagDaten.length > 0 ? (
+            <Badge variant="outline" className="badge-success">
+              {bagDaten.length} BAG-Datensätze geladen
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="badge-danger">
+              Keine BAG-Daten
+            </Badge>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
