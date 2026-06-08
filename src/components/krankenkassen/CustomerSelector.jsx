@@ -134,25 +134,29 @@ export default function CustomerSelector({ formData, setFormData, selectedCustom
     if (selectedCustomer) {
       setSelectedCustomer(null);
     }
+    // Nur Vorname zurücksetzen wenn nach Name gesucht wird
+    // Andere Felder behalten wir bei für manuelle Eingabe
     setFormData({
       ...formData,
-      vorname: value,
-      nachname: '',
-      geburtsdatum: '',
-      wohnort: '',
-      plz: '',
-      kanton: ''
+      vorname: value
     });
   };
 
   const handlePlzChange = (plz) => {
-    setFormData({ ...formData, plz });
     const plzData = SWISS_ZIP_CODES[plz];
     if (plzData) {
       setFormData(prev => ({
         ...prev,
+        plz,
         wohnort: plzData.ort,
         kanton: plzData.kanton
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        plz,
+        wohnort: '',
+        kanton: ''
       }));
     }
   };
