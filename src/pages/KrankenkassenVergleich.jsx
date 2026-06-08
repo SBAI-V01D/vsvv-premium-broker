@@ -28,6 +28,7 @@ import {
   Info
 } from 'lucide-react';
 import { generateKrankenkassenVergleichPDF } from '@/components/krankenkassen/generateKrankenkassenPDF';
+import CustomerSelector from '@/components/krankenkassen/CustomerSelector';
 
 const KANTONE = [
   'ZH', 'BE', 'LU', 'UR', 'SZ', 'OW', 'NW', 'GL', 'ZG', 'FR', 'SO', 'BS', 'BL', 'SH', 'AR', 'AI', 'SG', 'GR', 'AG', 'TG', 'TI', 'VD', 'VS', 'NE', 'GE', 'JU'
@@ -75,6 +76,7 @@ export default function KrankenkassenVergleich() {
     zeige_hmo: true,
     zeige_standard: true,
   });
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   const [ergebnisse, setErgebnisse] = useState([]);
   const [kiAnalyse, setKiAnalyse] = useState(null);
@@ -186,7 +188,7 @@ export default function KrankenkassenVergleich() {
   const saveVergleich = async () => {
     const user = await base44.auth.me();
     
-    let customerId = selectedKunde?.id;
+    let customerId = selectedCustomer?.id;
     if (!customerId && formData.vorname && formData.nachname) {
       const kundeResult = await base44.entities.Customer.filter({ 
         first_name: formData.vorname,
@@ -199,6 +201,10 @@ export default function KrankenkassenVergleich() {
           first_name: formData.vorname,
           last_name: formData.nachname,
           email: '',
+          zip_code: formData.plz,
+          city: formData.wohnort,
+          canton: formData.kanton,
+          birthdate: formData.geburtsdatum,
           organization_id: '69f9ece91b7c06b90471a6b1'
         });
         customerId = newCustomer.id;
@@ -292,18 +298,12 @@ export default function KrankenkassenVergleich() {
                 <User className="w-5 h-5 text-primary" />
                 Persönliche Daten
               </CardTitle>
+              <CardDescription>
+                Wählen Sie einen bestehenden Kunden oder erfassen Sie neue Daten
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Vorname</Label>
-                  <Input value={formData.vorname} onChange={e => setFormData({...formData, vorname: e.target.value})} />
-                </div>
-                <div>
-                  <Label>Nachname</Label>
-                  <Input value={formData.nachname} onChange={e => setFormData({...formData, nachname: e.target.value})} />
-                </div>
-              </div>
+              <CustomerSelector formData={formData} setFormData={setFormData} />
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Geburtsdatum</Label>
@@ -320,25 +320,6 @@ export default function KrankenkassenVergleich() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Wohnort</Label>
-                  <Input value={formData.wohnort} onChange={e => setFormData({...formData, wohnort: e.target.value})} />
-                </div>
-                <div>
-                  <Label>PLZ</Label>
-                  <Input value={formData.plz} onChange={e => setFormData({...formData, plz: e.target.value})} />
-                </div>
-              </div>
-              <div>
-                <Label>Kanton</Label>
-                <Select value={formData.kanton} onValueChange={v => setFormData({...formData, kanton: v})}>
-                  <SelectTrigger><SelectValue placeholder="Kanton wählen" /></SelectTrigger>
-                  <SelectContent>
-                    {KANTONE.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
-                  </SelectContent>
-                </Select>
               </div>
             </CardContent>
           </Card>
