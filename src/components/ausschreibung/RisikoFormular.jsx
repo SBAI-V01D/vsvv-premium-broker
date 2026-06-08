@@ -199,33 +199,37 @@ function MFZDeckungFormular({ d, set }) {
       {hasDeckung('teilkasko') && (
         <div className="mt-4 pl-4 border-l-2 border-emerald-200 space-y-3">
           <p className="text-sm font-semibold text-emerald-700">Teilkasko</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="mb-1 block">Variante</Label>
-              <RadioGroup options={['Standard', 'Plus']} value={d.tk_variante || ''} onChange={v => set('tk_variante', v)} />
-            </div>
-            <div>
-              <Label className="mb-1 block">Selbstbehalt</Label>
-              <Select value={d.tk_selbstbehalt || ''} onValueChange={v => set('tk_selbstbehalt', v)}>
-                <SelectTrigger><SelectValue placeholder="Bitte wählen..." /></SelectTrigger>
-                <SelectContent>
-                  {["CHF 0","CHF 200","CHF 300","CHF 500","CHF 1'000"].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label className="mb-1 block">Selbstbehalt</Label>
+            <Select value={d.tk_selbstbehalt || ''} onValueChange={v => set('tk_selbstbehalt', v)}>
+              <SelectTrigger><SelectValue placeholder="Bitte wählen..." /></SelectTrigger>
+              <SelectContent>
+                {["CHF 0","CHF 200","CHF 300","CHF 500","CHF 1'000"].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label className="mb-2 block text-xs text-muted-foreground">Deckungen</Label>
             <CheckboxGroup
               items={[
                 {key:'diebstahl',label:'Diebstahl'},{key:'feuer',label:'Feuer'},{key:'elementar',label:'Elementarschäden'},
-                {key:'glas',label:'Glasbruch'},{key:'marder',label:'Marder'},{key:'tiere',label:'Kollision mit Tieren'},
+                {key:'marder',label:'Marder'},{key:'tiere',label:'Kollision mit Tieren'},
                 {key:'vandalismus',label:'Vandalismus'},{key:'schluessel',label:'Schlüsselverlust'},
+                {key:'mitsachen',label:'Mitgeführte Sachen'},
                 {key:'ladekabel',label:'Ladekabel (E-Fahrzeuge)'},{key:'wallbox',label:'Wallbox'},
               ]}
               values={d.tk_deckungen || []}
               onChange={v => set('tk_deckungen', v)}
             />
+          </div>
+          <div>
+            <Label className="mb-2 block text-xs text-muted-foreground">Glasbruch</Label>
+            <RadioGroup options={['Standard', 'Plus']} value={d.tk_glas || ''} onChange={v => set('tk_glas', v)} />
+            {d.tk_glas && (
+              <p className="text-xs text-muted-foreground italic mt-1">
+                {d.tk_glas === 'Standard' ? 'Glasbruch Standard' : 'Glasbruch Plus — Erweiterte Deckung'}
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -234,20 +238,14 @@ function MFZDeckungFormular({ d, set }) {
       {hasDeckung('vollkasko') && (
         <div className="mt-4 pl-4 border-l-2 border-violet-200 space-y-3">
           <p className="text-sm font-semibold text-violet-700">Vollkasko</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="mb-1 block">Variante</Label>
-              <RadioGroup options={['Standard', 'Plus']} value={d.vk_variante || ''} onChange={v => set('vk_variante', v)} />
-            </div>
-            <div>
-              <Label className="mb-1 block">Selbstbehalt Kollisionsschäden</Label>
-              <Select value={d.vk_selbstbehalt || ''} onValueChange={v => set('vk_selbstbehalt', v)}>
-                <SelectTrigger><SelectValue placeholder="Bitte wählen..." /></SelectTrigger>
-                <SelectContent>
-                  {["CHF 0","CHF 500","CHF 1'000","CHF 2'000","CHF 5'000"].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label className="mb-1 block">Selbstbehalt Kollisionsschäden</Label>
+            <Select value={d.vk_selbstbehalt || ''} onValueChange={v => set('vk_selbstbehalt', v)}>
+              <SelectTrigger><SelectValue placeholder="Bitte wählen..." /></SelectTrigger>
+              <SelectContent>
+                {["CHF 0","CHF 500","CHF 1'000","CHF 2'000","CHF 5'000"].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label className="mb-2 block text-xs text-muted-foreground">Zusatzoptionen</Label>
@@ -255,7 +253,7 @@ function MFZDeckungFormular({ d, set }) {
               items={[
                 {key:'bonusschutz',label:'Bonusschutz'},{key:'neuwert',label:'Neuwertentschädigung'},
                 {key:'kaufwert',label:'Kaufwertentschädigung'},{key:'gap',label:'GAP-Deckung Leasing'},
-                {key:'mitsachen',label:'Mitgeführte Sachen'},{key:'grobfahrlaessigkeit',label:'Grobfahrlässigkeit'},
+                {key:'grobfahrlaessigkeit',label:'Grobfahrlässigkeit'},
               ]}
               values={d.vk_optionen || []}
               onChange={v => set('vk_optionen', v)}
@@ -309,15 +307,9 @@ function MFZDeckungFormular({ d, set }) {
       {hasDeckung('pannenhilfe') && (
         <div className="mt-4 pl-4 border-l-2 border-sky-200 space-y-3">
           <p className="text-sm font-semibold text-sky-700">Pannenhilfe</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="mb-1 block">Deckungsgebiet</Label>
-              <RadioGroup options={['Schweiz', 'Europa', 'Schweiz + Europa']} value={d.ph_gebiet || ''} onChange={v => set('ph_gebiet', v)} />
-            </div>
-            <div>
-              <Label className="mb-1 block">Paket</Label>
-              <RadioGroup options={['Standard', 'Plus']} value={d.ph_paket || ''} onChange={v => set('ph_paket', v)} />
-            </div>
+          <div>
+            <Label className="mb-1 block">Deckungsgebiet</Label>
+            <RadioGroup options={['Schweiz', 'Schweiz + Europa']} value={d.ph_gebiet || ''} onChange={v => set('ph_gebiet', v)} />
           </div>
           <div>
             <Label className="mb-2 block text-xs text-muted-foreground">Leistungen</Label>
