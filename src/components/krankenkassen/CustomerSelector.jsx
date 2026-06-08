@@ -161,14 +161,18 @@ export default function CustomerSelector({ formData, setFormData, selectedCustom
           </div>
 
           {showDropdown && searchQuery && !selectedCustomer && (
-            <div className="absolute top-full left-0 right-0 mt-1 z-50 max-h-60 overflow-y-auto rounded-md border bg-popover p-1 shadow-lg">
+            <div 
+              className="absolute top-full left-0 right-0 mt-1 z-50 max-h-60 overflow-y-auto rounded-md border bg-popover p-1 shadow-lg"
+              style={{ maxHeight: '240px', overflowY: 'auto' }}
+            >
               {filteredCustomers.length > 0 ? (
-                filteredCustomers.map(customer => (
-                  <button
-                    key={customer.id}
-                    onClick={() => handleSelectCustomer(customer)}
-                    className="w-full flex items-center gap-3 p-2 hover:bg-accent rounded-sm transition-colors text-left"
-                  >
+                <div className="space-y-0.5">
+                  {filteredCustomers.map(customer => (
+                    <button
+                      key={customer.id}
+                      onClick={() => handleSelectCustomer(customer)}
+                      className="w-full flex items-center gap-3 p-2 hover:bg-accent rounded-sm transition-colors text-left"
+                    >
                     <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                       <User className="w-3.5 h-3.5 text-blue-600" />
                     </div>
@@ -181,7 +185,8 @@ export default function CustomerSelector({ formData, setFormData, selectedCustom
                       </p>
                     </div>
                   </button>
-                ))
+                ))}
+                </div>
               ) : (
                 <div className="p-2 text-center text-sm text-muted-foreground">
                   Keine Kunden gefunden
