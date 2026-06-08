@@ -92,16 +92,50 @@ export default function AusschreibungDetail() {
 
   useEffect(() => { load(); }, [id]);
 
+  const autoUpdateStatus = async (currentAusschreibung, updatedOfferten) => {
+    const total = updatedOfferten.length;
+    const received = updatedOfferten.filter(o => o.status !== 'ausstehend').length;
+    const currentStatus = currentAusschreibung.status;
+
+    let newStatus = null;
+    if (total > 0 && received === 0 && ['entwurf', 'vorbereitung'].includes(currentStatus)) {
+      newStatus = 'offerten_ausstehend';
+    } else if (total > 0 && received > 0 && received < total && currentStatus !== 'in_analyse') {
+      newStatus = 'teilweise_erhalten';
+    } else if (total > 0 && received === total && currentStatus !== 'in_analyse') {
+      newStatus = 'vollstaendig_erhalten';
+    }
+
+    if (newStatus && newStatus !== currentStatus) {
+      await base44.entities.Ausschreibung.update(currentAusschreibung.id, { status: newStatus });
+    }
+  };
+
   const saveOfferte = async (data) => {
     if (editingOfferte?.id) await base44.entities.Offerte.update(editingOfferte.id, data);
     else await base44.entities.Offerte.create(data);
     setShowOfferteDialog(false);
     setEditingOfferte(null);
+    // Reload and then auto-update status
+    const [updatedOfferten] = await Promise.all([
+      base44.entities.Offerte.filter({ ausschreibung_id: id }),
+    ]);
+    setOfferten(updatedOfferten);
+    await autoUpdateStatus(ausschreibung, updatedOfferten);
     load();
   };
 
   const saveAusschreibung = async (data) => {
-    await base44.entities.Ausschreibung.update(id, data);
+    // Auto: Entwurf → Vorbereitung wenn Sparten und Kunde gesetzt sind
+    let updatedData = { ...data };
+    if (data.status === 'entwurf' && data.customer_id && (data.sparten || []).length > 0) {
+      updatedData.status = 'vorbereitung';
+    }
+    // Auto: wenn Versicherer hinzugefügt und Status noch entwurf/vorbereitung → offerten_ausstehend
+    if (['entwurf', 'vorbereitung'].includes(updatedData.status) && (data.ausgewaehlte_versicherer || []).length > 0 && offerten.length === 0) {
+      updatedData.status = 'offerten_ausstehend';
+    }
+    await base44.entities.Ausschreibung.update(id, updatedData);
     setShowEditDialog(false);
     load();
   };
