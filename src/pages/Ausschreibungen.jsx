@@ -50,7 +50,16 @@ export default function Ausschreibungen() {
 
   const createAusschreibung = async (data) => {
     const user = await base44.auth.me();
-    const organization_id = data.organization_id || user?.organization_id;
+    let organization_id = data.organization_id;
+    if (!organization_id && data.customer_id) {
+      const customer = await base44.entities.Customer.filter({ id: data.customer_id }, null, 1).then(r => r?.[0]);
+      organization_id = customer?.organization_id;
+    }
+    if (!organization_id) {
+      // Fallback: erste Organisation laden
+      const orgs = await base44.entities.Organization.list(null, 1);
+      organization_id = orgs?.[0]?.id;
+    }
     await base44.entities.Ausschreibung.create({ ...data, broker_name: user?.full_name, broker_id: user?.id, organization_id });
     setShowForm(false);
     load();
