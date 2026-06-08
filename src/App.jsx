@@ -52,7 +52,7 @@ import AusschreibungDetail from './pages/AusschreibungDetail'
 import VersichererDBPage from './pages/VersichererDBPage'
 import KrankenkassenVergleich from './pages/KrankenkassenVergleich'
 import BAGDatenAdmin from './pages/BAGDatenAdmin'
-import BAGDatenVerwaltung from './pages/BAGDatenVerwaltung'
+import BAGDatenVerwaltungPage from './pages/BAGDatenVerwaltung'
 
 // Portal
 import PortalRoot from './pages/portal/PortalRoot'
@@ -152,6 +152,7 @@ const AuthenticatedApp = () => {
         <Route path="/ausschreibungen/versicherer" element={<VersichererDBPage />} />
         <Route path="/krankenkassen-vergleich" element={<KrankenkassenVergleich />} />
         <Route path="/admin/bag-daten" element={<BAGDatenAdmin />} />
+        <Route path="/bag-daten" element={<BAGDatenVerwaltungPage />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>

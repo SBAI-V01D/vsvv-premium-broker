@@ -4,7 +4,8 @@ import {
   LayoutDashboard, Users, FileText, CheckSquare, Wallet,
   ChevronLeft, ChevronRight, Shield, LogOut, ExternalLink,
   User, Briefcase, TrendingUp, Lock, BookOpen, Activity,
-  Brain, BarChart2, UserPlus, FolderOpen, RefreshCw, Building2
+  Brain, BarChart2, UserPlus, FolderOpen, RefreshCw, Building2,
+  Database
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { base44 } from '@/api/base44Client';
@@ -66,6 +67,8 @@ const navGroups = [
       { label: 'Kundenübersicht',  icon: Users,       path: '/kunden' },
       { label: 'Verkaufschancen',  icon: TrendingUp,  path: '/verkaufschancen', color: 'primary' },
       { label: 'Leads',            icon: UserPlus,    path: '/leads',           color: 'warning' },
+      { label: 'Krankenkassen',    icon: Shield,      path: '/krankenkassen-vergleich' },
+      { label: 'BAG-Daten',        icon: Database,    path: '/admin/bag-daten' },
       { label: 'Beratungsdossiers',icon: BookOpen,    path: '/beratungsdossier' },
       { label: 'Kundenportal',     icon: ExternalLink, path: '/portal', external: true },
     ],
