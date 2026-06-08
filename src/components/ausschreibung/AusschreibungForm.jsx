@@ -138,7 +138,7 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </button>
           {customerDropdownOpen && (
-            <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg">
+            <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg" onMouseDown={e => e.preventDefault()}>
               <div className="p-2 border-b border-slate-100">
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
@@ -221,7 +221,7 @@ export default function AusschreibungForm({ ausschreibung, onSave, onCancel }) {
           <Search className="w-4 h-4 text-muted-foreground" />
         </button>
         {sparteDropdownOpen && (
-          <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg">
+          <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg" onMouseDown={e => e.preventDefault()}>
             <div className="p-2 border-b border-slate-100">
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
