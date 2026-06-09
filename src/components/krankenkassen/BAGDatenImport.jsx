@@ -357,7 +357,7 @@ export default function BAGDatenImport() {
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
   const bulkCreateWithRetry = async (batch) => {
-    for (let attempt = 1; attempt <= 5; attempt++) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         await base44.entities.BAGPraemienDaten.bulkCreate(batch);
         return;
@@ -365,8 +365,8 @@ export default function BAGDatenImport() {
         const isRateLimit = err?.response?.status === 429
           || String(err?.message || '').toLowerCase().includes('rate limit')
           || String(err?.message || '').includes('429');
-        if (isRateLimit && attempt < 5) {
-          await sleep(attempt * 10000);
+        if (isRateLimit && attempt < 3) {
+          await sleep(attempt * 3000);
         } else {
           throw err;
         }
@@ -405,7 +405,7 @@ export default function BAGDatenImport() {
       ? selectedKantone.filter(k => kantoneInDatei.includes(k))
       : kantoneInDatei;
 
-    const BATCH = 10;
+    const BATCH = 100;
 
     for (let i = 0; i < kantoneToImport.length; i++) {
       const kanton = kantoneToImport[i];
@@ -421,15 +421,12 @@ export default function BAGDatenImport() {
           await bulkCreateWithRetry(enriched.slice(b, b + BATCH));
           kantOk += Math.min(BATCH, enriched.length - b);
           setProgress({ phase: 'importing', current: i + 1, total: kantoneToImport.length, kanton, records: kantOk, total_records: enriched.length });
-          if (b + BATCH < enriched.length) await sleep(1500);
         }
         erfolgreich += kantOk;
       } catch (err) {
         fehler++;
         errors.push(`${kanton}: ${err.message}`);
       }
-
-      if (i < kantoneToImport.length - 1) await sleep(2000);
     }
 
     setUploadResult({
