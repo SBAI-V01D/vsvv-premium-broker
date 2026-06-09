@@ -17,12 +17,21 @@ const MODELL_MAP = {
   'TAR-STD': 'standard', 'TAR-TEL': 'telmed', 'TAR-HAM': 'hausarzt', 'TAR-HMO': 'hmo'
 };
 
-// BAG Franchise-Akronym → CHF Betrag (neues Format: FRA-0, FRA-100, ...)
+// BAG Franchise-Akronym → CHF Betrag
+// Kinder: FRA-0 (0), FRA-100 (100), FRA-200 (200), FRA-400 (400), FRA-600 (600)
+// Jugendliche/Erwachsene: FRA-300 (300), FRA-500 (500), FRA-1000 (1000), etc.
 const FRANCHISE_AKRO_MAP = {
-  'FRA-0': 300, 'FRA-100': 300,   // Kinder haben FRA-0/100, für Erwachsene nicht relevant
-  'FRA-300': 300, 'FRA-500': 500,
-  'FRA-1000': 1000, 'FRA-1500': 1500,
-  'FRA-2000': 2000, 'FRA-2500': 2500,
+  'FRA-0':    0,
+  'FRA-100':  100,
+  'FRA-200':  200,
+  'FRA-300':  300,
+  'FRA-400':  400,
+  'FRA-500':  500,
+  'FRA-600':  600,
+  'FRA-1000': 1000,
+  'FRA-1500': 1500,
+  'FRA-2000': 2000,
+  'FRA-2500': 2500,
 };
 
 // BAG Franchise-Index → CHF Betrag (altes Format)
@@ -249,8 +258,9 @@ function analyzeAndParseBAGExcel(file, jahr) {
             if (FRANCHISE_MAP[franchiseInt]) franchise = FRANCHISE_MAP[franchiseInt];
             else if (franchiseInt >= 300) franchise = franchiseInt;
           }
-          // Für Erwachsene: nur Standard-Franchisen 300-2500 importieren
-          if (!istJugendlich && ![300,500,1000,1500,2000,2500].includes(franchise)) continue;
+          // Nur Standard-Franchisen 300-2500 importieren (gilt für ERW und JUG)
+          // Kinder-Franchisen (0, 100, 200, 400, 600) überspringen
+          if (![300,500,1000,1500,2000,2500].includes(franchise)) continue;
 
           // Kassenname — unbekannte IDs überspringen
           const kassieId = parseInt(versichererId);
