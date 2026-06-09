@@ -14,10 +14,39 @@ const MODELL_MAP = {
   'TAR-STD': 'standard', 'TAR-TEL': 'telmed', 'TAR-HAM': 'hausarzt', 'TAR-HMO': 'hmo'
 };
 
+// BAG Franchise-Index → CHF Betrag
+const FRANCHISE_MAP = {
+  3: 300, 4: 500, 5: 1000, 6: 1500, 7: 2000, 8: 2500
+};
+
+// BAG Versicherer-ID → Name (aus offizieller BAG-Liste)
 const VERSICHERER_NAMEN = {
-  1:'CSS', 2:'Helsana', 3:'Sanitas', 4:'Swica', 5:'ÖKK',
-  6:'Visana', 7:'KPT', 8:'Agrisano', 9:'Concordia', 10:'Atupri',
-  11:'Assura', 12:'Intras', 13:'Sympany', 14:'bkk mobilise', 15:'Galenus', 16:'Groupe Mutuel'
+  // Grosse Kassen
+  1562: 'Groupe Mutuel', // Mutuel Assurance / Sanatel / Philos
+  1068: 'CSS',
+  1064: 'Helsana',
+  1065: 'KPT',
+  1066: 'Visana',
+  1118: 'Concordia',
+  1021: 'Atupri',
+  1019: 'Assura',
+  1024: 'ÖKK',
+  1109: 'Sanitas',
+  1113: 'Swica',
+  1016: 'Agrisano',
+  1097: 'Sympany',
+  1066: 'bkk mobilise',
+  1025: 'Galenus',
+  // Weitere Groupe Mutuel Tochtergesellschaften
+  1563: 'Groupe Mutuel',
+  1564: 'Groupe Mutuel',
+  1077: 'Groupe Mutuel',
+  // Weitere bekannte IDs
+  1100: 'Concordia',
+  1048: 'EGK',
+  1040: 'Visana',
+  1096: 'Sana24',
+  1126: 'Vivao Sympany',
 };
 
 // Findet Spaltenindex anhand möglicher Header-Namen (case-insensitive)
@@ -119,14 +148,24 @@ function parseBAGExcel(file, jahr) {
           const kanton = String(kantonCode || '').trim().toUpperCase();
           if (!kanton || kanton.length > 3) continue;
 
+          // Franchise: BAG nutzt Index 3-8, nicht CHF-Betrag
           let franchise = 300;
-          const m = String(franchiseCode || '').match(/(\d+)/);
-          if (m) franchise = parseInt(m[1]);
+          const franchiseInt = parseInt(String(franchiseCode || '').match(/(\d+)/)?.[1] || '0');
+          if (FRANCHISE_MAP[franchiseInt]) {
+            franchise = FRANCHISE_MAP[franchiseInt];
+          } else if (franchiseInt >= 300) {
+            // Direkt als CHF-Betrag (falls andere BAG-Version)
+            franchise = franchiseInt;
+          }
+
+          // Kasse: numerische ID → Name
+          const kassieId = parseInt(versichererId);
+          const kassenName = VERSICHERER_NAMEN[kassieId] || String(versichererId || '');
 
           if (!byKanton[kanton]) byKanton[kanton] = [];
           byKanton[kanton].push({
             jahr: parseInt(String(geschaeftsjahr || jahr).match(/\d{4}/)?.[0] || jahr),
-            krankenkasse: VERSICHERER_NAMEN[parseInt(versichererId)] || String(versichererId || ''),
+            krankenkasse: kassenName,
             kanton,
             region: String(regionCode || ''),
             modell,

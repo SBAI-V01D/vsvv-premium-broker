@@ -58,8 +58,21 @@ const getPraemienregion = (plz) => {
 
 const KRANKENKASSEN = [
   'CSS', 'Helsana', 'Sanitas', 'Swica', 'ÖKK', 'Visana', 'KPT', 'Groupe Mutuel', 'Concordia', 'Atupri',
-  'Assura', 'Intras', 'Sympany', 'Agrisano', 'bkk mobilise', 'Galenus'
+  'Assura', 'Sympany', 'Agrisano', 'bkk mobilise', 'Galenus', 'EGK', 'Sana24', 'Vivao Sympany'
 ];
+
+// Groupe Mutuel Marken-Aliases (Sanatel, Mutuel Assurance, Philos etc. → alle Groupe Mutuel in BAG)
+const KASSEN_ALIAS = {
+  'Sanatel': 'Groupe Mutuel',
+  'Mutuel Assurance': 'Groupe Mutuel',
+  'Philos': 'Groupe Mutuel',
+  'Avenir': 'Groupe Mutuel',
+  'Easy Sana': 'Groupe Mutuel',
+  'Mutuel': 'Groupe Mutuel',
+};
+
+// BAG Franchise-Index → CHF (für bereits importierte Daten mit falschem Mapping)
+const FRANCHISE_INDEX_MAP = { 3: 300, 4: 500, 5: 1000, 6: 1500, 7: 2000, 8: 2500 };
 
 const MODELLE = {
   standard: 'Standardmodell (Freie Arztwahl)',
@@ -139,29 +152,33 @@ export default function KrankenkassenVergleich() {
   const berechnePraemie = (kk, modell, franchise, kanton, bagDaten) => {
     if (!bagDaten || bagDaten.length === 0) return null;
     
-    // 1. Suche exakte BAG-Prämie für diese Kombination
-    const match = bagDaten.find(d => 
-      d.krankenkasse === kk && 
-      d.modell === modell && 
-      d.franchise === franchise &&
-      d.kanton === kanton
-    );
+    // Kassen-Alias auflösen (Sanatel → Groupe Mutuel etc.)
+    const kkNorm = KASSEN_ALIAS[kk] || kk;
     
-    if (match && match.praemie_erwachsene) {
-      return Math.round((match.praemie_erwachsene - 5.15) * 100) / 100;
+    // Franchise normalisieren: falls DB-Wert ein Index (3-8) ist, umrechnen
+    const franchiseNorm = (franchise <= 8 && FRANCHISE_INDEX_MAP[franchise]) 
+      ? FRANCHISE_INDEX_MAP[franchise] 
+      : franchise;
+
+    const matchFn = (d) => {
+      const dbKasse = KASSEN_ALIAS[d.krankenkasse] || d.krankenkasse;
+      const dbFranchise = (d.franchise <= 8 && FRANCHISE_INDEX_MAP[d.franchise])
+        ? FRANCHISE_INDEX_MAP[d.franchise]
+        : d.franchise;
+      return dbKasse === kkNorm && d.modell === modell && dbFranchise === franchiseNorm;
+    };
+
+    // 1. Exakter Kanton-Match
+    const match = bagDaten.find(d => matchFn(d) && d.kanton === kanton);
+    if (match?.praemie_erwachsene) {
+      return Math.round(match.praemie_erwachsene * 100) / 100;
     }
     
-    // 2. Fallback: Suche gleiche Kasse + Modell + Franchise in anderem Kanton
-    const fallback = bagDaten.find(d => 
-      d.krankenkasse === kk && 
-      d.modell === modell && 
-      d.franchise === franchise
-    );
-    
-    if (fallback && fallback.praemie_erwachsene) {
-      // Leichter Kanton-Anpassungsfaktor
+    // 2. Fallback: anderer Kanton (mit leichtem Faktor)
+    const fallback = bagDaten.find(d => matchFn(d));
+    if (fallback?.praemie_erwachsene) {
       const kantonFaktor = { 'ZH': 1.02, 'GE': 1.05, 'BS': 1.03, 'TI': 1.02, 'BE': 0.98 }[kanton] || 1.0;
-      return Math.round((fallback.praemie_erwachsene * kantonFaktor - 5.15) * 100) / 100;
+      return Math.round(fallback.praemie_erwachsene * kantonFaktor * 100) / 100;
     }
     
     return null;
@@ -175,7 +192,7 @@ export default function KrankenkassenVergleich() {
 
     setLoading(true);
     
-    // Aktuelle Prämie berechnen
+    // Aktuelle Prämie berechnen (wird auch in kassenListe-Loop als aktuellePraemieNorm genutzt)
     const aktuellePraemie = berechnePraemie(
       formData.aktuelle_krankenkasse,
       formData.aktuelles_modell,
@@ -185,16 +202,31 @@ export default function KrankenkassenVergleich() {
     );
 
     if (!aktuellePraemie) {
-      alert(`Keine BAG-Daten verfügbar für ${formData.aktuelle_krankenkasse} im Kanton ${formData.kanton}`);
+      const verfuegbareKassen = [...new Set(bagDaten.map(d => KASSEN_ALIAS[d.krankenkasse] || d.krankenkasse))].join(', ');
+      alert(`Keine BAG-Daten für "${formData.aktuelle_krankenkasse}" (${formData.aktuelles_modell}, CHF ${formData.aktuelle_franchise}) im Kanton ${formData.kanton}.\n\nVerfügbare Kassen: ${verfuegbareKassen}`);
       setLoading(false);
       return;
     }
 
     const vergleiche = [];
 
+    // Alle Krankenkassen aus den BAG-Daten ermitteln (dedupliziert + normalisiert)
+    const kassenInBag = [...new Set(bagDaten.map(d => KASSEN_ALIAS[d.krankenkasse] || d.krankenkasse))];
+    const kkListe = kassenInBag.length > 0 ? kassenInBag : KRANKENKASSEN;
+    const aktuellNorm = KASSEN_ALIAS[formData.aktuelle_krankenkasse] || formData.aktuelle_krankenkasse;
+
+    // Aktuelle Prämie neu berechnen mit normalisiertem Namen
+    const aktuellePraemieNorm = berechnePraemie(
+      formData.aktuelle_krankenkasse,
+      formData.aktuelles_modell,
+      formData.aktuelle_franchise,
+      formData.kanton,
+      bagDaten
+    );
+
     // Alle Kombinationen durchgehen
-    KRANKENKASSEN.forEach(kk => {
-      if (formData.nur_bestehende_kasse && kk !== formData.aktuelle_krankenkasse) return;
+    kkListe.forEach(kk => {
+      if (formData.nur_bestehende_kasse && kk !== aktuellNorm) return;
       
       const modelle = [];
       if (formData.zeige_standard) modelle.push('standard');
@@ -213,7 +245,8 @@ export default function KrankenkassenVergleich() {
           // Nur Optionen mit verfügbaren BAG-Daten anzeigen
           if (praemie === null) return;
           
-          const ersparnisMonat = aktuellePraemie - praemie;
+          const refPraemie = aktuellePraemieNorm || aktuellePraemie;
+          const ersparnisMonat = (refPraemie || 0) - praemie;
           const ersparnisJahr = ersparnisMonat * 12;
           
           vergleiche.push({
@@ -224,8 +257,8 @@ export default function KrankenkassenVergleich() {
             praemie_jaehrlich: praemie * 12,
             ersparnis_monatlich: ersparnisMonat,
             ersparnis_jaehrlich: ersparnisJahr,
-            ersparnis_prozent: aktuellePraemie > 0 ? ((ersparnisMonat / aktuellePraemie) * 100) : 0,
-            ist_aktuell: kk === formData.aktuelle_krankenkasse && 
+            ersparnis_prozent: refPraemie > 0 ? ((ersparnisMonat / refPraemie) * 100) : 0,
+            ist_aktuell: (KASSEN_ALIAS[kk] || kk) === aktuellNorm && 
                         modell === formData.aktuelles_modell && 
                         franchise === formData.aktuelle_franchise,
           });
