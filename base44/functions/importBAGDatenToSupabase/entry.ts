@@ -99,10 +99,13 @@ Deno.serve(async (req) => {
         aktiv: true
       }));
 
-      // Insert in Supabase
+      // UPSERT in Supabase (verhindert Duplikate bei gleichen Schlüsseln)
       const { data, error } = await supabase
         .from('bag_praemien')
-        .insert(enrichedBatch)
+        .upsert(enrichedBatch, {
+          onConflict: 'geschaeftsjahr,krankenkasse,kanton,region,modell,franchise,unfalleinschluss,altersklasse',
+          ignoreDuplicates: false // false = aktualisieren, true = überspringen
+        })
         .select();
 
       if (error) {

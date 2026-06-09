@@ -82,7 +82,18 @@ CREATE TABLE IF NOT EXISTS bag_praemien (
   gueltig_bis DATE,
   aktiv BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  -- UNIQUE Constraint für UPSERT (verhindert Duplikate)
+  CONSTRAINT unique_praemie UNIQUE NULLS NOT DISTINCT (
+    geschaeftsjahr,
+    krankenkasse,
+    kanton,
+    region,
+    modell,
+    franchise,
+    unfalleinschluss,
+    altersklasse
+  )
 );
 
 -- Import Versions (Tracking)
@@ -130,6 +141,8 @@ CREATE INDEX IF NOT EXISTS idx_bag_praemien_franchise ON bag_praemien(franchise)
 CREATE INDEX IF NOT EXISTS idx_bag_praemien_altersklasse ON bag_praemien(altersklasse);
 CREATE INDEX IF NOT EXISTS idx_bag_praemien_region ON bag_praemien(region);
 CREATE INDEX IF NOT EXISTS idx_bag_praemien_composite ON bag_praemien(geschaeftsjahr, kanton, altersklasse, modell, franchise);
+-- Unique Index für UPSERT (verhindert Duplikate)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bag_praemien_unique ON bag_praemien(geschaeftsjahr, krankenkasse, kanton, region, modell, franchise, unfalleinschluss, altersklasse);
 
 -- Reference Data Insertion
 INSERT INTO bag_kantone (kanton_code, kanton_name, region) VALUES
