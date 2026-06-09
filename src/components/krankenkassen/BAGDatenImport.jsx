@@ -14,7 +14,11 @@ const ALLE_KANTONE = ['ZH','BE','LU','UR','SZ','OW','NW','GL','ZG','FR','SO','BS
 // 1542=Assura-Basis, 1568=sana24, 1386=Galenos(Visana), 1560=Agrisano, 1401=rhenusana, 966=vita surselva, 360=Luzerner Hinterland, 1318=Wädenswil, 820=Lumneziana
 
 const MODELL_MAP = {
-  'TAR-STD': 'standard', 'TAR-TEL': 'telmed', 'TAR-HAM': 'hausarzt', 'TAR-HMO': 'hmo'
+  'TAR-STD':  'standard',
+  'TAR-BASE': 'standard',  // BAG 2026: Standard-Tarif als TAR-BASE codiert
+  'TAR-TEL':  'telmed',
+  'TAR-HAM':  'hausarzt',
+  'TAR-HMO':  'hmo',
 };
 
 // BAG Franchise-Akronym → CHF Betrag
