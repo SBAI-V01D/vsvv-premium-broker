@@ -81,7 +81,19 @@ const MODELLE = {
   hmo: 'HMO-Modell (Health Maintenance Organization)'
 };
 
-const FRANCHISEN = [300, 500, 1000, 1500, 2000, 2500];
+const FRANCHISEN_ERWACHSEN = [300, 500, 1000, 1500, 2000, 2500];
+const FRANCHISEN_KIND = [0, 100, 200, 300, 400, 500, 600];
+
+const getAltersklasse = (alter) => {
+  if (alter === null || alter === undefined) return 'erwachsen';
+  if (alter <= 18) return 'kind';
+  if (alter <= 25) return 'jugend';
+  return 'erwachsen';
+};
+
+const getFranchisen = (altersklasse) => {
+  return altersklasse === 'kind' ? FRANCHISEN_KIND : FRANCHISEN_ERWACHSEN;
+};
 
 export default function KrankenkassenVergleich() {
   const queryClient = useQueryClient();
@@ -102,6 +114,7 @@ export default function KrankenkassenVergleich() {
     aktuelles_modell: 'standard',
     aktuelle_franchise: 300,
     aktuelle_unfall: true,
+    altersklasse_override: '', // leer = auto aus Geburtsdatum
     nur_guenstigste: false,
     nur_bestehende_kasse: false,
     alle_modelle: false,
@@ -129,9 +142,9 @@ export default function KrankenkassenVergleich() {
         setLoadingDaten(true);
         // Lade NUR BAG-Daten für den ausgewählten Kanton 2026
         const data = await base44.entities.BAGPraemienDaten.filter(
-          { jahr: 2026, aktiv: true, kanton: formData.kanton },
+          { jahr: 2026, aktiv: true, kanton: formData.kanton, altersklasse: altersklasse },
           '-created_date',
-          500 // Maximal 500 Datensätze pro Kanton
+          1000
         );
         console.log(`BAG-Daten geladen für ${formData.kanton}:`, data?.length || 0, 'Datensätze');
         setBagDaten(data || []);
@@ -144,18 +157,26 @@ export default function KrankenkassenVergleich() {
     };
     
     loadBagDaten();
-  }, [formData.kanton]);
+  }, [formData.kanton, altersklasse]);
 
   const alter = formData.geburtsdatum ? 
     Math.floor((new Date() - new Date(formData.geburtsdatum)) / (365.25 * 24 * 60 * 60 * 1000)) : null;
 
+  // Altersklasse: override hat Vorrang, sonst auto aus Geburtsdatum
+  const altersklasse = formData.altersklasse_override || getAltersklasse(alter);
+  const franchisen = getFranchisen(altersklasse);
+
+  // Franchise-Reset wenn nicht mehr gültig für neue Altersklasse
+  React.useEffect(() => {
+    if (!franchisen.includes(formData.aktuelle_franchise)) {
+      setFormData(f => ({ ...f, aktuelle_franchise: franchisen[0] }));
+    }
+  }, [altersklasse]);
+
   const berechnePraemie = (kk, modell, franchise, kanton, bagDaten) => {
     if (!bagDaten || bagDaten.length === 0) return null;
     
-    // Kassen-Alias auflösen (Sanatel → Groupe Mutuel etc.)
     const kkNorm = KASSEN_ALIAS[kk] || kk;
-    
-    // Franchise normalisieren: falls DB-Wert ein Index (3-8) ist, umrechnen
     const franchiseNorm = (franchise <= 8 && FRANCHISE_INDEX_MAP[franchise]) 
       ? FRANCHISE_INDEX_MAP[franchise] 
       : franchise;
@@ -165,20 +186,23 @@ export default function KrankenkassenVergleich() {
       const dbFranchise = (d.franchise <= 8 && FRANCHISE_INDEX_MAP[d.franchise])
         ? FRANCHISE_INDEX_MAP[d.franchise]
         : d.franchise;
-      return dbKasse === kkNorm && d.modell === modell && dbFranchise === franchiseNorm;
+      // Altersklasse berücksichtigen
+      const dbAlter = d.altersklasse || 'erwachsen';
+      return dbKasse === kkNorm && d.modell === modell && dbFranchise === franchiseNorm && dbAlter === altersklasse;
     };
 
     // 1. Exakter Kanton-Match
     const match = bagDaten.find(d => matchFn(d) && d.kanton === kanton);
-    if (match?.praemie_erwachsene) {
-      return Math.round(match.praemie_erwachsene * 100) / 100;
+    const praemieField = altersklasse === 'kind' ? 'praemie_kinder' : 'praemie_erwachsene';
+    if (match?.[praemieField] > 0) {
+      return Math.round(match[praemieField] * 100) / 100;
     }
     
-    // 2. Fallback: anderer Kanton (mit leichtem Faktor)
+    // 2. Fallback: anderer Kanton
     const fallback = bagDaten.find(d => matchFn(d));
-    if (fallback?.praemie_erwachsene) {
+    if (fallback?.[praemieField] > 0) {
       const kantonFaktor = { 'ZH': 1.02, 'GE': 1.05, 'BS': 1.03, 'TI': 1.02, 'BE': 0.98 }[kanton] || 1.0;
-      return Math.round(fallback.praemie_erwachsene * kantonFaktor * 100) / 100;
+      return Math.round(fallback[praemieField] * kantonFaktor * 100) / 100;
     }
     
     return null;
@@ -237,7 +261,7 @@ export default function KrankenkassenVergleich() {
       modelle.forEach(modell => {
         const franschen = formData.nur_gleiche_franchise 
           ? [formData.aktuelle_franchise] 
-          : FRANCHISEN;
+          : franchisen;
 
         franschen.forEach(franchise => {
           const praemie = berechnePraemie(kk, modell, franchise, formData.kanton, bagDaten);
@@ -412,18 +436,37 @@ export default function KrankenkassenVergleich() {
                 <div>
                   <Label>Geburtsdatum</Label>
                   <Input type="date" value={formData.geburtsdatum} onChange={e => setFormData({...formData, geburtsdatum: e.target.value})} />
-                  {alter && <p className="text-xs text-muted-foreground mt-1">Alter: {alter} Jahre</p>}
+                  {alter !== null && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Alter: {alter} Jahre · 
+                      <span className={`ml-1 font-medium ${altersklasse === 'kind' ? 'text-blue-600' : altersklasse === 'jugend' ? 'text-violet-600' : 'text-slate-600'}`}>
+                        {altersklasse === 'kind' ? '👶 Kind (0–18)' : altersklasse === 'jugend' ? '🧑 Jugend (19–25)' : '🧑‍💼 Erwachsen (26+)'}
+                      </span>
+                    </p>
+                  )}
                 </div>
                 <div>
-                  <Label>Geschlecht</Label>
-                  <Select value={formData.geschlecht} onValueChange={v => setFormData({...formData, geschlecht: v})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Label>Altersklasse</Label>
+                  <Select value={formData.altersklasse_override || (alter !== null ? altersklasse : '')} onValueChange={v => setFormData({...formData, altersklasse_override: v})}>
+                    <SelectTrigger><SelectValue placeholder={alter !== null ? `Auto: ${altersklasse}` : 'Auto'} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="m">Männlich</SelectItem>
-                      <SelectItem value="w">Weiblich</SelectItem>
+                      <SelectItem value={null}>Auto (aus Geburtsdatum)</SelectItem>
+                      <SelectItem value="kind">Kind (0–18)</SelectItem>
+                      <SelectItem value="jugend">Jugend (19–25)</SelectItem>
+                      <SelectItem value="erwachsen">Erwachsen (26+)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div>
+                <Label>Geschlecht</Label>
+                <Select value={formData.geschlecht} onValueChange={v => setFormData({...formData, geschlecht: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="m">Männlich</SelectItem>
+                    <SelectItem value="w">Weiblich</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
@@ -460,7 +503,7 @@ export default function KrankenkassenVergleich() {
                   <Select value={formData.aktuelle_franchise.toString()} onValueChange={v => setFormData({...formData, aktuelle_franchise: parseInt(v, 10)})}>
                     <SelectTrigger><SelectValue placeholder="Franchise wählen" /></SelectTrigger>
                     <SelectContent>
-                      {FRANCHISEN.map(f => <SelectItem key={f} value={f.toString()}>CHF {f.toLocaleString('de-CH')}</SelectItem>)}
+                      {franchisen.map(f => <SelectItem key={f} value={f.toString()}>CHF {f.toLocaleString('de-CH')}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
