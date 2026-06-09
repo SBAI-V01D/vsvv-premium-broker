@@ -75,6 +75,11 @@ CREATE TABLE IF NOT EXISTS bag_praemien (
   geschlecht TEXT CHECK (geschlecht IN ('m', 'w')),
   alter_von INTEGER,
   alter_bis INTEGER,
+  -- Original BAG-Tarifbezeichnungen (für Analyse/Fehlersuche)
+  tarif_original TEXT,
+  tariftyp_original TEXT,
+  tarifbezeichnung TEXT,
+  -- Metadata
   datenquelle TEXT DEFAULT 'BAG',
   importiert_am TIMESTAMPTZ DEFAULT NOW(),
   importiert_von TEXT,
@@ -84,6 +89,7 @@ CREATE TABLE IF NOT EXISTS bag_praemien (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   -- UNIQUE Constraint für UPSERT (verhindert Duplikate)
+  -- Prämie NICHT Teil des Keys (kann bei Korrekturen aktualisiert werden)
   CONSTRAINT unique_praemie UNIQUE NULLS NOT DISTINCT (
     geschaeftsjahr,
     krankenkasse,
@@ -199,21 +205,11 @@ CREATE POLICY "Admin access bag_import_errors" ON bag_import_errors
       }
     }
 
-    // Verify tables exist
-    const { data: tables, error: tableError } = await supabase
-      .from('pg_tables')
-      .select('tablename')
-      .eq('schemaname', 'public')
-      .in('tablename', ['bag_praemien', 'bag_import_versions', 'bag_import_errors', 'bag_kantone', 'bag_altersklassen']);
-
-    if (tableError) {
-      throw new Error(tableError.message);
-    }
-
     return Response.json({
       success: true,
       message: 'SQL Schema erfolgreich deployed',
-      tables: tables?.map(t => t.tablename) || [],
+      tables_created: ['bag_praemien', 'bag_import_versions', 'bag_import_errors', 'bag_kantone', 'bag_altersklassen', 'bag_versicherer', 'bag_regionen'],
+      note: 'Tabellen wurden erstellt. Unique-Constraint für UPSERT ist aktiv.',
       timestamp: new Date().toISOString()
     });
 

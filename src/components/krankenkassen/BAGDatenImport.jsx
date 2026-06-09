@@ -298,6 +298,10 @@ function analyzeAndParseBAGExcel(file, jahr) {
             geschlecht: 'm',
             alter_von: istKind ? 0 : istJugendlich ? 19 : 26,
             alter_bis: istKind ? 18 : istJugendlich ? 25 : 99,
+            // Original BAG-Tarifbezeichnungen (für Analyse/Fehlersuche)
+            tarif_original: String(tarifTyp || ''),
+            tariftyp_original: String(tarifTyp || ''),
+            tarifbezeichnung: String(tarifTyp || ''),
             datenquelle: 'BAG',
             gueltig_ab: `${jahr}-01-01`,
             gueltig_bis: `${jahr}-12-31`,
