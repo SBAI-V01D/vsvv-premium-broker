@@ -33,6 +33,11 @@ export default function BAGDatenAdmin() {
     while (true) {
       const res = await base44.functions.invoke('deleteAllBAGDaten', { deleted: deletedSoFar });
       const data = res.data;
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
       deletedSoFar = data.deleted || deletedSoFar;
       setDeleted(deletedSoFar);
       if (estimate === 0 && deletedSoFar > 0) {
