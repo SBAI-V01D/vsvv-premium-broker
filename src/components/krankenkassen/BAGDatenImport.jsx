@@ -130,9 +130,9 @@ function analyzeAndParseBAGExcel(file, jahr) {
         const uniqueVersicherer = new Set();
         const uniqueFranchise = new Set();
 
-        // Stichprobe über die ganze Datei verteilt (nicht nur erste 500)
+        // Stichprobe über die ganze Datei verteilt für Diagnose
         const sampleIndices = new Set();
-        const sampleStep = Math.max(1, Math.floor(allRows.length / 200));
+        const sampleStep = Math.max(1, Math.floor(allRows.length / 500));
         for (let i = 1; i < allRows.length; i += sampleStep) sampleIndices.add(i);
 
         for (const i of sampleIndices) {
@@ -167,10 +167,12 @@ function analyzeAndParseBAGExcel(file, jahr) {
           uniqueFranchise: [...uniqueFranchise].slice(0, 10),
         };
 
-        // Nun parsen — aber mit ALLEN Altersklassen die nicht explizit Kinder/Jugendliche sind
+        // Nun parsen
         const byKanton = {};
         let skippedAlter = 0, skippedTarif = 0, skippedPraemie = 0, skippedUnbekanntId = 0;
         const unbekannteIds = new Set();
+        const unbekannteIdCount = {};  // ID → Anzahl Zeilen
+        const skippedTarifTypes = {};  // Tariftyp → Anzahl
 
         for (let i = 1; i < allRows.length; i++) {
           const row = allRows[i];
@@ -213,7 +215,11 @@ function analyzeAndParseBAGExcel(file, jahr) {
              tarifStr.includes('TEL') ? 'telmed' :
              tarifStr.includes('HAM') || tarifStr.includes('HAUS') ? 'hausarzt' :
              tarifStr.includes('HMO') ? 'hmo' : null);
-          if (!modell) { skippedTarif++; continue; } // DIV-Tarife, Komplementär etc. → ignorieren
+          if (!modell) {
+            skippedTarif++;
+            skippedTarifTypes[tarifStr] = (skippedTarifTypes[tarifStr] || 0) + 1;
+            continue;
+          }
 
           const kanton = String(kantonCode || '').trim().toUpperCase();
           if (!kanton || kanton.length > 3) continue;
@@ -235,7 +241,9 @@ function analyzeAndParseBAGExcel(file, jahr) {
           const kassieId = parseInt(versichererId);
           const kassenName = VERSICHERER_NAMEN[kassieId];
           if (!kassenName) {
-            unbekannteIds.add(String(versichererId || '').trim());
+            const idStr = String(versichererId || '').trim();
+            unbekannteIds.add(idStr);
+            unbekannteIdCount[idStr] = (unbekannteIdCount[idStr] || 0) + 1;
             skippedUnbekanntId++;
             continue;
           }
@@ -266,6 +274,8 @@ function analyzeAndParseBAGExcel(file, jahr) {
         diagnose.skippedPraemie = skippedPraemie;
         diagnose.skippedUnbekanntId = skippedUnbekanntId;
         diagnose.unbekannteIds = [...unbekannteIds].sort();
+        diagnose.unbekannteIdCount = unbekannteIdCount;
+        diagnose.skippedTarifTypes = skippedTarifTypes;
         diagnose.totalParsed = totalParsed;
         diagnose.kantone = Object.keys(byKanton);
 
@@ -537,10 +547,24 @@ export default function BAGDatenImport() {
               </div>
 
               {diagnose.unbekannteIds?.length > 0 && (
-                <div className="p-2 bg-amber-50 border border-amber-200 rounded text-amber-800">
-                  <p className="font-semibold mb-1">⚠️ {diagnose.unbekannteIds.length} unbekannte Versicherer-IDs übersprungen ({diagnose.skippedUnbekanntId} Zeilen):</p>
-                  <p className="font-mono text-xs">{diagnose.unbekannteIds.join(', ')}</p>
-                  <p className="text-xs mt-1 text-amber-700">Diese IDs fehlen im Mapping — bitte dem Entwickler mitteilen.</p>
+                <div className="p-2 bg-amber-50 border border-amber-200 rounded text-amber-800 space-y-1">
+                  <p className="font-semibold">⚠️ {diagnose.unbekannteIds.length} unbekannte Versicherer-IDs ({diagnose.skippedUnbekanntId} Zeilen übersprungen):</p>
+                  <div className="font-mono text-xs space-y-0.5">
+                    {Object.entries(diagnose.unbekannteIdCount || {}).sort((a,b) => b[1]-a[1]).map(([id, count]) => (
+                      <span key={id} className="inline-block mr-2 bg-amber-100 px-1 rounded">{id} ({count}×)</span>
+                    ))}
+                  </div>
+                  <p className="text-xs text-amber-700">→ Diese IDs müssen ins VERSICHERER_NAMEN-Mapping eingetragen werden.</p>
+                </div>
+              )}
+              {diagnose.skippedTarifTypes && Object.keys(diagnose.skippedTarifTypes).length > 0 && (
+                <div className="p-2 bg-slate-100 border border-slate-200 rounded text-slate-700 space-y-1">
+                  <p className="font-semibold text-xs">ℹ️ Übersprungene Tariftypen ({diagnose.skippedTarif} Zeilen):</p>
+                  <div className="font-mono text-xs">
+                    {Object.entries(diagnose.skippedTarifTypes).sort((a,b) => b[1]-a[1]).map(([t, count]) => (
+                      <span key={t} className="inline-block mr-2 bg-slate-200 px-1 rounded">{t} ({count}×)</span>
+                    ))}
+                  </div>
                 </div>
               )}
 
