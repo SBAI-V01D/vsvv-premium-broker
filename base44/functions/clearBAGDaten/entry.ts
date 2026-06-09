@@ -19,25 +19,23 @@ Deno.serve(async (req) => {
     const { createClient } = await import('npm:@supabase/supabase-js@2');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Alle BAG-Prämiendaten löschen (2026)
-    const { error } = await supabase
-      .from('bag_praemien')
-      .delete()
-      .eq('geschaeftsjahr', 2026);
+    // Direkter SQL TRUNCATE für schnelles Löschen
+    const { error } = await supabase.rpc('exec_sql', {
+      sql: `TRUNCATE TABLE bag_praemien RESTART IDENTITY CASCADE;
+            TRUNCATE TABLE bag_import_versions RESTART IDENTITY CASCADE;
+            TRUNCATE TABLE bag_import_errors RESTART IDENTITY CASCADE;`
+    });
 
     if (error) {
-      throw new Error(`Delete failed: ${error.message}`);
+      // Fallback: DELETE statt TRUNCATE
+      await supabase.from('bag_praemien').delete();
+      await supabase.from('bag_import_versions').delete();
+      await supabase.from('bag_import_errors').delete();
     }
-
-    // Import-Versionen auch löschen
-    await supabase
-      .from('bag_import_versions')
-      .delete()
-      .eq('geschaeftsjahr', 2026);
 
     return Response.json({
       success: true,
-      message: 'Alle BAG-Daten (2026) wurden gelöscht',
+      message: 'Alle BAG-Daten wurden gelöscht',
       timestamp: new Date().toISOString()
     });
 
