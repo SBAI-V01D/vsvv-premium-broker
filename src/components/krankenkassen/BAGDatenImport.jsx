@@ -14,6 +14,21 @@ const MODELL_MAP = {
   'TAR-STD': 'standard', 'TAR-TEL': 'telmed', 'TAR-HAM': 'hausarzt', 'TAR-HMO': 'hmo'
 };
 
+const VERSICHERER_NAMEN = {
+  1:'CSS', 2:'Helsana', 3:'Sanitas', 4:'Swica', 5:'ÖKK',
+  6:'Visana', 7:'KPT', 8:'Agrisano', 9:'Concordia', 10:'Atupri',
+  11:'Assura', 12:'Intras', 13:'Sympany', 14:'bkk mobilise', 15:'Galenus', 16:'Groupe Mutuel'
+};
+
+// Findet Spaltenindex anhand möglicher Header-Namen (case-insensitive)
+function findCol(headers, ...candidates) {
+  for (const c of candidates) {
+    const idx = headers.findIndex(h => String(h || '').toLowerCase().includes(c.toLowerCase()));
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
 // Parst die BAG Excel-Datei komplett im Browser und gibt Records pro Kanton zurück
 function parseBAGExcel(file, jahr) {
   return new Promise((resolve, reject) => {
@@ -21,43 +36,97 @@ function parseBAGExcel(file, jahr) {
     reader.onload = (e) => {
       try {
         const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        
+        // Alle Sheet-Namen loggen
+        console.log('[BAG] Sheets:', workbook.SheetNames);
+        
         const ws = workbook.Sheets[workbook.SheetNames[0]];
         const allRows = XLSX.utils.sheet_to_json(ws, { raw: true, header: 1 });
 
-        // Records nach Kanton gruppieren
+        if (allRows.length < 2) {
+          reject(new Error('Datei ist leer oder hat keine Daten'));
+          return;
+        }
+
+        // Header-Zeile analysieren
+        const headers = allRows[0].map(h => String(h || ''));
+        console.log('[BAG] Headers (erste 20):', headers.slice(0, 20));
+        console.log('[BAG] Zeile 1 (Beispiel):', allRows[1]);
+
+        // Spalten dynamisch finden
+        const colKanton      = findCol(headers, 'kanton', 'canton');
+        const colVersicherer = findCol(headers, 'versich', 'insurer', 'kasse');
+        const colJahr        = findCol(headers, 'jahr', 'year', 'geschaefts');
+        const colRegion      = findCol(headers, 'region', 'praemienregion');
+        const colAlter       = findCol(headers, 'alters', 'alter', 'age');
+        const colUnfall      = findCol(headers, 'unfall', 'accident');
+        const colTarif       = findCol(headers, 'tarif', 'modell', 'typ');
+        const colFranchise   = findCol(headers, 'franchise', 'selbstbeh');
+        const colPraemie     = findCol(headers, 'praemie', 'prämie', 'premium', 'betrag');
+
+        console.log('[BAG] Erkannte Spalten:', { colKanton, colVersicherer, colJahr, colRegion, colAlter, colUnfall, colTarif, colFranchise, colPraemie });
+
+        // Fallback: wenn Header nicht gefunden, nutze ursprüngliche Positionen (BAG-Standardformat)
+        // BAG-Format: [VersichererId, Kanton, Jahr, ?, Region, Altersklasse, Unfall, ?, Tarif, ?, ?, Franchise, ?, Praemie]
+        const useFixed = colKanton === -1 || colPraemie === -1;
+        if (useFixed) {
+          console.log('[BAG] Kein Header gefunden — verwende feste BAG-Spaltenposition');
+        }
+
         const byKanton = {};
 
         for (let i = 1; i < allRows.length; i++) {
           const row = allRows[i];
           if (!row?.length) continue;
 
-          const [versichererId, kantonCode, geschaeftsjahr, , regionCode, altersklasse, unfalleinschluss, , tarifTyp, , , franchiseCode, , praemie] = row;
+          let versichererId, kantonCode, geschaeftsjahr, regionCode, altersklasse, unfalleinschluss, tarifTyp, franchiseCode, praemie;
 
-          // Nur Erwachsene ohne Unfall
-          if (altersklasse !== 'AKL-ERW') continue;
-          if (unfalleinschluss !== 'OHNE-UNF') continue;
+          if (useFixed) {
+            // Feste BAG-Spaltenstruktur
+            [versichererId, kantonCode, geschaeftsjahr, , regionCode, altersklasse, unfalleinschluss, , tarifTyp, , , franchiseCode, , praemie] = row;
+          } else {
+            versichererId  = row[colVersicherer];
+            kantonCode     = row[colKanton];
+            geschaeftsjahr = colJahr >= 0 ? row[colJahr] : jahr;
+            regionCode     = colRegion >= 0 ? row[colRegion] : '';
+            altersklasse   = colAlter >= 0 ? row[colAlter] : '';
+            unfalleinschluss = colUnfall >= 0 ? row[colUnfall] : '';
+            tarifTyp       = row[colTarif];
+            franchiseCode  = row[colFranchise];
+            praemie        = row[colPraemie];
+          }
+
+          // Filter
+          const alterStr = String(altersklasse || '').toUpperCase();
+          if (alterStr && !alterStr.includes('ERW') && !alterStr.includes('ADU')) continue;
+          
+          const unfallStr = String(unfalleinschluss || '').toUpperCase();
+          if (unfallStr && !unfallStr.includes('OHNE') && !unfallStr.includes('OHN') && !unfallStr.includes('0') && !unfallStr.includes('NO') && !unfallStr.includes('N')) {
+            // wenn Unfall-Spalte existiert und nicht "ohne", überspringen
+            if (unfallStr.includes('MIT') || unfallStr.includes('WITH') || unfallStr.includes('1')) continue;
+          }
+
           if (!praemie || parseFloat(praemie) <= 0) continue;
 
-          const modell = MODELL_MAP[tarifTyp];
+          const tarifStr = String(tarifTyp || '').toUpperCase();
+          const modell = MODELL_MAP[tarifStr] || 
+            (tarifStr.includes('STD') || tarifStr.includes('STANDARD') ? 'standard' :
+             tarifStr.includes('TEL') ? 'telmed' :
+             tarifStr.includes('HAM') || tarifStr.includes('HAUS') ? 'hausarzt' :
+             tarifStr.includes('HMO') ? 'hmo' : null);
           if (!modell) continue;
 
-          const kanton = String(kantonCode || '').trim();
-          if (!kanton) continue;
+          const kanton = String(kantonCode || '').trim().toUpperCase();
+          if (!kanton || kanton.length > 3) continue;
 
           let franchise = 300;
           const m = String(franchiseCode || '').match(/(\d+)/);
           if (m) franchise = parseInt(m[1]);
 
-          const versichererNamen = {
-            1:'CSS', 2:'Helsana', 3:'Sanitas', 4:'Swica', 5:'ÖKK',
-            6:'Visana', 7:'KPT', 8:'Agrisano', 9:'Concordia', 10:'Atupri',
-            11:'Assura', 12:'Intras', 13:'Sympany', 14:'bkk mobilise', 15:'Galenus', 16:'Groupe Mutuel'
-          };
-
           if (!byKanton[kanton]) byKanton[kanton] = [];
           byKanton[kanton].push({
-            jahr: parseInt(geschaeftsjahr || jahr),
-            krankenkasse: versichererNamen[versichererId] || `VK-${versichererId}`,
+            jahr: parseInt(String(geschaeftsjahr || jahr).match(/\d{4}/)?.[0] || jahr),
+            krankenkasse: VERSICHERER_NAMEN[parseInt(versichererId)] || String(versichererId || ''),
             kanton,
             region: String(regionCode || ''),
             modell,
@@ -118,6 +187,15 @@ export default function BAGDatenImport() {
       setProgress({ phase: 'parsing', current: 0, total: 0, kanton: '' });
       const byKanton = await parseBAGExcel(selectedFile, parseInt(jahr));
 
+      // Debug: zeige was gefunden wurde
+      const kantoneGefunden = Object.keys(byKanton);
+      const totalGefunden = kantoneGefunden.reduce((s, k) => s + byKanton[k].length, 0);
+      console.log('[BAG Debug] Kantone in Datei:', kantoneGefunden);
+      console.log('[BAG Debug] Total Records:', totalGefunden);
+      if (kantoneGefunden.length > 0) {
+        console.log('[BAG Debug] Beispiel Record:', JSON.stringify(byKanton[kantoneGefunden[0]][0]));
+      }
+
       const kantoneInDatei = Object.keys(byKanton);
       const kantoneToImport = importModus === 'auswahl'
         ? selectedKantone.filter(k => kantoneInDatei.includes(k))
@@ -127,7 +205,11 @@ export default function BAGDatenImport() {
       console.log(`[BAG] Parsed: ${kantoneInDatei.length} Kantone, ${totalRecords} Records total`);
 
       if (kantoneToImport.length === 0) {
-        setUploadResult({ error: 'Keine passenden Kantone in der Datei gefunden.' });
+        setUploadResult({ 
+          error: kantoneInDatei.length === 0
+            ? `Keine Kantone erkannt. Datei hat ${Object.keys(byKanton).length} Einträge. Prüfen Sie die Browser-Konsole (F12) für Details zur Spaltenstruktur.`
+            : `Gewählte Kantone nicht in Datei. Datei enthält: ${kantoneInDatei.slice(0,10).join(', ')}`
+        });
         return;
       }
 
