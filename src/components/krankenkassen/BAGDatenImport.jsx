@@ -110,16 +110,16 @@ function analyzeAndParseBAGExcel(file, jahr) {
         const headers = allRows[0].map(h => String(h || ''));
         const sampleRow = allRows[1];
 
-        // Spalten finden
+        // Spalten finden — Tariftyp vor Tarif suchen (wichtig: Tariftyp enthält TAR-STD etc.)
         const colKanton      = findCol(headers, 'kanton', 'canton');
         const colVersicherer = findCol(headers, 'versich', 'insurer', 'kasse');
-        const colJahr        = findCol(headers, 'jahr', 'year', 'geschaefts');
+        const colJahr        = findCol(headers, 'gesch', 'jahr', 'year');
         const colRegion      = findCol(headers, 'region', 'praemienregion');
-        const colAlter       = findCol(headers, 'alters', 'alter', 'age');
+        const colAlter       = findCol(headers, 'altersklasse', 'alters', 'age');
         const colUnfall      = findCol(headers, 'unfall', 'accident');
-        const colTarif       = findCol(headers, 'tarif', 'modell', 'typ');
+        const colTarif       = findCol(headers, 'tariftyp', 'tariftype', 'modell');  // Tariftyp zuerst!
         const colFranchise   = findCol(headers, 'franchise', 'selbstbeh');
-        const colPraemie     = findCol(headers, 'praemie', 'prämie', 'premium', 'betrag');
+        const colPraemie     = findCol(headers, 'prämie', 'praemie', 'premium', 'betrag');
 
         const useFixed = colKanton === -1 || colPraemie === -1;
 
@@ -130,7 +130,12 @@ function analyzeAndParseBAGExcel(file, jahr) {
         const uniqueVersicherer = new Set();
         const uniqueFranchise = new Set();
 
-        for (let i = 1; i < Math.min(allRows.length, 500); i++) {
+        // Stichprobe über die ganze Datei verteilt (nicht nur erste 500)
+        const sampleIndices = new Set();
+        const sampleStep = Math.max(1, Math.floor(allRows.length / 200));
+        for (let i = 1; i < allRows.length; i += sampleStep) sampleIndices.add(i);
+
+        for (const i of sampleIndices) {
           const row = allRows[i];
           if (!row?.length) continue;
           if (useFixed) {
@@ -499,6 +504,7 @@ export default function BAGDatenImport() {
                 <div><span className="text-muted-foreground">Übersprungen (Unbekannte ID):</span> <strong className={diagnose.skippedUnbekanntId > 0 ? 'text-amber-700' : ''}>{diagnose.skippedUnbekanntId}</strong></div>
                 <div><span className="text-muted-foreground">Spalten-Modus:</span> <strong>{diagnose.useFixed ? 'Fest (kein Header)' : 'Dynamisch'}</strong></div>
                 <div><span className="text-muted-foreground">Kantone:</span> <strong>{diagnose.kantone?.length}</strong></div>
+                <div className="col-span-2"><span className="text-muted-foreground">Spalten-Indizes (Tariftyp/Alter/Franchise/Prämie):</span> <strong className="font-mono">{diagnose.cols?.colTarif} / {diagnose.cols?.colAlter} / {diagnose.cols?.colFranchise} / {diagnose.cols?.colPraemie}</strong></div>
               </div>
 
               <div>
