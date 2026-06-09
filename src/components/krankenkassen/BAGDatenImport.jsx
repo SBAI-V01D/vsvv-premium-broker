@@ -686,7 +686,7 @@ export default function BAGDatenImport() {
 
               {diagnose.totalParsed > 0 && (
                 <div className="p-2 bg-emerald-50 border border-emerald-200 rounded text-emerald-700">
-                  ✅ {diagnose.totalParsed?.toLocaleString()} Records bereit für Import (ohne Unfalldeckung)
+                  ✅ {diagnose.totalParsed?.toLocaleString()} Records bereit für Import (MIT-UNF + OHNE-UNF)
                 </div>
               )}
             </div>
