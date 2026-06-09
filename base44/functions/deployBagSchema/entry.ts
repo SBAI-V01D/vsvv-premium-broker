@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS bag_praemien (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Composite Unique Constraint für UPSERT (ohne praemie_Felder damit Updates möglich)
+-- Composite Unique Constraint für UPSERT (mit 'unfall' für BEIDE Varianten)
 ALTER TABLE bag_praemien
 ADD CONSTRAINT unique_bag_record
 UNIQUE (geschaeftsjahr, krankenkasse, kanton, region, modell, franchise, unfall, altersklasse);

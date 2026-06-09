@@ -236,14 +236,12 @@ function analyzeAndParseBAGExcel(file, jahr) {
             continue;
           }
 
-          // Unfall-Statistik erfassen
+          // Unfall-Statistik erfassen — BEIDE importieren!
           const unfallStr = String(unfalleinschluss || '').toUpperCase();
           const istMitUnf = unfallStr === 'MIT-UNF' || unfallStr === 'MIT' || unfallStr === 'WITH' || unfallStr === '1' || unfallStr === 'JA';
           
           if (istMitUnf) {
             totalMitUnf++;
-            skippedMitUnf++;  // Wir importieren nur OHNE-UNF
-            continue;
           } else {
             totalOhneUnf++;
           }
@@ -315,7 +313,7 @@ function analyzeAndParseBAGExcel(file, jahr) {
             region: String(regionCode || ''),
             modell,
             franchise,
-            unfall: false,
+            unfall: istMitUnf,  // TRUE = MIT-UNF, FALSE = OHNE-UNF
             altersklasse: istKind ? 'kind' : istJugendlich ? 'jugend' : 'erwachsen',
             praemie_erwachsene: istKind ? 0 : praemieVal,
             praemie_kinder: istKind ? praemieVal : 0,
@@ -606,11 +604,11 @@ export default function BAGDatenImport() {
                   <div><span className="text-muted-foreground">Kantone:</span> <strong>{diagnose.kantone?.length}</strong></div>
                 </div>
 
-                <div className="p-2 bg-blue-50 border border-blue-200 rounded text-xs">
-                  <p className="font-semibold text-blue-800 mb-2">📊 Vollständige Aufschlüsselung (217'472 → 108'736)</p>
+                <div className="p-2 bg-emerald-50 border border-emerald-200 rounded text-xs">
+                  <p className="font-semibold text-emerald-800 mb-2">✅ Vollständige Import-Strategie (BEIDE Unfall-Varianten)</p>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div><span className="text-muted-foreground">Übersprungen (MIT-UNF):</span> <strong className="text-blue-700">{diagnose.skippedMitUnf?.toLocaleString()}</strong></div>
-                    <div><span className="text-muted-foreground">Davon OHNE-UNF:</span> <strong className="text-emerald-700">{diagnose.totalOhneUnf?.toLocaleString()}</strong></div>
+                    <div><span className="text-emerald-700">MIT-UNF (importiert):</span> <strong className="text-emerald-900">{diagnose.totalMitUnf?.toLocaleString()}</strong></div>
+                    <div><span className="text-emerald-700">OHNE-UNF (importiert):</span> <strong className="text-emerald-900">{diagnose.totalOhneUnf?.toLocaleString()}</strong></div>
                     <div><span className="text-muted-foreground">Übersprungen (Tarif):</span> <strong>{diagnose.skippedTarif}</strong></div>
                     <div><span className="text-muted-foreground">Übersprungen (Alter):</span> <strong>{diagnose.skippedAlter}</strong></div>
                     <div><span className="text-muted-foreground">Übersprungen (Franchise):</span> <strong>{diagnose.skippedFranchise || 0}</strong></div>
@@ -618,8 +616,11 @@ export default function BAGDatenImport() {
                     <div><span className="text-muted-foreground">Übersprungen (Prämie ≤0):</span> <strong>{diagnose.skippedPraemie || 0}</strong></div>
                     <div><span className="text-muted-foreground">Übersprungen (Unbekannte ID):</span> <strong className={diagnose.skippedUnbekanntId > 0 ? 'text-amber-700' : ''}>{diagnose.skippedUnbekanntId}</strong></div>
                   </div>
-                  <p className="text-xs text-blue-700 mt-2">
-                    <strong>Summe verworfen:</strong> {((diagnose.skippedMitUnf || 0) + (diagnose.skippedTarif || 0) + (diagnose.skippedAlter || 0) + (diagnose.skippedFranchise || 0) + (diagnose.skippedKanton || 0) + (diagnose.skippedPraemie || 0) + (diagnose.skippedUnbekanntId || 0)).toLocaleString()}
+                  <p className="text-xs text-emerald-700 mt-2">
+                    <strong>Importiert gesamt:</strong> {(diagnose.totalMitUnf + diagnose.totalOhneUnf).toLocaleString()} von {diagnose.totalRows?.toLocaleString()} Zeilen
+                  </p>
+                  <p className="text-xs text-emerald-700">
+                    <strong>Verworfen gesamt:</strong> {((diagnose.skippedTarif || 0) + (diagnose.skippedAlter || 0) + (diagnose.skippedFranchise || 0) + (diagnose.skippedKanton || 0) + (diagnose.skippedPraemie || 0) + (diagnose.skippedUnbekanntId || 0)).toLocaleString()}
                   </p>
                 </div>
 

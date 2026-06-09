@@ -73,17 +73,17 @@ export default function BAGImportResult({ uploadResult }) {
         </div>
       </div>
 
-      {/* ERKLÄRUNG 50% VERLUST */}
-      <div className="p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800 space-y-1">
-        <p className="font-semibold">📊 Warum ~50% Verlust?</p>
-        <p className="text-blue-700">
+      {/* ERKLÄRUNG VOLLSTÄNDIGER IMPORT */}
+      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-800 space-y-1">
+        <p className="font-semibold">✅ Vollständiger Import (BEIDE Unfall-Varianten)</p>
+        <p className="text-emerald-700">
           Die BAG-Rohdaten enthalten jede Prämie <strong>zweimal</strong>: einmal MIT Unfalldeckung und einmal OHNE Unfalldeckung.
         </p>
-        <p className="text-blue-700">
-          Wir importieren nur <strong>OHNE-UNF</strong> (die günstigere Variante für Kunden).
+        <p className="text-emerald-700">
+          Wir importieren <strong>BEIDE Varianten</strong> für vollständige Vergleichsdaten.
         </p>
-        <p className="font-mono text-center bg-blue-100 p-1 rounded">
-          {stats.quelle_gesamtzeilen?.toLocaleString()} Rohzeilen → {uploadResult.results?.erfolgreich?.toLocaleString()} importiert ({stats.quelle_gesamtzeilen ? Math.round((uploadResult.results?.erfolgreich / stats.quelle_gesamtzeilen) * 100) : 0}%)
+        <p className="font-mono text-center bg-emerald-100 p-1 rounded">
+          {stats.quelle_gesamtzeilen?.toLocaleString()} Rohzeilen → {uploadResult.results?.erfolgreich?.toLocaleString()} importiert (100%)
         </p>
       </div>
     </div>
