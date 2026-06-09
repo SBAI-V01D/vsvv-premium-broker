@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Info, Search } from 'lucide-react';
+import BAGImportResult from './BAGImportResult';
 
 const ALLE_KANTONE = ['ZH','BE','LU','UR','SZ','OW','NW','GL','ZG','FR','SO','BS','BL','SH','AR','AI','SG','GR','AG','TG','TI','VD','VS','NE','GE','JU'];
 
@@ -407,6 +408,7 @@ export default function BAGDatenImport() {
       : kantoneInDatei;
 
     const BATCH = 25;
+    const importStart = Date.now();
 
     for (let i = 0; i < kantoneToImport.length; i++) {
       const kanton = kantoneToImport[i];
@@ -432,11 +434,28 @@ export default function BAGDatenImport() {
       }
     }
 
+    const importdauerMinuten = (Date.now() - importStart) / 60000;
+
+    // Automatische Validierung auslösen
+    let validierung = null;
+    try {
+      const validierungResponse = await base44.functions.invoke('validateBAGImport', {
+        import_batch_id: 'manual-import-' + Date.now(),
+        quelle_datei_gesamtzeilen: diagnose.totalParsed,
+        importdauer_minuten: parseFloat(importdauerMinuten.toFixed(2))
+      });
+      validierung = validierungResponse.data;
+    } catch (err) {
+      console.error('Validierung fehlgeschlagen:', err);
+    }
+
     setUploadResult({
       success: erfolgreich > 0,
       results: { gesamt: erfolgreich + fehler, erfolgreich, fehler },
       message: erfolgreich > 0 ? `${erfolgreich} Datensätze erfolgreich importiert` : 'Import fehlgeschlagen',
-      errors: errors.length > 0 ? errors : null
+      errors: errors.length > 0 ? errors : null,
+      importdauer_minuten: parseFloat(importdauerMinuten.toFixed(2)),
+      validierung: validierung
     });
 
     if (erfolgreich > 0) queryClient.invalidateQueries({ queryKey: ['bag-praemien-stats'] });
@@ -639,33 +658,7 @@ export default function BAGDatenImport() {
           )}
 
           {/* Result */}
-          {uploadResult && (
-            <div className={`p-4 rounded-lg border ${uploadResult.error ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
-              {uploadResult.error ? (
-                <div className="flex items-center gap-2 text-red-700">
-                  <AlertCircle className="w-4 h-4" />
-                  <p className="font-medium text-sm">{uploadResult.error}</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-emerald-700">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <p className="font-medium text-sm">{uploadResult.message}</p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 text-sm mt-2">
-                    <div><p className="text-muted-foreground text-xs">Gesamt</p><p className="font-bold">{uploadResult.results?.gesamt}</p></div>
-                    <div><p className="text-muted-foreground text-xs">Erfolgreich</p><p className="font-bold text-emerald-700">{uploadResult.results?.erfolgreich}</p></div>
-                    <div><p className="text-muted-foreground text-xs">Fehler</p><p className="font-bold text-red-700">{uploadResult.results?.fehler}</p></div>
-                  </div>
-                  {uploadResult.errors && (
-                    <div className="mt-2 text-xs text-red-600 space-y-0.5">
-                      {uploadResult.errors.map((e, i) => <p key={i}>{e}</p>)}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+          <BAGImportResult uploadResult={uploadResult} />
         </div>
 
         <DialogFooter className="gap-2">
