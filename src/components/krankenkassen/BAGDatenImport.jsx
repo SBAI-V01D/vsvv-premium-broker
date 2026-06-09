@@ -230,15 +230,34 @@ export default function BAGDatenImport() {
           const now = new Date().toISOString();
           const enriched = records.map(r => ({ ...r, importiert_am: now, aktiv: true }));
 
-          // In Batches von 20 mit Pause
-          const BATCH = 20;
+          // In Batches von 10 mit grosser Pause — Rate Limit vermeiden
+          const BATCH = 10;
           let kantErfolgreich = 0;
           for (let b = 0; b < enriched.length; b += BATCH) {
-            await base44.entities.BAGPraemienDaten.bulkCreate(enriched.slice(b, b + BATCH));
+            let retries = 0;
+            let batchOk = false;
+            while (retries < 4 && !batchOk) {
+              try {
+                await base44.entities.BAGPraemienDaten.bulkCreate(enriched.slice(b, b + BATCH));
+                batchOk = true;
+              } catch (batchErr) {
+                if (batchErr.message?.includes('Rate limit') || batchErr.message?.includes('429') || batchErr.response?.status === 429) {
+                  retries++;
+                  const waitSec = retries * 8;
+                  console.warn(`[BAG] Rate limit — warte ${waitSec}s (Versuch ${retries}/4)...`);
+                  setProgress(p => ({ ...p, kanton: `${kanton} ⏳ Rate limit, warte ${waitSec}s...` }));
+                  await new Promise(r => setTimeout(r, waitSec * 1000));
+                } else {
+                  throw batchErr;
+                }
+              }
+            }
+            if (!batchOk) throw new Error('Rate limit — zu viele Versuche');
+
             kantErfolgreich += Math.min(BATCH, enriched.length - b);
             setProgress({ phase: 'importing', current: i + 1, total: kantoneToImport.length, kanton, records: kantErfolgreich, total_records: enriched.length });
             if (b + BATCH < enriched.length) {
-              await new Promise(r => setTimeout(r, 500));
+              await new Promise(r => setTimeout(r, 1500));
             }
           }
           erfolgreich += kantErfolgreich;
@@ -248,9 +267,9 @@ export default function BAGDatenImport() {
           console.error(`[BAG] ${kanton} failed:`, err.message);
         }
 
-        // Pause zwischen Kantonen
+        // Grosse Pause zwischen Kantonen
         if (i < kantoneToImport.length - 1) {
-          await new Promise(r => setTimeout(r, 1000));
+          await new Promise(r => setTimeout(r, 3000));
         }
       }
 
