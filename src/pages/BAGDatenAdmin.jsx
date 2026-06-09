@@ -13,21 +13,9 @@ export default function BAGDatenAdmin() {
   const handleDeleteAll = async () => {
     if (!window.confirm('Alle BAG-Prämiendaten löschen? Dies kann nicht rückgängig gemacht werden!')) return;
     setDeleting(true);
-    setDeleteResult(null);
-    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-    let total = 0;
-    while (true) {
-      const batch = await base44.entities.BAGPraemienDaten.list('-created_date', 20);
-      if (!batch || batch.length === 0) break;
-      for (const r of batch) {
-        await base44.entities.BAGPraemienDaten.delete(r.id);
-        await sleep(100);
-      }
-      total += batch.length;
-      setDeleteResult(`${total} gelöscht...`);
-      await sleep(500);
-    }
-    setDeleteResult(`✅ ${total} Datensätze gelöscht.`);
+    setDeleteResult('Lösche...');
+    const res = await base44.functions.invoke('deleteAllBAGDaten', {});
+    setDeleteResult(`✅ ${res.data?.deleted || 0} Datensätze gelöscht.`);
     setDeleting(false);
   };
 
