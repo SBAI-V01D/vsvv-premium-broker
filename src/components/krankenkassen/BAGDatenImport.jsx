@@ -222,14 +222,15 @@ function analyzeAndParseBAGExcel(file, jahr) {
             praemie          = row[colPraemie];
           }
 
-          // Altersfilter: NUR Erwachsene (AKL-ERW) und Jugendliche (AKL-JUG) — Kinder (AKL-KIN) überspringen
+          // Altersklasse bestimmen — alle 3 importieren
           const alterStr = String(altersklasse || '').toUpperCase();
-          if (alterStr === 'AKL-KIN' || alterStr.includes('KIN') || alterStr.includes('KIND')) {
+          const istKind      = alterStr === 'AKL-KIN' || alterStr.includes('KIN');
+          const istJugendlich = alterStr === 'AKL-JUG' || alterStr.includes('JUG');
+          // Unbekannte Altersklasse überspringen
+          if (!istKind && !istJugendlich && !alterStr.includes('ERW')) {
             skippedAlter++;
             continue;
           }
-          // Altersgruppe bestimmen
-          const istJugendlich = alterStr === 'AKL-JUG' || alterStr.includes('JUG');
 
           // Unfall: MIT-UNF überspringen (wir wollen OHNE-UNF = günstiger)
           const unfallStr = String(unfalleinschluss || '').toUpperCase();
@@ -262,9 +263,12 @@ function analyzeAndParseBAGExcel(file, jahr) {
             if (FRANCHISE_MAP[franchiseInt]) franchise = FRANCHISE_MAP[franchiseInt];
             else if (franchiseInt >= 300) franchise = franchiseInt;
           }
-          // Nur Standard-Franchisen 300-2500 importieren (gilt für ERW und JUG)
-          // Kinder-Franchisen (0, 100, 200, 400, 600) überspringen
-          if (![300,500,1000,1500,2000,2500].includes(franchise)) continue;
+          // Franchise-Filter je Altersklasse
+          // Kinder: 0, 100, 200, 300, 400, 500, 600 | Jugend/Erwachsene: 300, 500, 1000, 1500, 2000, 2500
+          const gueltigeFranchisen = istKind
+            ? [0, 100, 200, 300, 400, 500, 600]
+            : [300, 500, 1000, 1500, 2000, 2500];
+          if (!gueltigeFranchisen.includes(franchise)) continue;
 
           // Kassenname — unbekannte IDs überspringen
           const kassieId = parseInt(versichererId);
@@ -278,6 +282,7 @@ function analyzeAndParseBAGExcel(file, jahr) {
           }
 
           if (!byKanton[kanton]) byKanton[kanton] = [];
+          const praemieVal = parseFloat(praemie);
           byKanton[kanton].push({
             jahr: parseInt(String(geschaeftsjahr || jahr).match(/\d{4}/)?.[0] || jahr),
             krankenkasse: kassenName,
@@ -286,11 +291,12 @@ function analyzeAndParseBAGExcel(file, jahr) {
             modell,
             franchise,
             unfall: false,
-            praemie_erwachsene: istJugendlich ? 0 : parseFloat(praemie),
-            praemie_kinder: istJugendlich ? parseFloat(praemie) : 0,
+            altersklasse: istKind ? 'kind' : istJugendlich ? 'jugend' : 'erwachsen',
+            praemie_erwachsene: istKind ? 0 : praemieVal,
+            praemie_kinder: istKind ? praemieVal : 0,
             geschlecht: 'm',
-            alter_von: istJugendlich ? 19 : 26,
-            alter_bis: istJugendlich ? 25 : 99,
+            alter_von: istKind ? 0 : istJugendlich ? 19 : 26,
+            alter_bis: istKind ? 18 : istJugendlich ? 25 : 99,
             datenquelle: 'BAG',
             gueltig_ab: `${jahr}-01-01`,
             gueltig_bis: `${jahr}-12-31`,

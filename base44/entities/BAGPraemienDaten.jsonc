@@ -31,8 +31,13 @@
     "franchise": {
       "type": "number",
       "enum": [
+        0,
+        100,
+        200,
         300,
+        400,
         500,
+        600,
         1000,
         1500,
         2000,
@@ -42,8 +47,17 @@
     },
     "unfall": {
       "type": "boolean",
-      "default": true,
+      "default": false,
       "description": "Mit Unfalldeckung"
+    },
+    "altersklasse": {
+      "type": "string",
+      "enum": [
+        "kind",
+        "jugend",
+        "erwachsen"
+      ],
+      "description": "Altersklasse: kind (0-18), jugend (19-25), erwachsen (26+)"
     },
     "praemie_erwachsene": {
       "type": "number",
