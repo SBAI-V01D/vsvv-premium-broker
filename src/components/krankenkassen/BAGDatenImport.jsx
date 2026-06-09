@@ -20,6 +20,7 @@ const MODELL_MAP = {
   'TAR-TEL':  'telmed',
   'TAR-HAM':  'hausarzt',
   'TAR-HMO':  'hmo',
+  'TAR-DIV':  'other',     // Diverse/spezial Modelle (importieren, nicht ausschliessen)
 };
 
 // BAG Franchise-Akronym → CHF Betrag
@@ -240,11 +241,18 @@ function analyzeAndParseBAGExcel(file, jahr) {
           if (!praemie || parseFloat(praemie) <= 0) { skippedPraemie++; continue; }
 
           const tarifStr = String(tarifTyp || '').toUpperCase();
-          const modell = MODELL_MAP[tarifStr] ||
-            (tarifStr.includes('STD') || tarifStr.includes('STANDARD') ? 'standard' :
-             tarifStr.includes('TEL') ? 'telmed' :
-             tarifStr.includes('HAM') || tarifStr.includes('HAUS') ? 'hausarzt' :
-             tarifStr.includes('HMO') ? 'hmo' : null);
+          let modell = MODELL_MAP[tarifStr];
+          
+          // Fallback: Automatische Erkennung wenn nicht im MODELL_MAP
+          if (!modell) {
+            if (tarifStr.includes('STD') || tarifStr.includes('STANDARD')) modell = 'standard';
+            else if (tarifStr.includes('TEL')) modell = 'telmed';
+            else if (tarifStr.includes('HAM') || tarifStr.includes('HAUS')) modell = 'hausarzt';
+            else if (tarifStr.includes('HMO')) modell = 'hmo';
+            else if (tarifStr.includes('DIV')) modell = 'other';  // TAR-DIV explizit akzeptieren
+          }
+          
+          // Unbekannte Tariftypen überspringen (aber TAR-DIV ist jetzt bekannt)
           if (!modell) {
             skippedTarif++;
             skippedTarifTypes[tarifStr] = (skippedTarifTypes[tarifStr] || 0) + 1;

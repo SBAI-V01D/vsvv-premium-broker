@@ -24,9 +24,10 @@
         "standard",
         "telmed",
         "hausarzt",
-        "hmo"
+        "hmo",
+        "other"
       ],
-      "description": "Versicherungsmodell"
+      "description": "Versicherungsmodell (other = TAR-DIV diverse/spezial)"
     },
     "franchise": {
       "type": "number",
