@@ -5,17 +5,44 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FileSpreadsheet, Database, Calendar, Info, Trash2, Loader2 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 export default function BAGDatenAdmin() {
   const [deleting, setDeleting] = useState(false);
   const [deleteResult, setDeleteResult] = useState(null);
+  const [deleted, setDeleted] = useState(0);
+  const [totalEstimate, setTotalEstimate] = useState(0);
 
   const handleDeleteAll = async () => {
     if (!window.confirm('Alle BAG-Prämiendaten löschen? Dies kann nicht rückgängig gemacht werden!')) return;
     setDeleting(true);
-    setDeleteResult('Lösche...');
-    const res = await base44.functions.invoke('deleteAllBAGDaten', {});
-    setDeleteResult(`✅ ${res.data?.deleted || 0} Datensätze gelöscht.`);
+    setDeleteResult(null);
+    setDeleted(0);
+    setTotalEstimate(0);
+
+    let deletedSoFar = 0;
+    let estimate = 0;
+
+    // Get total count estimate first
+    try {
+      const sample = await base44.entities.BAGPraemienDaten.list('-created_date', 1000);
+      estimate = sample.length >= 1000 ? 130000 : sample.length;
+      setTotalEstimate(estimate);
+    } catch {}
+
+    while (true) {
+      const res = await base44.functions.invoke('deleteAllBAGDaten', { deleted: deletedSoFar });
+      const data = res.data;
+      deletedSoFar = data.deleted || deletedSoFar;
+      setDeleted(deletedSoFar);
+      if (estimate === 0 && deletedSoFar > 0) {
+        estimate = Math.max(estimate, deletedSoFar * 2);
+        setTotalEstimate(estimate);
+      }
+      if (data.done) break;
+    }
+
+    setDeleteResult(`✅ ${deletedSoFar.toLocaleString()} Datensätze gelöscht.`);
     setDeleting(false);
   };
 
@@ -96,13 +123,24 @@ export default function BAGDatenAdmin() {
             </div>
           </div>
 
-          <div className="pt-4 border-t flex items-center gap-3">
-            <BAGDatenImport />
-            <Button variant="destructive" size="sm" onClick={handleDeleteAll} disabled={deleting}>
-              {deleting ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 mr-2" />}
-              Alle Daten löschen
-            </Button>
-            {deleteResult && <span className="text-xs text-emerald-700">{deleteResult}</span>}
+          <div className="pt-4 border-t space-y-3">
+            <div className="flex items-center gap-3">
+              <BAGDatenImport />
+              <Button variant="destructive" size="sm" onClick={handleDeleteAll} disabled={deleting}>
+                {deleting ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 mr-2" />}
+                Alle Daten löschen
+              </Button>
+              {deleteResult && <span className="text-xs text-emerald-700">{deleteResult}</span>}
+            </div>
+            {deleting && (
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{deleted.toLocaleString()} gelöscht{totalEstimate > 0 ? ` von ~${totalEstimate.toLocaleString()}` : ''}...</span>
+                  {totalEstimate > 0 && <span>{Math.min(100, Math.round((deleted / totalEstimate) * 100))}%</span>}
+                </div>
+                <Progress value={totalEstimate > 0 ? Math.min(100, (deleted / totalEstimate) * 100) : undefined} className="h-2" />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

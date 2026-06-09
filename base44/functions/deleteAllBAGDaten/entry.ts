@@ -7,13 +7,24 @@ Deno.serve(async (req) => {
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  let total = 0;
-  while (true) {
-    const batch = await base44.asServiceRole.entities.BAGPraemienDaten.list('-created_date', 100);
-    if (!batch || batch.length === 0) break;
-    await Promise.all(batch.map(r => base44.asServiceRole.entities.BAGPraemienDaten.delete(r.id)));
-    total += batch.length;
+  const body = await req.json().catch(() => ({}));
+  const chunkSize = 200;
+
+  // Fetch one batch and delete it, return progress info
+  const batch = await base44.asServiceRole.entities.BAGPraemienDaten.list('-created_date', chunkSize);
+  
+  if (!batch || batch.length === 0) {
+    return Response.json({ done: true, deleted: body.deleted || 0, remaining: 0 });
   }
 
-  return Response.json({ success: true, deleted: total });
+  await Promise.all(batch.map(r => base44.asServiceRole.entities.BAGPraemienDaten.delete(r.id)));
+
+  const deletedSoFar = (body.deleted || 0) + batch.length;
+  const total = body.total || (deletedSoFar + batch.length); // rough estimate
+
+  return Response.json({ 
+    done: batch.length < chunkSize,
+    deleted: deletedSoFar,
+    batch_size: batch.length,
+  });
 });
