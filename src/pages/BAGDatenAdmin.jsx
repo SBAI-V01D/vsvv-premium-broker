@@ -21,30 +21,28 @@ export default function BAGDatenAdmin() {
     setTotalEstimate(0);
 
     let deletedSoFar = 0;
-    let estimate = 0;
-
-    // Get total count estimate first
-    try {
-      const sample = await base44.entities.BAGPraemienDaten.list('-created_date', 1000);
-      estimate = sample.length >= 1000 ? 130000 : sample.length;
-      setTotalEstimate(estimate);
-    } catch {}
+    const FETCH_SIZE = 500;
 
     while (true) {
-      const res = await base44.functions.invoke('deleteAllBAGDaten', { deleted: deletedSoFar });
-      const data = res.data;
-      
-      if (data.error) {
-        throw new Error(data.error);
+      // Fetch a batch of IDs
+      const batch = await base44.entities.BAGPraemienDaten.list('-created_date', FETCH_SIZE);
+      if (!batch || batch.length === 0) break;
+
+      if (deletedSoFar === 0) {
+        // Estimate total on first batch
+        setTotalEstimate(batch.length >= FETCH_SIZE ? 80000 : batch.length);
       }
-      
-      deletedSoFar = data.deleted || deletedSoFar;
-      setDeleted(deletedSoFar);
-      if (estimate === 0 && deletedSoFar > 0) {
-        estimate = Math.max(estimate, deletedSoFar * 2);
-        setTotalEstimate(estimate);
+
+      // Delete all in parallel (10 at a time)
+      const CONCURRENCY = 10;
+      for (let i = 0; i < batch.length; i += CONCURRENCY) {
+        const chunk = batch.slice(i, i + CONCURRENCY);
+        await Promise.all(chunk.map(r => base44.entities.BAGPraemienDaten.delete(r.id)));
+        deletedSoFar += chunk.length;
+        setDeleted(deletedSoFar);
       }
-      if (data.done) break;
+
+      if (batch.length < FETCH_SIZE) break;
     }
 
     setDeleteResult(`✅ ${deletedSoFar.toLocaleString()} Datensätze gelöscht.`);
