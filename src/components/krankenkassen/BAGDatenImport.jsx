@@ -176,120 +176,107 @@ export default function BAGDatenImport() {
     if (file) { setSelectedFile(file); setUploadResult(null); }
   };
 
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  const bulkCreateWithRetry = async (batch) => {
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      try {
+        await base44.entities.BAGPraemienDaten.bulkCreate(batch);
+        return; // success
+      } catch (err) {
+        const isRateLimit = err?.response?.status === 429
+          || String(err?.message || '').toLowerCase().includes('rate limit')
+          || String(err?.message || '').includes('429');
+        if (isRateLimit && attempt < 5) {
+          const waitSec = attempt * 10;
+          console.warn(`[BAG] Rate limit — warte ${waitSec}s (Versuch ${attempt}/5)`);
+          await sleep(waitSec * 1000);
+        } else {
+          throw err;
+        }
+      }
+    }
+  };
+
   const handleUpload = async () => {
     if (!selectedFile) return;
     setUploading(true);
-    setProgress(null);
     setUploadResult(null);
 
+    let erfolgreich = 0;
+    let fehler = 0;
+    const errors = [];
+
     try {
-      // 1. Excel lokal im Browser parsen
-      setProgress({ phase: 'parsing', current: 0, total: 0, kanton: '' });
+      setProgress({ phase: 'parsing', kanton: '', current: 0, total: 0 });
       const byKanton = await parseBAGExcel(selectedFile, parseInt(jahr));
 
-      // Debug: zeige was gefunden wurde
-      const kantoneGefunden = Object.keys(byKanton);
-      const totalGefunden = kantoneGefunden.reduce((s, k) => s + byKanton[k].length, 0);
-      console.log('[BAG Debug] Kantone in Datei:', kantoneGefunden);
-      console.log('[BAG Debug] Total Records:', totalGefunden);
-      if (kantoneGefunden.length > 0) {
-        console.log('[BAG Debug] Beispiel Record:', JSON.stringify(byKanton[kantoneGefunden[0]][0]));
-      }
-
       const kantoneInDatei = Object.keys(byKanton);
+      console.log('[BAG] Kantone gefunden:', kantoneInDatei, 'Total:', kantoneInDatei.reduce((s,k) => s + byKanton[k].length, 0));
+
       const kantoneToImport = importModus === 'auswahl'
         ? selectedKantone.filter(k => kantoneInDatei.includes(k))
         : kantoneInDatei;
 
-      const totalRecords = kantoneToImport.reduce((s, k) => s + (byKanton[k]?.length || 0), 0);
-      console.log(`[BAG] Parsed: ${kantoneInDatei.length} Kantone, ${totalRecords} Records total`);
-
       if (kantoneToImport.length === 0) {
-        setUploadResult({ 
-          error: kantoneInDatei.length === 0
-            ? `Keine Kantone erkannt. Datei hat ${Object.keys(byKanton).length} Einträge. Prüfen Sie die Browser-Konsole (F12) für Details zur Spaltenstruktur.`
-            : `Gewählte Kantone nicht in Datei. Datei enthält: ${kantoneInDatei.slice(0,10).join(', ')}`
+        setUploadResult({
+          error: `Keine Kantone gefunden. Datei enthält: ${kantoneInDatei.join(', ') || 'nichts erkannt'}`
         });
+        setUploading(false);
+        setProgress(null);
         return;
       }
 
-      // 2. Pro Kanton Records senden (kein File-Upload, nur JSON)
-      let erfolgreich = 0;
-      let fehler = 0;
-      const errors = [];
+      const BATCH = 10;
 
       for (let i = 0; i < kantoneToImport.length; i++) {
         const kanton = kantoneToImport[i];
         const records = byKanton[kanton] || [];
-        setProgress({ phase: 'importing', current: i + 1, total: kantoneToImport.length, kanton, records: records.length });
-
         if (records.length === 0) continue;
 
+        const now = new Date().toISOString();
+        const enriched = records.map(r => ({ ...r, importiert_am: now, aktiv: true }));
+        let kantOk = 0;
+
         try {
-          // Direkt vom Frontend schreiben — kein Backend-Roundtrip
-          const now = new Date().toISOString();
-          const enriched = records.map(r => ({ ...r, importiert_am: now, aktiv: true }));
-
-          // In Batches von 10 mit grosser Pause — Rate Limit vermeiden
-          const BATCH = 10;
-          let kantErfolgreich = 0;
           for (let b = 0; b < enriched.length; b += BATCH) {
-            let retries = 0;
-            let batchOk = false;
-            while (retries < 4 && !batchOk) {
-              try {
-                await base44.entities.BAGPraemienDaten.bulkCreate(enriched.slice(b, b + BATCH));
-                batchOk = true;
-              } catch (batchErr) {
-                if (batchErr.message?.includes('Rate limit') || batchErr.message?.includes('429') || batchErr.response?.status === 429) {
-                  retries++;
-                  const waitSec = retries * 8;
-                  console.warn(`[BAG] Rate limit — warte ${waitSec}s (Versuch ${retries}/4)...`);
-                  setProgress(p => ({ ...p, kanton: `${kanton} ⏳ Rate limit, warte ${waitSec}s...` }));
-                  await new Promise(r => setTimeout(r, waitSec * 1000));
-                } else {
-                  throw batchErr;
-                }
-              }
-            }
-            if (!batchOk) throw new Error('Rate limit — zu viele Versuche');
-
-            kantErfolgreich += Math.min(BATCH, enriched.length - b);
-            setProgress({ phase: 'importing', current: i + 1, total: kantoneToImport.length, kanton, records: kantErfolgreich, total_records: enriched.length });
-            if (b + BATCH < enriched.length) {
-              await new Promise(r => setTimeout(r, 1500));
-            }
+            await bulkCreateWithRetry(enriched.slice(b, b + BATCH));
+            kantOk += Math.min(BATCH, enriched.length - b);
+            setProgress({ phase: 'importing', current: i + 1, total: kantoneToImport.length, kanton, records: kantOk, total_records: enriched.length });
+            if (b + BATCH < enriched.length) await sleep(1500);
           }
-          erfolgreich += kantErfolgreich;
+          erfolgreich += kantOk;
         } catch (err) {
           fehler++;
           errors.push(`${kanton}: ${err.message}`);
-          console.error(`[BAG] ${kanton} failed:`, err.message);
+          console.error(`[BAG] ${kanton} fehlgeschlagen:`, err.message);
         }
 
-        // Grosse Pause zwischen Kantonen
-        if (i < kantoneToImport.length - 1) {
-          await new Promise(r => setTimeout(r, 3000));
-        }
+        if (i < kantoneToImport.length - 1) await sleep(2000);
       }
 
-      setUploadResult({
-        success: erfolgreich > 0,
-        results: { gesamt: erfolgreich + fehler, erfolgreich, fehler },
-        message: `${erfolgreich} Datensätze aus ${kantoneToImport.length} Kantonen importiert`,
-        errors: errors.length > 0 ? errors : null
-      });
-
-      if (erfolgreich > 0) {
-        queryClient.invalidateQueries({ queryKey: ['bag-praemien-stats'] });
-      }
-
-    } catch (error) {
-      setUploadResult({ error: error.message });
-    } finally {
-      setUploading(false);
-      setProgress(null);
+    } catch (err) {
+      console.error('[BAG] Fehler:', err);
+      errors.push(`Allgemeiner Fehler: ${err.message}`);
+      fehler++;
     }
+
+    // Ergebnis immer setzen — auch wenn Fehler
+    setUploadResult({
+      success: erfolgreich > 0,
+      results: { gesamt: erfolgreich + fehler, erfolgreich, fehler },
+      message: erfolgreich > 0
+        ? `${erfolgreich} Datensätze erfolgreich importiert`
+        : 'Import fehlgeschlagen',
+      errors: errors.length > 0 ? errors : null
+    });
+
+    if (erfolgreich > 0) {
+      queryClient.invalidateQueries({ queryKey: ['bag-praemien-stats'] });
+    }
+
+    setUploading(false);
+    setProgress(null);
   };
 
   return (
