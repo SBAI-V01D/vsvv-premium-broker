@@ -17,10 +17,22 @@ Deno.serve(async (req) => {
     return Response.json({ done: true, deleted: body.deleted || 0, remaining: 0 });
   }
 
-  await Promise.all(batch.map(r => base44.asServiceRole.entities.BAGPraemienDaten.delete(r.id)));
+  // Sequential deletes with retry to avoid rate limits
+  let deletedInBatch = 0;
+  for (const r of batch) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await base44.asServiceRole.entities.BAGPraemienDaten.delete(r.id);
+        deletedInBatch++;
+        break;
+      } catch (err) {
+        if (attempt === 3) throw err;
+        await new Promise(res => setTimeout(res, 500 * attempt));
+      }
+    }
+  }
 
-  const deletedSoFar = (body.deleted || 0) + batch.length;
-  const total = body.total || (deletedSoFar + batch.length); // rough estimate
+  const deletedSoFar = (body.deleted || 0) + deletedInBatch;
 
   return Response.json({ 
     done: batch.length < chunkSize,
