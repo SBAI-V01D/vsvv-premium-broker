@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function BAGImportResult({ uploadResult }) {
   if (!uploadResult) return null;
@@ -29,6 +29,7 @@ export default function BAGImportResult({ uploadResult }) {
   const { results, importdauer_minuten, validierung } = uploadResult;
   const stats = validierung?.statistik || {};
   const dq = validierung?.datenqualitaet || {};
+  const diag = validierung?.diagnose || {};
 
   return (
     <div className="space-y-3">
@@ -57,61 +58,74 @@ export default function BAGImportResult({ uploadResult }) {
         </div>
       )}
 
-      {/* METRIKEN - Kompakt */}
-      <div className="grid grid-cols-4 gap-3">
-        {/* IMPORTERGEBNIS */}
-        <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-2">
+      {/* MINIMALE METRIKEN */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="p-3 bg-white border border-slate-200 rounded-lg">
           <p className="text-xs text-muted-foreground font-semibold">QUELLE</p>
-          <p className="text-xl font-bold text-slate-700">{stats.quelle_gesamtzeilen?.toLocaleString() || '-'}</p>
+          <p className="text-lg font-bold text-slate-700">{stats.quelle_gesamtzeilen?.toLocaleString() || '-'}</p>
         </div>
-        <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-2">
+        <div className="p-3 bg-white border border-slate-200 rounded-lg">
           <p className="text-xs text-muted-foreground font-semibold">IMPORTIERT</p>
-          <p className={`text-xl font-bold ${stats.importiert > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+          <p className={`text-lg font-bold ${stats.importiert > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
             {stats.importiert?.toLocaleString() || '-'}
           </p>
         </div>
-        <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-2">
+        <div className="p-3 bg-white border border-slate-200 rounded-lg">
           <p className="text-xs text-muted-foreground font-semibold">DIFFERENZ</p>
-          <p className={`text-xl font-bold ${
+          <p className={`text-lg font-bold ${
             stats.differenz === 0 ? 'text-emerald-700' : 
             stats.differenz > 0 ? 'text-amber-700' : 'text-red-700'
           }`}>
-            {stats.differenz !== undefined ? (stats.differenz > 0 ? '+' : '') + stats.differenz : '-'}
+            {stats.differenz !== undefined ? (stats.differenz > 0 ? '+' : '') + stats.differenz?.toLocaleString() : '-'}
           </p>
         </div>
-        <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-2">
+        <div className="p-3 bg-white border border-slate-200 rounded-lg">
           <p className="text-xs text-muted-foreground font-semibold">IMPORTDAUER</p>
-          <p className="text-xl font-bold text-slate-700">{importdauer_minuten?.toFixed(2) || '-'} Min.</p>
-        </div>
-
-        {/* QUALITÄTSMETRIKEN */}
-        <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-2">
-          <p className="text-xs text-muted-foreground font-semibold">VERSICHERER</p>
-          <p className="text-xl font-bold text-slate-700">{dq.versicherer || '-'}</p>
-        </div>
-        <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-2">
-          <p className="text-xs text-muted-foreground font-semibold">KANTONE</p>
-          <p className="text-xl font-bold text-slate-700">{dq.kantone || '-'}</p>
-        </div>
-        <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-2">
-          <p className="text-xs text-muted-foreground font-semibold">REGIONEN</p>
-          <p className="text-xl font-bold text-slate-700">{dq.regionen || '-'}</p>
-        </div>
-        <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-2">
-          <p className="text-xs text-muted-foreground font-semibold">MODELLE</p>
-          <p className="text-xl font-bold text-slate-700">{dq.modelle || '-'}</p>
-        </div>
-        <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-2">
-          <p className="text-xs text-muted-foreground font-semibold">ALTERSKLASSEN</p>
-          <p className="text-xl font-bold text-slate-700">{dq.altersklassen || '-'}</p>
-        </div>
-        <div className="p-3 bg-white border border-slate-200 rounded-lg space-y-2">
-          <p className="text-xs text-muted-foreground font-semibold">FRANCHISEN</p>
-          <p className="text-xl font-bold text-slate-700">{dq.franchisen || '-'}</p>
+          <p className="text-lg font-bold text-slate-700">{importdauer_minuten?.toFixed(2) || '-'} Min.</p>
         </div>
       </div>
 
-      {/* Fehlerursachen (VALIDIERUNG FAILED) */}
+      {/* DATENQUALITÄT */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="p-2 bg-white border border-slate-200 rounded text-center">
+          <p className="text-[10px] text-muted-foreground">VERSICHERER</p>
+          <p className="text-base font-bold text-slate-700">{dq.versicherer || '-'}</p>
+        </div>
+        <div className="p-2 bg-white border border-slate-200 rounded text-center">
+          <p className="text-[10px] text-muted-foreground">KANTONE</p>
+          <p className="text-base font-bold text-slate-700">{dq.kantone || '-'}</p>
+        </div>
+        <div className="p-2 bg-white border border-slate-200 rounded text-center">
+          <p className="text-[10px] text-muted-foreground">REGIONEN</p>
+          <p className="text-base font-bold text-slate-700">{dq.regionen || '-'}</p>
+        </div>
+        <div className="p-2 bg-white border border-slate-200 rounded text-center">
+          <p className="text-[10px] text-muted-foreground">MODELLE</p>
+          <p className="text-base font-bold text-slate-700">{dq.modelle || '-'}</p>
+        </div>
+        <div className="p-2 bg-white border border-slate-200 rounded text-center">
+          <p className="text-[10px] text-muted-foreground">ALTERSKLASSEN</p>
+          <p className="text-base font-bold text-slate-700">{dq.altersklassen || '-'}</p>
+        </div>
+        <div className="p-2 bg-white border border-slate-200 rounded text-center">
+          <p className="text-[10px] text-muted-foreground">FRANCHISEN</p>
+          <p className="text-base font-bold text-slate-700">{dq.franchisen || '-'}</p>
+        </div>
+      </div>
+
+      {/* DIAGNOSE (FAIL) */}
+      {validierung?.overall === 'FAIL' && diag && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs space-y-1">
+          <p className="font-semibold text-red-700">Diagnose:</p>
+          {diag.skipped_alter > 0 && <p className="text-red-600">• Unbekannte Altersklassen: {diag.skipped_alter}</p>}
+          {diag.skipped_tarif > 0 && <p className="text-red-600">• Unbekannte Tariftypen: {diag.skipped_tarif}</p>}
+          {diag.skipped_franchise > 0 && <p className="text-red-600">• Unbekannte Franchisen: {diag.skipped_franchise}</p>}
+          {diag.skipped_pflichtfelder > 0 && <p className="text-red-600">• Leere Pflichtfelder: {diag.skipped_pflichtfelder}</p>}
+          {diag.skipped_unbekannte_ids > 0 && <p className="text-red-600">• Unbekannte IDs: {diag.skipped_unbekannte_ids}</p>}
+        </div>
+      )}
+
+      {/* Fehlerursachen */}
       {validierung?.overall === 'FAIL' && uploadResult.error_causes && uploadResult.error_causes.length > 0 && (
         <div className="p-4 bg-red-50 border-2 border-red-300 rounded-lg">
           <div className="flex items-center gap-2 text-red-700 font-semibold mb-3">
@@ -126,9 +140,6 @@ export default function BAGImportResult({ uploadResult }) {
               </li>
             ))}
           </ul>
-          <p className="text-xs text-red-600 mt-3">
-            <strong>Automatischer Import-Stop:</strong> Der Import wurde als FAIL markiert, da kritische Validierungsregeln verletzt wurden.
-          </p>
         </div>
       )}
 
