@@ -147,7 +147,8 @@ function analyzeAndParseBAGExcel(file, jahr) {
 
         // Nun parsen — aber mit ALLEN Altersklassen die nicht explizit Kinder/Jugendliche sind
         const byKanton = {};
-        let skippedAlter = 0, skippedTarif = 0, skippedPraemie = 0;
+        let skippedAlter = 0, skippedTarif = 0, skippedPraemie = 0, skippedUnbekanntId = 0;
+        const unbekannteIds = new Set();
 
         for (let i = 1; i < allRows.length; i++) {
           const row = allRows[i];
@@ -200,9 +201,14 @@ function analyzeAndParseBAGExcel(file, jahr) {
           if (FRANCHISE_MAP[franchiseInt]) franchise = FRANCHISE_MAP[franchiseInt];
           else if (franchiseInt >= 300) franchise = franchiseInt;
 
-          // Kassenname
+          // Kassenname — unbekannte IDs überspringen
           const kassieId = parseInt(versichererId);
-          const kassenName = VERSICHERER_NAMEN[kassieId] || String(versichererId || '');
+          const kassenName = VERSICHERER_NAMEN[kassieId];
+          if (!kassenName) {
+            unbekannteIds.add(String(versichererId || '').trim());
+            skippedUnbekanntId++;
+            continue;
+          }
 
           if (!byKanton[kanton]) byKanton[kanton] = [];
           byKanton[kanton].push({
@@ -228,6 +234,8 @@ function analyzeAndParseBAGExcel(file, jahr) {
         diagnose.skippedAlter = skippedAlter;
         diagnose.skippedTarif = skippedTarif;
         diagnose.skippedPraemie = skippedPraemie;
+        diagnose.skippedUnbekanntId = skippedUnbekanntId;
+        diagnose.unbekannteIds = [...unbekannteIds].sort();
         diagnose.totalParsed = totalParsed;
         diagnose.kantone = Object.keys(byKanton);
 
@@ -463,6 +471,7 @@ export default function BAGDatenImport() {
                 <div><span className="text-muted-foreground">Geparste Records:</span> <strong className={diagnose.totalParsed > 0 ? 'text-emerald-700' : 'text-red-700'}>{diagnose.totalParsed?.toLocaleString()}</strong></div>
                 <div><span className="text-muted-foreground">Übersprungen (Alter):</span> <strong>{diagnose.skippedAlter}</strong></div>
                 <div><span className="text-muted-foreground">Übersprungen (Tarif):</span> <strong>{diagnose.skippedTarif}</strong></div>
+                <div><span className="text-muted-foreground">Übersprungen (Unbekannte ID):</span> <strong className={diagnose.skippedUnbekanntId > 0 ? 'text-amber-700' : ''}>{diagnose.skippedUnbekanntId}</strong></div>
                 <div><span className="text-muted-foreground">Spalten-Modus:</span> <strong>{diagnose.useFixed ? 'Fest (kein Header)' : 'Dynamisch'}</strong></div>
                 <div><span className="text-muted-foreground">Kantone:</span> <strong>{diagnose.kantone?.length}</strong></div>
               </div>
@@ -495,6 +504,14 @@ export default function BAGDatenImport() {
                   <p className="font-mono bg-white border rounded p-1">{diagnose.uniqueVersicherer?.join(', ')}</p>
                 </div>
               </div>
+
+              {diagnose.unbekannteIds?.length > 0 && (
+                <div className="p-2 bg-amber-50 border border-amber-200 rounded text-amber-800">
+                  <p className="font-semibold mb-1">⚠️ {diagnose.unbekannteIds.length} unbekannte Versicherer-IDs übersprungen ({diagnose.skippedUnbekanntId} Zeilen):</p>
+                  <p className="font-mono text-xs">{diagnose.unbekannteIds.join(', ')}</p>
+                  <p className="text-xs mt-1 text-amber-700">Diese IDs fehlen im Mapping — bitte dem Entwickler mitteilen.</p>
+                </div>
+              )}
 
               {diagnose.totalParsed === 0 && (
                 <div className="p-2 bg-red-50 border border-red-200 rounded text-red-700">
