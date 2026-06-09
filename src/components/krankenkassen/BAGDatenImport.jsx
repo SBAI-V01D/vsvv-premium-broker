@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Info } from 'lucide-react';
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Info, Search } from 'lucide-react';
 
 const ALLE_KANTONE = ['ZH','BE','LU','UR','SZ','OW','NW','GL','ZG','FR','SO','BS','BL','SH','AR','AI','SG','GR','AG','TG','TI','VD','VS','NE','GE','JU'];
 
@@ -15,41 +15,18 @@ const MODELL_MAP = {
 };
 
 // BAG Franchise-Index → CHF Betrag
-const FRANCHISE_MAP = {
-  3: 300, 4: 500, 5: 1000, 6: 1500, 7: 2000, 8: 2500
-};
+const FRANCHISE_MAP = { 3: 300, 4: 500, 5: 1000, 6: 1500, 7: 2000, 8: 2500 };
 
-// BAG Versicherer-ID → Name (aus offizieller BAG-Liste)
+// BAG Versicherer-ID → Name
 const VERSICHERER_NAMEN = {
-  // Grosse Kassen
-  1562: 'Groupe Mutuel', // Mutuel Assurance / Sanatel / Philos
-  1068: 'CSS',
-  1064: 'Helsana',
-  1065: 'KPT',
-  1066: 'Visana',
-  1118: 'Concordia',
-  1021: 'Atupri',
-  1019: 'Assura',
-  1024: 'ÖKK',
-  1109: 'Sanitas',
-  1113: 'Swica',
-  1016: 'Agrisano',
-  1097: 'Sympany',
-  1066: 'bkk mobilise',
-  1025: 'Galenus',
-  // Weitere Groupe Mutuel Tochtergesellschaften
-  1563: 'Groupe Mutuel',
-  1564: 'Groupe Mutuel',
-  1077: 'Groupe Mutuel',
-  // Weitere bekannte IDs
-  1100: 'Concordia',
-  1048: 'EGK',
-  1040: 'Visana',
-  1096: 'Sana24',
-  1126: 'Vivao Sympany',
+  1562: 'Groupe Mutuel', 1068: 'CSS', 1064: 'Helsana', 1065: 'KPT',
+  1066: 'Visana', 1118: 'Concordia', 1021: 'Atupri', 1019: 'Assura',
+  1024: 'ÖKK', 1109: 'Sanitas', 1113: 'Swica', 1016: 'Agrisano',
+  1097: 'Sympany', 1025: 'Galenus', 1563: 'Groupe Mutuel', 1564: 'Groupe Mutuel',
+  1077: 'Groupe Mutuel', 1100: 'Concordia', 1048: 'EGK', 1040: 'Visana',
+  1096: 'Sana24', 1126: 'Vivao Sympany',
 };
 
-// Findet Spaltenindex anhand möglicher Header-Namen (case-insensitive)
 function findCol(headers, ...candidates) {
   for (const c of candidates) {
     const idx = headers.findIndex(h => String(h || '').toLowerCase().includes(c.toLowerCase()));
@@ -58,31 +35,25 @@ function findCol(headers, ...candidates) {
   return -1;
 }
 
-// Parst die BAG Excel-Datei komplett im Browser und gibt Records pro Kanton zurück
-function parseBAGExcel(file, jahr) {
+// Analysiert die Datei und gibt Diagnose + geparste Records zurück
+function analyzeAndParseBAGExcel(file, jahr) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-        
-        // Alle Sheet-Namen loggen
-        console.log('[BAG] Sheets:', workbook.SheetNames);
-        
         const ws = workbook.Sheets[workbook.SheetNames[0]];
         const allRows = XLSX.utils.sheet_to_json(ws, { raw: true, header: 1 });
 
         if (allRows.length < 2) {
-          reject(new Error('Datei ist leer oder hat keine Daten'));
+          reject(new Error('Datei ist leer'));
           return;
         }
 
-        // Header-Zeile analysieren
         const headers = allRows[0].map(h => String(h || ''));
-        console.log('[BAG] Headers (erste 20):', headers.slice(0, 20));
-        console.log('[BAG] Zeile 1 (Beispiel):', allRows[1]);
+        const sampleRow = allRows[1];
 
-        // Spalten dynamisch finden
+        // Spalten finden
         const colKanton      = findCol(headers, 'kanton', 'canton');
         const colVersicherer = findCol(headers, 'versich', 'insurer', 'kasse');
         const colJahr        = findCol(headers, 'jahr', 'year', 'geschaefts');
@@ -93,16 +64,50 @@ function parseBAGExcel(file, jahr) {
         const colFranchise   = findCol(headers, 'franchise', 'selbstbeh');
         const colPraemie     = findCol(headers, 'praemie', 'prämie', 'premium', 'betrag');
 
-        console.log('[BAG] Erkannte Spalten:', { colKanton, colVersicherer, colJahr, colRegion, colAlter, colUnfall, colTarif, colFranchise, colPraemie });
-
-        // Fallback: wenn Header nicht gefunden, nutze ursprüngliche Positionen (BAG-Standardformat)
-        // BAG-Format: [VersichererId, Kanton, Jahr, ?, Region, Altersklasse, Unfall, ?, Tarif, ?, ?, Franchise, ?, Praemie]
         const useFixed = colKanton === -1 || colPraemie === -1;
-        if (useFixed) {
-          console.log('[BAG] Kein Header gefunden — verwende feste BAG-Spaltenposition');
+
+        // Diagnosedaten sammeln
+        const uniqueAlter = new Set();
+        const uniqueTarif = new Set();
+        const uniqueUnfall = new Set();
+        const uniqueVersicherer = new Set();
+        const uniqueFranchise = new Set();
+
+        for (let i = 1; i < Math.min(allRows.length, 500); i++) {
+          const row = allRows[i];
+          if (!row?.length) continue;
+          if (useFixed) {
+            uniqueVersicherer.add(String(row[0] || ''));
+            uniqueAlter.add(String(row[5] || ''));
+            uniqueUnfall.add(String(row[6] || ''));
+            uniqueTarif.add(String(row[8] || ''));
+            uniqueFranchise.add(String(row[11] || ''));
+          } else {
+            if (colAlter >= 0) uniqueAlter.add(String(row[colAlter] || ''));
+            if (colTarif >= 0) uniqueTarif.add(String(row[colTarif] || ''));
+            if (colUnfall >= 0) uniqueUnfall.add(String(row[colUnfall] || ''));
+            if (colVersicherer >= 0) uniqueVersicherer.add(String(row[colVersicherer] || ''));
+            if (colFranchise >= 0) uniqueFranchise.add(String(row[colFranchise] || ''));
+          }
         }
 
+        const diagnose = {
+          sheets: workbook.SheetNames,
+          totalRows: allRows.length - 1,
+          headers: headers.slice(0, 20),
+          sampleRow: sampleRow?.slice(0, 20),
+          useFixed,
+          cols: { colKanton, colVersicherer, colAlter, colUnfall, colTarif, colFranchise, colPraemie },
+          uniqueAlter: [...uniqueAlter].slice(0, 20),
+          uniqueTarif: [...uniqueTarif].slice(0, 15),
+          uniqueUnfall: [...uniqueUnfall].slice(0, 10),
+          uniqueVersicherer: [...uniqueVersicherer].slice(0, 15),
+          uniqueFranchise: [...uniqueFranchise].slice(0, 10),
+        };
+
+        // Nun parsen — aber mit ALLEN Altersklassen die nicht explizit Kinder/Jugendliche sind
         const byKanton = {};
+        let skippedAlter = 0, skippedTarif = 0, skippedPraemie = 0;
 
         for (let i = 1; i < allRows.length; i++) {
           const row = allRows[i];
@@ -111,54 +116,51 @@ function parseBAGExcel(file, jahr) {
           let versichererId, kantonCode, geschaeftsjahr, regionCode, altersklasse, unfalleinschluss, tarifTyp, franchiseCode, praemie;
 
           if (useFixed) {
-            // Feste BAG-Spaltenstruktur
             [versichererId, kantonCode, geschaeftsjahr, , regionCode, altersklasse, unfalleinschluss, , tarifTyp, , , franchiseCode, , praemie] = row;
           } else {
-            versichererId  = row[colVersicherer];
-            kantonCode     = row[colKanton];
-            geschaeftsjahr = colJahr >= 0 ? row[colJahr] : jahr;
-            regionCode     = colRegion >= 0 ? row[colRegion] : '';
-            altersklasse   = colAlter >= 0 ? row[colAlter] : '';
+            versichererId    = row[colVersicherer];
+            kantonCode       = row[colKanton];
+            geschaeftsjahr   = colJahr >= 0 ? row[colJahr] : jahr;
+            regionCode       = colRegion >= 0 ? row[colRegion] : '';
+            altersklasse     = colAlter >= 0 ? row[colAlter] : '';
             unfalleinschluss = colUnfall >= 0 ? row[colUnfall] : '';
-            tarifTyp       = row[colTarif];
-            franchiseCode  = row[colFranchise];
-            praemie        = row[colPraemie];
+            tarifTyp         = row[colTarif];
+            franchiseCode    = row[colFranchise];
+            praemie          = row[colPraemie];
           }
 
-          // Filter
+          // Altersfilter: AUSSCHLIESSEN was explizit Kind/Jugend ist
           const alterStr = String(altersklasse || '').toUpperCase();
-          if (alterStr && !alterStr.includes('ERW') && !alterStr.includes('ADU')) continue;
-          
-          const unfallStr = String(unfalleinschluss || '').toUpperCase();
-          if (unfallStr && !unfallStr.includes('OHNE') && !unfallStr.includes('OHN') && !unfallStr.includes('0') && !unfallStr.includes('NO') && !unfallStr.includes('N')) {
-            // wenn Unfall-Spalte existiert und nicht "ohne", überspringen
-            if (unfallStr.includes('MIT') || unfallStr.includes('WITH') || unfallStr.includes('1')) continue;
+          // BAG-Codes: AE = Erwachsene, JU = Jugendliche, KI = Kinder
+          if (alterStr && (alterStr.includes('JU') || alterStr.includes('KI') || alterStr.includes('KIND') || alterStr.includes('JUGEND'))) {
+            skippedAlter++;
+            continue;
           }
 
-          if (!praemie || parseFloat(praemie) <= 0) continue;
+          // Unfall: MIT Unfall überspringen (wir wollen "ohne Unfall" = günstiger)
+          const unfallStr = String(unfalleinschluss || '').toUpperCase();
+          if (unfallStr === 'MIT' || unfallStr === 'WITH' || unfallStr === '1' || unfallStr === 'JA') continue;
+
+          if (!praemie || parseFloat(praemie) <= 0) { skippedPraemie++; continue; }
 
           const tarifStr = String(tarifTyp || '').toUpperCase();
-          const modell = MODELL_MAP[tarifStr] || 
+          const modell = MODELL_MAP[tarifStr] ||
             (tarifStr.includes('STD') || tarifStr.includes('STANDARD') ? 'standard' :
              tarifStr.includes('TEL') ? 'telmed' :
              tarifStr.includes('HAM') || tarifStr.includes('HAUS') ? 'hausarzt' :
              tarifStr.includes('HMO') ? 'hmo' : null);
-          if (!modell) continue;
+          if (!modell) { skippedTarif++; continue; }
 
           const kanton = String(kantonCode || '').trim().toUpperCase();
           if (!kanton || kanton.length > 3) continue;
 
-          // Franchise: BAG nutzt Index 3-8, nicht CHF-Betrag
+          // Franchise
           let franchise = 300;
           const franchiseInt = parseInt(String(franchiseCode || '').match(/(\d+)/)?.[1] || '0');
-          if (FRANCHISE_MAP[franchiseInt]) {
-            franchise = FRANCHISE_MAP[franchiseInt];
-          } else if (franchiseInt >= 300) {
-            // Direkt als CHF-Betrag (falls andere BAG-Version)
-            franchise = franchiseInt;
-          }
+          if (FRANCHISE_MAP[franchiseInt]) franchise = FRANCHISE_MAP[franchiseInt];
+          else if (franchiseInt >= 300) franchise = franchiseInt;
 
-          // Kasse: numerische ID → Name
+          // Kassenname
           const kassieId = parseInt(versichererId);
           const kassenName = VERSICHERER_NAMEN[kassieId] || String(versichererId || '');
 
@@ -182,7 +184,14 @@ function parseBAGExcel(file, jahr) {
           });
         }
 
-        resolve(byKanton);
+        const totalParsed = Object.values(byKanton).reduce((s, v) => s + v.length, 0);
+        diagnose.skippedAlter = skippedAlter;
+        diagnose.skippedTarif = skippedTarif;
+        diagnose.skippedPraemie = skippedPraemie;
+        diagnose.totalParsed = totalParsed;
+        diagnose.kantone = Object.keys(byKanton);
+
+        resolve({ byKanton, diagnose });
       } catch (err) {
         reject(err);
       }
@@ -200,9 +209,11 @@ export default function BAGDatenImport() {
   const [importModus, setImportModus] = useState('alle_26');
   const [selectedKantone, setSelectedKantone] = useState(ALLE_KANTONE);
   const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(null); // { current, total, kanton }
+  const [progress, setProgress] = useState(null);
   const [uploadResult, setUploadResult] = useState(null);
+  const [diagnose, setDiagnose] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
+  const [parsedData, setParsedData] = useState(null);
 
   const toggleKanton = (kanton) => {
     setSelectedKantone(prev =>
@@ -212,7 +223,12 @@ export default function BAGDatenImport() {
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
-    if (file) { setSelectedFile(file); setUploadResult(null); }
+    if (file) {
+      setSelectedFile(file);
+      setUploadResult(null);
+      setDiagnose(null);
+      setParsedData(null);
+    }
   };
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -221,15 +237,13 @@ export default function BAGDatenImport() {
     for (let attempt = 1; attempt <= 5; attempt++) {
       try {
         await base44.entities.BAGPraemienDaten.bulkCreate(batch);
-        return; // success
+        return;
       } catch (err) {
         const isRateLimit = err?.response?.status === 429
           || String(err?.message || '').toLowerCase().includes('rate limit')
           || String(err?.message || '').includes('429');
         if (isRateLimit && attempt < 5) {
-          const waitSec = attempt * 10;
-          console.warn(`[BAG] Rate limit — warte ${waitSec}s (Versuch ${attempt}/5)`);
-          await sleep(waitSec * 1000);
+          await sleep(attempt * 10000);
         } else {
           throw err;
         }
@@ -237,8 +251,25 @@ export default function BAGDatenImport() {
     }
   };
 
-  const handleUpload = async () => {
+  // Schritt 1: Datei analysieren
+  const handleAnalyze = async () => {
     if (!selectedFile) return;
+    setProgress({ phase: 'parsing' });
+    setDiagnose(null);
+    setParsedData(null);
+    try {
+      const result = await analyzeAndParseBAGExcel(selectedFile, parseInt(jahr));
+      setDiagnose(result.diagnose);
+      setParsedData(result.byKanton);
+    } catch (err) {
+      setDiagnose({ error: err.message });
+    }
+    setProgress(null);
+  };
+
+  // Schritt 2: Importieren
+  const handleUpload = async () => {
+    if (!parsedData) return;
     setUploading(true);
     setUploadResult(null);
 
@@ -246,73 +277,46 @@ export default function BAGDatenImport() {
     let fehler = 0;
     const errors = [];
 
-    try {
-      setProgress({ phase: 'parsing', kanton: '', current: 0, total: 0 });
-      const byKanton = await parseBAGExcel(selectedFile, parseInt(jahr));
+    const kantoneInDatei = Object.keys(parsedData);
+    const kantoneToImport = importModus === 'auswahl'
+      ? selectedKantone.filter(k => kantoneInDatei.includes(k))
+      : kantoneInDatei;
 
-      const kantoneInDatei = Object.keys(byKanton);
-      console.log('[BAG] Kantone gefunden:', kantoneInDatei, 'Total:', kantoneInDatei.reduce((s,k) => s + byKanton[k].length, 0));
+    const BATCH = 10;
 
-      const kantoneToImport = importModus === 'auswahl'
-        ? selectedKantone.filter(k => kantoneInDatei.includes(k))
-        : kantoneInDatei;
+    for (let i = 0; i < kantoneToImport.length; i++) {
+      const kanton = kantoneToImport[i];
+      const records = parsedData[kanton] || [];
+      if (records.length === 0) continue;
 
-      if (kantoneToImport.length === 0) {
-        setUploadResult({
-          error: `Keine Kantone gefunden. Datei enthält: ${kantoneInDatei.join(', ') || 'nichts erkannt'}`
-        });
-        setUploading(false);
-        setProgress(null);
-        return;
-      }
+      const now = new Date().toISOString();
+      const enriched = records.map(r => ({ ...r, importiert_am: now, aktiv: true }));
+      let kantOk = 0;
 
-      const BATCH = 10;
-
-      for (let i = 0; i < kantoneToImport.length; i++) {
-        const kanton = kantoneToImport[i];
-        const records = byKanton[kanton] || [];
-        if (records.length === 0) continue;
-
-        const now = new Date().toISOString();
-        const enriched = records.map(r => ({ ...r, importiert_am: now, aktiv: true }));
-        let kantOk = 0;
-
-        try {
-          for (let b = 0; b < enriched.length; b += BATCH) {
-            await bulkCreateWithRetry(enriched.slice(b, b + BATCH));
-            kantOk += Math.min(BATCH, enriched.length - b);
-            setProgress({ phase: 'importing', current: i + 1, total: kantoneToImport.length, kanton, records: kantOk, total_records: enriched.length });
-            if (b + BATCH < enriched.length) await sleep(1500);
-          }
-          erfolgreich += kantOk;
-        } catch (err) {
-          fehler++;
-          errors.push(`${kanton}: ${err.message}`);
-          console.error(`[BAG] ${kanton} fehlgeschlagen:`, err.message);
+      try {
+        for (let b = 0; b < enriched.length; b += BATCH) {
+          await bulkCreateWithRetry(enriched.slice(b, b + BATCH));
+          kantOk += Math.min(BATCH, enriched.length - b);
+          setProgress({ phase: 'importing', current: i + 1, total: kantoneToImport.length, kanton, records: kantOk, total_records: enriched.length });
+          if (b + BATCH < enriched.length) await sleep(1500);
         }
-
-        if (i < kantoneToImport.length - 1) await sleep(2000);
+        erfolgreich += kantOk;
+      } catch (err) {
+        fehler++;
+        errors.push(`${kanton}: ${err.message}`);
       }
 
-    } catch (err) {
-      console.error('[BAG] Fehler:', err);
-      errors.push(`Allgemeiner Fehler: ${err.message}`);
-      fehler++;
+      if (i < kantoneToImport.length - 1) await sleep(2000);
     }
 
-    // Ergebnis immer setzen — auch wenn Fehler
     setUploadResult({
       success: erfolgreich > 0,
       results: { gesamt: erfolgreich + fehler, erfolgreich, fehler },
-      message: erfolgreich > 0
-        ? `${erfolgreich} Datensätze erfolgreich importiert`
-        : 'Import fehlgeschlagen',
+      message: erfolgreich > 0 ? `${erfolgreich} Datensätze erfolgreich importiert` : 'Import fehlgeschlagen',
       errors: errors.length > 0 ? errors : null
     });
 
-    if (erfolgreich > 0) {
-      queryClient.invalidateQueries({ queryKey: ['bag-praemien-stats'] });
-    }
+    if (erfolgreich > 0) queryClient.invalidateQueries({ queryKey: ['bag-praemien-stats'] });
 
     setUploading(false);
     setProgress(null);
@@ -326,7 +330,7 @@ export default function BAGDatenImport() {
           BAG-Daten importieren
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="w-5 h-5 text-primary" />
@@ -339,12 +343,7 @@ export default function BAGDatenImport() {
             <div className="flex items-start gap-2">
               <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
               <p className="text-blue-700">
-                Excel-Datei von{' '}
-                <a href="https://www.bag.admin.ch/bag/de/home/versicherungen/krankenversicherung/krankenversicherung-praemien-und-oeffentliche-beitraege/pramiendaten.html"
-                  target="_blank" className="underline font-medium" rel="noopener noreferrer">
-                  bag.admin.ch
-                </a>{' '}
-                herunterladen und hier hochladen. Die Datei wird lokal geparst — kein Timeout.
+                <strong>2-Schritt-Import:</strong> Zuerst "Analysieren" klicken um die Datei zu prüfen, dann "Importieren".
               </p>
             </div>
           </div>
@@ -400,34 +399,95 @@ export default function BAGDatenImport() {
             >
               <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleFileSelect} className="hidden" />
               <FileSpreadsheet className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-              <p className="text-sm font-medium">{selectedFile ? selectedFile.name : 'Datei auswählen oder hierher ziehen'}</p>
+              <p className="text-sm font-medium">{selectedFile ? selectedFile.name : 'Datei auswählen'}</p>
               {selectedFile && (
                 <p className="text-xs text-muted-foreground mt-1">{(selectedFile.size / 1024 / 1024).toFixed(1)} MB</p>
               )}
             </div>
           </div>
 
+          {/* Analyse-Button */}
+          {selectedFile && !diagnose && (
+            <Button variant="outline" onClick={handleAnalyze} disabled={!!progress} className="w-full">
+              {progress ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Analysiere...</> : <><Search className="w-3.5 h-3.5 mr-2" />Datei analysieren (Schritt 1)</>}
+            </Button>
+          )}
+
+          {/* Diagnose-Ergebnis */}
+          {diagnose && !diagnose.error && (
+            <div className="border rounded-lg p-4 bg-slate-50 space-y-3 text-xs">
+              <p className="font-semibold text-sm text-slate-700">📊 Datei-Analyse</p>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div><span className="text-muted-foreground">Zeilen gesamt:</span> <strong>{diagnose.totalRows?.toLocaleString()}</strong></div>
+                <div><span className="text-muted-foreground">Geparste Records:</span> <strong className={diagnose.totalParsed > 0 ? 'text-emerald-700' : 'text-red-700'}>{diagnose.totalParsed?.toLocaleString()}</strong></div>
+                <div><span className="text-muted-foreground">Übersprungen (Alter):</span> <strong>{diagnose.skippedAlter}</strong></div>
+                <div><span className="text-muted-foreground">Übersprungen (Tarif):</span> <strong>{diagnose.skippedTarif}</strong></div>
+                <div><span className="text-muted-foreground">Spalten-Modus:</span> <strong>{diagnose.useFixed ? 'Fest (kein Header)' : 'Dynamisch'}</strong></div>
+                <div><span className="text-muted-foreground">Kantone:</span> <strong>{diagnose.kantone?.length}</strong></div>
+              </div>
+
+              <div>
+                <p className="text-muted-foreground mb-1">Header:</p>
+                <p className="font-mono bg-white border rounded p-1 break-all">{diagnose.headers?.join(' | ')}</p>
+              </div>
+
+              <div>
+                <p className="text-muted-foreground mb-1">Zeile 1 (Rohdaten):</p>
+                <p className="font-mono bg-white border rounded p-1 break-all">{diagnose.sampleRow?.join(' | ')}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-muted-foreground mb-1">Altersklassen (Stichprobe):</p>
+                  <p className="font-mono bg-white border rounded p-1">{diagnose.uniqueAlter?.join(', ')}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-1">Tarife:</p>
+                  <p className="font-mono bg-white border rounded p-1">{diagnose.uniqueTarif?.join(', ')}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-1">Franchise-Werte:</p>
+                  <p className="font-mono bg-white border rounded p-1">{diagnose.uniqueFranchise?.join(', ')}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-1">Versicherer (Stichprobe):</p>
+                  <p className="font-mono bg-white border rounded p-1">{diagnose.uniqueVersicherer?.join(', ')}</p>
+                </div>
+              </div>
+
+              {diagnose.totalParsed === 0 && (
+                <div className="p-2 bg-red-50 border border-red-200 rounded text-red-700">
+                  ⚠️ Keine Records geparst! Bitte Rohdaten oben prüfen und an den Support melden.
+                </div>
+              )}
+
+              {diagnose.totalParsed > 0 && (
+                <div className="p-2 bg-emerald-50 border border-emerald-200 rounded text-emerald-700">
+                  ✅ {diagnose.totalParsed?.toLocaleString()} Records bereit für Import
+                </div>
+              )}
+            </div>
+          )}
+
+          {diagnose?.error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              <AlertCircle className="w-4 h-4 inline mr-1" />
+              Analysefehler: {diagnose.error}
+            </div>
+          )}
+
           {/* Progress */}
           {uploading && progress && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center gap-2 text-blue-700 text-sm">
                 <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                {progress.phase === 'parsing' ? (
-                  <span>Excel wird lokal geparst...</span>
-                ) : (
-                  <span>
-                    Kanton <strong>{progress.kanton}</strong> ({progress.current}/{progress.total}) — {progress.records}/{progress.total_records || '?'} Records
-                  </span>
-                )}
+                <span>Kanton <strong>{progress.kanton}</strong> ({progress.current}/{progress.total}) — {progress.records}/{progress.total_records} Records</span>
               </div>
-              {progress.phase === 'importing' && (
-                <div className="mt-2 h-1.5 bg-blue-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-500 rounded-full transition-all"
-                    style={{ width: `${(progress.current / progress.total) * 100}%` }}
-                  />
-                </div>
-              )}
+              <div className="mt-2 h-1.5 bg-blue-200 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full transition-all"
+                  style={{ width: `${(progress.current / progress.total) * 100}%` }} />
+              </div>
             </div>
           )}
 
@@ -461,11 +521,15 @@ export default function BAGDatenImport() {
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => setShowDialog(false)}>Schliessen</Button>
-          <Button onClick={handleUpload} disabled={!selectedFile || uploading}>
-            {uploading ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Importiere...</> : <><Upload className="w-3.5 h-3.5 mr-2" />Importieren</>}
-          </Button>
+          {diagnose && !diagnose.error && diagnose.totalParsed > 0 && !uploadResult && (
+            <Button onClick={handleUpload} disabled={uploading}>
+              {uploading
+                ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Importiere...</>
+                : <><Upload className="w-3.5 h-3.5 mr-2" />Importieren ({diagnose.totalParsed?.toLocaleString()} Records)</>}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
