@@ -10,6 +10,9 @@ import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Info, Sear
 
 const ALLE_KANTONE = ['ZH','BE','LU','UR','SZ','OW','NW','GL','ZG','FR','SO','BS','BL','SH','AR','AI','SG','GR','AG','TG','TI','VD','VS','NE','GE','JU'];
 
+// Fehlende IDs aus dem BAG-Verzeichnis September 2025
+// 1542=Assura-Basis, 1568=sana24, 1386=Galenos(Visana), 1560=Agrisano, 1401=rhenusana, 966=vita surselva, 360=Luzerner Hinterland, 1318=Wädenswil, 820=Lumneziana
+
 const MODELL_MAP = {
   'TAR-STD': 'standard', 'TAR-TEL': 'telmed', 'TAR-HAM': 'hausarzt', 'TAR-HMO': 'hmo'
 };
@@ -30,40 +33,42 @@ const VERSICHERER_NAMEN = {
   // CSS Gruppe
   8: 'CSS', 1068: 'CSS', 1535: 'CSS', 1090: 'CSS', 1091: 'CSS',
   // Helsana Gruppe
-  1064: 'Helsana', 1509: 'Helsana', 1086: 'Helsana', 1087: 'Helsana', 1088: 'Helsana',
+  1064: 'Helsana', 1562: 'Helsana', 1509: 'Sanitas', 1086: 'Helsana', 1087: 'Helsana', 1088: 'Helsana',
   // Sanitas
-  1109: 'Sanitas', 1384: 'Swica',
+  1109: 'Sanitas',
   // Swica
-  1113: 'Swica',
+  1384: 'Swica',
   // Visana Gruppe
   1066: 'Visana', 1040: 'Visana', 1041: 'Visana', 1555: 'Visana',
+  1386: 'Galenos',   // Galenos AG (Visana-Gruppe) — BAG-ID 1386
   // KPT
   1065: 'KPT', 1053: 'KPT', 376: 'KPT',
   // Concordia
   1118: 'Concordia', 1100: 'Concordia', 290: 'Concordia',
   // Groupe Mutuel (alle Marken: Mutuel, Sanatel, Philos, Avenir, Easy Sana)
-  1562: 'Groupe Mutuel', 1563: 'Groupe Mutuel', 1564: 'Groupe Mutuel',
+  1563: 'Groupe Mutuel', 1564: 'Groupe Mutuel',
   1077: 'Groupe Mutuel', 1078: 'Groupe Mutuel', 1079: 'Groupe Mutuel',
-  1080: 'Groupe Mutuel', 1081: 'Groupe Mutuel',
+  1080: 'Groupe Mutuel', 1081: 'Groupe Mutuel', 1082: 'Groupe Mutuel', 1083: 'Groupe Mutuel',
   343: 'Groupe Mutuel', 1479: 'Groupe Mutuel', // Avenir + Mutuel
+  1113: 'Groupe Mutuel', // Vallée d'Entremont (Groupe Mutuel-Zusammenarbeit)
   // Atupri
   1021: 'Atupri', 312: 'Atupri',
   // Assura
   1019: 'Assura',
+  1542: 'Assura',    // Assura-Basis SA — BAG-ID 1542
   // ÖKK
   1024: 'ÖKK', 455: 'ÖKK',
   // Agrisano
   1016: 'Agrisano',
+  1560: 'Agrisano',  // Agrisano (neue ID) — BAG-ID 1560
   // Sympany / Vivao
   1097: 'Sympany', 1126: 'Vivao Sympany', 509: 'Vivao Sympany', 57: 'Sympany',
   // EGK
   1048: 'EGK', 881: 'EGK',
   // Sana24
-  1096: 'Sana24',
+  1096: 'Sana24', 1568: 'Sana24',  // sana24 — BAG-ID 1568
   // bkk mobilise
   1017: 'bkk mobilise',
-  // Galenus / GALENOS
-  1025: 'Galenus',
   // Aquilana
   1007: 'Aquilana', 32: 'Aquilana',
   // SUPRA
@@ -72,16 +77,21 @@ const VERSICHERER_NAMEN = {
   1112: 'Sumiswalder', 194: 'Sumiswalder',
   // Steffisburg
   1110: 'Steffisburg', 246: 'Steffisburg',
-  // Easy Sana / Avenir (Groupe Mutuel)
-  1082: 'Groupe Mutuel', 1083: 'Groupe Mutuel',
-  // Kleinere/regionale Kassen mit eigenen alten IDs
-  1322: 'Birchmeier', // Krankenkasse Birchmeier, Künten
-  1384: 'Swica',     // SWICA (ältere ID)
-  1479: 'Groupe Mutuel', // Mutuel Assurance
+  // Kleinere/regionale Kassen
+  1322: 'Birchmeier',
   1507: 'AMB Assurances',
-  923: 'SLKK',       // Krankenkasse SLKK Zürich
-  941: 'sodalis',    // sodalis Krankenkasse, Visp
-  780: 'Glarner',    // Glarner Krankenversicherung
+  923: 'SLKK',
+  941: 'sodalis',
+  780: 'Glarner',
+  1401: 'rhenusana',      // rhenusana — BAG-ID 1401
+  966: 'vita surselva',   // vita surselva — BAG-ID 966
+  360: 'Luzerner Hinterland', // Krankenkasse Luzerner Hinterland — BAG-ID 360
+  1318: 'Wädenswil',     // Krankenkasse Wädenswil — BAG-ID 1318
+  820: 'Lumneziana',     // Cassa da malsauns Lumneziana — BAG-ID 820
+  134: 'Einsiedler',     // Einsiedler Krankenkasse — BAG-ID 134
+  829: 'KLuG',           // KLuG Krankenversicherung — BAG-ID 829
+  901: 'sanavals',       // sanavals Gesundheitskasse — BAG-ID 901
+  1040: 'Visperterminen', // Krankenkasse Visperterminen — BAG-ID 1040
 };
 
 function findCol(headers, ...candidates) {
@@ -118,7 +128,12 @@ function analyzeAndParseBAGExcel(file, jahr) {
         const colAlter       = findCol(headers, 'altersklasse', 'alters', 'age');
         const colUnfall      = findCol(headers, 'unfall', 'accident');
         const colTarif       = findCol(headers, 'tariftyp', 'tariftype', 'modell');  // Tariftyp zuerst!
-        const colFranchise   = findCol(headers, 'franchise', 'selbstbeh');
+        // "Franchise" (FRA-xxx Werte) bevorzugen, NICHT "Franchisestufe" (FRAST1-7)
+        const colFranchise   = (() => {
+          const exactIdx = headers.findIndex(h => String(h || '').toLowerCase() === 'franchise');
+          if (exactIdx >= 0) return exactIdx;
+          return findCol(headers, 'franchise', 'selbstbeh');
+        })();
         const colPraemie     = findCol(headers, 'prämie', 'praemie', 'premium', 'betrag');
 
         const useFixed = colKanton === -1 || colPraemie === -1;
