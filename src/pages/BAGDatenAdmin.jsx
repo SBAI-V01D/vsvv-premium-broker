@@ -1,10 +1,30 @@
-import React from 'react';
+import React, { useState } from 'react';
 import BAGDatenImport from '@/components/krankenkassen/BAGDatenImport';
+import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { FileSpreadsheet, Database, Calendar, Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { FileSpreadsheet, Database, Calendar, Info, Trash2, Loader2 } from 'lucide-react';
 
 export default function BAGDatenAdmin() {
+  const [deleting, setDeleting] = useState(false);
+  const [deleteResult, setDeleteResult] = useState(null);
+
+  const handleDeleteAll = async () => {
+    if (!window.confirm('Alle BAG-Prämiendaten löschen? Dies kann nicht rückgängig gemacht werden!')) return;
+    setDeleting(true);
+    setDeleteResult(null);
+    let total = 0;
+    while (true) {
+      const batch = await base44.entities.BAGPraemienDaten.list('-created_date', 50);
+      if (!batch || batch.length === 0) break;
+      await Promise.all(batch.map(r => base44.entities.BAGPraemienDaten.delete(r.id)));
+      total += batch.length;
+    }
+    setDeleteResult(`${total} Datensätze gelöscht.`);
+    setDeleting(false);
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -82,8 +102,13 @@ export default function BAGDatenAdmin() {
             </div>
           </div>
 
-          <div className="pt-4 border-t">
+          <div className="pt-4 border-t flex items-center gap-3">
             <BAGDatenImport />
+            <Button variant="destructive" size="sm" onClick={handleDeleteAll} disabled={deleting}>
+              {deleting ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 mr-2" />}
+              Alle Daten löschen
+            </Button>
+            {deleteResult && <span className="text-xs text-emerald-700">{deleteResult}</span>}
           </div>
         </CardContent>
       </Card>
