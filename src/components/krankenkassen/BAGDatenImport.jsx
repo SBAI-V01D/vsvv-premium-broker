@@ -197,9 +197,11 @@ function analyzeAndParseBAGExcel(file, jahr) {
           uniqueFranchise: [...uniqueFranchise].slice(0, 10),
         };
 
-        // Nun parsen
+        // Nun parsen — mit detaillierter Statistik
         const byKanton = {};
         let skippedAlter = 0, skippedTarif = 0, skippedPraemie = 0, skippedUnbekanntId = 0;
+        let skippedMitUnf = 0, skippedKanton = 0, skippedFranchise = 0;
+        let totalMitUnf = 0, totalOhneUnf = 0;
         const unbekannteIds = new Set();
         const unbekannteIdCount = {};  // ID → Anzahl Zeilen
         const skippedTarifTypes = {};  // Tariftyp → Anzahl
@@ -234,9 +236,17 @@ function analyzeAndParseBAGExcel(file, jahr) {
             continue;
           }
 
-          // Unfall: MIT-UNF überspringen (wir wollen OHNE-UNF = günstiger)
+          // Unfall-Statistik erfassen
           const unfallStr = String(unfalleinschluss || '').toUpperCase();
-          if (unfallStr === 'MIT-UNF' || unfallStr === 'MIT' || unfallStr === 'WITH' || unfallStr === '1' || unfallStr === 'JA') continue;
+          const istMitUnf = unfallStr === 'MIT-UNF' || unfallStr === 'MIT' || unfallStr === 'WITH' || unfallStr === '1' || unfallStr === 'JA';
+          
+          if (istMitUnf) {
+            totalMitUnf++;
+            skippedMitUnf++;  // Wir importieren nur OHNE-UNF
+            continue;
+          } else {
+            totalOhneUnf++;
+          }
 
           if (!praemie || parseFloat(praemie) <= 0) { skippedPraemie++; continue; }
 
@@ -260,7 +270,10 @@ function analyzeAndParseBAGExcel(file, jahr) {
           }
 
           const kanton = String(kantonCode || '').trim().toUpperCase();
-          if (!kanton || kanton.length > 3) continue;
+          if (!kanton || kanton.length > 3) {
+            skippedKanton++;
+            continue;
+          }
 
           // Franchise — neues Format: FRA-300, FRA-500, etc. / altes Format: Index 3-8
           let franchise = 300;
@@ -277,7 +290,10 @@ function analyzeAndParseBAGExcel(file, jahr) {
           const gueltigeFranchisen = istKind
             ? [0, 100, 200, 300, 400, 500, 600]
             : [300, 500, 1000, 1500, 2000, 2500];
-          if (!gueltigeFranchisen.includes(franchise)) continue;
+          if (!gueltigeFranchisen.includes(franchise)) {
+            skippedFranchise++;
+            continue;
+          }
 
           // Kassenname — unbekannte IDs überspringen
           const kassieId = parseInt(versichererId);
@@ -326,6 +342,11 @@ function analyzeAndParseBAGExcel(file, jahr) {
         diagnose.skippedTarifTypes = skippedTarifTypes;
         diagnose.totalParsed = totalParsed;
         diagnose.kantone = Object.keys(byKanton);
+        diagnose.skippedMitUnf = skippedMitUnf;
+        diagnose.skippedKanton = skippedKanton;
+        diagnose.skippedFranchise = skippedFranchise;
+        diagnose.totalMitUnf = totalMitUnf;
+        diagnose.totalOhneUnf = totalOhneUnf;
 
         resolve({ byKanton, diagnose });
       } catch (err) {
@@ -577,14 +598,31 @@ export default function BAGDatenImport() {
             <div className="border rounded-lg p-4 bg-slate-50 space-y-3 text-xs">
               <p className="font-semibold text-sm text-slate-700">📊 Datei-Analyse</p>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div><span className="text-muted-foreground">Zeilen gesamt:</span> <strong>{diagnose.totalRows?.toLocaleString()}</strong></div>
-                <div><span className="text-muted-foreground">Geparste Records:</span> <strong className={diagnose.totalParsed > 0 ? 'text-emerald-700' : 'text-red-700'}>{diagnose.totalParsed?.toLocaleString()}</strong></div>
-                <div><span className="text-muted-foreground">Übersprungen (Alter):</span> <strong>{diagnose.skippedAlter}</strong></div>
-                <div><span className="text-muted-foreground">Übersprungen (Tarif):</span> <strong>{diagnose.skippedTarif}</strong></div>
-                <div><span className="text-muted-foreground">Übersprungen (Unbekannte ID):</span> <strong className={diagnose.skippedUnbekanntId > 0 ? 'text-amber-700' : ''}>{diagnose.skippedUnbekanntId}</strong></div>
-                <div><span className="text-muted-foreground">Spalten-Modus:</span> <strong>{diagnose.useFixed ? 'Fest (kein Header)' : 'Dynamisch'}</strong></div>
-                <div><span className="text-muted-foreground">Kantone:</span> <strong>{diagnose.kantone?.length}</strong></div>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div><span className="text-muted-foreground">Zeilen gesamt:</span> <strong>{diagnose.totalRows?.toLocaleString()}</strong></div>
+                  <div><span className="text-muted-foreground">Geparste Records:</span> <strong className={diagnose.totalParsed > 0 ? 'text-emerald-700' : 'text-red-700'}>{diagnose.totalParsed?.toLocaleString()}</strong></div>
+                  <div><span className="text-muted-foreground">Spalten-Modus:</span> <strong>{diagnose.useFixed ? 'Fest (kein Header)' : 'Dynamisch'}</strong></div>
+                  <div><span className="text-muted-foreground">Kantone:</span> <strong>{diagnose.kantone?.length}</strong></div>
+                </div>
+
+                <div className="p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                  <p className="font-semibold text-blue-800 mb-2">📊 Vollständige Aufschlüsselung (217'472 → 108'736)</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div><span className="text-muted-foreground">Übersprungen (MIT-UNF):</span> <strong className="text-blue-700">{diagnose.skippedMitUnf?.toLocaleString()}</strong></div>
+                    <div><span className="text-muted-foreground">Davon OHNE-UNF:</span> <strong className="text-emerald-700">{diagnose.totalOhneUnf?.toLocaleString()}</strong></div>
+                    <div><span className="text-muted-foreground">Übersprungen (Tarif):</span> <strong>{diagnose.skippedTarif}</strong></div>
+                    <div><span className="text-muted-foreground">Übersprungen (Alter):</span> <strong>{diagnose.skippedAlter}</strong></div>
+                    <div><span className="text-muted-foreground">Übersprungen (Franchise):</span> <strong>{diagnose.skippedFranchise || 0}</strong></div>
+                    <div><span className="text-muted-foreground">Übersprungen (Kanton):</span> <strong>{diagnose.skippedKanton || 0}</strong></div>
+                    <div><span className="text-muted-foreground">Übersprungen (Prämie ≤0):</span> <strong>{diagnose.skippedPraemie || 0}</strong></div>
+                    <div><span className="text-muted-foreground">Übersprungen (Unbekannte ID):</span> <strong className={diagnose.skippedUnbekanntId > 0 ? 'text-amber-700' : ''}>{diagnose.skippedUnbekanntId}</strong></div>
+                  </div>
+                  <p className="text-xs text-blue-700 mt-2">
+                    <strong>Summe verworfen:</strong> {((diagnose.skippedMitUnf || 0) + (diagnose.skippedTarif || 0) + (diagnose.skippedAlter || 0) + (diagnose.skippedFranchise || 0) + (diagnose.skippedKanton || 0) + (diagnose.skippedPraemie || 0) + (diagnose.skippedUnbekanntId || 0)).toLocaleString()}
+                  </p>
+                </div>
+
                 <div className="col-span-2"><span className="text-muted-foreground">Spalten-Indizes (Tariftyp/Alter/Franchise/Prämie):</span> <strong className="font-mono">{diagnose.cols?.colTarif} / {diagnose.cols?.colAlter} / {diagnose.cols?.colFranchise} / {diagnose.cols?.colPraemie}</strong></div>
               </div>
 
@@ -647,7 +685,7 @@ export default function BAGDatenImport() {
 
               {diagnose.totalParsed > 0 && (
                 <div className="p-2 bg-emerald-50 border border-emerald-200 rounded text-emerald-700">
-                  ✅ {diagnose.totalParsed?.toLocaleString()} Records bereit für Import
+                  ✅ {diagnose.totalParsed?.toLocaleString()} Records bereit für Import (ohne Unfalldeckung)
                 </div>
               )}
             </div>
