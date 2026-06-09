@@ -226,27 +226,31 @@ export default function BAGDatenImport() {
         if (records.length === 0) continue;
 
         try {
-          const res = await base44.functions.invoke('importBAGDatenFromURL', {
-            records,
-            kanton,
-            jahr: parseInt(jahr)
-          });
+          // Direkt vom Frontend schreiben — kein Backend-Roundtrip
+          const now = new Date().toISOString();
+          const enriched = records.map(r => ({ ...r, importiert_am: now, aktiv: true }));
 
-          if (res.data?.success) {
-            erfolgreich += res.data.results?.erfolgreich || 0;
-          } else {
-            fehler++;
-            errors.push(`${kanton}: ${res.data?.error || 'Fehler'}`);
+          // In Batches von 20 mit Pause
+          const BATCH = 20;
+          let kantErfolgreich = 0;
+          for (let b = 0; b < enriched.length; b += BATCH) {
+            await base44.entities.BAGPraemienDaten.bulkCreate(enriched.slice(b, b + BATCH));
+            kantErfolgreich += Math.min(BATCH, enriched.length - b);
+            setProgress({ phase: 'importing', current: i + 1, total: kantoneToImport.length, kanton, records: kantErfolgreich, total_records: enriched.length });
+            if (b + BATCH < enriched.length) {
+              await new Promise(r => setTimeout(r, 500));
+            }
           }
+          erfolgreich += kantErfolgreich;
         } catch (err) {
           fehler++;
           errors.push(`${kanton}: ${err.message}`);
           console.error(`[BAG] ${kanton} failed:`, err.message);
         }
 
-        // Pause zwischen Kantonen um Rate Limit zu vermeiden
+        // Pause zwischen Kantonen
         if (i < kantoneToImport.length - 1) {
-          await new Promise(r => setTimeout(r, 1500));
+          await new Promise(r => setTimeout(r, 1000));
         }
       }
 
@@ -367,7 +371,7 @@ export default function BAGDatenImport() {
                   <span>Excel wird lokal geparst...</span>
                 ) : (
                   <span>
-                    Kanton <strong>{progress.kanton}</strong> ({progress.current}/{progress.total}) — {progress.records} Records
+                    Kanton <strong>{progress.kanton}</strong> ({progress.current}/{progress.total}) — {progress.records}/{progress.total_records || '?'} Records
                   </span>
                 )}
               </div>
