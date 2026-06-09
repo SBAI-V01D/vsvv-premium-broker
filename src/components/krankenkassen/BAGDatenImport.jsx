@@ -446,7 +446,12 @@ export default function BAGDatenImport() {
       const validierungResponse = await base44.functions.invoke('validateBAGImport', {
         import_batch_id: 'manual-import-' + Date.now(),
         quelle_datei_gesamtzeilen: diagnose.totalParsed,
-        importdauer_minuten: parseFloat(importdauerMinuten.toFixed(2))
+        importdauer_minuten: parseFloat(importdauerMinuten.toFixed(2)),
+        skipped_alter: diagnose.skippedAlter || 0,
+        skipped_tarif: diagnose.skippedTarif || 0,
+        skipped_franchise: diagnose.skippedFranchise || 0,
+        skipped_pflichtfelder: diagnose.skippedPraemie || 0,
+        skipped_unbekannte_ids: diagnose.skippedUnbekanntId || 0,
       });
       validierung = validierungResponse.data;
     } catch (err) {

@@ -158,11 +158,43 @@ Deno.serve(async (req) => {
       plausiChecks.praemie_gt_0 = false;
     }
 
-    // 5. Systemvalidierung
-    const expectedRecords = importVersion.quelle_datei_gesamtzeilen || 0;
+    // 5. Systemvalidierung - STRENGE KRITERIEN
+    const expectedRecords = importVersion.quelle_datei_gesamtzeilen || payload.quelle_datei_gesamtzeilen || 0;
     const importedRecords = totalImported || 0;
     const difference = expectedRecords - importedRecords;
     const differencePercent = expectedRecords > 0 ? ((difference / expectedRecords) * 100) : 0;
+
+    // Diagnose-Daten aus Payload ODER Import-Version laden (skipped_* Werte)
+    const skippedAlter = payload.skipped_alter ?? importVersion.skipped_alter ?? 0;
+    const skippedTarif = payload.skipped_tarif ?? importVersion.skipped_tarif ?? 0;
+    const skippedFranchise = payload.skipped_franchise ?? importVersion.skipped_franchise ?? 0;
+    const skippedPflichtfelder = payload.skipped_pflichtfelder ?? importVersion.skipped_pflichtfelder ?? 0;
+    const skippedUnbekannteIds = payload.skipped_unbekannte_ids ?? importVersion.skipped_unbekannte_ids ?? 0;
+
+    // VALIDIERUNGSREGELN - Automatisch FAIL wenn:
+    const validationRules = {
+      differenz_null: difference === 0,  // Differenz muss 0 sein
+      keine_unbekannten_tariftypen: skippedTarif === 0,  // Keine unbekannten Tariftypen
+      keine_unbekannten_altersklassen: skippedAlter === 0,  // Keine unbekannten Altersklassen
+      keine_unbekannten_franchisen: skippedFranchise === 0,  // Keine unbekannten Franchisen
+      keine_fehlenden_pflichtfelder: skippedPflichtfelder === 0,  // Keine fehlenden Pflichtfelder
+      plausibilitaet_ok: Object.values(plausiChecks).every(v => v === true),
+    };
+
+    // Fehlerursachen sammeln
+    const errorCauses = [];
+    if (difference > 0) errorCauses.push(`Differenz: ${difference} Datensätze fehlen`);
+    if (skippedTarif > 0) errorCauses.push(`Unbekannte Tariftypen: ${skippedTarif} Zeilen übersprungen`);
+    if (skippedAlter > 0) errorCauses.push(`Unbekannte Altersklassen: ${skippedAlter} Zeilen übersprungen`);
+    if (skippedFranchise > 0) errorCauses.push(`Unbekannte Franchisen: ${skippedFranchise} Zeilen übersprungen`);
+    if (skippedPflichtfelder > 0) errorCauses.push(`Fehlende Pflichtfelder: ${skippedPflichtfelder} Zeilen übersprungen`);
+    if (!validationRules.plausibilitaet_ok) {
+      if (!plausiChecks.praemie_gt_0) errorCauses.push('Negative Prämien gefunden');
+      if (!plausiChecks.no_null_pflichtfelder) errorCauses.push('NULL-Werte in Pflichtfeldern');
+      if (!plausiChecks.keine_unbekannten_tariftypen) errorCauses.push('Ungültige Tariftypen in DB');
+      if (!plausiChecks.keine_unbekannten_altersklassen) errorCauses.push('Ungültige Altersklassen in DB');
+      if (!plausiChecks.keine_unbekannten_franchisen) errorCauses.push('Ungültige Franchisen in DB');
+    }
 
     const validierung = {
       vollstaendigkeit: {
@@ -182,19 +214,17 @@ Deno.serve(async (req) => {
         franchisen: uniqueFranchisen,
       },
       plausibilitaet: {
-        pass: Object.values(plausiChecks).every(v => v === true),
+        pass: validationRules.plausibilitaet_ok,
         checks: plausiChecks,
       },
       performance: {
-        pass: true, // Wird separat gemessen
+        pass: true,
         importdauer_minuten: importVersion.importdauer_minuten || 0,
       },
     };
 
-    const overallPass = 
-      validierung.vollstaendigkeit.pass &&
-      validierung.datenqualitaet.pass &&
-      validierung.plausibilitaet.pass;
+    // STRENGE VALIDIERUNG - Alle Regeln müssen erfüllt sein
+    const overallPass = Object.values(validationRules).every(v => v === true);
 
     // 6. Update Import Version mit Validierungsergebnis
     const updateData = {
@@ -206,6 +236,7 @@ Deno.serve(async (req) => {
         datenqualitaet: validierung.datenqualitaet,
         plausibilitaet: validierung.plausibilitaet,
         overall: overallPass,
+        error_causes: errorCauses,
       },
       anzahl_versicherer: uniqueVersicherer,
       anzahl_kantone: uniqueKantone,
@@ -214,6 +245,11 @@ Deno.serve(async (req) => {
       anzahl_modelle: uniqueModelle,
       anzahl_franchisen: uniqueFranchisen,
       plausibilitaet_checks_json: plausiChecks,
+      skipped_alter: skippedAlter,
+      skipped_tarif: skippedTarif,
+      skipped_franchise: skippedFranchise,
+      skipped_pflichtfelder: skippedPflichtfelder,
+      skipped_unbekannte_ids: skippedUnbekannteIds,
     };
 
     await supabase
@@ -239,9 +275,17 @@ Deno.serve(async (req) => {
         modelle: uniqueModelle,
         franchisen: uniqueFranchisen,
       },
+      diagnose: {
+        skipped_alter: skippedAlter,
+        skipped_tarif: skippedTarif,
+        skipped_franchise: skippedFranchise,
+        skipped_pflichtfelder: skippedPflichtfelder,
+        skipped_unbekannte_ids: skippedUnbekannteIds,
+      },
       plausibilitaet: plausiChecks,
       validierung: validierung,
       overall: overallPass ? 'PASS' : 'FAIL',
+      error_causes: errorCauses,
     });
 
   } catch (error) {

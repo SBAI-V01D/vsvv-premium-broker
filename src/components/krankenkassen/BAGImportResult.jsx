@@ -111,10 +111,31 @@ export default function BAGImportResult({ uploadResult }) {
         </div>
       </div>
 
-      {/* Fehler-Liste */}
+      {/* Fehlerursachen (VALIDIERUNG FAILED) */}
+      {validierung?.overall === 'FAIL' && uploadResult.error_causes && uploadResult.error_causes.length > 0 && (
+        <div className="p-4 bg-red-50 border-2 border-red-300 rounded-lg">
+          <div className="flex items-center gap-2 text-red-700 font-semibold mb-3">
+            <AlertCircle className="w-5 h-5" />
+            <p>IMPORT FEHLGESCHLAGEN - {uploadResult.error_causes.length} Ursachen:</p>
+          </div>
+          <ul className="space-y-2 text-sm text-red-700">
+            {uploadResult.error_causes.map((cause, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <span className="text-red-600 font-bold">•</span>
+                <span>{cause}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-red-600 mt-3">
+            <strong>Automatischer Import-Stop:</strong> Der Import wurde als FAIL markiert, da kritische Validierungsregeln verletzt wurden.
+          </p>
+        </div>
+      )}
+
+      {/* Technische Fehler */}
       {uploadResult.errors && uploadResult.errors.length > 0 && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="font-semibold text-red-700 text-sm mb-2">Import-Fehler ({uploadResult.errors.length})</p>
+          <p className="font-semibold text-red-700 text-sm mb-2">Technische Fehler ({uploadResult.errors.length})</p>
           <div className="max-h-32 overflow-y-auto text-xs text-red-600 space-y-0.5">
             {uploadResult.errors.map((err, i) => (
               <div key={i} className="font-mono">{String(err)}</div>
