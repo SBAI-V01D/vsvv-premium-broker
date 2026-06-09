@@ -130,9 +130,15 @@ export default function KrankenkassenVergleich() {
   const [bagDaten, setBagDaten] = useState(null);
   const [loadingDaten, setLoadingDaten] = useState(true);
 
+  const alter = formData.geburtsdatum ? 
+    Math.floor((new Date() - new Date(formData.geburtsdatum)) / (365.25 * 24 * 60 * 60 * 1000)) : null;
+
+  // Altersklasse: override hat Vorrang, sonst auto aus Geburtsdatum
+  const altersklasse = formData.altersklasse_override || getAltersklasse(alter);
+
   // BAG-Daten laden für exakte Prämienberechnung - nur für ausgewählten Kanton
   useEffect(() => {
-    if (!formData.kanton) {
+    if (!formData.kanton || !altersklasse) {
       setBagDaten([]);
       return;
     }
@@ -158,12 +164,6 @@ export default function KrankenkassenVergleich() {
     
     loadBagDaten();
   }, [formData.kanton, altersklasse]);
-
-  const alter = formData.geburtsdatum ? 
-    Math.floor((new Date() - new Date(formData.geburtsdatum)) / (365.25 * 24 * 60 * 60 * 1000)) : null;
-
-  // Altersklasse: override hat Vorrang, sonst auto aus Geburtsdatum
-  const altersklasse = formData.altersklasse_override || getAltersklasse(alter);
   const franchisen = getFranchisen(altersklasse);
 
   // Franchise-Reset wenn nicht mehr gültig für neue Altersklasse
