@@ -421,6 +421,8 @@ export default function BAGDatenImport() {
           await bulkCreateWithRetry(enriched.slice(b, b + BATCH));
           kantOk += Math.min(BATCH, enriched.length - b);
           setProgress({ phase: 'importing', current: i + 1, total: kantoneToImport.length, kanton, records: kantOk, total_records: enriched.length });
+          // Kurze Pause zwischen Batches um Rate-Limit zu vermeiden
+          if (b + BATCH < enriched.length) await sleep(500);
         }
         erfolgreich += kantOk;
       } catch (err) {
