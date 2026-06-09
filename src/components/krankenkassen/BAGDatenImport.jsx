@@ -20,51 +20,60 @@ const FRANCHISE_MAP = { 3: 300, 4: 500, 5: 1000, 6: 1500, 7: 2000, 8: 2500 };
 // BAG Versicherer-ID → Name (vollständige offizielle BAG-Liste)
 const VERSICHERER_NAMEN = {
   // CSS Gruppe
-  1068: 'CSS', 1535: 'CSS', 1090: 'CSS', 1091: 'CSS',
+  8: 'CSS', 1068: 'CSS', 1535: 'CSS', 1090: 'CSS', 1091: 'CSS',
   // Helsana Gruppe
   1064: 'Helsana', 1509: 'Helsana', 1086: 'Helsana', 1087: 'Helsana', 1088: 'Helsana',
   // Sanitas
-  1109: 'Sanitas',
+  1109: 'Sanitas', 1384: 'Swica',
   // Swica
   1113: 'Swica',
   // Visana Gruppe
-  1066: 'Visana', 1040: 'Visana', 1041: 'Visana',
+  1066: 'Visana', 1040: 'Visana', 1041: 'Visana', 1555: 'Visana',
   // KPT
-  1065: 'KPT', 1053: 'KPT',
+  1065: 'KPT', 1053: 'KPT', 376: 'KPT',
   // Concordia
-  1118: 'Concordia', 1100: 'Concordia',
+  1118: 'Concordia', 1100: 'Concordia', 290: 'Concordia',
   // Groupe Mutuel (alle Marken: Mutuel, Sanatel, Philos, Avenir, Easy Sana)
   1562: 'Groupe Mutuel', 1563: 'Groupe Mutuel', 1564: 'Groupe Mutuel',
   1077: 'Groupe Mutuel', 1078: 'Groupe Mutuel', 1079: 'Groupe Mutuel',
   1080: 'Groupe Mutuel', 1081: 'Groupe Mutuel',
+  343: 'Groupe Mutuel', 1479: 'Groupe Mutuel', // Avenir + Mutuel
   // Atupri
-  1021: 'Atupri',
+  1021: 'Atupri', 312: 'Atupri',
   // Assura
   1019: 'Assura',
   // ÖKK
-  1024: 'ÖKK',
+  1024: 'ÖKK', 455: 'ÖKK',
   // Agrisano
   1016: 'Agrisano',
   // Sympany / Vivao
-  1097: 'Sympany', 1126: 'Vivao Sympany',
+  1097: 'Sympany', 1126: 'Vivao Sympany', 509: 'Vivao Sympany', 57: 'Sympany',
   // EGK
-  1048: 'EGK',
+  1048: 'EGK', 881: 'EGK',
   // Sana24
   1096: 'Sana24',
   // bkk mobilise
   1017: 'bkk mobilise',
-  // Galenus
+  // Galenus / GALENOS
   1025: 'Galenus',
   // Aquilana
-  1007: 'Aquilana',
+  1007: 'Aquilana', 32: 'Aquilana',
   // SUPRA
-  1111: 'SUPRA',
+  1111: 'SUPRA', 62: 'SUPRA',
   // Sumiswalder
-  1112: 'Sumiswalder',
+  1112: 'Sumiswalder', 194: 'Sumiswalder',
   // Steffisburg
-  1110: 'Steffisburg',
+  1110: 'Steffisburg', 246: 'Steffisburg',
   // Easy Sana / Avenir (Groupe Mutuel)
   1082: 'Groupe Mutuel', 1083: 'Groupe Mutuel',
+  // Kleinere/regionale Kassen mit eigenen alten IDs
+  1322: 'Birchmeier', // Krankenkasse Birchmeier, Künten
+  1384: 'Swica',     // SWICA (ältere ID)
+  1479: 'Groupe Mutuel', // Mutuel Assurance
+  1507: 'AMB Assurances',
+  923: 'SLKK',       // Krankenkasse SLKK Zürich
+  941: 'sodalis',    // sodalis Krankenkasse, Visp
+  780: 'Glarner',    // Glarner Krankenversicherung
 };
 
 function findCol(headers, ...candidates) {
