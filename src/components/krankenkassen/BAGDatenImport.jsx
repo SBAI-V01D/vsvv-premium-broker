@@ -14,7 +14,15 @@ const MODELL_MAP = {
   'TAR-STD': 'standard', 'TAR-TEL': 'telmed', 'TAR-HAM': 'hausarzt', 'TAR-HMO': 'hmo'
 };
 
-// BAG Franchise-Index → CHF Betrag
+// BAG Franchise-Akronym → CHF Betrag (neues Format: FRA-0, FRA-100, ...)
+const FRANCHISE_AKRO_MAP = {
+  'FRA-0': 300, 'FRA-100': 300,   // Kinder haben FRA-0/100, für Erwachsene nicht relevant
+  'FRA-300': 300, 'FRA-500': 500,
+  'FRA-1000': 1000, 'FRA-1500': 1500,
+  'FRA-2000': 2000, 'FRA-2500': 2500,
+};
+
+// BAG Franchise-Index → CHF Betrag (altes Format)
 const FRANCHISE_MAP = { 3: 300, 4: 500, 5: 1000, 6: 1500, 7: 2000, 8: 2500 };
 
 // BAG Versicherer-ID → Name (vollständige offizielle BAG-Liste)
@@ -179,17 +187,18 @@ function analyzeAndParseBAGExcel(file, jahr) {
             praemie          = row[colPraemie];
           }
 
-          // Altersfilter: AUSSCHLIESSEN was explizit Kind/Jugend ist
+          // Altersfilter: NUR Erwachsene (AKL-ERW) und Jugendliche (AKL-JUG) — Kinder (AKL-KIN) überspringen
           const alterStr = String(altersklasse || '').toUpperCase();
-          // BAG-Codes: AE = Erwachsene, JU = Jugendliche, KI = Kinder
-          if (alterStr && (alterStr.includes('JU') || alterStr.includes('KI') || alterStr.includes('KIND') || alterStr.includes('JUGEND'))) {
+          if (alterStr === 'AKL-KIN' || alterStr.includes('KIN') || alterStr.includes('KIND')) {
             skippedAlter++;
             continue;
           }
+          // Altersgruppe bestimmen
+          const istJugendlich = alterStr === 'AKL-JUG' || alterStr.includes('JUG');
 
-          // Unfall: MIT Unfall überspringen (wir wollen "ohne Unfall" = günstiger)
+          // Unfall: MIT-UNF überspringen (wir wollen OHNE-UNF = günstiger)
           const unfallStr = String(unfalleinschluss || '').toUpperCase();
-          if (unfallStr === 'MIT' || unfallStr === 'WITH' || unfallStr === '1' || unfallStr === 'JA') continue;
+          if (unfallStr === 'MIT-UNF' || unfallStr === 'MIT' || unfallStr === 'WITH' || unfallStr === '1' || unfallStr === 'JA') continue;
 
           if (!praemie || parseFloat(praemie) <= 0) { skippedPraemie++; continue; }
 
@@ -199,16 +208,23 @@ function analyzeAndParseBAGExcel(file, jahr) {
              tarifStr.includes('TEL') ? 'telmed' :
              tarifStr.includes('HAM') || tarifStr.includes('HAUS') ? 'hausarzt' :
              tarifStr.includes('HMO') ? 'hmo' : null);
-          if (!modell) { skippedTarif++; continue; }
+          if (!modell) { skippedTarif++; continue; } // DIV-Tarife, Komplementär etc. → ignorieren
 
           const kanton = String(kantonCode || '').trim().toUpperCase();
           if (!kanton || kanton.length > 3) continue;
 
-          // Franchise
+          // Franchise — neues Format: FRA-300, FRA-500, etc. / altes Format: Index 3-8
           let franchise = 300;
-          const franchiseInt = parseInt(String(franchiseCode || '').match(/(\d+)/)?.[1] || '0');
-          if (FRANCHISE_MAP[franchiseInt]) franchise = FRANCHISE_MAP[franchiseInt];
-          else if (franchiseInt >= 300) franchise = franchiseInt;
+          const franchiseStr = String(franchiseCode || '').trim().toUpperCase();
+          if (FRANCHISE_AKRO_MAP[franchiseStr] !== undefined) {
+            franchise = FRANCHISE_AKRO_MAP[franchiseStr];
+          } else {
+            const franchiseInt = parseInt(franchiseStr.match(/(\d+)/)?.[1] || '0');
+            if (FRANCHISE_MAP[franchiseInt]) franchise = FRANCHISE_MAP[franchiseInt];
+            else if (franchiseInt >= 300) franchise = franchiseInt;
+          }
+          // Für Erwachsene: nur Standard-Franchisen 300-2500 importieren
+          if (!istJugendlich && ![300,500,1000,1500,2000,2500].includes(franchise)) continue;
 
           // Kassenname — unbekannte IDs überspringen
           const kassieId = parseInt(versichererId);
@@ -228,11 +244,11 @@ function analyzeAndParseBAGExcel(file, jahr) {
             modell,
             franchise,
             unfall: false,
-            praemie_erwachsene: parseFloat(praemie),
-            praemie_kinder: 0,
+            praemie_erwachsene: istJugendlich ? 0 : parseFloat(praemie),
+            praemie_kinder: istJugendlich ? parseFloat(praemie) : 0,
             geschlecht: 'm',
-            alter_von: 26,
-            alter_bis: 99,
+            alter_von: istJugendlich ? 19 : 26,
+            alter_bis: istJugendlich ? 25 : 99,
             datenquelle: 'BAG',
             gueltig_ab: `${jahr}-01-01`,
             gueltig_bis: `${jahr}-12-31`,
