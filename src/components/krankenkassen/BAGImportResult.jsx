@@ -4,123 +4,190 @@ import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 export default function BAGImportResult({ uploadResult }) {
   if (!uploadResult) return null;
 
-  return (
-    <div className={`p-4 rounded-lg border ${uploadResult.error ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'}`}>
-      {uploadResult.error ? (
-        <div className="flex items-center gap-2 text-red-700">
-          <AlertCircle className="w-4 h-4" />
-          <p className="font-medium text-sm">{uploadResult.error}</p>
+  if (!uploadResult.success) {
+    return (
+      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div className="flex items-center gap-2 text-red-700 font-semibold mb-2">
+          <AlertCircle className="w-5 h-5" />
+          Import fehlgeschlagen
         </div>
-      ) : (
-        <div className="space-y-4">
-          {/* Header */}
-          <div className="flex items-center gap-2 text-emerald-700">
-            <CheckCircle2 className="w-5 h-5" />
-            <p className="font-bold text-base">{uploadResult.message}</p>
+        <p className="text-sm text-red-600">{uploadResult.message}</p>
+        {uploadResult.errors && (
+          <div className="mt-3 p-2 bg-red-100 rounded text-xs text-red-700 max-h-32 overflow-y-auto">
+            <p className="font-semibold mb-1">Fehler:</p>
+            <ul className="list-disc list-inside space-y-0.5">
+              {uploadResult.errors.slice(0, 5).map((err, i) => (
+                <li key={i}>{String(err)}</li>
+              ))}
+            </ul>
           </div>
+        )}
+      </div>
+    );
+  }
 
-          {/* Import-Statistik */}
-          <div className="grid grid-cols-4 gap-3 text-sm">
-            <div className="p-2 bg-white rounded border">
-              <p className="text-muted-foreground text-xs">Gesamt</p>
-              <p className="font-bold text-lg">{uploadResult.results?.gesamt?.toLocaleString()}</p>
-            </div>
-            <div className="p-2 bg-emerald-50 rounded border border-emerald-200">
-              <p className="text-emerald-700 text-xs">Erfolgreich</p>
-              <p className="font-bold text-lg text-emerald-700">{uploadResult.results?.erfolgreich?.toLocaleString()}</p>
-            </div>
-            <div className="p-2 bg-red-50 rounded border border-red-200">
-              <p className="text-red-700 text-xs">Fehler</p>
-              <p className="font-bold text-lg text-red-700">{uploadResult.results?.fehler?.toLocaleString() || 0}</p>
-            </div>
-            <div className="p-2 bg-blue-50 rounded border border-blue-200">
-              <p className="text-blue-700 text-xs">Dauer</p>
-              <p className="font-bold text-lg text-blue-700">{uploadResult.importdauer_minuten?.toFixed(2) || '-'} Min.</p>
-            </div>
-          </div>
+  const { results, importdauer_minuten, validierung } = uploadResult;
+  const stats = validierung?.statistik || {};
+  const dq = validierung?.datenqualitaet || {};
 
-          {/* Validierung */}
-          {uploadResult.validierung && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Info className="w-4 h-4 text-blue-600" />
-                <p className="font-semibold text-sm text-blue-700">Automatische Validierung</p>
-              </div>
-
-              {/* Vollständigkeit */}
-              <div className={`p-3 rounded border ${uploadResult.validierung.vollstaendigkeit.pass ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
-                <div className="flex justify-between items-center mb-2">
-                  <p className="font-semibold text-sm">Vollständigkeit</p>
-                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${uploadResult.validierung.vollstaendigkeit.pass ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800'}`}>
-                    {uploadResult.validierung.vollstaendigkeit.pass ? 'PASS' : 'FAIL'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div><span className="text-muted-foreground">Quelle:</span> <strong>{uploadResult.validierung.vollstaendigkeit.expected?.toLocaleString()}</strong></div>
-                  <div><span className="text-muted-foreground">Importiert:</span> <strong>{uploadResult.validierung.vollstaendigkeit.actual?.toLocaleString()}</strong></div>
-                  <div><span className="text-muted-foreground">Differenz:</span> <strong className={uploadResult.validierung.vollstaendigkeit.difference === 0 ? 'text-emerald-700' : 'text-amber-700'}>{uploadResult.validierung.vollstaendigkeit.difference?.toLocaleString()} ({uploadResult.validierung.vollstaendigkeit.difference_percent}%)</strong></div>
-                </div>
-              </div>
-
-              {/* Datenqualität */}
-              <div className={`p-3 rounded border ${uploadResult.validierung.datenqualitaet.pass ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
-                <div className="flex justify-between items-center mb-2">
-                  <p className="font-semibold text-sm">Datenqualität</p>
-                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${uploadResult.validierung.datenqualitaet.pass ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800'}`}>
-                    {uploadResult.validierung.datenqualitaet.pass ? 'PASS' : 'FAIL'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div><span className="text-muted-foreground">Versicherer:</span> <strong>{uploadResult.validierung.datenqualitaet.versicherer}</strong></div>
-                  <div><span className="text-muted-foreground">Kantone:</span> <strong>{uploadResult.validierung.datenqualitaet.kantone}</strong></div>
-                  <div><span className="text-muted-foreground">Regionen:</span> <strong>{uploadResult.validierung.datenqualitaet.regionen}</strong></div>
-                  <div><span className="text-muted-foreground">Altersklassen:</span> <strong>{uploadResult.validierung.datenqualitaet.altersklassen}</strong></div>
-                  <div><span className="text-muted-foreground">Modelle:</span> <strong>{uploadResult.validierung.datenqualitaet.modelle}</strong></div>
-                  <div><span className="text-muted-foreground">Franchisen:</span> <strong>{uploadResult.validierung.datenqualitaet.franchisen}</strong></div>
-                </div>
-              </div>
-
-              {/* Plausibilität */}
-              <div className={`p-3 rounded border ${uploadResult.validierung.plausibilitaet.pass ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-                <div className="flex justify-between items-center mb-2">
-                  <p className="font-semibold text-sm">Plausibilitätsprüfung</p>
-                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${uploadResult.validierung.plausibilitaet.pass ? 'bg-emerald-200 text-emerald-800' : 'bg-red-200 text-red-800'}`}>
-                    {uploadResult.validierung.plausibilitaet.pass ? 'PASS' : 'FAIL'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  {Object.entries(uploadResult.validierung.plausibilitaet.checks).map(([key, value]) => (
-                    <div key={key} className="flex justify-between items-center bg-white px-2 py-1 rounded">
-                      <span className="text-muted-foreground">{key.replace(/_/g, ' ')}</span>
-                      <span className={value ? 'text-emerald-700' : 'text-red-700'}>{value ? '✓' : '✗'}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Overall Status */}
-              <div className={`p-4 rounded-lg border-2 text-center ${uploadResult.validierung.overall === 'PASS' ? 'bg-emerald-100 border-emerald-300' : 'bg-red-100 border-red-300'}`}>
-                <p className={`text-2xl font-bold ${uploadResult.validierung.overall === 'PASS' ? 'text-emerald-800' : 'text-red-800'}`}>
-                  {uploadResult.validierung.overall}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {uploadResult.validierung.overall === 'PASS' 
-                    ? 'Alle Validierungen erfolgreich. Daten können verwendet werden.' 
-                    : 'Validierung fehlgeschlagen. Bitte prüfen Sie die oben stehenden Details.'}
+  return (
+    <div className="space-y-4">
+      {/* STATUS */}
+      {validierung && (
+        <div className={`p-5 border-2 rounded-lg ${
+          validierung.overall === 'PASS' 
+            ? 'bg-emerald-50 border-emerald-300' 
+            : 'bg-red-50 border-red-300'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {validierung.overall === 'PASS' ? (
+                <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+              ) : (
+                <AlertCircle className="w-8 h-8 text-red-600" />
+              )}
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">STATUS</p>
+                <p className={`text-3xl font-bold ${
+                  validierung.overall === 'PASS' ? 'text-emerald-700' : 'text-red-700'
+                }`}>
+                  {validierung.overall === 'PASS' ? 'PASS' : 'FAIL'}
                 </p>
               </div>
             </div>
-          )}
-
-          {/* Errors */}
-          {uploadResult.errors && uploadResult.errors.length > 0 && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-              <p className="font-semibold mb-1">Fehler ({uploadResult.errors.length}):</p>
-              <div className="space-y-0.5 max-h-32 overflow-y-auto">
-                {uploadResult.errors.map((e, i) => <p key={i}>{e}</p>)}
-              </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground mb-1">Importdauer</p>
+              <p className="text-lg font-semibold">{importdauer_minuten?.toFixed(2)} Min.</p>
+              {results?.fehler > 0 && (
+                <p className="text-xs text-red-600 mt-1">{results.fehler} Fehler</p>
+              )}
             </div>
-          )}
+          </div>
+        </div>
+      )}
+
+      {/* IMPORTERGEBNIS */}
+      <div className="p-4 bg-white border border-slate-200 rounded-lg">
+        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-3 font-semibold">IMPORTERGEBNIS</p>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Quelle</p>
+            <p className="text-2xl font-bold text-slate-700">{stats.quelle_gesamtzeilen?.toLocaleString() || '-'}</p>
+            <p className="text-xs text-muted-foreground">Datensätze</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Importiert</p>
+            <p className={`text-2xl font-bold ${stats.importiert > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+              {stats.importiert?.toLocaleString() || '-'}
+            </p>
+            <p className="text-xs text-muted-foreground">Datensätze</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Differenz</p>
+            <p className={`text-2xl font-bold ${
+              stats.differenz === 0 ? 'text-emerald-700' : 
+              stats.differenz > 0 ? 'text-amber-700' : 'text-red-700'
+            }`}>
+              {stats.differenz !== undefined ? (stats.differenz > 0 ? '+' : '') + stats.differenz : '-'}
+            </p>
+            <p className="text-xs text-muted-foreground">Datensätze</p>
+          </div>
+        </div>
+      </div>
+
+      {/* QUALITÄTSMETRIKEN */}
+      {dq && Object.keys(dq).length > 0 && (
+        <div className="p-4 bg-white border border-slate-200 rounded-lg">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-3 font-semibold">QUALITÄTSMETRIKEN</p>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Versicherer</p>
+              <p className="text-xl font-bold text-slate-700">{dq.versicherer || '-'}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Kantone</p>
+              <p className="text-xl font-bold text-slate-700">{dq.kantone || '-'}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Regionen</p>
+              <p className="text-xl font-bold text-slate-700">{dq.regionen || '-'}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Modelle</p>
+              <p className="text-xl font-bold text-slate-700">{dq.modelle || '-'}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Altersklassen</p>
+              <p className="text-xl font-bold text-slate-700">{dq.altersklassen || '-'}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Franchisen</p>
+              <p className="text-xl font-bold text-slate-700">{dq.franchisen || '-'}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VALIDIERUNGS-Details */}
+      {validierung && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className={`p-3 rounded-lg border-2 ${
+            validierung.vollstaendigkeit?.pass 
+              ? 'bg-emerald-50 border-emerald-300' 
+              : 'bg-red-50 border-red-300'
+          }`}>
+            <p className="text-xs font-semibold mb-1">Vollständigkeit</p>
+            <p className={`text-lg font-bold ${
+              validierung.vollstaendigkeit?.pass ? 'text-emerald-700' : 'text-red-700'
+            }`}>
+              {validierung.vollstaendigkeit?.pass ? '✓' : '✗'}
+            </p>
+            <p className="text-xs mt-0.5">
+              {validierung.vollstaendigkeit?.actual?.toLocaleString()} / {validierung.vollstaendigkeit?.expected?.toLocaleString()}
+            </p>
+          </div>
+          <div className={`p-3 rounded-lg border-2 ${
+            validierung.datenqualitaet?.pass 
+              ? 'bg-emerald-50 border-emerald-300' 
+              : 'bg-red-50 border-red-300'
+          }`}>
+            <p className="text-xs font-semibold mb-1">Datenqualität</p>
+            <p className={`text-lg font-bold ${
+              validierung.datenqualitaet?.pass ? 'text-emerald-700' : 'text-red-700'
+            }`}>
+              {validierung.datenqualitaet?.pass ? '✓' : '✗'}
+            </p>
+            <p className="text-xs mt-0.5">
+              {validierung.datenqualitaet?.versicherer} Versicherer, {validierung.datenqualitaet?.kantone} Kantone
+            </p>
+          </div>
+          <div className={`p-3 rounded-lg border-2 ${
+            validierung.plausibilitaet?.pass 
+              ? 'bg-emerald-50 border-emerald-300' 
+              : 'bg-red-50 border-red-300'
+          }`}>
+            <p className="text-xs font-semibold mb-1">Plausibilität</p>
+            <p className={`text-lg font-bold ${
+              validierung.plausibilitaet?.pass ? 'text-emerald-700' : 'text-red-700'
+            }`}>
+              {validierung.plausibilitaet?.pass ? '✓' : '✗'}
+            </p>
+            <p className="text-xs mt-0.5">
+              {Object.values(validierung.plausibilitaet?.checks || {}).every(v => v) ? 'Alle Checks OK' : 'Checks fehlgeschlagen'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Fehler-Liste */}
+      {uploadResult.errors && uploadResult.errors.length > 0 && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="font-semibold text-red-700 text-sm mb-2">Import-Fehler ({uploadResult.errors.length})</p>
+          <div className="max-h-32 overflow-y-auto text-xs text-red-600 space-y-0.5">
+            {uploadResult.errors.map((err, i) => (
+              <div key={i} className="font-mono">{String(err)}</div>
+            ))}
+          </div>
         </div>
       )}
     </div>
