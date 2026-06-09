@@ -243,6 +243,11 @@ export default function BAGDatenImport() {
           errors.push(`${kanton}: ${err.message}`);
           console.error(`[BAG] ${kanton} failed:`, err.message);
         }
+
+        // Pause zwischen Kantonen um Rate Limit zu vermeiden
+        if (i < kantoneToImport.length - 1) {
+          await new Promise(r => setTimeout(r, 1500));
+        }
       }
 
       setUploadResult({

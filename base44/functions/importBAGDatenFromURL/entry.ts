@@ -28,13 +28,17 @@ Deno.serve(async (req) => {
       aktiv: true
     }));
 
-    // In Batches von 50 speichern
-    const BATCH = 50;
+    // In Batches von 25 speichern mit Pause zwischen Batches
+    const BATCH = 25;
     let erfolgreich = 0;
 
     for (let i = 0; i < enriched.length; i += BATCH) {
       await base44.entities.BAGPraemienDaten.bulkCreate(enriched.slice(i, i + BATCH));
       erfolgreich += Math.min(BATCH, enriched.length - i);
+      // Pause zwischen Batches um Rate Limit zu vermeiden
+      if (i + BATCH < enriched.length) {
+        await new Promise(r => setTimeout(r, 300));
+      }
     }
 
     console.log(`[BAG] ${kanton}: ${erfolgreich} gespeichert`);
