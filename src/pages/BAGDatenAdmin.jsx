@@ -21,51 +21,19 @@ export default function BAGDatenAdmin() {
     setTotalEstimate(0);
 
     let deletedSoFar = 0;
-    const FETCH_SIZE = 500;
-
-    // Helper: Delete with retry on rate limit
-    const deleteWithRetry = async (id, maxRetries = 5) => {
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          await base44.entities.BAGPraemienDaten.delete(id);
-          return true;
-        } catch (err) {
-          const isRateLimit = err?.response?.status === 429
-            || String(err?.message || '').includes('429')
-            || String(err?.message || '').toLowerCase().includes('rate limit');
-          
-          if (isRateLimit && attempt < maxRetries) {
-            // Exponentielles Backoff: 1s, 2s, 4s, 8s, 16s
-            await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 500));
-          } else {
-            throw err;
-          }
-        }
-      }
-    };
 
     while (true) {
-      // Fetch a batch of IDs
-      const batch = await base44.entities.BAGPraemienDaten.list('-created_date', FETCH_SIZE);
-      if (!batch || batch.length === 0) break;
-
-      if (deletedSoFar === 0) {
-        // Estimate total on first batch
-        setTotalEstimate(batch.length >= FETCH_SIZE ? 80000 : batch.length);
+      const res = await base44.functions.invoke('deleteAllBAGDatenOptimized', { deleted: deletedSoFar });
+      const data = res.data;
+      
+      if (data.error) {
+        throw new Error(data.error);
       }
-
-      // Delete in parallel (5 at a time to avoid rate limits)
-      const CONCURRENCY = 5;
-      for (let i = 0; i < batch.length; i += CONCURRENCY) {
-        const chunk = batch.slice(i, i + CONCURRENCY);
-        await Promise.all(chunk.map(r => deleteWithRetry(r.id)));
-        deletedSoFar += chunk.length;
-        setDeleted(deletedSoFar);
-        // Small delay between chunks
-        await new Promise(r => setTimeout(r, 200));
-      }
-
-      if (batch.length < FETCH_SIZE) break;
+      
+      deletedSoFar = data.deleted || deletedSoFar;
+      setDeleted(deletedSoFar);
+      
+      if (data.done) break;
     }
 
     setDeleteResult(`✅ ${deletedSoFar.toLocaleString()} Datensätze gelöscht.`);
