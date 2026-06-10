@@ -217,17 +217,16 @@ export default function KrankenkassenVergleich() {
     return null;
   };
 
-  // BAG-Modell-Name → unser internes Modell (case-insensitive via toLowerCase)
+  // BAG API gibt direkt "Standard", "Hausarzt", "HMO", "Telemedizin" etc. zurück
+  // Wir mappen auf unsere 4 internen Kategorien
   const MODEL_MAP_FROM_API = (modelLabel) => {
     if (!modelLabel) return 'standard';
     const l = modelLabel.toLowerCase();
+    if (l === 'standard' || l === 'freie arztwahl') return 'standard';
     if (l.includes('hmo')) return 'hmo';
-    if (l.includes('hausarzt') || l.includes('medbase') || l.includes('contact')) return 'hausarzt';
-    if (l.includes('telmed') || l.includes('telemedizin') || l.includes('callmed') ||
-        l.includes('callcare') || l.includes('smart') || l.includes('tel') ||
-        l.includes('flex') || l.includes('primed') || l.includes('sanatel') ||
-        l.includes('primaflex') || l.includes('combi')) return 'telmed';
-    return 'standard';
+    if (l === 'hausarzt' || l.includes('hausarzt') || l.includes('medbase')) return 'hausarzt';
+    // Alles andere (Telemedizin, Telmed, CallMed, SanaTel, PrimaFlex, FlexHelp, BeneFit PLUS Telmed, etc.)
+    return 'telmed';
   };
 
   const handleVergleich = async () => {
@@ -283,8 +282,16 @@ export default function KrankenkassenVergleich() {
 
     const vergleiche = offers
       .filter(o => {
+        // Kassenfilter
         if (formData.nur_bestehende_kasse && normalizeKasse(o.insurer) !== aktuellKasseNorm) return false;
-        // Alle Modelle zeigen (PrimAI gibt bereits gefilterte Ergebnisse zurück)
+        // Franchise-Filter
+        if (formData.nur_gleiche_franchise && o.deductible !== formData.aktuelle_franchise) return false;
+        // Modell-Filter
+        const modellNorm = MODEL_MAP_FROM_API(o.model);
+        if (modellNorm === 'standard' && !formData.zeige_standard) return false;
+        if (modellNorm === 'telmed' && !formData.zeige_telmed) return false;
+        if (modellNorm === 'hausarzt' && !formData.zeige_hausarzt) return false;
+        if (modellNorm === 'hmo' && !formData.zeige_hmo) return false;
         return true;
       })
       .map(o => {
