@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { generateKrankenkassenVergleichPDF } from '@/components/krankenkassen/generateKrankenkassenPDF';
 import CustomerSelector from '@/components/krankenkassen/CustomerSelector';
+import AnalyseErfassung from '@/components/krankenkassen/AnalyseErfassung';
 
 // Alle 34 offiziellen BAG-Krankenkassen 2026
 const KRANKENKASSEN = [
@@ -76,6 +77,7 @@ const MODEL_MAP_FROM_API = (modelLabel) => {
 export default function KrankenkassenVergleich() {
   const queryClient = useQueryClient();
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showAnalyseErfassung, setShowAnalyseErfassung] = useState(false);
   const [loading, setLoading] = useState(false);
   const [vergleichId, setVergleichId] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -312,6 +314,22 @@ export default function KrankenkassenVergleich() {
     queryClient.invalidateQueries({ queryKey: ['krankenkassen-vergleiche'] });
   };
 
+  const saveAnalyse = async (analyseData) => {
+    try {
+      const response = await base44.functions.invoke('erfasseVergleichsAnalyse', analyseData);
+      
+      if (response.data?.success) {
+        alert('Analyse erfolgreich gespeichert!');
+        setShowAnalyseErfassung(false);
+        queryClient.invalidateQueries({ queryKey: ['vergleichs-analysen'] });
+      } else {
+        alert('Fehler beim Speichern: ' + (response.data?.error || 'Unbekannter Fehler'));
+      }
+    } catch (error) {
+      alert('Fehler beim Speichern: ' + error.message);
+    }
+  };
+
   const exportPDF = () => {
     generateKrankenkassenVergleichPDF({
       vergleichsdatum: new Date().toISOString(),
@@ -329,6 +347,8 @@ export default function KrankenkassenVergleich() {
       customer_name: `${formData.vorname} ${formData.nachname}`
     });
   };
+
+
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -522,18 +542,18 @@ export default function KrankenkassenVergleich() {
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <TrendingDown className="w-5 h-5 text-emerald-600" />
-                      Vergleichsergebnisse
-                    </CardTitle>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={exportPDF}>
-                        <Download className="w-3.5 h-3.5" /> PDF
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => setShowSaveDialog(true)}>
-                        <Save className="w-3.5 h-3.5" /> Speichern
-                      </Button>
-                    </div>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingDown className="w-5 h-5 text-emerald-600" />
+                    Vergleichsergebnisse
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={exportPDF}>
+                      <Download className="w-3.5 h-3.5" /> Vergleich-PDF
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setShowAnalyseErfassung(true)}>
+                      <Save className="w-3.5 h-3.5" /> Analyse erfassen
+                    </Button>
+                  </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -616,7 +636,18 @@ export default function KrankenkassenVergleich() {
         </div>
       </div>
 
-      {/* Save Dialog */}
+      {/* Analyse Erfassung */}
+      {showAnalyseErfassung && ergebnisse.length > 0 && (
+        <AnalyseErfassung
+          formData={{ ...formData, customer_id: selectedCustomer?.id, organization_id: selectedCustomer?.organization_id }}
+          ergebnisse={ergebnisse}
+          kiAnalyse={kiAnalyse}
+          onSave={saveAnalyse}
+          onCancel={() => setShowAnalyseErfassung(false)}
+        />
+      )}
+
+      {/* Save Dialog (legacy) */}
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
         <DialogContent>
           <DialogHeader>
