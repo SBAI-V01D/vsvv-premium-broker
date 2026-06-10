@@ -329,6 +329,20 @@ export default function CustomerDetail() {
         backLabel={backLabel}
       />
 
+      {/* 360° CTA Banner */}
+      <div className="px-6 py-3 bg-primary/5 border-b border-primary/10 flex items-center justify-between gap-4">
+        <p className="text-xs text-muted-foreground">
+          Stammdaten & Grundinformationen — für die vollständige Beratungsansicht:
+        </p>
+        <button
+          onClick={() => navigate(`/kunden/${id}/360`)}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 transition-colors whitespace-nowrap"
+        >
+          <Shield className="w-3.5 h-3.5" />
+          360° Akte öffnen →
+        </button>
+      </div>
+
       {/* Sticky Nav */}
       <StickyNav items={NAV_ITEMS} active={activeSection} onChange={setActiveSection} />
 

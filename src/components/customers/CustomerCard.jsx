@@ -94,8 +94,8 @@ export default function CustomerCard({
           <div className="flex-1 min-w-0 pt-0.5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <button onClick={() => navigate(`/kunden/${customer.id}/360`)} className="text-[15px] font-semibold text-slate-900 hover:text-primary leading-tight block truncate text-left">
-                  {displayName}
+                <button onClick={() => navigate(`/kunden/${customer.id}/detail`)} className="text-[15px] font-semibold text-slate-900 hover:text-primary leading-tight block truncate text-left">
+                 {displayName}
                 </button>
                 <p className="text-[12px] text-slate-400 mt-0.5 truncate">
                   {customer.customer_number && <span className="font-mono mr-2">{customer.customer_number}</span>}
@@ -229,7 +229,7 @@ export default function CustomerCard({
               </div>
               
               <div className="flex items-center gap-2">
-                <button onClick={() => navigate(`/kunden/${customer.id}/360`)}
+                <button onClick={() => navigate(`/kunden/${customer.id}/detail`)}
                   className="text-[12px] font-medium text-primary hover:underline">
                   Alle Daten öffnen →
                 </button>
@@ -238,7 +238,7 @@ export default function CustomerCard({
           </div>
         ) : (
           <div className="mt-3 flex items-center gap-3">
-            <button onClick={() => navigate(`/kunden/${customer.id}/360`)}
+            <button onClick={() => navigate(`/kunden/${customer.id}/detail`)}
               className="text-[12px] font-medium text-primary hover:underline">
               Alle Daten öffnen →
             </button>
@@ -251,7 +251,7 @@ export default function CustomerCard({
         <div className="border-t border-border/40 divide-y divide-border/30 bg-slate-50/50">
           {familyMembers.map(member => (
             <div key={member.id} className={`px-6 py-3 flex items-center justify-between gap-3 ${matchedFamilyIds.has(member.id) ? 'bg-primary/5' : ''}`}>
-              <Link to={`/kunden/${member.id}/360`} className="flex-1 min-w-0 group/m">
+              <Link to={`/kunden/${member.id}/detail`} className="flex-1 min-w-0 group/m">
                 <p className={`text-[13px] font-medium group-hover/m:text-primary ${matchedFamilyIds.has(member.id) ? 'text-primary' : 'text-slate-700'}`}>
                   {member.last_name} {member.first_name}
                   {matchedFamilyIds.has(member.id) && (

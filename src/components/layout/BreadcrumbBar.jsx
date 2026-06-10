@@ -99,8 +99,8 @@ export default function BreadcrumbBar() {
         if (parent === 'kunden' && customer) {
           const name = customer.company_name ||
             `${customer.first_name || ''} ${customer.last_name || ''}`.trim()
-          // Link to 360 view — /kunden/:id alone has no route
-          crumbs.push({ label: name, path: currentPath + '/360' })
+          // Link to detail view (Stammdaten)
+          crumbs.push({ label: name, path: currentPath + '/detail' })
         } else if (parent === 'partner' && partner) {
           crumbs.push({ label: partner.name || 'Partner', path: currentPath })
         } else {
