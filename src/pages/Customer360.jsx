@@ -887,7 +887,6 @@ export default function Customer360() {
           <CustomerForm
             customer={customer}
             onSave={data => {
-              console.log('Saving customer data:', data);
               // Preserve RLS-critical fields that are not editable in the form
               const safeData = {
                 ...data,
@@ -897,14 +896,10 @@ export default function Customer360() {
                 primary_advisor_id: customer.primary_advisor_id,
                 access_level: customer.access_level,
               }
-              console.log('Safe data:', safeData);
               updateCustomerMutation.mutate({ id: customer.id, data: safeData });
             }}
             saving={updateCustomerMutation.isPending}
-            onCancel={() => {
-              console.log('Cancel clicked');
-              setEditingCustomer(false);
-            }}
+            onCancel={() => setEditingCustomer(false)}
           />
         </StandardModal>
       )}
