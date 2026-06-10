@@ -1,0 +1,146 @@
+{
+  "name": "VergleichsAnalyse",
+  "type": "object",
+  "properties": {
+    "customer_id": {
+      "type": "string",
+      "description": "Kunden-ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Kundenname (Cache)"
+    },
+    "advisor_id": {
+      "type": "string",
+      "description": "Berater-ID"
+    },
+    "advisor_name": {
+      "type": "string",
+      "description": "Beratername (Cache)"
+    },
+    "organization_id": {
+      "type": "string",
+      "description": "Organisations-ID"
+    },
+    "analyse_datum": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Datum der Analyse"
+    },
+    "persoenliche_daten": {
+      "type": "object",
+      "properties": {
+        "vorname": {
+          "type": "string"
+        },
+        "nachname": {
+          "type": "string"
+        },
+        "geburtsdatum": {
+          "type": "string",
+          "format": "date"
+        },
+        "plz": {
+          "type": "string"
+        },
+        "kanton": {
+          "type": "string"
+        },
+        "geschlecht": {
+          "type": "string",
+          "enum": [
+            "m",
+            "w"
+          ]
+        }
+      }
+    },
+    "ausgangslage": {
+      "type": "object",
+      "properties": {
+        "krankenkasse": {
+          "type": "string"
+        },
+        "modell": {
+          "type": "string"
+        },
+        "franchise": {
+          "type": "number"
+        },
+        "unfall": {
+          "type": "boolean"
+        },
+        "praemie_aktuell": {
+          "type": "number"
+        }
+      }
+    },
+    "empfehlung": {
+      "type": "object",
+      "properties": {
+        "empfohlene_krankenkasse": {
+          "type": "string"
+        },
+        "empfohlenes_modell": {
+          "type": "string"
+        },
+        "empfohlene_franchise": {
+          "type": "number"
+        },
+        "praemie_empfohlen": {
+          "type": "number"
+        },
+        "ersparnis_jaehrlich": {
+          "type": "number"
+        },
+        "ersparnis_prozent": {
+          "type": "number"
+        }
+      }
+    },
+    "beratungsergebnis": {
+      "type": "object",
+      "properties": {
+        "kunde_folgt_empfehlung": {
+          "type": "boolean",
+          "default": false
+        },
+        "kunde_moechte_ueberpruefen": {
+          "type": "boolean",
+          "default": false
+        },
+        "kunde_lehnt_ab": {
+          "type": "boolean",
+          "default": false
+        },
+        "abweichung_begruendung": {
+          "type": "string"
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "analyse_laeuft",
+        "beratung_erfolgt",
+        "umgesetzt",
+        "abgelehnt",
+        "ueberpruefung"
+      ],
+      "default": "analyse_laeuft"
+    },
+    "pdf_url": {
+      "type": "string",
+      "description": "URL zum generierten Beratungs-PDF"
+    },
+    "notizen": {
+      "type": "string",
+      "description": "Berater-Notizen"
+    }
+  },
+  "required": [
+    "customer_id",
+    "organization_id",
+    "analyse_datum"
+  ]
+}
