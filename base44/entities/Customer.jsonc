@@ -313,33 +313,5 @@
     "last_name",
     "email",
     "organization_id"
-  ],
-  "rls": {
-    "read": {
-      "$or": [
-        {
-          "user.role": {
-            "$eq": "admin"
-          }
-        },
-        {
-          "data.advisor_id": {
-            "$eq": "{{user.id}}"
-          }
-        },
-        {
-          "data.primary_advisor_id": {
-            "$eq": "{{user.id}}"
-          }
-        },
-        {
-          "data.assigned_advisors": {
-            "$in": [
-              "{{user.id}}"
-            ]
-          }
-        }
-      ]
-    }
-  }
+  ]
 }
