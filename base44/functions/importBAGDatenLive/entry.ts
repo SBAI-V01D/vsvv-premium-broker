@@ -159,26 +159,30 @@ Deno.serve(async (req) => {
 
                   // Angebote für diese Kombination verarbeiten
                   for (const offer of data.offers) {
-                    // Modell mappen
+                    // Modell mappen (Kategorie für Filter)
                     const modellLabel = offer.model?.toLowerCase() || '';
                     let modell = 'standard';
                     if (modellLabel.includes('hmo')) modell = 'hmo';
                     else if (modellLabel.includes('hausarzt') || modellLabel.includes('medbase') || modellLabel.includes('contact')) modell = 'hausarzt';
                     else if (modellLabel !== 'standard' && !modellLabel.includes('freie arztwahl')) modell = 'telmed';
 
-                    // Record erstellen
+                    // Prämie immer setzen (NOT NULL Constraint)
+                    const praemie = offer.price?.total || 0;
+                    
+                    // Record erstellen (MIT spezifischem Produkt-Label)
                     const record = {
                       jahr: JAHR,
                       krankenkasse: offer.insurer,
                       kanton: kanton,
                       region: region,
                       modell: modell,
+                      modell_label: offer.model, // Spezifisches Produkt (z.B. "BeneFit PLUS Telmed")
                       franchise: franchise,
                       unfall: unfall,
                       altersklasse: altersklasse,
-                      praemie_erwachsene: altersklasse === 'erwachsen' ? (offer.price?.total || 0) : null,
-                      praemie_kinder: altersklasse === 'kind' ? (offer.price?.total || 0) : null,
-                      geschlecht: 'm', // Standard (kann erweitert werden)
+                      praemie_erwachsene: praemie, // Immer setzen (für Filterung in Query)
+                      praemie_kinder: praemie, // Immer setzen (für Filterung in Query)
+                      geschlecht: 'm',
                       alter_von: altersklasse === 'kind' ? 0 : altersklasse === 'jugend' ? 19 : 26,
                       alter_bis: altersklasse === 'kind' ? 18 : altersklasse === 'jugend' ? 25 : 99,
                       datenquelle: 'BAG',
@@ -220,11 +224,11 @@ Deno.serve(async (req) => {
       
       console.log(`Insertiere Batch ${batchCount} (${batch.length} Records)...`);
 
-      // UPSERT Logic: Verwende insert mit onConflict
+      // UPSERT Logic: Verwende insert mit onConflict (inkl. modell_label für exakte Produkt-Zuordnung)
       const { error } = await supabase
         .from('bag_praemien')
         .upsert(batch, {
-          onConflict: 'jahr,krankenkasse,kanton,region,modell,franchise,unfall,altersklasse'
+          onConflict: 'jahr,krankenkasse,kanton,region,modell,modell_label,franchise,unfall,altersklasse'
         });
 
       if (error) {

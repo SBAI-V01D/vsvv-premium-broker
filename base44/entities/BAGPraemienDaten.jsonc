@@ -27,7 +27,11 @@
         "hmo",
         "other"
       ],
-      "description": "Versicherungsmodell (other = TAR-DIV diverse/spezial)"
+      "description": "Versicherungsmodell (Kategorie)"
+    },
+    "modell_label": {
+      "type": "string",
+      "description": "Spezifisches Produkt-Label (z.B. 'BeneFit PLUS Telmed', 'Helsana Telmed')"
     },
     "franchise": {
       "type": "number",
@@ -114,6 +118,7 @@
     "krankenkasse",
     "kanton",
     "modell",
+    "modell_label",
     "franchise",
     "praemie_erwachsene"
   ]
