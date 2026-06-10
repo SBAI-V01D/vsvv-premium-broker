@@ -233,8 +233,9 @@ export default function KrankenkassenVergleich() {
         };
       });
 
+    // Nach Prämie (netto) aufsteigend sortieren — günstigste zuerst
     const sortiert = vergleiche
-      .sort((a, b) => b.ersparnis_jaehrlich - a.ersparnis_jaehrlich)
+      .sort((a, b) => a.praemie_netto - b.praemie_netto)
       .map((e, idx) => ({
         ...e,
         rang: idx + 1,
