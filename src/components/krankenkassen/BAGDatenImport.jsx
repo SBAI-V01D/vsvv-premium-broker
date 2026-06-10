@@ -427,31 +427,33 @@ export default function BAGDatenImport() {
       }
     }
 
-    const BATCH = 1000; // 1000 Records pro Backend-Call via Supabase
-    const totalBatches = Math.ceil(allRecords.length / BATCH);
+    // Alle Records in einem einzigen Backend-Call senden
+    // Das Backend verarbeitet intern in 500er-Chunks — kein Browser-Abbruch möglich
+    const MAX_CHUNK = 5000; // Max 5000 Records pro HTTP-Call (Payload-Limit)
+    const totalChunks = Math.ceil(allRecords.length / MAX_CHUNK);
     const importStart = Date.now();
 
-    for (let i = 0; i < totalBatches; i++) {
-      const batch = allRecords.slice(i * BATCH, (i + 1) * BATCH);
+    for (let i = 0; i < totalChunks; i++) {
+      const chunk = allRecords.slice(i * MAX_CHUNK, (i + 1) * MAX_CHUNK);
       setProgress({
         phase: 'importing',
         current: i + 1,
-        total: totalBatches,
-        kanton: `Batch ${i + 1}/${totalBatches}`,
-        records: Math.min((i + 1) * BATCH, allRecords.length),
+        total: totalChunks,
+        kanton: `Chunk ${i + 1}/${totalChunks}`,
+        records: Math.min((i + 1) * MAX_CHUNK, allRecords.length),
         total_records: allRecords.length
       });
 
       try {
         const res = await base44.functions.invoke('importBAGDatenBulk', {
-          records: batch,
+          records: chunk,
           batch_index: i,
-          total_batches: totalBatches
+          total_batches: totalChunks
         });
-        erfolgreich += res.data?.inserted || batch.length;
+        erfolgreich += res.data?.inserted || chunk.length;
       } catch (err) {
-        fehler += batch.length;
-        errors.push(`Batch ${i + 1}: ${err.message}`);
+        fehler += chunk.length;
+        errors.push(`Chunk ${i + 1}: ${err.message}`);
       }
     }
 

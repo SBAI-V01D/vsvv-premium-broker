@@ -29,56 +29,72 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: `Bearer ${supabaseKey}` } }
     });
 
-    // Feldnamen anpassen: frontend sendet "jahr", DB hat "geschaeftsjahr"
+    // Feldnamen mappen
     const mappedRecords = records.map(r => ({
-      geschaeftsjahr:    r.jahr ?? r.geschaeftsjahr,
-      krankenkasse:      r.krankenkasse,
-      kanton:            r.kanton,
-      region:            r.region ?? '',
-      modell:            r.modell,
-      franchise:         r.franchise,
-      unfall:            r.unfall ?? false,
-      altersklasse:      r.altersklasse,
+      geschaeftsjahr:     r.jahr ?? r.geschaeftsjahr,
+      krankenkasse:       r.krankenkasse,
+      kanton:             r.kanton,
+      region:             r.region ?? '',
+      modell:             r.modell,
+      franchise:          r.franchise,
+      unfall:             r.unfall ?? false,
+      altersklasse:       r.altersklasse,
       praemie_erwachsene: r.praemie_erwachsene ?? 0,
-      praemie_kinder:    r.praemie_kinder ?? 0,
-      geschlecht:        r.geschlecht ?? null,
-      alter_von:         r.alter_von ?? null,
-      alter_bis:         r.alter_bis ?? null,
-      tarif_original:    r.tarif_original ?? null,
-      tariftyp_original: r.tariftyp_original ?? null,
-      tarifbezeichnung:  r.tarifbezeichnung ?? null,
-      datenquelle:       r.datenquelle ?? 'BAG',
-      importiert_am:     r.importiert_am ?? new Date().toISOString(),
-      importiert_von:    r.importiert_von ?? null,
-      gueltig_ab:        r.gueltig_ab ?? null,
-      gueltig_bis:       r.gueltig_bis ?? null,
-      aktiv:             r.aktiv ?? true,
+      praemie_kinder:     r.praemie_kinder ?? 0,
+      geschlecht:         r.geschlecht ?? null,
+      alter_von:          r.alter_von ?? null,
+      alter_bis:          r.alter_bis ?? null,
+      tarif_original:     r.tarif_original ?? null,
+      tariftyp_original:  r.tariftyp_original ?? null,
+      tarifbezeichnung:   r.tarifbezeichnung ?? null,
+      datenquelle:        r.datenquelle ?? 'BAG',
+      importiert_am:      r.importiert_am ?? new Date().toISOString(),
+      importiert_von:     r.importiert_von ?? null,
+      gueltig_ab:         r.gueltig_ab ?? null,
+      gueltig_bis:        r.gueltig_bis ?? null,
+      aktiv:              r.aktiv ?? true,
     }));
 
-    // Upsert mit korrektem unique constraint: geschaeftsjahr,krankenkasse,kanton,region,modell,franchise,unfall,altersklasse
-    const { error } = await supabase
-      .from('bag_praemien')
-      .upsert(mappedRecords, {
-        onConflict: 'geschaeftsjahr,krankenkasse,kanton,region,modell,franchise,unfall,altersklasse',
-        ignoreDuplicates: false
-      });
+    // Backend verarbeitet alle Records intern in 500er-Batches
+    // So ist der Browser-Seitenlaod irrelevant — der Import läuft server-seitig durch
+    const INTERNAL_BATCH = 500;
+    let totalInserted = 0;
+    let lastError = null;
 
-    if (error) {
-      // Fallback: insert ohne conflict-handling
-      const { error: insertError } = await supabase
+    for (let i = 0; i < mappedRecords.length; i += INTERNAL_BATCH) {
+      const chunk = mappedRecords.slice(i, i + INTERNAL_BATCH);
+
+      const { error } = await supabase
         .from('bag_praemien')
-        .insert(mappedRecords);
+        .upsert(chunk, {
+          onConflict: 'geschaeftsjahr,krankenkasse,kanton,region,modell,franchise,unfall,altersklasse',
+          ignoreDuplicates: false
+        });
 
-      if (insertError) {
-        return Response.json({ error: insertError.message, batch_index }, { status: 500 });
+      if (error) {
+        // Fallback: insert
+        const { error: insertError } = await supabase
+          .from('bag_praemien')
+          .insert(chunk);
+
+        if (insertError) {
+          lastError = insertError.message;
+          console.error('Chunk insert error:', insertError.message);
+          // Weiter mit nächstem Chunk — nicht abbrechen
+          continue;
+        }
       }
+
+      totalInserted += chunk.length;
     }
 
     return Response.json({
       success: true,
-      inserted: mappedRecords.length,
+      inserted: totalInserted,
+      total_sent: mappedRecords.length,
       batch_index,
-      total_batches
+      total_batches,
+      ...(lastError ? { partial_error: lastError } : {})
     });
 
   } catch (error) {
