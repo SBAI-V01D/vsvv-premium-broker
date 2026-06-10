@@ -231,7 +231,7 @@ export default function CustomerDetail() {
       queryClient.invalidateQueries({ queryKey: ['customers'] })
       queryClient.invalidateQueries({ queryKey: ['customer', id] })
       setShowEdit(false)
-      navigate(`/kunden/${id}/360`, { replace: true })
+      navigate(`/kunden/${id}`, { replace: true })
     },
   })
 
