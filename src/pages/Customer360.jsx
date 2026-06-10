@@ -900,6 +900,7 @@ export default function Customer360() {
               setEditingCustomer(false)
             }}
             saving={updateCustomerMutation.isPending}
+            onCancel={() => setEditingCustomer(false)}
           />
         </StandardModal>
       )}
