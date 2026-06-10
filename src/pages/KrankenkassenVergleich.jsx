@@ -118,7 +118,7 @@ export default function KrankenkassenVergleich() {
         plz: '4304',
         kanton: 'BL',
         geschlecht: 'm',
-        aktuelle_krankenkasse: 'CSS',
+        aktuelle_krankenkasse: 'Mutuel',
         aktuelles_modell: 'telmed',
         aktuelle_franchise: 2500,
         aktuelle_unfall: false,
@@ -217,16 +217,17 @@ export default function KrankenkassenVergleich() {
     return null;
   };
 
-  // BAG-Modell-Name → unser internes Modell
-  const MODEL_MAP_FROM_API = {
-    'Standard': 'standard',
-    'Hausarzt': 'hausarzt',
-    'HMO': 'hmo',
-    'Telmed': 'telmed',
-    'Telemedizin': 'telmed',
-    'FlexMed': 'telmed',
-    'CallMed': 'telmed',
-    'Andere': 'other',
+  // BAG-Modell-Name → unser internes Modell (case-insensitive via toLowerCase)
+  const MODEL_MAP_FROM_API = (modelLabel) => {
+    if (!modelLabel) return 'standard';
+    const l = modelLabel.toLowerCase();
+    if (l.includes('hmo')) return 'hmo';
+    if (l.includes('hausarzt') || l.includes('medbase') || l.includes('contact')) return 'hausarzt';
+    if (l.includes('telmed') || l.includes('telemedizin') || l.includes('callmed') ||
+        l.includes('callcare') || l.includes('smart') || l.includes('tel') ||
+        l.includes('flex') || l.includes('primed') || l.includes('sanatel') ||
+        l.includes('primaflex') || l.includes('combi')) return 'telmed';
+    return 'standard';
   };
 
   const handleVergleich = async () => {
@@ -261,40 +262,47 @@ export default function KrankenkassenVergleich() {
 
     setBagDaten(offers);
 
-    // Aktuelle Prämie finden (normalisierter Name für aktuell-Markierung)
-    const aktuellAngebot = offers.find(o => {
-      const modellNorm = MODEL_MAP_FROM_API[o.model] || o.model?.toLowerCase();
-      return o.insurer === formData.aktuelle_krankenkasse &&
-             modellNorm === formData.aktuelles_modell;
-    });
-    const aktuellePraemie = aktuellAngebot?.price?.total || null;
+    // BAG-Subvention: CHF 5.15/Monat wird von der Nettoprämie abgezogen
+    const SUBVENTION = 5.15;
 
-    // Filter nach gewählten Modellen
-    const erlaubteModelle = new Set();
-    if (formData.zeige_standard) erlaubteModelle.add('standard');
-    if (formData.zeige_telmed) { erlaubteModelle.add('telmed'); erlaubteModelle.add('telemedizin'); erlaubteModelle.add('flexmed'); erlaubteModelle.add('callmed'); }
-    if (formData.zeige_hausarzt) erlaubteModelle.add('hausarzt');
-    if (formData.zeige_hmo) erlaubteModelle.add('hmo');
+    // Aktuelle Prämie finden — zuerst exakter Kassenname-Match, dann Fuzzy
+    // Die API gibt z.B. "Mutuel" zurück, Formular hat "CSS"/"Mutuel" etc.
+    // Wir suchen: gleicher Kassenname (case-insensitive) + gleicher normalisierter Modell-Typ
+    const normalizeKasse = (name) => (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const aktuellKasseNorm = normalizeKasse(formData.aktuelle_krankenkasse);
+
+    const aktuellAngebot = offers.find(o => {
+      const modellNorm = MODEL_MAP_FROM_API(o.model);
+      const kasseMatch = normalizeKasse(o.insurer) === aktuellKasseNorm;
+      const modellMatch = modellNorm === formData.aktuelles_modell;
+      return kasseMatch && modellMatch;
+    }) || offers.find(o => normalizeKasse(o.insurer) === aktuellKasseNorm); // Fallback: gleiche Kasse, beliebiges Modell
+
+    const aktuelleBrutto = aktuellAngebot?.price?.total || null;
+    const aktuellePraemie = aktuelleBrutto; // Brutto für Differenzberechnung
 
     const vergleiche = offers
       .filter(o => {
-        const modellNorm = MODEL_MAP_FROM_API[o.model] || o.model?.toLowerCase();
-        if (formData.nur_bestehende_kasse && o.insurer !== formData.aktuelle_krankenkasse) return false;
-        return erlaubteModelle.has(modellNorm);
+        if (formData.nur_bestehende_kasse && normalizeKasse(o.insurer) !== aktuellKasseNorm) return false;
+        // Alle Modelle zeigen (PrimAI gibt bereits gefilterte Ergebnisse zurück)
+        return true;
       })
       .map(o => {
-        const praemie = o.price?.total || 0;
-        const modellNorm = MODEL_MAP_FROM_API[o.model] || o.model?.toLowerCase();
-        const ersparnisMonat = (aktuellePraemie || 0) - praemie;
-        const istAktuell = o.insurer === formData.aktuelle_krankenkasse &&
+        const brutto = o.price?.total || 0;
+        const netto = Math.round((brutto - SUBVENTION) * 100) / 100;
+        const modellNorm = MODEL_MAP_FROM_API(o.model);
+        const ersparnisMonat = aktuellePraemie ? aktuellePraemie - brutto : 0;
+        const istAktuell = normalizeKasse(o.insurer) === aktuellKasseNorm &&
                            modellNorm === formData.aktuelles_modell;
         return {
           krankenkasse: o.insurer,
-          modell_label: o.model, // Originaler BAG-Modellname (z.B. "Telemedizin")
+          modell_label: o.model,
           modell: modellNorm,
           franchise: o.deductible,
-          praemie_monatlich: praemie,
-          praemie_jaehrlich: praemie * 12,
+          praemie_brutto: brutto,
+          praemie_netto: netto,
+          praemie_monatlich: netto, // Anzeige immer Netto
+          praemie_jaehrlich: netto * 12,
           ersparnis_monatlich: ersparnisMonat,
           ersparnis_jaehrlich: ersparnisMonat * 12,
           ersparnis_prozent: aktuellePraemie > 0 ? (ersparnisMonat / aktuellePraemie) * 100 : 0,
@@ -307,13 +315,13 @@ export default function KrankenkassenVergleich() {
       .map((e, idx) => ({
         ...e,
         rang: idx + 1,
-        ist_guenstigste: idx === 0,
-        ist_empfohlen: idx === 0 && e.ersparnis_jaehrlich > 100
+        ist_guenstigste: idx === 0 && !e.ist_aktuell,
+        ist_empfohlen: idx === 0 && e.ersparnis_jaehrlich > 100 && !e.ist_aktuell
       }));
 
     setErgebnisse(sortiert);
 
-    const besteOption = sortiert[0];
+    const besteOption = sortiert.find(e => !e.ist_aktuell);
     if (besteOption && besteOption.ersparnis_jaehrlich > 0) {
       setKiAnalyse({
         sparpotenzial: Math.round(besteOption.ersparnis_jaehrlich),
@@ -324,7 +332,7 @@ export default function KrankenkassenVergleich() {
         modell_optimierung: formData.aktuelles_modell === 'standard'
           ? 'Ein Telmed- oder Hausarztmodell könnte Prämien sparen'
           : 'Modell ist gut gewählt',
-        empfehlung_text: `Durch einen Wechsel zu ${besteOption.krankenkasse} (${besteOption.modell_label || besteOption.modell}) können Sie CHF ${Math.round(besteOption.ersparnis_jaehrlich).toLocaleString('de-CH')} pro Jahr sparen.`,
+        empfehlung_text: `Durch einen Wechsel zu ${besteOption.krankenkasse} (${besteOption.modell_label || besteOption.modell}) können Sie CHF ${Math.round(besteOption.ersparnis_jaehrlich).toLocaleString('de-CH')} pro Jahr sparen (Nettoprämie nach Subventionsabzug).`,
         empfohlene_krankenkasse: besteOption.krankenkasse,
         empfohlenes_modell: besteOption.modell
       });
@@ -424,7 +432,7 @@ export default function KrankenkassenVergleich() {
               plz: '4304',
               kanton: 'BL',
               geschlecht: 'm',
-              aktuelle_krankenkasse: 'CSS',
+              aktuelle_krankenkasse: 'Mutuel',
               aktuelles_modell: 'telmed',
               aktuelle_franchise: 2500,
               aktuelle_unfall: false,
@@ -622,44 +630,51 @@ export default function KrankenkassenVergleich() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                    {ergebnisse.slice(0, 15).map((e, idx) => (
+                  {/* Header */}
+                  <div className="grid grid-cols-[1fr_auto] gap-2 px-3 pb-1 border-b">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Kasse / Modell</span>
+                    <div className="text-right">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Netto/Monat</span>
+                      <span className="text-[10px] text-muted-foreground block">(nach CHF 5.15 Subv.)</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5 max-h-[580px] overflow-y-auto">
+                    {ergebnisse.map((e, idx) => (
                       <div 
                         key={idx}
                         className={`flex items-center justify-between p-3 rounded-lg border ${
+                          e.ist_aktuell ? 'bg-blue-50 border-blue-300' :
                           e.ist_empfohlen ? 'bg-emerald-50 border-emerald-200' :
-                          e.ist_aktuell ? 'bg-blue-50 border-blue-200' :
-                          'bg-white'
+                          'bg-white border-slate-100'
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="text-center w-8">
-                            {e.ist_empfohlen ? (
-                              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                            ) : e.ist_aktuell ? (
-                              <Badge variant="outline" className="text-xs">Aktuell</Badge>
+                          <div className="text-center w-10 shrink-0">
+                            {e.ist_aktuell ? (
+                              <Badge className="text-[10px] bg-blue-100 text-blue-700 border-blue-200 px-1 py-0">Aktuell</Badge>
+                            ) : e.ist_empfohlen ? (
+                              <CheckCircle2 className="w-5 h-5 text-emerald-600 mx-auto" />
                             ) : (
                               <span className="text-sm font-medium text-muted-foreground">#{e.rang}</span>
                             )}
                           </div>
                           <div>
-                            <p className={`font-semibold ${e.ist_empfohlen ? 'text-emerald-900' : ''}`}>
+                            <p className={`font-semibold text-sm ${e.ist_aktuell ? 'text-blue-900' : e.ist_empfohlen ? 'text-emerald-900' : ''}`}>
                               {e.krankenkasse}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {e.modell_label || MODELLE[e.modell] || e.modell} · CHF {e.franchise}
+                              {e.modell_label || MODELLE[e.modell] || e.modell} · Fr. {e.franchise}
                             </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold">CHF {e.praemie_monatlich.toFixed(2)}/Monat</p>
-                          {e.ersparnis_jaehrlich > 0 ? (
-                            <p className="text-sm text-emerald-600 font-medium">
-                              +CHF {e.ersparnis_jaehrlich.toLocaleString('de-CH')}/Jahr
+                        <div className="text-right shrink-0">
+                          <p className="font-bold text-sm">CHF {e.praemie_netto.toFixed(2)}</p>
+                          <p className="text-[10px] text-muted-foreground">Brutto: {e.praemie_brutto.toFixed(2)}</p>
+                          {!e.ist_aktuell && e.ersparnis_monatlich !== 0 ? (
+                            <p className={`text-xs font-medium ${e.ersparnis_monatlich > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                              {e.ersparnis_monatlich > 0 ? '−' : '+'}CHF {Math.abs(e.ersparnis_monatlich).toFixed(2)}/Mt
                             </p>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">—</p>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     ))}
