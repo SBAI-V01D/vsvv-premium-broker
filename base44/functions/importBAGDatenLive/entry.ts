@@ -171,17 +171,17 @@ Deno.serve(async (req) => {
                     
                     // Record erstellen (MIT spezifischem Produkt-Label)
                     const record = {
-                      jahr: JAHR,
+                      geschaeftsjahr: JAHR,
                       krankenkasse: offer.insurer,
                       kanton: kanton,
                       region: region,
                       modell: modell,
-                      modell_label: offer.model, // Spezifisches Produkt (z.B. "BeneFit PLUS Telmed")
+                      modell_label: offer.model || `${modell} (Standard)`, // Spezifisches Produkt
                       franchise: franchise,
                       unfall: unfall,
                       altersklasse: altersklasse,
-                      praemie_erwachsene: praemie, // Immer setzen (für Filterung in Query)
-                      praemie_kinder: praemie, // Immer setzen (für Filterung in Query)
+                      praemie_erwachsene: praemie,
+                      praemie_kinder: praemie,
                       geschlecht: 'm',
                       alter_von: altersklasse === 'kind' ? 0 : altersklasse === 'jugend' ? 19 : 26,
                       alter_bis: altersklasse === 'kind' ? 18 : altersklasse === 'jugend' ? 25 : 99,
@@ -224,11 +224,11 @@ Deno.serve(async (req) => {
       
       console.log(`Insertiere Batch ${batchCount} (${batch.length} Records)...`);
 
-      // UPSERT Logic: Verwende insert mit onConflict (inkl. modell_label für exakte Produkt-Zuordnung)
+      // UPSERT Logic: 9-Feld Unique Constraint (inkl. modell_label)
       const { error } = await supabase
         .from('bag_praemien')
         .upsert(batch, {
-          onConflict: 'jahr,krankenkasse,kanton,region,modell,modell_label,franchise,unfall,altersklasse'
+          onConflict: 'geschaeftsjahr,krankenkasse,kanton,region,modell,modell_label,franchise,unfall,altersklasse'
         });
 
       if (error) {
