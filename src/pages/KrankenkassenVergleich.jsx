@@ -169,36 +169,10 @@ export default function KrankenkassenVergleich() {
   // Altersklasse: override hat Vorrang, sonst auto aus Geburtsdatum
   const altersklasse = formData.altersklasse_override || getAltersklasse(alter);
 
-  // BAG-Daten laden für exakte Prämienberechnung - nur für ausgewählten Kanton
+  // BAG-Daten werden beim Vergleich live geladen — kein Pre-Load mehr nötig
   useEffect(() => {
-    if (!formData.kanton || !altersklasse) {
-      setBagDaten([]);
-      return;
-    }
-
-    const loadBagDaten = async () => {
-      try {
-        setLoadingDaten(true);
-        // Lade BAG-Daten aus Supabase via Backend-Funktion
-        const res = await base44.functions.invoke('queryBAGPraemien', {
-          jahr: 2026,
-          kanton: formData.kanton,
-          altersklasse: altersklasse,
-          limit: 5000
-        });
-        const data = res.data?.data || [];
-        console.log(`BAG-Daten geladen für ${formData.kanton}:`, data.length, 'Datensätze');
-        setBagDaten(data);
-      } catch (error) {
-        console.error('Fehler beim Laden der BAG-Daten:', error.message);
-        setBagDaten([]);
-      } finally {
-        setLoadingDaten(false);
-      }
-    };
-    
-    loadBagDaten();
-  }, [formData.kanton, altersklasse]);
+    setBagDaten([]);
+  }, [formData.plz, formData.geburtsdatum]);
   const franchisen = getFranchisen(altersklasse);
 
   // Franchise-Reset wenn nicht mehr gültig für neue Altersklasse
@@ -243,85 +217,90 @@ export default function KrankenkassenVergleich() {
     return null;
   };
 
+  // BAG-Modell-Name → unser internes Modell
+  const MODEL_MAP_FROM_API = {
+    'Standard': 'standard',
+    'Hausarzt': 'hausarzt',
+    'HMO': 'hmo',
+    'Telmed': 'telmed',
+    'Telemedizin': 'telmed',
+    'FlexMed': 'telmed',
+    'CallMed': 'telmed',
+    'Andere': 'other',
+  };
+
   const handleVergleich = async () => {
-    if (!bagDaten || bagDaten.length === 0) {
-      alert('Keine BAG-Daten verfügbar. Bitte importieren Sie zuerst die BAG-Prämiendaten unter /admin/bag-daten');
+    if (!formData.plz || !formData.geburtsdatum) {
+      alert('Bitte PLZ und Geburtsdatum eingeben.');
       return;
     }
 
     setLoading(true);
     setVergleichFehler(null);
-    
-    // Aktuelle Prämie berechnen (wird auch in kassenListe-Loop als aktuellePraemieNorm genutzt)
-    const aktuellePraemie = berechnePraemie(
-      formData.aktuelle_krankenkasse,
-      formData.aktuelles_modell,
-      formData.aktuelle_franchise,
-      formData.kanton,
-      bagDaten
-    );
+    setErgebnisse([]);
+    setKiAnalyse(null);
 
-    if (!aktuellePraemie) {
-      setVergleichFehler(null); // Kein Fehler — einfach alle Kassen vergleichen ohne Referenzprämie
+    // Geburtsjahr aus Geburtsdatum
+    const yob = new Date(formData.geburtsdatum).getFullYear();
+
+    // Live-Daten von PrimAI/BAG holen (alle Angebote für diese PLZ, Alter, Franchise)
+    const res = await base44.functions.invoke('queryBAGLive', {
+      plz: formData.plz,
+      yob,
+      deductible: formData.aktuelle_franchise,
+      accident: formData.aktuelle_unfall,
+      limit: 500
+    });
+
+    const offers = res.data?.data || [];
+    if (offers.length === 0) {
+      setVergleichFehler('Keine BAG-Daten für diese PLZ/Franchise gefunden.');
+      setLoading(false);
+      return;
     }
 
-    const vergleiche = [];
+    setBagDaten(offers);
 
-    // Alle Krankenkassen aus den BAG-Daten ermitteln (dedupliziert + normalisiert)
-    const kassenInBag = [...new Set(bagDaten.map(d => KASSEN_ALIAS[d.krankenkasse] || d.krankenkasse))];
-    const kkListe = kassenInBag.length > 0 ? kassenInBag : KRANKENKASSEN;
-    const aktuellNorm = KASSEN_ALIAS[formData.aktuelle_krankenkasse] || formData.aktuelle_krankenkasse;
-
-    // Aktuelle Prämie neu berechnen mit normalisiertem Namen
-    const aktuellePraemieNorm = berechnePraemie(
-      formData.aktuelle_krankenkasse,
-      formData.aktuelles_modell,
-      formData.aktuelle_franchise,
-      formData.kanton,
-      bagDaten
-    );
-
-    // Alle Kombinationen durchgehen
-    kkListe.forEach(kk => {
-      if (formData.nur_bestehende_kasse && kk !== aktuellNorm) return;
-      
-      const modelle = [];
-      if (formData.zeige_standard) modelle.push('standard');
-      if (formData.zeige_telmed) modelle.push('telmed');
-      if (formData.zeige_hausarzt) modelle.push('hausarzt');
-      if (formData.zeige_hmo) modelle.push('hmo');
-
-      modelle.forEach(modell => {
-        const franschen = formData.nur_gleiche_franchise 
-          ? [formData.aktuelle_franchise] 
-          : franchisen;
-
-        franschen.forEach(franchise => {
-          const praemie = berechnePraemie(kk, modell, franchise, formData.kanton, bagDaten);
-          
-          // Nur Optionen mit verfügbaren BAG-Daten anzeigen
-          if (praemie === null) return;
-          
-          const refPraemie = aktuellePraemieNorm || aktuellePraemie;
-          const ersparnisMonat = (refPraemie || 0) - praemie;
-          const ersparnisJahr = ersparnisMonat * 12;
-          
-          vergleiche.push({
-            krankenkasse: kk,
-            modell,
-            franchise,
-            praemie_monatlich: praemie,
-            praemie_jaehrlich: praemie * 12,
-            ersparnis_monatlich: ersparnisMonat,
-            ersparnis_jaehrlich: ersparnisJahr,
-            ersparnis_prozent: refPraemie > 0 ? ((ersparnisMonat / refPraemie) * 100) : 0,
-            ist_aktuell: (KASSEN_ALIAS[kk] || kk) === aktuellNorm && 
-                        modell === formData.aktuelles_modell && 
-                        franchise === formData.aktuelle_franchise,
-          });
-        });
-      });
+    // Aktuelle Prämie finden (normalisierter Name für aktuell-Markierung)
+    const aktuellAngebot = offers.find(o => {
+      const modellNorm = MODEL_MAP_FROM_API[o.model] || o.model?.toLowerCase();
+      return o.insurer === formData.aktuelle_krankenkasse &&
+             modellNorm === formData.aktuelles_modell;
     });
+    const aktuellePraemie = aktuellAngebot?.price?.total || null;
+
+    // Filter nach gewählten Modellen
+    const erlaubteModelle = new Set();
+    if (formData.zeige_standard) erlaubteModelle.add('standard');
+    if (formData.zeige_telmed) { erlaubteModelle.add('telmed'); erlaubteModelle.add('telemedizin'); erlaubteModelle.add('flexmed'); erlaubteModelle.add('callmed'); }
+    if (formData.zeige_hausarzt) erlaubteModelle.add('hausarzt');
+    if (formData.zeige_hmo) erlaubteModelle.add('hmo');
+
+    const vergleiche = offers
+      .filter(o => {
+        const modellNorm = MODEL_MAP_FROM_API[o.model] || o.model?.toLowerCase();
+        if (formData.nur_bestehende_kasse && o.insurer !== formData.aktuelle_krankenkasse) return false;
+        return erlaubteModelle.has(modellNorm);
+      })
+      .map(o => {
+        const praemie = o.price?.total || 0;
+        const modellNorm = MODEL_MAP_FROM_API[o.model] || o.model?.toLowerCase();
+        const ersparnisMonat = (aktuellePraemie || 0) - praemie;
+        const istAktuell = o.insurer === formData.aktuelle_krankenkasse &&
+                           modellNorm === formData.aktuelles_modell;
+        return {
+          krankenkasse: o.insurer,
+          modell_label: o.model, // Originaler BAG-Modellname (z.B. "Telemedizin")
+          modell: modellNorm,
+          franchise: o.deductible,
+          praemie_monatlich: praemie,
+          praemie_jaehrlich: praemie * 12,
+          ersparnis_monatlich: ersparnisMonat,
+          ersparnis_jaehrlich: ersparnisMonat * 12,
+          ersparnis_prozent: aktuellePraemie > 0 ? (ersparnisMonat / aktuellePraemie) * 100 : 0,
+          ist_aktuell: istAktuell,
+        };
+      });
 
     const sortiert = vergleiche
       .sort((a, b) => b.ersparnis_jaehrlich - a.ersparnis_jaehrlich)
@@ -337,15 +316,15 @@ export default function KrankenkassenVergleich() {
     const besteOption = sortiert[0];
     if (besteOption && besteOption.ersparnis_jaehrlich > 0) {
       setKiAnalyse({
-        sparpotenzial: besteOption.ersparnis_jaehrlich,
+        sparpotenzial: Math.round(besteOption.ersparnis_jaehrlich),
         wechsel_empfohlen: besteOption.ersparnis_jaehrlich > 500,
-        franschise_optimierung: formData.aktuelle_franchise > 1000 
-          ? 'Eine tiefere Franchise könnte sinnvoll sein' 
+        franschise_optimierung: formData.aktuelle_franchise > 1000
+          ? 'Eine tiefere Franchise könnte sinnvoll sein'
           : 'Franchise ist optimal gewählt',
         modell_optimierung: formData.aktuelles_modell === 'standard'
           ? 'Ein Telmed- oder Hausarztmodell könnte Prämien sparen'
           : 'Modell ist gut gewählt',
-        empfehlung_text: `Durch einen Wechsel zu ${besteOption.krankenkasse} ${MODELLE[besteOption.modell]} können Sie CHF ${besteOption.ersparnis_jaehrlich.toLocaleString('de-CH')} pro Jahr sparen.`,
+        empfehlung_text: `Durch einen Wechsel zu ${besteOption.krankenkasse} (${besteOption.modell_label || besteOption.modell}) können Sie CHF ${Math.round(besteOption.ersparnis_jaehrlich).toLocaleString('de-CH')} pro Jahr sparen.`,
         empfohlene_krankenkasse: besteOption.krankenkasse,
         empfohlenes_modell: besteOption.modell
       });
@@ -463,19 +442,11 @@ export default function KrankenkassenVergleich() {
           >
             🧪 Testdaten: Peter Adam
           </Button>
-          {loadingDaten ? (
-            <Badge variant="outline" className="badge-info">
-              Lade BAG-Daten...
-            </Badge>
-          ) : bagDaten && bagDaten.length > 0 ? (
+          {bagDaten && bagDaten.length > 0 ? (
             <Badge variant="outline" className="badge-success">
-              {bagDaten.length} BAG-Datensätze geladen
+              {bagDaten.length} Angebote (BAG Live)
             </Badge>
-          ) : (
-            <Badge variant="outline" className="badge-danger">
-              Keine BAG-Daten
-            </Badge>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -614,7 +585,7 @@ export default function KrankenkassenVergleich() {
             className="w-full" 
             size="lg"
             onClick={handleVergleich}
-            disabled={loading || loadingDaten || !formData.kanton || !formData.aktuelle_krankenkasse || !bagDaten}
+            disabled={loading || !formData.plz || !formData.geburtsdatum || !formData.aktuelle_krankenkasse}
           >
             {loadingDaten ? 'Lade BAG-Daten...' : loading ? 'Berechne...' : 'Vergleich durchführen'}
             {!loading && !loadingDaten && <ArrowRight className="w-4 h-4 ml-2" />}
@@ -676,7 +647,7 @@ export default function KrankenkassenVergleich() {
                               {e.krankenkasse}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {MODELLE[e.modell]} · CHF {e.franchise}
+                              {e.modell_label || MODELLE[e.modell] || e.modell} · CHF {e.franchise}
                             </p>
                           </div>
                         </div>
