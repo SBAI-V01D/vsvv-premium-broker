@@ -289,7 +289,7 @@ export default function CustomerDetail() {
   }
 
   const NAV_ITEMS = [
-    { id: 'uebersicht', label: 'Übersicht', icon: Shield },
+    { id: 'uebersicht', label: 'Stammdaten', icon: Shield },
     { id: 'vertraege', label: 'Verträge', icon: FileText, count: relatedContracts.length },
     { id: 'antraege', label: 'Anträge', icon: FileText, count: relatedApplications.length },
     { id: 'aufgaben', label: 'Aufgaben', icon: Clock, count: custTasks.filter(t => t.status !== 'completed').length },
@@ -299,6 +299,24 @@ export default function CustomerDetail() {
     { id: 'timeline', label: 'Timeline', icon: Clock },
     { id: 'beratungspotential', label: 'Beratungspotential', icon: Bot, count: verkaufschancen.length > 0 ? verkaufschancen.length : 0 },
   ]
+
+  // Alter aus Geburtsdatum berechnen
+  const calcAge = (birthdate) => {
+    if (!birthdate) return null
+    const birth = new Date(birthdate)
+    const today = new Date()
+    let age = today.getFullYear() - birth.getFullYear()
+    const m = today.getMonth() - birth.getMonth()
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+    return age
+  }
+
+  // KK-Verträge aus relatedContracts ermitteln
+  const kkContracts = relatedContracts.filter(c => {
+    const t = (c.sparte || c.insurance_type || '').toLowerCase()
+    return t.includes('health') || t.includes('kranken') || t.includes('kk') || t.includes('okp') || t.includes('grundversicherung')
+  })
+  const otherContracts = relatedContracts.filter(c => !kkContracts.includes(c))
 
   return (
     <div className="min-h-screen bg-background -mx-6 -mt-6">
@@ -312,20 +330,6 @@ export default function CustomerDetail() {
           advisors={allAdvisors.filter(a => a.id === (primaryCustomer?.advisor_id || customer?.advisor_id))}
           organization={organizations.find(o => o.id === (primaryCustomer?.organization_id || customer?.organization_id))}
         />
-      </div>
-
-      {/* 360° CTA Banner */}
-      <div className="px-6 py-3 bg-primary/5 border-b border-primary/10 flex items-center justify-between gap-4">
-        <p className="text-xs text-muted-foreground">
-          Stammdaten & Grundinformationen — für die vollständige Beratungsansicht:
-        </p>
-        <button
-          onClick={() => navigate(`/kunden/${id}/360`)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 transition-colors whitespace-nowrap"
-        >
-          <Shield className="w-3.5 h-3.5" />
-          360° Akte öffnen →
-        </button>
       </div>
 
       {/* Executive Header */}
@@ -345,115 +349,284 @@ export default function CustomerDetail() {
 
 
 
-      {/* Sticky Nav */}
-      <StickyNav items={NAV_ITEMS} active={activeSection} onChange={setActiveSection} />
+      {/* Sticky Nav + 360° Button */}
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border flex items-center gap-0">
+        <div className="flex-1 overflow-x-auto scrollbar-none">
+          <StickyNav items={NAV_ITEMS} active={activeSection} onChange={setActiveSection} />
+        </div>
+        <div className="shrink-0 px-4 border-l border-border">
+          <button
+            onClick={() => navigate(`/kunden/${id}/360`)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 transition-colors whitespace-nowrap"
+          >
+            <Shield className="w-3 h-3" />
+            360° Ansicht
+          </button>
+        </div>
+      </div>
 
       {/* Content — increased vertical rhythm */}
       <div className="px-6 py-8 max-w-7xl mx-auto space-y-8">
 
-        {/* ── Übersicht ─────────────────────────────────────────────── */}
+        {/* ── Stammdaten (Hauptansicht) ──────────────────────────────── */}
         {activeSection === 'uebersicht' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-            {/* Kachel 1: Kontakt & Adresse */}
-            <div className="surface p-6">
-              <h3 className="text-xs font-semibold text-muted-foreground mb-4 uppercase tracking-widest">Kontakt & Adresse</h3>
-              <div className="space-y-4">
-                {customer.street && (
-                  <div>
-                    <p className="text-xs font-semibold uppercase text-muted-foreground tracking-widest mb-2">Adresse</p>
-                    <div className="space-y-0.5">
-                      <p className="text-xs text-slate-700">{customer.street}</p>
-                      {(customer.zip_code || customer.city) && <p className="text-xs text-slate-700">{[customer.zip_code, customer.city].filter(Boolean).join(' ')}</p>}
-                      {customer.canton && <p className="text-xs text-muted-foreground">Kanton {customer.canton}</p>}
+          <div className="space-y-6">
+            {/* Zeile 1: Persönliche Daten + Kontakt */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Persönliche Stammdaten */}
+              <div className="surface p-6">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-5">Persönliche Daten</h3>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Vorname</p>
+                      <p className="text-sm font-medium text-slate-800">{customer.first_name || '–'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Nachname</p>
+                      <p className="text-sm font-medium text-slate-800">{customer.last_name || '–'}</p>
                     </div>
                   </div>
-                )}
-                {(customer.profession || customer.civil_status || customer.nationality || customer.birthdate) && (
-                  <div>
-                    <p className="text-xs font-semibold uppercase text-muted-foreground tracking-widest mb-2">Persönliche Daten</p>
-                    <div className="space-y-1">
-                      {customer.birthdate && (
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                          <span className="text-xs text-slate-700">{formatDate(customer.birthdate)}</span>
-                        </div>
-                      )}
-                      {customer.profession && <p className="text-xs text-slate-700">{customer.profession}</p>}
-                      {customer.civil_status && <p className="text-xs text-slate-700">{CIVIL_STATUS_LABELS[customer.civil_status] || customer.civil_status}</p>}
-                      {customer.nationality && <p className="text-xs text-slate-700">{customer.nationality}</p>}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Geburtsdatum</p>
+                      <p className="text-sm text-slate-700">{customer.birthdate ? formatDate(customer.birthdate) : '–'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Alter</p>
+                      <p className="text-sm text-slate-700">{calcAge(customer.birthdate) !== null ? `${calcAge(customer.birthdate)} Jahre` : '–'}</p>
                     </div>
                   </div>
-                )}
-                {!customer.street && !customer.birthdate && !customer.profession && !customer.civil_status && !customer.nationality && (
-                  <p className="text-xs text-muted-foreground">Keine Stammdaten hinterlegt</p>
-                )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Familienstand</p>
+                      <p className="text-sm text-slate-700">{customer.civil_status ? (CIVIL_STATUS_LABELS[customer.civil_status] || customer.civil_status) : '–'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Nationalität</p>
+                      <p className="text-sm text-slate-700">{customer.nationality || '–'}</p>
+                    </div>
+                  </div>
+                  {customer.profession && (
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Beruf</p>
+                      <p className="text-sm text-slate-700">{customer.profession}</p>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border/40">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Kundenstatus</p>
+                      <span className={`inline-block text-xs px-2 py-0.5 rounded font-semibold ${
+                        customer.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                        customer.status === 'inactive' ? 'bg-slate-100 text-slate-600 border border-slate-200' :
+                        'bg-amber-50 text-amber-700 border border-amber-200'
+                      }`}>
+                        {customer.status === 'active' ? 'Aktiv' : customer.status === 'inactive' ? 'Inaktiv' : 'Interessent'}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Mandat</p>
+                      <span className={`inline-block text-xs px-2 py-0.5 rounded font-semibold ${
+                        customer.mandate_status === 'valid' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                        customer.mandate_status === 'pending' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                        'bg-red-50 text-red-600 border border-red-200'
+                      }`}>
+                        {customer.mandate_status === 'valid' ? 'Gültig' : customer.mandate_status === 'pending' ? 'Ausstehend' : customer.mandate_status === 'expired' ? 'Abgelaufen' : 'Ungültig'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Kontakt & Adresse */}
+              <div className="surface p-6">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-5">Kontakt & Adresse</h3>
+                <div className="space-y-3">
+                  {customer.phone && (
+                    <div className="flex items-center gap-3">
+                      <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Telefon</p>
+                        <a href={`tel:${customer.phone}`} className="text-sm text-primary hover:underline">{customer.phone}</a>
+                      </div>
+                    </div>
+                  )}
+                  {customer.mobile && (
+                    <div className="flex items-center gap-3">
+                      <Smartphone className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Mobile</p>
+                        <a href={`tel:${customer.mobile}`} className="text-sm text-primary hover:underline">{customer.mobile}</a>
+                      </div>
+                    </div>
+                  )}
+                  {customer.email && (
+                    <div className="flex items-center gap-3">
+                      <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">E-Mail</p>
+                        <EmailLink email={customer.email} className="text-sm" />
+                      </div>
+                    </div>
+                  )}
+                  {customer.street && (
+                    <div className="flex items-start gap-3">
+                      <MapPin className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Adresse</p>
+                        <p className="text-sm text-slate-700">{customer.street}</p>
+                        {(customer.zip_code || customer.city) && (
+                          <p className="text-sm text-slate-700">{[customer.zip_code, customer.city].filter(Boolean).join(' ')}</p>
+                        )}
+                        {customer.canton && <p className="text-xs text-muted-foreground">Kanton {customer.canton}</p>}
+                      </div>
+                    </div>
+                  )}
+                  {customer.bank_account && (
+                    <div className="flex items-center gap-3">
+                      <CreditCard className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">IBAN / Konto</p>
+                        <p className="text-sm font-mono text-slate-700">{customer.bank_account}</p>
+                      </div>
+                    </div>
+                  )}
+                  {!customer.phone && !customer.mobile && !customer.email && !customer.street && (
+                    <p className="text-xs text-muted-foreground">Keine Kontaktdaten hinterlegt</p>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Kachel 2: Quick Links */}
+            {/* Zeile 2: Versicherungsübersicht (KK) */}
             <div className="surface p-6">
-              <h3 className="text-xs font-semibold text-muted-foreground mb-4 uppercase tracking-widest">Quick Links</h3>
-              <div className="space-y-1.5">
-                <button onClick={() => setActiveSection('vertraege')} className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors">
-                  <span className="text-slate-600">Verträge</span>
-                  <span className="text-xs font-semibold text-slate-800">{relatedContracts.length}</span>
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Versicherungsübersicht — Krankenkasse</h3>
+                <button onClick={() => setActiveSection('vertraege')} className="text-xs text-primary hover:underline">
+                  Alle Verträge →
                 </button>
-                <button onClick={() => setActiveSection('antraege')} className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors">
-                  <span className="text-slate-600">Offene Anträge</span>
-                  <span className="text-xs font-semibold text-slate-800">{relatedApplications.filter(a => {
-                    const status = (a.custom_status || a.status || '').toLowerCase().trim()
-                    const OPEN_KEYS = ['neu', 'new', 'eingereicht', 'in_pruefung', 'rueckfrage', 'vorbehalt', 'risikopruefung', 'under_review', 'in_progress', 'warten']
-                    return OPEN_KEYS.includes(status)
-                  }).length}</span>
-                </button>
-                <button onClick={() => setActiveSection('aufgaben')} className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors">
-                  <span className="text-slate-600">Offene Aufgaben</span>
-                  <span className={`text-xs font-semibold ${custTasks.filter(t => t.status !== 'completed').length > 0 ? 'text-amber-600' : 'text-slate-800'}`}>
-                    {custTasks.filter(t => t.status !== 'completed').length}
-                  </span>
-                </button>
-                <button onClick={() => setActiveSection('dokumente')} className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors">
-                  <span className="text-slate-600">Dokumente</span>
-                  <span className="text-xs font-semibold text-slate-800">{relatedDocuments.length}</span>
-                </button>
-                {verkaufschancen.length > 0 && (
-                  <button onClick={() => setActiveSection('beratungspotential')} className="w-full flex justify-between items-center text-xs hover:bg-muted/50 p-1.5 rounded transition-colors">
-                    <span className="text-slate-600">Beratungspotential</span>
-                    <span className="text-xs font-semibold text-primary">{verkaufschancen.length}</span>
-                  </button>
-                )}
               </div>
-            </div>
-
-            {/* Kachel 3: Haushaltsmitglieder */}
-            <div className="surface p-6">
-              <h3 className="text-xs font-semibold text-muted-foreground mb-4 uppercase tracking-widest">Haushaltsmitglieder</h3>
-              {familyMembers.length > 1 ? (
-                <div className="space-y-4">
-                  <p className="text-xs text-muted-foreground">{familyMembers.length} Personen im Haushalt</p>
-                  <div className="flex flex-wrap gap-2">
-                    {familyMembers.filter(m => m.id !== id).map(member => (
-                      <button
-                        key={member.id}
-                        onClick={() => navigate(`/kunden/${member.id}`)}
-                        className="inline-flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"
-                      >
-                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                          {member.first_name?.[0]}{member.last_name?.[0]}
+              {kkContracts.length > 0 ? (
+                <div className="space-y-3">
+                  {kkContracts.map(c => (
+                    <div key={c.id} className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-blue-50/40 border border-blue-100 rounded-xl">
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Krankenkasse</p>
+                        <p className="text-sm font-semibold text-slate-800">{c.insurer || '–'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Modell</p>
+                        <p className="text-sm text-slate-700">{c.sparte_data?.model || c.product || '–'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Franchise</p>
+                        <p className="text-sm text-slate-700">{c.sparte_data?.franchise ? `CHF ${c.sparte_data.franchise}` : '–'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Monatsprämie</p>
+                        <p className="text-sm font-semibold text-slate-800">
+                          {c.premium_monthly ? `CHF ${c.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '–'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground py-3">Keine Krankenversicherung erfasst</p>
+              )}
+              {/* Zusatzversicherungen */}
+              {otherContracts.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-border/40">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">Zusatzversicherungen & weitere Policen ({otherContracts.length})</p>
+                  <div className="space-y-2">
+                    {otherContracts.map(c => (
+                      <div key={c.id} className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div>
+                            <p className="text-xs font-semibold text-slate-800">{c.insurer} {c.product ? `· ${c.product}` : ''}</p>
+                            <p className="text-[10px] text-muted-foreground">{getSparteLabel(c.sparte || c.insurance_type)}</p>
+                          </div>
                         </div>
-                        <div className="flex flex-col items-start">
-                          <span className="text-xs font-medium text-slate-700">{member.first_name} {member.last_name}</span>
-                          <span className="text-xs text-muted-foreground">{FAMILY_ROLE_LABELS[member.family_role] || 'Familie'}</span>
-                        </div>
-                      </button>
+                        <p className="text-xs font-semibold text-slate-700">
+                          {c.premium_monthly ? `CHF ${c.premium_monthly.toLocaleString('de-CH', { minimumFractionDigits: 2 })}/M.` :
+                           c.premium_yearly ? `CHF ${c.premium_yearly.toLocaleString('de-CH', { minimumFractionDigits: 2 })}/J.` : '–'}
+                        </p>
+                      </div>
                     ))}
                   </div>
                 </div>
-              ) : (
-                <div className="py-6 text-center">
-                  <p className="text-xs text-muted-foreground">Keine weiteren Haushaltsmitglieder</p>
-                </div>
               )}
+            </div>
+
+            {/* Zeile 3: Aktivitäten + Notizen + Haushalt */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Aktivitäten / Recent */}
+              <div className="lg:col-span-2 surface p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Letzte Aktivitäten</h3>
+                  <button onClick={() => setActiveSection('timeline')} className="text-xs text-primary hover:underline">Alle →</button>
+                </div>
+                <div className="space-y-2">
+                  {[...relatedContracts.slice(0, 2).map(c => ({
+                    type: 'Vertrag', label: `${c.insurer} · ${getSparteLabel(c.sparte || c.insurance_type)}`, date: c.start_date || c.created_date, icon: FileText,
+                  })), ...relatedApplications.slice(0, 2).map(a => ({
+                    type: 'Antrag', label: `${a.insurer} · ${getSparteLabel(a.sparte || a.insurance_type)}`, date: a.status_changed_at || a.created_date, icon: FileText,
+                  })), ...custTasks.filter(t => t.status !== 'completed').slice(0, 2).map(t => ({
+                    type: 'Aufgabe', label: t.title, date: t.due_date, icon: Clock,
+                  }))]
+                  .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+                  .slice(0, 5)
+                  .map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-3 py-2 border-b border-border/30 last:border-0">
+                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <item.icon className="w-3 h-3 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-slate-700 truncate">{item.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{item.type}</p>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground shrink-0">{item.date ? formatDate(item.date) : ''}</p>
+                    </div>
+                  ))}
+                  {relatedContracts.length === 0 && relatedApplications.length === 0 && custTasks.length === 0 && (
+                    <p className="text-xs text-muted-foreground">Keine Aktivitäten vorhanden</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Notizen + Haushalt */}
+              <div className="space-y-6">
+                {customer.notes && (
+                  <div className="surface p-5">
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Notizen</h3>
+                    <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed">{customer.notes}</p>
+                  </div>
+                )}
+                <div className="surface p-5">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">Haushalt</h3>
+                  {familyMembers.length > 1 ? (
+                    <div className="space-y-2">
+                      {familyMembers.filter(m => m.id !== id).map(member => (
+                        <button
+                          key={member.id}
+                          onClick={() => navigate(`/kunden/${member.id}/detail`)}
+                          className="w-full flex items-center gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors text-left"
+                        >
+                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                            {member.first_name?.[0]}{member.last_name?.[0]}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-slate-700 truncate">{member.first_name} {member.last_name}</p>
+                            <p className="text-[10px] text-muted-foreground">{FAMILY_ROLE_LABELS[member.family_role] || 'Familie'}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Keine Haushaltsmitglieder</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}
