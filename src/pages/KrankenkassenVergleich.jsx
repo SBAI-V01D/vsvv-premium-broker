@@ -118,7 +118,7 @@ export default function KrankenkassenVergleich() {
         plz: '4304',
         kanton: 'BL',
         geschlecht: 'm',
-        aktuelle_krankenkasse: 'Mutuel',
+        aktuelle_krankenkasse: 'CSS',
         aktuelles_modell: 'telmed',
         aktuelle_franchise: 2500,
         aktuelle_unfall: false,
@@ -131,9 +131,9 @@ export default function KrankenkassenVergleich() {
         zeige_hausarzt: true,
         zeige_hmo: true,
         zeige_standard: true,
-      };
-    }
-    return {
+        };
+        }
+        return {
       vorname: '',
       nachname: '',
       geburtsdatum: '',
@@ -439,7 +439,7 @@ export default function KrankenkassenVergleich() {
               plz: '4304',
               kanton: 'BL',
               geschlecht: 'm',
-              aktuelle_krankenkasse: 'Mutuel',
+              aktuelle_krankenkasse: 'CSS',
               aktuelles_modell: 'telmed',
               aktuelle_franchise: 2500,
               aktuelle_unfall: false,
