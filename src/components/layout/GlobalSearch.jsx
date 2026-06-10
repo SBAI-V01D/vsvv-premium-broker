@@ -13,12 +13,29 @@ export default function GlobalSearch({ collapsed, light = false }) {
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
 
-  const { data: customers = [] } = useQuery({
+  const { data: allCustomers = [] } = useQuery({
     queryKey: ['sidebar_customers_slim'],
     queryFn: () => base44.entities.Customer.filter({ archived: false }, 'last_name', 2000),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+
+  const { data: currentUser } = useQuery({ queryKey: ['currentUser'], queryFn: () => base44.auth.me() });
+
+  // Filter customers based on user role (same logic as CustomerIntelligenceWorkspace)
+  const customers = useMemo(() => {
+    if (!currentUser) return [];
+    if (currentUser.role === 'admin') return allCustomers;
+    if (currentUser.role === 'broker' || currentUser.role === 'assistenz') {
+      return allCustomers.filter(c =>
+        c.primary_advisor_id === currentUser.id ||
+        (c.assigned_advisors || []).includes(currentUser.id) ||
+        (c.assigned_assistants || []).includes(currentUser.id) ||
+        c.advisor_id === currentUser.id
+      );
+    }
+    return [];
+  }, [allCustomers, currentUser]);
 
   const { data: contracts = [] } = useQuery({
     queryKey: ['sidebar_contracts_slim'],
