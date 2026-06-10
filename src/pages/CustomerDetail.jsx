@@ -16,6 +16,7 @@ import DocumentsTab from '../components/documents/DocumentsTab'
 import ContractForm from '../components/contracts/ContractForm'
 import StatusChangeDialog from '@/components/status/StatusChangeDialog'
 import { calculateCustomerHealthScore } from '@/lib/customerHealthScore'
+import { useCustomerDetailDiagnose } from '@/components/customers/CustomerDetailDiagnose'
 import { FAMILY_ROLE_LABELS, CIVIL_STATUS_LABELS, label } from '@/lib/labels'
 import { getSparteLabel } from '@/lib/insuranceSparten'
 import StatusBadge from '@/components/status/StatusBadge'
@@ -31,6 +32,7 @@ import { HouseholdPrintExport } from '@/components/customers/HouseholdPrintExpor
 import CustomerStammdatenCard from '../components/customers/CustomerStammdatenCard'
 import { StickyNav, EnterpriseCard, EmptySection, SectionHeader } from '@/components/ui/ds'
 import EmailLink from '@/components/common/EmailLink'
+import CustomerDetailDiagnose from '@/components/customers/CustomerDetailDiagnose'
 
 export default function CustomerDetail() {
   const { id } = useParams()
@@ -54,16 +56,24 @@ export default function CustomerDetail() {
   const [editingApp, setEditingApp] = useState(null)
   const queryClient = useQueryClient()
 
+  // Diagnose-Tool für Ladezeiten und Datenfluss
+  const { diagnose, markLoaded, checkDataFlow } = useCustomerDetailDiagnose(id)
+
   // Globale Real-time Subscriptions sind in lib/query-client.js registriert —
   // keine lokale Subscription notwendig.
 
   // Fast: nur aktuellen Kunden laden
-  const { data: customerDirect } = useQuery({
+  const { data: customerDirect, isLoading: customerLoading, isSuccess: customerSuccess } = useQuery({
     queryKey: ['customer', id],
     queryFn: () => base44.entities.Customer.filter({ id }, null, 1).then(r => r?.[0]),
     enabled: !!id,
     staleTime: 2 * 60 * 1000,
   })
+
+  // Track customer load time
+  useEffect(() => {
+    if (customerSuccess && id) markLoaded('customerLoaded')
+  }, [customerSuccess, id])
 
   // Alle Kunden nur laden wenn ein Formular geöffnet wird
   const [needAllCustomers, setNeedAllCustomers] = useState(false)
@@ -97,19 +107,23 @@ export default function CustomerDetail() {
   const primaryCustomerId = customer?.is_family_member ? customer?.primary_customer_id : customer?.id
 
   // NUR den aktuellen Kunden laden (schnell)
-  const { data: relatedContracts = [] } = useQuery({
+  const { data: relatedContracts = [], isSuccess: contractsSuccess } = useQuery({
     queryKey: ['contracts', id],
     queryFn: () => base44.entities.Contract.filter({ customer_id: id, archived: false }),
     enabled: !!id,
     staleTime: 3 * 60 * 1000,
   })
 
-  const { data: relatedApplications = [] } = useQuery({
+  useEffect(() => { if (contractsSuccess && id) markLoaded('contractsLoaded') }, [contractsSuccess, id])
+
+  const { data: relatedApplications = [], isSuccess: applicationsSuccess } = useQuery({
     queryKey: ['applications', id],
     queryFn: () => base44.entities.Application.filter({ customer_id: id }),
     enabled: !!id,
     staleTime: 3 * 60 * 1000,
   })
+
+  useEffect(() => { if (applicationsSuccess && id) markLoaded('applicationsLoaded') }, [applicationsSuccess, id])
 
   const { data: messages = [] } = useQuery({
     queryKey: ['messages', id],
@@ -118,12 +132,14 @@ export default function CustomerDetail() {
     staleTime: 5 * 60 * 1000,
   })
 
-  const { data: relatedDocuments = [] } = useQuery({
+  const { data: relatedDocuments = [], isSuccess: documentsSuccess } = useQuery({
     queryKey: ['documents', id],
     queryFn: () => base44.entities.Document.filter({ customer_id: id }),
     enabled: !!id,
     staleTime: 5 * 60 * 1000,
   })
+
+  useEffect(() => { if (documentsSuccess && id) markLoaded('documentsLoaded') }, [documentsSuccess, id])
 
   const { data: statusDefs = [] } = useQuery({
     queryKey: ['statusDefinitions'],
@@ -1301,6 +1317,9 @@ export default function CustomerDetail() {
         open={showAddFamilyMember}
         onOpenChange={setShowAddFamilyMember}
       />
+
+      {/* Diagnose-Tool */}
+      <CustomerDetailDiagnose customerId={id} diagnose={diagnose} checkDataFlow={checkDataFlow} />
     </div>
   )
 }
