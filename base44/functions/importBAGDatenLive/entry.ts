@@ -8,6 +8,44 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 import { createClient } from 'npm:@supabase/supabase-js@2.39.0';
 
+// Retry-Utility mit Backoff (für 429/5xx Fehler)
+async function fetchWithRetry(url: string, maxRetries = 3, baseDelay = 2000) {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: { 'Accept': 'application/json', 'User-Agent': 'VSVV-CRM-BAG-Importer/1.0' },
+      });
+      
+      // Bei 429: Retry-After Header respektieren
+      if (res.status === 429) {
+        const retryAfter = parseInt(res.headers.get('Retry-After') || '2', 10) * 1000;
+        console.log(`Rate limit (429). Warte ${retryAfter}ms...`);
+        await new Promise(resolve => setTimeout(resolve, retryAfter));
+        continue;
+      }
+      
+      // Bei 5xx: Exponential Backoff
+      if (res.status >= 500 && res.status < 600) {
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        console.log(`Server error (${res.status}). Retry ${attempt}/${maxRetries} in ${delay}ms`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      return res;
+    } catch (error) {
+      lastError = error as Error;
+      const delay = baseDelay * Math.pow(2, attempt - 1);
+      console.log(`Network error. Retry ${attempt}/${maxRetries} in ${delay}ms: ${error.message}`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError || new Error('Max retries exceeded');
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -49,10 +87,21 @@ Deno.serve(async (req) => {
 
     const stats = {
       total: 0,
-      inserted: 0,
-      updated: 0,
-      errors: 0
+      api_success: 0,
+      api_errors: 0,
+      db_inserted: 0,
+      db_errors: 0
     };
+
+    const errorLog: Array<{
+      plz: string;
+      kanton: string;
+      franchise: number;
+      altersklasse: string;
+      unfall: boolean;
+      error: string;
+      status?: number;
+    }> = [];
 
     const recordsToInsert = [];
 
@@ -86,17 +135,23 @@ Deno.serve(async (req) => {
                   });
 
                   const url = `https://api.primai.ch/v1/compare?${params.toString()}`;
-                  const res = await fetch(url, {
-                    headers: { 'Accept': 'application/json', 'User-Agent': 'VSVV-CRM-BAG-Importer/1.0' }
-                  });
+                  
+                  // Retry-Logic für API Calls
+                  const res = await fetchWithRetry(url, 3, 2000);
 
                   if (!res.ok) {
-                    stats.errors++;
-                    console.error('API Error für PLZ', plz, 'Franchise', franchise, res.status);
+                    stats.api_errors++;
+                    errorLog.push({
+                      plz, kanton, franchise, altersklasse, unfall,
+                      error: `API error: ${res.status}`,
+                      status: res.status
+                    });
+                    console.error(`API Error [${res.status}] für PLZ ${plz}, Franchise ${franchise}`);
                     continue;
                   }
 
                   const data = await res.json();
+                  stats.api_success++;
                   
                   if (!data.offers || data.offers.length === 0) {
                     continue;
@@ -135,12 +190,16 @@ Deno.serve(async (req) => {
                     };
 
                     recordsToInsert.push(record);
-                    stats.inserted++;
+                    stats.db_inserted++;
                   }
 
                 } catch (error) {
-                  stats.errors++;
-                  console.error('Error bei PLZ', plz, 'Franchise', franchise, error.message);
+                  stats.api_errors++;
+                  errorLog.push({
+                    plz, kanton, franchise, altersklasse, unfall,
+                    error: error.message
+                  });
+                  console.error(`Error bei PLZ ${plz}, Franchise ${franchise}: ${error.message}`);
                 }
               }
             }
@@ -151,8 +210,8 @@ Deno.serve(async (req) => {
 
     console.log('Records gesammelt:', recordsToInsert.length);
 
-    // Batch-Insert in Supabase (500er Blöcke)
-    const BATCH_SIZE = 500;
+    // Batch-Insert in Supabase (200er Blöcke für mehr Stabilität)
+    const BATCH_SIZE = 200;
     let batchCount = 0;
 
     for (let i = 0; i < recordsToInsert.length; i += BATCH_SIZE) {
@@ -169,31 +228,50 @@ Deno.serve(async (req) => {
         });
 
       if (error) {
-        stats.errors += batch.length;
+        stats.db_errors += batch.length;
+        errorLog.push({
+          plz: 'BATCH',
+          kanton: 'BATCH',
+          franchise: batch.length,
+          altersklasse: 'N/A',
+          unfall: false,
+          error: `DB error: ${error.message}`
+        });
         console.error('Batch Insert Error:', error.message);
       } else {
-        stats.updated += batch.length;
+        stats.db_inserted += batch.length;
       }
 
-      // Rate Limiting: 100ms Pause zwischen Batches
+      // Rate Limiting: 200ms Pause zwischen Batches
       if (i + BATCH_SIZE < recordsToInsert.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
 
     console.log('Import abgeschlossen!');
-    console.log('Total:', stats.total);
-    console.log('Inserted/Updated:', stats.updated);
-    console.log('Errors:', stats.errors);
+    console.log('Total Kombinationen:', stats.total);
+    console.log('API Success:', stats.api_success);
+    console.log('API Errors:', stats.api_errors);
+    console.log('DB Records:', stats.db_inserted);
+    console.log('DB Errors:', stats.db_errors);
+    
+    if (errorLog.length > 0) {
+      console.log('Fehler-Details:', JSON.stringify(errorLog.slice(0, 10), null, 2));
+      console.log(`... und ${errorLog.length - 10} weitere Fehler`);
+    }
 
     return Response.json({
       success: true,
       stats: {
         total_combinations: stats.total,
-        records_inserted: stats.updated,
-        errors: stats.errors
+        api_success: stats.api_success,
+        api_errors: stats.api_errors,
+        db_records: stats.db_inserted,
+        db_errors: stats.db_errors,
+        total_errors: errorLog.length
       },
-      message: `BAG-Daten für ${JAHR} erfolgreich importiert (${stats.updated} Records)`
+      error_log: errorLog.slice(0, 50), // Erste 50 Fehler für Debugging
+      message: `BAG-Daten für ${JAHR} importiert: ${stats.db_inserted} Records, ${errorLog.length} Fehler`
     });
 
   } catch (error) {
