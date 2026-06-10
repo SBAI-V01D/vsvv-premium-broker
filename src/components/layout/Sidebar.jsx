@@ -67,7 +67,7 @@ const navGroups = [
       { label: 'Kundenübersicht',  icon: Users,       path: '/kunden' },
       { label: 'Verkaufschancen',  icon: TrendingUp,  path: '/verkaufschancen', color: 'primary' },
       { label: 'Leads',            icon: UserPlus,    path: '/leads',           color: 'warning' },
-      { label: 'Krankenkassen',    icon: Shield,      path: '/krankenkassen-vergleich' },
+      { label: 'Krankenkassenvergleich', icon: Shield,      path: '/krankenkassen-vergleich' },
       { label: 'Beratungsdossiers',icon: BookOpen,    path: '/beratungsdossier' },
       { label: 'Kundenportal',     icon: ExternalLink, path: '/portal', external: true },
     ],
