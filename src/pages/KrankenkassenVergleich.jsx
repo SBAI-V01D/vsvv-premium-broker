@@ -30,6 +30,7 @@ export default function KrankenkassenVergleich() {
     nachname: '',
     geburtsdatum: '',
     plz: '',
+    wohnort: '',
     kanton: '',
     aktuelle_krankenkasse: '',
     aktuelles_modell: '',
