@@ -251,7 +251,7 @@ export default function CustomerCard({
         <div className="border-t border-border/40 divide-y divide-border/30 bg-slate-50/50">
           {familyMembers.map(member => (
             <div key={member.id} className={`px-6 py-3 flex items-center justify-between gap-3 ${matchedFamilyIds.has(member.id) ? 'bg-primary/5' : ''}`}>
-              <Link to={`/kunden/${member.id}`} className="flex-1 min-w-0 group/m">
+              <Link to={`/kunden/${member.id}/360`} className="flex-1 min-w-0 group/m">
                 <p className={`text-[13px] font-medium group-hover/m:text-primary ${matchedFamilyIds.has(member.id) ? 'text-primary' : 'text-slate-700'}`}>
                   {member.last_name} {member.first_name}
                   {matchedFamilyIds.has(member.id) && (
