@@ -457,7 +457,7 @@ export default function CustomerIntelligenceWorkspace() {
                   </div>
                   <div className="bg-white/80 rounded-lg border border-[hsl(var(--border-subtle))] p-2.5 space-y-1">
                     {(showAllMandate ? mandateIssues : mandateIssues.slice(0, DISPLAY_LIMIT)).map(c => (
-                      <button key={c.id} onClick={() => navigate(`/kunden/${c.id}`)}
+                      <button key={c.id} onClick={() => navigate(`/kunden/${c.id}/360`)}
                         className="w-full flex items-center justify-between p-1.5 rounded hover:bg-[hsl(var(--surface-2))] transition-colors text-left">
                         <div className="min-w-0">
                           <p className="text-[11px] font-medium truncate">{c.first_name} {c.last_name}</p>
@@ -625,7 +625,7 @@ export default function CustomerIntelligenceWorkspace() {
                   return (
                     <button
                       key={c.id}
-                      onMouseDown={() => { navigate(`/kunden/${c.id}`); setSearch(''); }}
+                      onMouseDown={() => { navigate(`/kunden/${c.id}/360`); setSearch(''); }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-blue-50/60 transition-colors"
                     >
                       <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-[10px] font-bold', isCompany ? 'bg-violet-50 text-violet-600' : 'bg-blue-50 text-blue-600')}>

@@ -94,9 +94,9 @@ export default function CustomerCard({
           <div className="flex-1 min-w-0 pt-0.5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <Link to={`/kunden/${customer.id}${fromParam}`} className="text-[15px] font-semibold text-slate-900 hover:text-primary leading-tight block truncate">
+                <button onClick={() => navigate(`/kunden/${customer.id}/360`)} className="text-[15px] font-semibold text-slate-900 hover:text-primary leading-tight block truncate text-left">
                   {displayName}
-                </Link>
+                </button>
                 <p className="text-[12px] text-slate-400 mt-0.5 truncate">
                   {customer.customer_number && <span className="font-mono mr-2">{customer.customer_number}</span>}
                   {customer.email}
@@ -229,25 +229,18 @@ export default function CustomerCard({
               </div>
               
               <div className="flex items-center gap-2">
-                <Link to={`/kunden/${customer.id}${fromParam}`} className="text-[12px] font-medium text-primary hover:underline">
-                  Profil öffnen →
-                </Link>
                 <button onClick={() => navigate(`/kunden/${customer.id}/360`)}
-                  className="text-[12px] font-medium text-slate-400 hover:text-slate-700 transition-colors">
-                  360°
+                  className="text-[12px] font-medium text-primary hover:underline">
+                  Alle Daten öffnen →
                 </button>
               </div>
             </div>
           </div>
         ) : (
           <div className="mt-3 flex items-center gap-3">
-            <Link to={`/kunden/${customer.id}${fromParam}`} className="text-[12px] font-medium text-primary hover:underline">
-              Profil öffnen →
-            </Link>
-            <span className="text-slate-200">|</span>
             <button onClick={() => navigate(`/kunden/${customer.id}/360`)}
-              className="text-[12px] font-medium text-slate-400 hover:text-slate-700 transition-colors">
-              360°
+              className="text-[12px] font-medium text-primary hover:underline">
+              Alle Daten öffnen →
             </button>
           </div>
         )}
