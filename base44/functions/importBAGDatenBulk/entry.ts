@@ -24,21 +24,50 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'No records provided' }, { status: 400 });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { headers: { Authorization: `Bearer ${supabaseKey}` } }
+    });
 
-    // Bulk upsert direkt in Supabase — sehr schnell, kein Rate-Limit
-    const { data, error } = await supabase
+    // Feldnamen anpassen: frontend sendet "jahr", DB hat "geschaeftsjahr"
+    const mappedRecords = records.map(r => ({
+      geschaeftsjahr:    r.jahr ?? r.geschaeftsjahr,
+      krankenkasse:      r.krankenkasse,
+      kanton:            r.kanton,
+      region:            r.region ?? '',
+      modell:            r.modell,
+      franchise:         r.franchise,
+      unfall:            r.unfall ?? false,
+      altersklasse:      r.altersklasse,
+      praemie_erwachsene: r.praemie_erwachsene ?? 0,
+      praemie_kinder:    r.praemie_kinder ?? 0,
+      geschlecht:        r.geschlecht ?? null,
+      alter_von:         r.alter_von ?? null,
+      alter_bis:         r.alter_bis ?? null,
+      tarif_original:    r.tarif_original ?? null,
+      tariftyp_original: r.tariftyp_original ?? null,
+      tarifbezeichnung:  r.tarifbezeichnung ?? null,
+      datenquelle:       r.datenquelle ?? 'BAG',
+      importiert_am:     r.importiert_am ?? new Date().toISOString(),
+      importiert_von:    r.importiert_von ?? null,
+      gueltig_ab:        r.gueltig_ab ?? null,
+      gueltig_bis:       r.gueltig_bis ?? null,
+      aktiv:             r.aktiv ?? true,
+    }));
+
+    // Upsert mit korrektem unique constraint: geschaeftsjahr,krankenkasse,kanton,region,modell,franchise,unfall,altersklasse
+    const { error } = await supabase
       .from('bag_praemien')
-      .upsert(records, {
-        onConflict: 'geschaeftsjahr,krankenkasse,kanton,region,modell,franchise,unfalleinschluss,altersklasse',
+      .upsert(mappedRecords, {
+        onConflict: 'geschaeftsjahr,krankenkasse,kanton,region,modell,franchise,unfall,altersklasse',
         ignoreDuplicates: false
       });
 
     if (error) {
-      // Fallback: einfaches insert ohne upsert (falls unique constraint nicht existiert)
+      // Fallback: insert ohne conflict-handling
       const { error: insertError } = await supabase
         .from('bag_praemien')
-        .insert(records);
+        .insert(mappedRecords);
 
       if (insertError) {
         return Response.json({ error: insertError.message, batch_index }, { status: 500 });
@@ -47,7 +76,7 @@ Deno.serve(async (req) => {
 
     return Response.json({
       success: true,
-      inserted: records.length,
+      inserted: mappedRecords.length,
       batch_index,
       total_batches
     });
