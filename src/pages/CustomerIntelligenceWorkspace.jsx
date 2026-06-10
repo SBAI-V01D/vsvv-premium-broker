@@ -457,7 +457,7 @@ export default function CustomerIntelligenceWorkspace() {
                   </div>
                   <div className="bg-white/80 rounded-lg border border-[hsl(var(--border-subtle))] p-2.5 space-y-1">
                     {(showAllMandate ? mandateIssues : mandateIssues.slice(0, DISPLAY_LIMIT)).map(c => (
-                      <button key={c.id} onClick={() => navigate(`/kunden/${c.id}`)}
+                      <button key={c.id} onClick={() => navigate(`/kunden/${c.id}/360`)}
                         className="w-full flex items-center justify-between p-1.5 rounded hover:bg-[hsl(var(--surface-2))] transition-colors text-left">
                         <div className="min-w-0">
                           <p className="text-[11px] font-medium truncate">{c.first_name} {c.last_name}</p>
