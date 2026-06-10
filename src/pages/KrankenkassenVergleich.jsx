@@ -56,9 +56,13 @@ const getPraemienregion = (plz) => {
   return PRAEMIENREGIONEN[plzStr] || PRAEMIENREGIONEN[plzStr.substring(0, 2) + '00'] || '3';
 };
 
+// Alle 34 offiziellen BAG-Krankenkassen 2026
 const KRANKENKASSEN = [
-  'CSS', 'Helsana', 'Sanitas', 'Swica', 'ÖKK', 'Visana', 'KPT', 'Groupe Mutuel', 'Concordia', 'Atupri',
-  'Assura', 'Sympany', 'Agrisano', 'bkk mobilise', 'Galenus', 'EGK', 'Sana24', 'Vivao Sympany'
+  'Assura', 'KPT', 'Atupri', 'Sympany', 'Aquilana', 'Sanitas', 'ÖKK', 'CSS', 'EGK',
+  'Concordia', 'Visana', 'Sana24', 'SLKK', 'Agrisano', 'Swica', 'Avenir', 'AMB',
+  'Sodalis', 'Sumiswalder', 'Groupe Mutuel', 'Philos', 'Mutuel', 'Helsana', 'Galenos',
+  'Glarner', 'Rhenusana', 'Steffisburg', 'Birchmeier', 'Einsiedeln',
+  'Luzerner Hinterland', 'Visperterminen', 'Vita Surselva', "d'Entremont", 'Wädenswil'
 ];
 
 // Groupe Mutuel Marken-Aliases (Sanatel, Mutuel Assurance, Philos etc. → alle Groupe Mutuel in BAG)
