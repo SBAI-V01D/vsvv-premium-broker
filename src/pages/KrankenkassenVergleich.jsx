@@ -222,10 +222,12 @@ export default function KrankenkassenVergleich() {
   const MODEL_MAP_FROM_API = (modelLabel) => {
     if (!modelLabel) return 'standard';
     const l = modelLabel.toLowerCase();
+    // Explizite Checks für alle bekannten Telmed-Markennamen
+    const telmedKeywords = ['telmed', 'telemedizin', 'callmed', 'sanatel', 'primaflex', 'flexhelp', 'benefit', 'agris mart', 'agrismart', 'kptwin', 'select', 'combi'];
     if (l === 'standard' || l === 'freie arztwahl') return 'standard';
     if (l.includes('hmo')) return 'hmo';
-    if (l === 'hausarzt' || l.includes('hausarzt') || l.includes('medbase')) return 'hausarzt';
-    // Alles andere (Telemedizin, Telmed, CallMed, SanaTel, PrimaFlex, FlexHelp, BeneFit PLUS Telmed, etc.)
+    if (l === 'hausarzt' || l.includes('hausarzt') || l.includes('medbase') || l.includes('contact')) return 'hausarzt';
+    // Alles andere ist Telmed (inkl. SanaTel, Agrismart, KPTwin.smart, ÖKK Select, Visana Combi Care, etc.)
     return 'telmed';
   };
 
@@ -290,6 +292,10 @@ export default function KrankenkassenVergleich() {
         if (formData.nur_gleiche_franchise && o.deductible !== formData.aktuelle_franchise) return false;
         // Modell-Filter
         const modellNorm = MODEL_MAP_FROM_API(o.model);
+        // Wenn aktuelle Kasse gewählt: immer zeigen (auch andere Modelle)
+        const istAktuelleKasse = normalizeKasse(o.insurer) === aktuellKasseNorm;
+        if (istAktuelleKasse) return true;
+        // Sonst Filter anwenden
         if (modellNorm === 'standard' && !formData.zeige_standard) return false;
         if (modellNorm === 'telmed' && !formData.zeige_telmed) return false;
         if (modellNorm === 'hausarzt' && !formData.zeige_hausarzt) return false;
@@ -301,8 +307,10 @@ export default function KrankenkassenVergleich() {
         const netto = Math.round((brutto - SUBVENTION) * 100) / 100;
         const modellNorm = MODEL_MAP_FROM_API(o.model);
         const ersparnisMonat = aktuellePraemie ? aktuellePraemie - brutto : 0;
+        // Aktuelle Kasse: Match auf Kasse + Modell ODER nur Kasse (wenn Modell nicht exakt matcht)
         const istAktuell = normalizeKasse(o.insurer) === aktuellKasseNorm &&
-                           modellNorm === formData.aktuelles_modell;
+                           (modellNorm === formData.aktuelles_modell || 
+                            (formData.aktuelles_modell === 'telmed' && modellNorm === 'telmed'));
         return {
           krankenkasse: o.insurer,
           modell_label: o.model,
@@ -441,10 +449,10 @@ export default function KrankenkassenVergleich() {
               plz: '4304',
               kanton: 'BL',
               geschlecht: 'm',
-              aktuelle_krankenkasse: '',
-              aktuelles_modell: 'standard',
+              aktuelle_krankenkasse: 'Mutuel',
+              aktuelles_modell: 'telmed',
               aktuelle_franchise: 300,
-              aktuelle_unfall: true,
+              aktuelle_unfall: false,
               altersklasse_override: '',
               nur_guenstigste: false,
               nur_bestehende_kasse: false,
