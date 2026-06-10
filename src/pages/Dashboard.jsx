@@ -18,7 +18,7 @@ import {
   ChevronDown, ChevronUp, ChevronRight,
   TrendingUp, Target, RefreshCw,
   AlertTriangle, Zap, BarChart2, Building2, User, Plus, Loader2,
-  Users, FolderOpen, Wallet, Shield, Icon
+  Users, FolderOpen, Wallet, Shield
 } from 'lucide-react'
 
 import TodayDashboard from '@/components/dashboard/TodayDashboard'
@@ -401,13 +401,13 @@ export default function Dashboard() {
           {/* KPI Row */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <KpiTile label="Abgelaufen" value={expiredContracts.length} sub={expiredContracts.length > 0 ? 'sofort handeln' : 'keine'} icon={AlertTriangle}
-              colorClass={expiredContracts.length > 0 ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--text-muted))}'}
-              bgClass={expiredContracts.length > 0 ? 'bg-rose-50' : 'bg-[hsl(var(--surface-0)))'}
+              colorClass={expiredContracts.length > 0 ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--text-muted))]'}
+              bgClass={expiredContracts.length > 0 ? 'bg-rose-50' : 'bg-[hsl(var(--surface-0))]'}
               borderClass={expiredContracts.length > 0 ? 'border-rose-200' : 'border-[hsl(var(--border-subtle))]'}
               urgent={expiredContracts.length > 0} onClick={() => navigate('/vertragsablaeufe')} />
             <KpiTile label="30d Renewal" value={renewalIn30.length} sub={urgentRenewal > 0 ? `${urgentRenewal} krit.` : 'demnächst'} icon={RefreshCw}
-              colorClass={urgentRenewal > 0 ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--text-heading)))'}
-              bgClass={urgentRenewal > 0 ? 'bg-rose-50' : 'bg-[hsl(var(--surface-0)))'}
+              colorClass={urgentRenewal > 0 ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--text-heading))]'}
+              bgClass={urgentRenewal > 0 ? 'bg-rose-50' : 'bg-[hsl(var(--surface-0))]'}
               borderClass="border-[hsl(var(--border-subtle))]" urgent={urgentRenewal > 0} onClick={() => navigate('/vertragsablaeufe')} />
             <KpiTile label="Hot Leads" value={hotLeads.length} sub={`${activeLeads.length} aktiv`} icon={Zap}
               colorClass="text-[hsl(var(--primary))]" bgClass="bg-[hsl(var(--surface-0))]" borderClass="border-[hsl(var(--border-subtle))]" onClick={() => navigate('/leads')} />
@@ -459,7 +459,7 @@ export default function Dashboard() {
               </div>
               <div className="grid gap-3">
                 {newCustomers.map(customer => (
-                  <button key={customer.id} onClick={() => navigate(`/kunden/${customer.id}`)}
+                  <button key={customer.id} onClick={() => navigate(`/kunden/${customer.id}/360`)}
                     className="flex items-center gap-3 p-3 rounded-lg border border-[hsl(var(--border-subtle))]/30 bg-[hsl(var(--surface-1))] hover:bg-[hsl(var(--surface-2))] transition-all text-left group">
                     <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
                       customer.customer_type === 'business' ? 'bg-blue-50 border border-blue-200' : 'bg-blue-50 border border-blue-200')}>

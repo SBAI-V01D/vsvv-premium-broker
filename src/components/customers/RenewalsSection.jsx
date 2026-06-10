@@ -92,7 +92,7 @@ export default function RenewalsSection({ contracts, customers, verkaufschancen 
     return (
       <Link
         key={item.contract.id}
-        to={`/kunden/${item.customer?.id}`}
+        to={`/kunden/${item.customer?.id}/360`}
         className="block bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-[hsl(var(--border-subtle))]/40 hover:border-[hsl(var(--border-default))]/60 hover:shadow-md transition-all"
       >
         <div className="flex items-start gap-2 mb-2">
