@@ -106,27 +106,55 @@ export default function KrankenkassenVergleich() {
   const [vergleichId, setVergleichId] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   
-  const [formData, setFormData] = useState({
-    vorname: '',
-    nachname: '',
-    geburtsdatum: '',
-    wohnort: '',
-    plz: '',
-    kanton: '',
-    geschlecht: 'm',
-    aktuelle_krankenkasse: '',
-    aktuelles_modell: 'standard',
-    aktuelle_franchise: 300,
-    aktuelle_unfall: true,
-    altersklasse_override: '', // leer = auto aus Geburtsdatum
-    nur_guenstigste: false,
-    nur_bestehende_kasse: false,
-    alle_modelle: false,
-    nur_gleiche_franchise: false,
-    zeige_telmed: true,
-    zeige_hausarzt: true,
-    zeige_hmo: true,
-    zeige_standard: true,
+  const [formData, setFormData] = useState(() => {
+    // Testdaten via URL-Parameter ?test=1 laden
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('test') === '1') {
+      return {
+        vorname: 'Peter',
+        nachname: 'Adam',
+        geburtsdatum: '1968-10-07',
+        wohnort: 'Giebenach',
+        plz: '4304',
+        kanton: 'BL',
+        geschlecht: 'm',
+        aktuelle_krankenkasse: 'CSS',
+        aktuelles_modell: 'telmed',
+        aktuelle_franchise: 2500,
+        aktuelle_unfall: false,
+        altersklasse_override: '',
+        nur_guenstigste: false,
+        nur_bestehende_kasse: false,
+        alle_modelle: false,
+        nur_gleiche_franchise: false,
+        zeige_telmed: true,
+        zeige_hausarzt: true,
+        zeige_hmo: true,
+        zeige_standard: true,
+      };
+    }
+    return {
+      vorname: '',
+      nachname: '',
+      geburtsdatum: '',
+      wohnort: '',
+      plz: '',
+      kanton: '',
+      geschlecht: 'm',
+      aktuelle_krankenkasse: '',
+      aktuelles_modell: 'standard',
+      aktuelle_franchise: 300,
+      aktuelle_unfall: true,
+      altersklasse_override: '',
+      nur_guenstigste: false,
+      nur_bestehende_kasse: false,
+      alle_modelle: false,
+      nur_gleiche_franchise: false,
+      zeige_telmed: true,
+      zeige_hausarzt: true,
+      zeige_hmo: true,
+      zeige_standard: true,
+    };
   });
 
   const [ergebnisse, setErgebnisse] = useState([]);
