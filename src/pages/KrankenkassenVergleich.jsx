@@ -243,13 +243,15 @@ export default function KrankenkassenVergleich() {
     // Geburtsjahr aus Geburtsdatum
     const yob = new Date(formData.geburtsdatum).getFullYear();
 
-    // Live-Daten von PrimAI/BAG holen (alle Angebote für diese PLZ, Alter, Franchise)
+    // Live-Daten von PrimAI/BAG holen
+    // Wenn "nur_gleiche_franchise" NICHT gewählt: ALLE Franchisen holen für vollständigen Vergleich
     const res = await base44.functions.invoke('queryBAGLive', {
       plz: formData.plz,
       yob,
       deductible: formData.aktuelle_franchise,
       accident: formData.aktuelle_unfall,
-      limit: 500
+      limit: 500,
+      all_deductibles: !formData.nur_gleiche_franchise
     });
 
     const offers = res.data?.data || [];

@@ -14,41 +14,47 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { plz, yob, deductible, accident, limit = 200 } = await req.json();
+    const { plz, yob, deductible, accident, limit = 200, all_deductibles = false } = await req.json();
 
     if (!plz || !yob || deductible === undefined) {
       return Response.json({ error: 'plz, yob und deductible sind Pflichtfelder' }, { status: 400 });
     }
 
-    const params = new URLSearchParams({
-      plz: String(plz),
-      yob: String(yob),
-      deductible: String(deductible),
-      accident: String(accident ?? false),
-      limit: String(limit),
-    });
+    // Wenn all_deductibles=true: hole Daten für ALLE Franchisen (für Vergleichsansicht)
+    const FRANCHISEN = [0, 100, 200, 300, 400, 500, 600, 1000, 1500, 2000, 2500];
+    const targetDeductibles = all_deductibles ? FRANCHISEN : [deductible];
 
-    const url = `https://api.primai.ch/v1/compare?${params.toString()}`;
-    console.log('Calling PrimAI API:', url);
+    const allOffers = [];
+    for (const ded of targetDeductibles) {
+      const params = new URLSearchParams({
+        plz: String(plz),
+        yob: String(yob),
+        deductible: String(ded),
+        accident: String(accident ?? false),
+        limit: String(limit),
+      });
 
-    const res = await fetch(url, {
-      headers: { 'Accept': 'application/json', 'User-Agent': 'VSVV-CRM/1.0' }
-    });
+      const url = `https://api.primai.ch/v1/compare?${params.toString()}`;
+      console.log('Calling PrimAI API:', url);
 
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error('PrimAI API error:', res.status, errText);
-      return Response.json({ error: `PrimAI API Fehler: ${res.status}`, data: [] }, { status: 502 });
+      const res = await fetch(url, {
+        headers: { 'Accept': 'application/json', 'User-Agent': 'VSVV-CRM/1.0' }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.offers) {
+          allOffers.push(...data.offers);
+        }
+      } else {
+        const errText = await res.text();
+        console.error('PrimAI API error for deductible', ded, res.status, errText);
+      }
     }
 
-    const data = await res.json();
-
     return Response.json({
-      data: data.offers || [],
-      count: (data.offers || []).length,
-      region: data.region,
-      age_band: data.age_band,
-      currency: data.currency,
+      data: allOffers,
+      count: allOffers.length,
       source: 'primai.ch (BAG/FOPH offizielle Daten 2026)'
     });
 
