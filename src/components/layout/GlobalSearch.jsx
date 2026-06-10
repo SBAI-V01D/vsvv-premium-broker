@@ -115,7 +115,7 @@ export default function GlobalSearch({ collapsed, light = false }) {
   const goTo = (item, type = 'customer') => {
     if (type === 'contract') navigate(`/kunden/${item.customer_id}`);
     else if (type === 'application') navigate(`/antraege`);
-    else navigate(`/kunden/${item.id}/360`);
+    else navigate(`/kunden/${item.id}`);
     setQuery('');
     setOpen(false);
     inputRef.current?.blur();
