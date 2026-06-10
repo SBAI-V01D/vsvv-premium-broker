@@ -71,7 +71,7 @@ export default function Customer360() {
   const { data: customer, isLoading, error } = useQuery({
     queryKey: ['customer', customerId],
     queryFn: async () => {
-      const results = await base44.entities.Customer.filter({ archived: false }, '-created_date', 500);
+      const results = await base44.entities.Customer.list('-created_date', 500);
       return results.find(c => c.id === customerId) || null;
     },
     enabled: !!customerId,
