@@ -98,33 +98,63 @@ export default function CustomerDetail() {
 
   const customer = customerDirect || allCustomers.find(x => x.id === id)
 
-  // primaryCustomerId FRÜH definieren (wird von householdContracts Query benötigt)
   const primaryCustomerId = customer?.is_family_member ? customer?.primary_customer_id : customer?.id
 
-  // Haushaltsverträge ZENTRAL laden: Alle Verträge des Haushalts in einer Query
-  const { data: householdContracts = [] } = useQuery({
-    queryKey: ['household-contracts-all', primaryCustomerId],
-    queryFn: async () => {
-      if (!primaryCustomerId) return []
-      // Alle Familienmitglieder laden
-      const members = await base44.entities.Customer.filter({ primary_customer_id: primaryCustomerId })
-      const memberIds = members.map(m => m.id)
-      const allIds = [primaryCustomerId, ...memberIds]
-      // Alle Verträge für alle Haushaltsmitglieder laden
-      const results = await Promise.all(
-        allIds.map(cid => base44.entities.Contract.filter({ customer_id: cid, archived: false }))
-      )
-      return results.flat()
-    },
-    enabled: !!primaryCustomerId,
+  // Kritische Daten sofort laden
+  const { data: relatedContracts = [] } = useQuery({
+    queryKey: ['contracts', id],
+    queryFn: () => base44.entities.Contract.filter({ customer_id: id, archived: false }),
+    enabled: !!id,
+    staleTime: 3 * 60 * 1000,
+  })
+
+  const { data: custTasks = [] } = useQuery({
+    queryKey: ['tasks', id],
+    queryFn: () => base44.entities.Task.filter({ customer_id: id }),
+    enabled: !!id,
+    staleTime: 3 * 60 * 1000,
+  })
+
+  // Lazy: nur bei Bedarf laden
+  const { data: relatedApplications = [] } = useQuery({
+    queryKey: ['applications', id],
+    queryFn: () => base44.entities.Application.filter({ customer_id: id }),
+    enabled: !!id && activeSection === 'antraege',
     staleTime: 5 * 60 * 1000,
   })
 
-  // Familienmitglieder immer laden (unabhängig von needAllCustomers)
+  const { data: relatedDocuments = [] } = useQuery({
+    queryKey: ['documents', id],
+    queryFn: () => base44.entities.Document.filter({ customer_id: id }),
+    enabled: !!id && activeSection === 'dokumente',
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const { data: statusDefs = [] } = useQuery({
+    queryKey: ['statusDefinitions'],
+    queryFn: () => base44.entities.StatusDefinition.filter({ type: 'contract' }),
+    enabled: activeSection === 'vertraege' || activeSection === 'antraege',
+    staleTime: 10 * 60 * 1000,
+  })
+
+  const { data: organizations = [] } = useQuery({
+    queryKey: ['organizations'],
+    queryFn: () => base44.entities.Organization.list(),
+    enabled: activeSection === 'betreuung',
+    staleTime: 10 * 60 * 1000,
+  })
+
+  const { data: verkaufschancen = [] } = useQuery({
+    queryKey: ['verkaufschancen', id],
+    queryFn: () => base44.entities.Verkaufschance.filter({ customer_id: id }),
+    enabled: !!id && activeSection === 'beratungspotential',
+    staleTime: 5 * 60 * 1000,
+  })
+
+  // Haushalt + Familie: nur bei Familie-Tab laden
   const { data: householdFamilyMembers = [] } = useQuery({
     queryKey: ['family-members', id],
     queryFn: async () => {
-      // Zuerst den Kunden holen um primary_customer_id zu kennen
       const cust = customerDirect
       if (!cust) return []
       const primaryId = cust.is_family_member ? cust.primary_customer_id : cust.id
@@ -134,55 +164,27 @@ export default function CustomerDetail() {
       const all = primary ? [primary, ...members.filter(m => m.id !== primaryId)] : members
       return all
     },
-    enabled: !!customerDirect,
+    enabled: !!customerDirect && activeSection === 'familie',
     staleTime: 5 * 60 * 1000,
   })
 
-  const { data: relatedContracts = [] } = useQuery({
-    queryKey: ['contracts', id],
-    queryFn: () => base44.entities.Contract.filter({ customer_id: id, archived: false }),
-    enabled: !!id,
+  const { data: householdContracts = [] } = useQuery({
+    queryKey: ['household-contracts-all', primaryCustomerId],
+    queryFn: async () => {
+      if (!primaryCustomerId) return []
+      const members = await base44.entities.Customer.filter({ primary_customer_id: primaryCustomerId })
+      const allIds = [primaryCustomerId, ...members.map(m => m.id)]
+      const results = await Promise.all(
+        allIds.map(cid => base44.entities.Contract.filter({ customer_id: cid, archived: false }))
+      )
+      return results.flat()
+    },
+    enabled: !!primaryCustomerId && activeSection === 'familie',
+    staleTime: 5 * 60 * 1000,
   })
 
-  const { data: relatedApplications = [] } = useQuery({
-    queryKey: ['applications', id],
-    queryFn: () => base44.entities.Application.filter({ customer_id: id }),
-    enabled: !!id,
-  })
-
-  const { data: messages = [] } = useQuery({
-    queryKey: ['messages', id],
-    queryFn: () => base44.entities.Message.filter({ customer_id: id }),
-    enabled: !!id,
-  })
-
-  const { data: relatedDocuments = [] } = useQuery({
-    queryKey: ['documents', id],
-    queryFn: () => base44.entities.Document.filter({ customer_id: id }),
-    enabled: !!id,
-  })
-
-  const { data: statusDefs = [] } = useQuery({
-    queryKey: ['statusDefinitions'],
-    queryFn: () => base44.entities.StatusDefinition.filter({ type: 'contract' }),
-  })
-
-  const { data: organizations = [] } = useQuery({
-    queryKey: ['organizations'],
-    queryFn: () => base44.entities.Organization.list(),
-  })
-
-  const { data: custTasks = [] } = useQuery({
-    queryKey: ['tasks', id],
-    queryFn: () => base44.entities.Task.filter({ customer_id: id }),
-    enabled: !!id,
-  })
-
-  const { data: verkaufschancen = [] } = useQuery({
-    queryKey: ['verkaufschancen', id],
-    queryFn: () => base44.entities.Verkaufschance.filter({ customer_id: id }),
-    enabled: !!id,
-  })
+  // Messages nicht mehr laden (unused)
+  const messages = []
 
   const [aiAnalysis, setAiAnalysis] = useState(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
