@@ -7,13 +7,10 @@ import { Button } from '@/components/ui/button';
 import { 
   TrendingDown, 
   Shield, 
-  Users, 
   ArrowUpRight,
   Calculator,
-  Sparkles,
-  Upload
+  Sparkles
 } from 'lucide-react';
-import BAGDatenImport from './BAGDatenImport';
 
 export default function KrankenkassenCockpit() {
   const { data: stats, isLoading } = useQuery({
@@ -139,7 +136,6 @@ export default function KrankenkassenCockpit() {
               Neuer Vergleich
             </a>
           </Button>
-          <BAGDatenImport />
         </div>
       </CardContent>
     </Card>
