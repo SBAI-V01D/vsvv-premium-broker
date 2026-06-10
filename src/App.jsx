@@ -168,6 +168,11 @@ function App() {
     // Clear localStorage recovery flags only
     localStorage.removeItem('recovery_mode_enabled')
     localStorage.removeItem('bypass_visibility')
+    
+    // Force reload Krankenkassenvergleich page cache
+    if (window.location.pathname === '/krankenkassen-vergleich') {
+      sessionStorage.setItem('kkv_cache_buster', Date.now().toString())
+    }
   }, [])
 
   return (
