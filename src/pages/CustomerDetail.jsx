@@ -7,14 +7,9 @@ import { useAccessControl } from '@/hooks/useAccessControl'
 import { Edit, Users, FileText, Clock, Shield, Bot, Tag, Building2, Calendar, Trash2, Plus, XCircle, Phone, Mail, MapPin, Smartphone, CreditCard, CheckCircle2 } from 'lucide-react'
 import AiInsightsPanel from '../components/customers/AiInsightsPanel'
 import ActivityTimeline from '../components/customers/ActivityTimeline'
-import HouseholdContractsCockpit from '../components/customers/HouseholdContractsCockpit'
 import FamilyMemberCard from '../components/customers/FamilyMemberCard'
-import ContractsBySparteGroup from '../components/contracts/ContractsBySparteGroup'
-import CoverageGapsPanel from '../components/contracts/CoverageGapsPanel'
-import CustomerDashboardCompact from '../components/customers/CustomerDashboardCompact'
+import HouseholdContractsCockpit from '../components/customers/HouseholdContractsCockpit'
 import CustomerExecutiveHeader from '../components/customers/CustomerExecutiveHeader'
-import HealthScoreDetail from '../components/customers/HealthScoreDetail'
-import HouseholdIntelligencePanel from '../components/customers/HouseholdIntelligencePanel'
 import { StandardModal, ActionMenu } from '@/components/shared'
 import CustomerForm from '../components/customers/CustomerForm'
 import DocumentsTab from '../components/documents/DocumentsTab'
@@ -98,90 +93,62 @@ export default function CustomerDetail() {
 
   const customer = customerDirect || allCustomers.find(x => x.id === id)
 
-  // primaryCustomerId FRÜH definieren (wird von householdContracts Query benötigt)
+  // primaryCustomerId FRÜH definieren
   const primaryCustomerId = customer?.is_family_member ? customer?.primary_customer_id : customer?.id
 
-  // Haushaltsverträge ZENTRAL laden: Alle Verträge des Haushalts in einer Query
-  const { data: householdContracts = [] } = useQuery({
-    queryKey: ['household-contracts-all', primaryCustomerId],
-    queryFn: async () => {
-      if (!primaryCustomerId) return []
-      // Alle Familienmitglieder laden
-      const members = await base44.entities.Customer.filter({ primary_customer_id: primaryCustomerId })
-      const memberIds = members.map(m => m.id)
-      const allIds = [primaryCustomerId, ...memberIds]
-      // Alle Verträge für alle Haushaltsmitglieder laden
-      const results = await Promise.all(
-        allIds.map(cid => base44.entities.Contract.filter({ customer_id: cid, archived: false }))
-      )
-      return results.flat()
-    },
-    enabled: !!primaryCustomerId,
-    staleTime: 5 * 60 * 1000,
-  })
-
-  // Familienmitglieder immer laden (unabhängig von needAllCustomers)
-  const { data: householdFamilyMembers = [] } = useQuery({
-    queryKey: ['family-members', id],
-    queryFn: async () => {
-      // Zuerst den Kunden holen um primary_customer_id zu kennen
-      const cust = customerDirect
-      if (!cust) return []
-      const primaryId = cust.is_family_member ? cust.primary_customer_id : cust.id
-      if (!primaryId) return []
-      const members = await base44.entities.Customer.filter({ primary_customer_id: primaryId })
-      const primary = await base44.entities.Customer.filter({ id: primaryId }, null, 1).then(r => r?.[0])
-      const all = primary ? [primary, ...members.filter(m => m.id !== primaryId)] : members
-      return all
-    },
-    enabled: !!customerDirect,
-    staleTime: 5 * 60 * 1000,
-  })
-
+  // NUR den aktuellen Kunden laden (schnell)
   const { data: relatedContracts = [] } = useQuery({
     queryKey: ['contracts', id],
     queryFn: () => base44.entities.Contract.filter({ customer_id: id, archived: false }),
     enabled: !!id,
+    staleTime: 3 * 60 * 1000,
   })
 
   const { data: relatedApplications = [] } = useQuery({
     queryKey: ['applications', id],
     queryFn: () => base44.entities.Application.filter({ customer_id: id }),
     enabled: !!id,
+    staleTime: 3 * 60 * 1000,
   })
 
   const { data: messages = [] } = useQuery({
     queryKey: ['messages', id],
     queryFn: () => base44.entities.Message.filter({ customer_id: id }),
     enabled: !!id,
+    staleTime: 5 * 60 * 1000,
   })
 
   const { data: relatedDocuments = [] } = useQuery({
     queryKey: ['documents', id],
     queryFn: () => base44.entities.Document.filter({ customer_id: id }),
     enabled: !!id,
+    staleTime: 5 * 60 * 1000,
   })
 
   const { data: statusDefs = [] } = useQuery({
     queryKey: ['statusDefinitions'],
     queryFn: () => base44.entities.StatusDefinition.filter({ type: 'contract' }),
+    staleTime: 10 * 60 * 1000,
   })
 
   const { data: organizations = [] } = useQuery({
     queryKey: ['organizations'],
     queryFn: () => base44.entities.Organization.list(),
+    staleTime: 10 * 60 * 1000,
   })
 
   const { data: custTasks = [] } = useQuery({
     queryKey: ['tasks', id],
     queryFn: () => base44.entities.Task.filter({ customer_id: id }),
     enabled: !!id,
+    staleTime: 3 * 60 * 1000,
   })
 
   const { data: verkaufschancen = [] } = useQuery({
     queryKey: ['verkaufschancen', id],
     queryFn: () => base44.entities.Verkaufschance.filter({ customer_id: id }),
     enabled: !!id,
+    staleTime: 5 * 60 * 1000,
   })
 
   const [aiAnalysis, setAiAnalysis] = useState(null)
@@ -201,15 +168,13 @@ export default function CustomerDetail() {
     }
   }
 
-  // Familienmitglieder: dedupliziert aus householdFamilyMembers (immer geladen) + allCustomers (lazy)
-  const mergedHouseholdMembers = householdFamilyMembers.length > 0
-    ? householdFamilyMembers
-    : allCustomers.filter(c => c.id === primaryCustomerId || c.primary_customer_id === primaryCustomerId)
-  const primaryCustomer = mergedHouseholdMembers.find(c => c.id === primaryCustomerId) || allCustomers.find(c => c.id === primaryCustomerId) || customer
-  const householdMembers = mergedHouseholdMembers
-  const familyMembers = householdMembers
-  // Verträge direkt aus zentraler Query verwenden
-  const allHouseholdContracts = householdContracts
+  // Familienmitglieder: nur aus allCustomers (lazy geladen wenn Formular geöffnet)
+  // Bei Bedarf: separate Query für Familie-Tab
+  const familyMembers = allCustomers.filter(c => c.id === primaryCustomerId || c.primary_customer_id === primaryCustomerId)
+  const householdMembers = familyMembers
+  const primaryCustomer = familyMembers.find(c => c.id === primaryCustomerId) || customer
+  // Verträge: nur direkte Kundenverträge (householdContracts entfernt für Performance)
+  const allHouseholdContracts = relatedContracts
 
   const downloadPDFMutation = useMutation({
     mutationFn: async () => {
