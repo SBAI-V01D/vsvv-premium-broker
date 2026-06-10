@@ -16,44 +16,44 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Supabase secrets not configured' }, { status: 500 });
     }
 
-    const { createClient } = await import('npm:@supabase/supabase-js@2');
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const headers = {
+      'apikey': supabaseKey,
+      'Authorization': `Bearer ${supabaseKey}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'count=exact'
+    };
 
-    // Prüfe ob Tabelle existiert
-    const { data: tables } = await supabase
-      .from('information_schema.tables')
-      .select('table_name')
-      .eq('table_schema', 'public')
-      .eq('table_name', 'bag_praemien');
+    // Count records in bag_praemien
+    const countRes = await fetch(`${supabaseUrl}/rest/v1/bag_praemien?select=id&limit=1`, {
+      headers: { ...headers, 'Prefer': 'count=exact' }
+    });
 
-    const tableExists = tables && tables.length > 0;
+    let record_count = 0;
+    let table_exists = false;
 
-    // Wenn Tabelle existiert, zähle Datensätze
-    let count = 0;
-    let error = null;
-    if (tableExists) {
-      try {
-        const { count: c } = await supabase
-          .from('bag_praemien')
-          .select('*', { count: 'exact', head: true });
-        count = c || 0;
-      } catch (e) {
-        error = e.message;
+    if (countRes.ok) {
+      table_exists = true;
+      const contentRange = countRes.headers.get('content-range');
+      if (contentRange) {
+        const match = contentRange.match(/\/(\d+)$/);
+        if (match) record_count = parseInt(match[1]);
       }
+    } else if (countRes.status === 404 || countRes.status === 400) {
+      table_exists = false;
     }
 
-    // Prüfe bag_import_versions
-    const { data: imports } = await supabase
-      .from('bag_import_versions')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(5);
+    // Recent imports
+    const importsRes = await fetch(
+      `${supabaseUrl}/rest/v1/bag_import_versions?select=*&order=created_at.desc&limit=5`,
+      { headers }
+    );
+    const recent_imports = importsRes.ok ? await importsRes.json() : [];
 
     return Response.json({
-      table_exists: tableExists,
-      record_count: count,
-      import_error: error,
-      recent_imports: imports || [],
+      table_exists,
+      record_count,
+      import_error: null,
+      recent_imports: Array.isArray(recent_imports) ? recent_imports : [],
     });
 
   } catch (err) {
