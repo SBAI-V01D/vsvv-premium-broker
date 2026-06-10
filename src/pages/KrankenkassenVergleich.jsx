@@ -241,7 +241,10 @@ export default function KrankenkassenVergleich() {
       all_deductibles: !formData.nur_gleiche_franchise
     });
 
+    console.log('queryBAGLive Response:', res.data);
     const offers = res.data?.data || [];
+    console.log('Offers count:', offers.length);
+    
     if (offers.length === 0) {
       setVergleichFehler('Keine BAG-Daten für diese PLZ gefunden.');
       setLoading(false);
