@@ -434,6 +434,35 @@ export default function KrankenkassenVergleich() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setFormData({
+              vorname: 'Peter',
+              nachname: 'Adam',
+              geburtsdatum: '1968-10-07',
+              wohnort: 'Giebenach',
+              plz: '4304',
+              kanton: 'BL',
+              geschlecht: 'm',
+              aktuelle_krankenkasse: 'CSS',
+              aktuelles_modell: 'telmed',
+              aktuelle_franchise: 2500,
+              aktuelle_unfall: false,
+              altersklasse_override: '',
+              nur_guenstigste: false,
+              nur_bestehende_kasse: false,
+              alle_modelle: false,
+              nur_gleiche_franchise: false,
+              zeige_telmed: true,
+              zeige_hausarzt: true,
+              zeige_hmo: true,
+              zeige_standard: true,
+            })}
+            className="text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
+          >
+            🧪 Testdaten: Peter Adam
+          </Button>
           {loadingDaten ? (
             <Badge variant="outline" className="badge-info">
               Lade BAG-Daten...
