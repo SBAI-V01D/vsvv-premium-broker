@@ -68,9 +68,18 @@ export default function Customer360() {
   const [showDocUpload, setShowDocUpload] = useState(false)
 
   // ── Data ─────────────────────────────────────────────────────────────────
-  const { data: customer, isLoading } = useQuery({
+  const { data: customer, isLoading, error } = useQuery({
     queryKey: ['customer', customerId],
-    queryFn: () => base44.entities.Customer.get(customerId),
+    queryFn: async () => {
+      try {
+        const c = await base44.entities.Customer.get(customerId);
+        return c;
+      } catch (err) {
+        console.error('Customer360: Kunde nicht gefunden', customerId, err);
+        return null;
+      }
+    },
+    enabled: !!customerId,
   })
 
   const { data: contracts = [] } = useQuery({
@@ -223,7 +232,20 @@ export default function Customer360() {
   const selectedVs = selectedVsId ? verkaufschancen.find(v => v.id === selectedVsId) : null
 
   if (isLoading) return <div className="flex items-center justify-center h-64 text-muted-foreground">Lädt...</div>
-  if (!customer) return <div className="p-6 text-muted-foreground">Kunde nicht gefunden</div>
+  if (error || !customer) {
+    console.error('Customer360 error:', error);
+    return (
+      <div className="p-6 text-center space-y-4">
+        <div className="text-lg font-semibold text-red-600">Kunde nicht gefunden</div>
+        <p className="text-sm text-muted-foreground">
+          {error?.message || 'Der Kunde existiert nicht oder Sie haben keine Berechtigung.'}
+        </p>
+        <Button onClick={() => navigate('/kunden')} variant="outline">
+          ← Zurück zur Kundenübersicht
+        </Button>
+      </div>
+    );
+  }
 
   const SECTIONS = [
     { id: 'overview',        label: 'Übersicht',     badge: null },

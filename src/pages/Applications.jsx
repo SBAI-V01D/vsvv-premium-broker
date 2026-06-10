@@ -527,7 +527,7 @@ export default function Applications() {
                         <FileText className="w-4 h-4" />
                       </Button>
                       <ActionMenu items={[
-                        ...(app.customer_id ? [{ label: 'Kunde öffnen', onClick: () => navigate(`/kunden/${app.customer_id}`) }] : []),
+                        ...(app.customer_id ? [{ label: 'Kunde öffnen', onClick: () => navigate(`/kunden/${app.customer_id}/360`) }] : []),
                         ...(getCustomer(app.customer_id)?.email ? [{ label: 'E-Mail senden', onClick: () => window.location.href = `mailto:${getCustomer(app.customer_id).email}` }] : []),
                         ...(getCustomer(app.customer_id)?.phone ? [{ label: 'Anrufen', onClick: () => window.location.href = `tel:${getCustomer(app.customer_id).phone}` }] : []),
                         { label: 'Status ändern', onClick: () => setStatusChanging(app), separator: true },
