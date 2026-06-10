@@ -55,8 +55,23 @@ Deno.serve(async (req) => {
       aktiv:              r.aktiv ?? true,
     }));
 
+    // Beim ersten Batch (batch_index === 0): alle bestehenden Records für dieses Jahr löschen
+    if (batch_index === 0) {
+      const jahr = mappedRecords[0]?.geschaeftsjahr;
+      if (jahr) {
+        const { error: delError } = await supabase
+          .from('bag_praemien')
+          .delete()
+          .eq('geschaeftsjahr', jahr);
+        if (delError) {
+          console.error('Delete error:', delError.message);
+        } else {
+          console.log(`Deleted existing records for year ${jahr}`);
+        }
+      }
+    }
+
     // Backend verarbeitet alle Records intern in 500er-Batches
-    // So ist der Browser-Seitenlaod irrelevant — der Import läuft server-seitig durch
     const INTERNAL_BATCH = 500;
     let totalInserted = 0;
     let lastError = null;
@@ -64,25 +79,14 @@ Deno.serve(async (req) => {
     for (let i = 0; i < mappedRecords.length; i += INTERNAL_BATCH) {
       const chunk = mappedRecords.slice(i, i + INTERNAL_BATCH);
 
-      const { error } = await supabase
+      const { error: insertError } = await supabase
         .from('bag_praemien')
-        .upsert(chunk, {
-          onConflict: 'geschaeftsjahr,krankenkasse,kanton,region,modell,franchise,unfall,altersklasse',
-          ignoreDuplicates: false
-        });
+        .insert(chunk);
 
-      if (error) {
-        // Fallback: insert
-        const { error: insertError } = await supabase
-          .from('bag_praemien')
-          .insert(chunk);
-
-        if (insertError) {
-          lastError = insertError.message;
-          console.error('Chunk insert error:', insertError.message);
-          // Weiter mit nächstem Chunk — nicht abbrechen
-          continue;
-        }
+      if (insertError) {
+        lastError = insertError.message;
+        console.error('Chunk insert error:', insertError.message);
+        continue;
       }
 
       totalInserted += chunk.length;
