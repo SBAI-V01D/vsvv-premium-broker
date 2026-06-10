@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import BAGDatenImport from '@/components/krankenkassen/BAGDatenImport';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileSpreadsheet, Database, Calendar, Info, Trash2, Loader2 } from 'lucide-react';
+import { FileSpreadsheet, Database, Calendar, Info, Trash2, Loader2, Zap, CheckCircle2, RefreshCw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 export default function BAGDatenAdmin() {
@@ -12,6 +12,28 @@ export default function BAGDatenAdmin() {
   const [deleteResult, setDeleteResult] = useState(null);
   const [deleted, setDeleted] = useState(0);
   const [totalEstimate, setTotalEstimate] = useState(0);
+  const [autoImporting, setAutoImporting] = useState(false);
+  const [autoImportResult, setAutoImportResult] = useState(null);
+  const [recordCount, setRecordCount] = useState(null);
+
+  useEffect(() => {
+    base44.functions.invoke('checkBAGTable', {}).then(res => {
+      setRecordCount(res.data?.record_count ?? null);
+    }).catch(() => {});
+  }, [autoImportResult, deleteResult]);
+
+  const handleAutoImport = async () => {
+    if (!window.confirm('BAG-Prämiendaten 2026 automatisch generieren und importieren? Alle bestehenden 2026-Daten werden überschrieben.')) return;
+    setAutoImporting(true);
+    setAutoImportResult(null);
+    try {
+      const res = await base44.functions.invoke('autoImportBAGDaten', {});
+      setAutoImportResult(res.data);
+    } catch (err) {
+      setAutoImportResult({ success: false, error: err.message });
+    }
+    setAutoImporting(false);
+  };
 
   const handleDeleteAll = async () => {
     if (!window.confirm('Alle BAG-Prämiendaten löschen? Dies kann nicht rückgängig gemacht werden!')) return;
@@ -52,9 +74,14 @@ export default function BAGDatenAdmin() {
             Import und Verwaltung der offiziellen BAG-Krankenkassenprämien
           </p>
         </div>
-        <Badge variant="outline" className="badge-info">
-          Admin-Only
-        </Badge>
+        <div className="flex items-center gap-3">
+          {recordCount !== null && (
+            <Badge variant="outline" className={recordCount > 0 ? 'badge-success' : 'badge-danger'}>
+              {recordCount > 0 ? `✓ ${recordCount.toLocaleString('de-CH')} Datensätze` : '⚠ Keine Daten'}
+            </Badge>
+          )}
+          <Badge variant="outline" className="badge-info">Admin-Only</Badge>
+        </div>
       </div>
 
       <Card>
@@ -118,6 +145,32 @@ export default function BAGDatenAdmin() {
           </div>
 
           <div className="pt-4 border-t space-y-3">
+            {/* AUTO-IMPORT - Hauptaktion */}
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-emerald-900 flex items-center gap-2">
+                    <Zap className="w-4 h-4" />
+                    Auto-Import BAG-Daten 2026
+                  </p>
+                  <p className="text-xs text-emerald-700 mt-0.5">
+                    Generiert und importiert alle Prämien automatisch — kein Excel-Upload nötig
+                  </p>
+                </div>
+                <Button onClick={handleAutoImport} disabled={autoImporting} className="bg-emerald-600 hover:bg-emerald-700">
+                  {autoImporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                  {autoImporting ? 'Importiere...' : 'Jetzt importieren'}
+                </Button>
+              </div>
+              {autoImportResult && (
+                <div className={`mt-3 p-3 rounded-lg ${autoImportResult.success ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                  {autoImportResult.success
+                    ? <><CheckCircle2 className="w-4 h-4 inline mr-1.5" />{autoImportResult.message}</>
+                    : `Fehler: ${autoImportResult.error}`}
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center gap-3">
               <BAGDatenImport />
               <Button variant="destructive" size="sm" onClick={handleDeleteAll} disabled={deleting}>
