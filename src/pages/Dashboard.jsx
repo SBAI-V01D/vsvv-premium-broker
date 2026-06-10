@@ -459,7 +459,7 @@ export default function Dashboard() {
               </div>
               <div className="grid gap-3">
                 {newCustomers.map(customer => (
-                  <button key={customer.id} onClick={() => navigate(`/kunden/${customer.id}/360`)}
+                  <button key={customer.id} onClick={() => navigate(`/kunden/${customer.id}`)}
                     className="flex items-center gap-3 p-3 rounded-lg border border-[hsl(var(--border-subtle))]/30 bg-[hsl(var(--surface-1))] hover:bg-[hsl(var(--surface-2))] transition-all text-left group">
                     <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
                       customer.customer_type === 'business' ? 'bg-blue-50 border border-blue-200' : 'bg-blue-50 border border-blue-200')}>
