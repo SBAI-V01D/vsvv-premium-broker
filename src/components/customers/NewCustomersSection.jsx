@@ -129,7 +129,7 @@ export default function NewCustomersSection({ searchQuery = '' }) {
             <NewCustomerCard
               key={customer.id}
               customer={customer}
-              onClick={() => navigate(`/kunden/${customer.id}?from=/kunden?view=private`)}
+              onClick={() => navigate(`/kunden/${customer.id}/360`)}
             />
           ))}
         </div>
@@ -145,7 +145,7 @@ export default function NewCustomersSection({ searchQuery = '' }) {
                   <NewCustomerCard
                     key={customer.id}
                     customer={customer}
-                    onClick={() => { setShowAll(false); navigate(`/kunden/${customer.id}?from=/kunden?view=private`); }}
+                    onClick={() => { setShowAll(false); navigate(`/kunden/${customer.id}/360`); }}
                   />
                 ))}
               </div>
