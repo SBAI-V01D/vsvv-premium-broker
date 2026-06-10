@@ -73,19 +73,7 @@ export default function BAGImportResult({ uploadResult }) {
         </div>
       </div>
 
-      {/* ERKLÄRUNG VOLLSTÄNDIGER IMPORT */}
-      <div className="p-3 bg-emerald-50 border border-emerald-200 rounded text-xs text-emerald-800 space-y-1">
-        <p className="font-semibold">✅ Vollständiger Import (BEIDE Unfall-Varianten)</p>
-        <p className="text-emerald-700">
-          Die BAG-Rohdaten enthalten jede Prämie <strong>zweimal</strong>: einmal MIT Unfalldeckung und einmal OHNE Unfalldeckung.
-        </p>
-        <p className="text-emerald-700">
-          Wir importieren <strong>BEIDE Varianten</strong> für vollständige Vergleichsdaten.
-        </p>
-        <p className="font-mono text-center bg-emerald-100 p-1 rounded">
-          {stats.quelle_gesamtzeilen?.toLocaleString()} Rohzeilen → {uploadResult.results?.erfolgreich?.toLocaleString()} importiert (100%)
-        </p>
-      </div>
+
     </div>
   );
 }
