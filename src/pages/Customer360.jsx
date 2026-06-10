@@ -54,7 +54,7 @@ const CATEGORY_LABEL = {
 }
 
 export default function Customer360() {
-  const { id: customerId } = useParams()
+  const { customerId } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showVsForm, setShowVsForm] = useState(false)
