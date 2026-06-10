@@ -1,376 +1,145 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ArrowRight, 
-  Calculator, 
+  ExternalLink, 
   CheckCircle2, 
-  TrendingDown, 
-  User, 
-  Building2,
-  Shield,
-  Sparkles,
-  Download,
   Save,
-  Info
+  Info,
+  Building2,
+  User,
+  Calendar,
+  MapPin
 } from 'lucide-react';
-import { generateKrankenkassenVergleichPDF } from '@/components/krankenkassen/generateKrankenkassenPDF';
 import CustomerSelector from '@/components/krankenkassen/CustomerSelector';
-import AnalyseErfassung from '@/components/krankenkassen/AnalyseErfassung';
-
-const KRANKENKASSEN = [
-  'Assura', 'KPT', 'Atupri', 'Sympany', 'Aquilana', 'Sanitas', 'ÖKK', 'CSS', 'EGK',
-  'Concordia', 'Visana', 'Sana24', 'SLKK', 'Agrisano', 'Swica', 'Avenir', 'AMB',
-  'Sodalis', 'Sumiswalder', 'Groupe Mutuel', 'Philos', 'Mutuel', 'Helsana', 'Galenos',
-  'Glarner', 'Rhenusana', 'Steffisburg', 'Birchmeier', 'Einsiedeln',
-  'Luzerner Hinterland', 'Visperterminen', 'Vita Surselva', "d'Entremont", 'Wädenswil'
-];
-
-const MODELLE = {
-  standard: 'Standardmodell (Freie Arztwahl)',
-  telmed: 'Telmed (Telefonische Erstberatung)',
-  hausarzt: 'Hausarztmodell',
-  hmo: 'HMO-Modell (Health Maintenance Organization)'
-};
-
-const FRANCHISEN_ERWACHSEN = [300, 500, 1000, 1500, 2000, 2500];
-const FRANCHISEN_KIND = [0, 100, 200, 300, 400, 500, 600];
-
-const getAltersklasse = (alter) => {
-  if (alter === null || alter === undefined) return 'erwachsen';
-  if (alter <= 18) return 'kind';
-  if (alter <= 25) return 'jugend';
-  return 'erwachsen';
-};
-
-const getFranchisen = (altersklasse) => {
-  return altersklasse === 'kind' ? FRANCHISEN_KIND : FRANCHISEN_ERWACHSEN;
-};
-
-const MODEL_MAP_FROM_API = (modelLabel) => {
-  if (!modelLabel) return 'standard';
-  const l = modelLabel.toLowerCase();
-  if (l === 'standard' || l === 'freie arztwahl') return 'standard';
-  if (l.includes('hmo')) return 'hmo';
-  if (l === 'hausarzt' || l.includes('hausarzt') || l.includes('medbase') || l.includes('contact')) return 'hausarzt';
-  return 'telmed';
-};
 
 export default function KrankenkassenVergleich() {
   const queryClient = useQueryClient();
-  const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [showAnalyseErfassung, setShowAnalyseErfassung] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [vergleichId, setVergleichId] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  
-  const [formData, setFormData] = useState(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('test') === '1') {
-      return {
-        vorname: 'Peter',
-        nachname: 'Adam',
-        geburtsdatum: '1968-10-07',
-        wohnort: 'Giebenach',
-        plz: '4304',
-        kanton: 'BL',
-        geschlecht: 'm',
-        aktuelle_krankenkasse: 'Mutuel',
-        aktuelles_modell: 'telmed',
-        aktuelle_franchise: 300,
-        aktuelle_unfall: false,
-        altersklasse_override: '',
-        nur_guenstigste: false,
-        nur_bestehende_kasse: false,
-        alle_modelle: false,
-        nur_gleiche_franchise: false,
-        zeige_telmed: true,
-        zeige_hausarzt: true,
-        zeige_hmo: true,
-        zeige_standard: true,
-      };
-    }
-    return {
-      vorname: '',
-      nachname: '',
-      geburtsdatum: '',
-      wohnort: '',
-      plz: '',
-      kanton: '',
-      geschlecht: 'm',
-      aktuelle_krankenkasse: '',
-      aktuelles_modell: 'standard',
-      aktuelle_franchise: 300,
-      aktuelle_unfall: true,
-      altersklasse_override: '',
-      nur_guenstigste: false,
-      nur_bestehende_kasse: false,
-      alle_modelle: false,
-      nur_gleiche_franchise: false,
-      zeige_telmed: true,
-      zeige_hausarzt: true,
-      zeige_hmo: true,
-      zeige_standard: true,
-    };
+  const [showResultDialog, setShowResultDialog] = useState(false);
+  const [formData, setFormData] = useState({
+    vorname: '',
+    nachname: '',
+    geburtsdatum: '',
+    plz: '',
+    kanton: '',
+    aktuelle_krankenkasse: '',
+    aktuelles_modell: '',
+    aktuelle_franchise: '',
+    aktuelle_praemie: '',
+  });
+  const [resultData, setResultData] = useState({
+    neue_krankenkasse: '',
+    neues_modell: '',
+    neue_franchise: '',
+    neue_praemie: '',
+    ersparnis: '',
+    notizen: ''
   });
 
-  const [ergebnisse, setErgebnisse] = useState([]);
-  const [kiAnalyse, setKiAnalyse] = useState(null);
-  const [bagDaten, setBagDaten] = useState(null);
-  const [vergleichFehler, setVergleichFehler] = useState(null);
-
-  const saveVergleich = async () => {
-    const user = await base44.auth.me();
-    const customerId = selectedCustomer?.id;
-    const organizationId = selectedCustomer?.organization_id || user.data?.organization_id;
-    
-    await base44.entities.KrankenkassenVergleich.create({
-      customer_id: customerId,
-      customer_name: `${formData.vorname} ${formData.nachname}`,
-      advisor_id: user.id,
-      advisor_name: user.full_name || user.email,
-      organization_id: organizationId,
-      vergleichsdatum: new Date().toISOString(),
-      persoenliche_daten: {
-        vorname: formData.vorname,
-        nachname: formData.nachname,
-        geburtsdatum: formData.geburtsdatum,
-        wohnort: formData.wohnort,
-        plz: formData.plz,
-        kanton: formData.kanton,
-        geschlecht: formData.geschlecht
-      },
-      aktuelle_versicherung: {
-        krankenkasse: formData.aktuelle_krankenkasse,
-        modell: formData.aktuelles_modell,
-        franchise: formData.aktuelle_franchise,
-        unfall: formData.aktuelle_unfall
-      },
-      vergleichsoptionen: {
-        nur_guenstigste: formData.nur_guenstigste,
-        nur_bestehende_kasse: formData.nur_bestehende_kasse,
-        alle_modelle: formData.alle_modelle,
-        nur_gleiche_franchise: formData.nur_gleiche_franchise,
-        zeige_telmed: formData.zeige_telmed,
-        zeige_hausarzt: formData.zeige_hausarzt,
-        zeige_hmo: formData.zeige_hmo,
-        zeige_standard: formData.zeige_standard
-      },
-      vergleichsergebnisse: ergebnisse,
-      ki_analyse: kiAnalyse,
-      status: 'durchgefuehrt'
+  const handleLoadCustomer = (customer) => {
+    setSelectedCustomer(customer);
+    setFormData({
+      vorname: customer.first_name || '',
+      nachname: customer.last_name || '',
+      geburtsdatum: customer.birthdate || '',
+      plz: customer.zip_code || '',
+      kanton: customer.canton || '',
+      aktuelle_krankenkasse: '',
+      aktuelles_modell: '',
+      aktuelle_franchise: '',
+      aktuelle_praemie: '',
     });
-
-    setVergleichId(null);
-    setShowSaveDialog(false);
-    queryClient.invalidateQueries({ queryKey: ['krankenkassen-vergleiche'] });
   };
 
-  const saveAnalyse = async (analyseData) => {
+  const openPrimInfo = () => {
+    const url = `https://www.priminfo.admin.ch/de/praemien`;
+    window.open(url, '_blank');
+    setShowResultDialog(true);
+  };
+
+  const handleSaveVergleich = async () => {
     try {
-      const response = await base44.functions.invoke('erfasseVergleichsAnalyse', analyseData);
-      if (response.data?.success) {
-        alert('Analyse erfolgreich gespeichert!');
-        setShowAnalyseErfassung(false);
-        queryClient.invalidateQueries({ queryKey: ['vergleichs-analysen'] });
-      } else {
-        alert('Fehler beim Speichern: ' + (response.data?.error || 'Unbekannter Fehler'));
-      }
+      const user = await base44.auth.me();
+      const organizationId = selectedCustomer?.organization_id || user.data?.organization_id;
+      
+      await base44.entities.VergleichsAnalyse.create({
+        customer_id: selectedCustomer?.id,
+        customer_name: `${formData.vorname} ${formData.nachname}`,
+        advisor_id: user.id,
+        advisor_name: user.full_name || user.email,
+        organization_id: organizationId,
+        analyse_datum: new Date().toISOString(),
+        persoenliche_daten: {
+          vorname: formData.vorname,
+          nachname: formData.nachname,
+          geburtsdatum: formData.geburtsdatum,
+          plz: formData.plz,
+          kanton: formData.kanton
+        },
+        ausgangslage: {
+          krankenkasse: formData.aktuelle_krankenkasse,
+          modell: formData.aktuelles_modell,
+          franchise: parseFloat(formData.aktuelle_franchise) || 0,
+          praemie_aktuell: parseFloat(formData.aktuelle_praemie) || 0
+        },
+        empfehlung: {
+          empfohlene_krankenkasse: resultData.neue_krankenkasse,
+          empfohlenes_modell: resultData.neues_modell,
+          empfohlene_franchise: parseFloat(resultData.neue_franchise) || 0,
+          praemie_empfohlen: parseFloat(resultData.neue_praemie) || 0,
+          ersparnis_jaehrlich: parseFloat(resultData.ersparnis) || 0,
+          ersparnis_prozent: formData.aktuelle_praemie ? 
+            ((parseFloat(resultData.ersparnis) || 0) * 12 / (parseFloat(formData.aktuelle_praemie) * 12)) * 100 : 0
+        },
+        status: 'beratung_erfolgt',
+        notizen: resultData.notizen
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['vergleichs-analysen'] });
+      setShowResultDialog(false);
+      alert('✅ Vergleich erfolgreich gespeichert!');
     } catch (error) {
-      alert('Fehler beim Speichern: ' + error.message);
+      alert('❌ Fehler beim Speichern: ' + error.message);
     }
   };
 
-  const exportPDF = () => {
-    generateKrankenkassenVergleichPDF({
-      vergleichsdatum: new Date().toISOString(),
-      advisor_name: 'Aktueller Berater',
-      persoenliche_daten: formData,
-      aktuelle_versicherung: {
-        krankenkasse: formData.aktuelle_krankenkasse,
-        modell: formData.aktuelles_modell,
-        franchise: formData.aktuelle_franchise,
-        unfall: formData.aktuelle_unfall
-      },
-      vergleichsoptionen: formData,
-      vergleichsergebnisse: ergebnisse,
-      ki_analyse: kiAnalyse,
-      customer_name: `${formData.vorname} ${formData.nachname}`
+  const handleTestDaten = () => {
+    setFormData({
+      vorname: 'Peter',
+      nachname: 'Adam',
+      geburtsdatum: '1968-10-07',
+      plz: '4304',
+      kanton: 'BL',
+      aktuelle_krankenkasse: 'Mutuel',
+      aktuelles_modell: 'Telmed',
+      aktuelle_franchise: '300',
+      aktuelle_praemie: '381.25'
     });
-  };
-
-  const alter = formData.geburtsdatum ? 
-    Math.floor((new Date() - new Date(formData.geburtsdatum)) / (365.25 * 24 * 60 * 60 * 1000)) : null;
-
-  const altersklasse = formData.altersklasse_override || getAltersklasse(alter);
-  const franchisen = getFranchisen(altersklasse);
-
-  React.useEffect(() => {
-    if (!franchisen.includes(formData.aktuelle_franchise)) {
-      setFormData(f => ({ ...f, aktuelle_franchise: franchisen[0] }));
-    }
-  }, [altersklasse]);
-
-  const handleVergleich = async () => {
-    if (!formData.plz || !formData.geburtsdatum) {
-      alert('Bitte PLZ und Geburtsdatum eingeben.');
-      return;
-    }
-
-    setLoading(true);
-    setVergleichFehler(null);
-    setErgebnisse([]);
-    setKiAnalyse(null);
-
-    const yob = new Date(formData.geburtsdatum).getFullYear();
-
-    const res = await base44.functions.invoke('queryBAGLive', {
-      plz: formData.plz,
-      yob,
-      deductible: formData.aktuelle_franchise,
-      accident: formData.aktuelle_unfall,
-      limit: 500,
-      all_deductibles: !formData.nur_gleiche_franchise
-    });
-
-    console.log('queryBAGLive Response:', res.data);
-    const offers = res.data?.data || [];
-    console.log('Offers count:', offers.length);
-    
-    if (offers.length === 0) {
-      setVergleichFehler('Keine BAG-Daten für diese PLZ gefunden.');
-      setLoading(false);
-      return;
-    }
-
-    setBagDaten(offers);
-    const SUBVENTION = 5.15;
-
-    const normalizeKasse = (name) => (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const aktuellKasseNorm = normalizeKasse(formData.aktuelle_krankenkasse);
-
-    const aktuellAngebot = offers.find(o => {
-      const modellNorm = MODEL_MAP_FROM_API(o.model);
-      return normalizeKasse(o.insurer) === aktuellKasseNorm && modellNorm === formData.aktuelles_modell;
-    }) || offers.find(o => normalizeKasse(o.insurer) === aktuellKasseNorm);
-
-    const aktuellePraemie = aktuellAngebot?.price?.total || null;
-
-    const vergleiche = offers
-      .filter(o => {
-        if (formData.nur_bestehende_kasse && normalizeKasse(o.insurer) !== aktuellKasseNorm) return false;
-        if (formData.nur_gleiche_franchise && o.deductible !== formData.aktuelle_franchise) return false;
-        const modellNorm = MODEL_MAP_FROM_API(o.model);
-        const istAktuelleKasse = normalizeKasse(o.insurer) === aktuellKasseNorm;
-        if (istAktuelleKasse) return true;
-        if (modellNorm === 'standard' && !formData.zeige_standard) return false;
-        if (modellNorm === 'telmed' && !formData.zeige_telmed) return false;
-        if (modellNorm === 'hausarzt' && !formData.zeige_hausarzt) return false;
-        if (modellNorm === 'hmo' && !formData.zeige_hmo) return false;
-        return true;
-      })
-      .map(o => {
-        const brutto = o.price?.total || 0;
-        const netto = Math.round((brutto - SUBVENTION) * 100) / 100;
-        const modellNorm = MODEL_MAP_FROM_API(o.model);
-        const istAktuell = normalizeKasse(o.insurer) === aktuellKasseNorm && modellNorm === formData.aktuelles_modell;
-        const ersparnisMonat = aktuellePraemie ? aktuellePraemie - brutto : 0;
-        
-        return {
-          krankenkasse: o.insurer,
-          modell_label: o.model,
-          modell: modellNorm,
-          franchise: o.deductible,
-          praemie_brutto: brutto,
-          praemie_netto: netto,
-          praemie_monatlich: netto,
-          praemie_jaehrlich: netto * 12,
-          ersparnis_monatlich: ersparnisMonat,
-          ersparnis_jaehrlich: ersparnisMonat * 12,
-          ersparnis_prozent: aktuellePraemie > 0 ? (ersparnisMonat / aktuellePraemie) * 100 : 0,
-          ist_aktuell: istAktuell,
-        };
-      });
-
-    const sortiert = vergleiche
-      .sort((a, b) => a.praemie_netto - b.praemie_netto)
-      .map((e, idx) => ({
-        ...e,
-        rang: idx + 1,
-        ist_guenstigste: idx === 0 && !e.ist_aktuell,
-        ist_empfohlen: idx === 0 && e.ersparnis_jaehrlich > 100 && !e.ist_aktuell
-      }));
-
-    setErgebnisse(sortiert);
-
-    const besteOption = sortiert.find(e => !e.ist_aktuell);
-    if (besteOption && besteOption.ersparnis_jaehrlich > 0) {
-      setKiAnalyse({
-        sparpotenzial: Math.round(besteOption.ersparnis_jaehrlich),
-        wechsel_empfohlen: besteOption.ersparnis_jaehrlich > 500,
-        franschise_optimierung: formData.aktuelle_franchise > 1000
-          ? 'Eine tiefere Franchise könnte sinnvoll sein'
-          : 'Franchise ist optimal gewählt',
-        modell_optimierung: formData.aktuelles_modell === 'standard'
-          ? 'Ein Telmed- oder Hausarztmodell könnte Prämien sparen'
-          : 'Modell ist gut gewählt',
-        empfehlung_text: `Durch einen Wechsel zu ${besteOption.krankenkasse} (${besteOption.modell_label || besteOption.modell}) können Sie CHF ${Math.round(besteOption.ersparnis_jaehrlich).toLocaleString('de-CH')} pro Jahr sparen.`,
-        empfohlene_krankenkasse: besteOption.krankenkasse,
-        empfohlenes_modell: besteOption.modell
-      });
-    }
-
-    setLoading(false);
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div className="max-w-5xl mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Shield className="w-6 h-6 text-primary" />
-            Krankenkassenvergleich Schweiz
+            <ExternalLink className="w-6 h-6 text-primary" />
+            Krankenkassenvergleich
           </h1>
           <p className="text-muted-foreground mt-1">
-            Professioneller Vergleich der Grundversicherungs-Prämien (KVG)
+            Gateway zum offiziellen BAG-Rechner (priminfo.admin.ch)
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setFormData({
-            vorname: 'Peter',
-            nachname: 'Adam',
-            geburtsdatum: '1968-10-07',
-            wohnort: 'Giebenach',
-            plz: '4304',
-            kanton: 'BL',
-            geschlecht: 'm',
-            aktuelle_krankenkasse: 'Mutuel',
-            aktuelles_modell: 'telmed',
-            aktuelle_franchise: 300,
-            aktuelle_unfall: false,
-            altersklasse_override: '',
-            nur_guenstigste: false,
-            nur_bestehende_kasse: false,
-            alle_modelle: false,
-            nur_gleiche_franchise: false,
-            zeige_telmed: true,
-            zeige_hausarzt: true,
-            zeige_hmo: true,
-            zeige_standard: true,
-          })}
-          className="text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
-        >
-          🧪 Testdaten: Peter Adam
+        <Button variant="outline" size="sm" onClick={handleTestDaten} className="text-xs">
+          🧪 Testdaten laden
         </Button>
       </div>
 
@@ -380,44 +149,15 @@ export default function KrankenkassenVergleich() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="w-5 h-5 text-primary" />
-                Persönliche Daten
+                Kunde auswählen
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <CustomerSelector formData={formData} setFormData={setFormData} />
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Geburtsdatum</Label>
-                  <Input type="date" value={formData.geburtsdatum} onChange={e => setFormData({...formData, geburtsdatum: e.target.value})} />
-                  {alter !== null && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Alter: {alter} Jahre · {altersklasse === 'kind' ? '👶 Kind' : altersklasse === 'jugend' ? '🧑 Jugend' : '🧑‍💼 Erwachsen'}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <Label>Altersklasse</Label>
-                  <Select value={formData.altersklasse_override || (alter !== null ? altersklasse : '')} onValueChange={v => setFormData({...formData, altersklasse_override: v})}>
-                    <SelectTrigger><SelectValue placeholder={alter !== null ? `Auto: ${altersklasse}` : 'Auto'} /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={null}>Auto</SelectItem>
-                      <SelectItem value="kind">Kind (0–18)</SelectItem>
-                      <SelectItem value="jugend">Jugend (19–25)</SelectItem>
-                      <SelectItem value="erwachsen">Erwachsen (26+)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div>
-                <Label>Geschlecht</Label>
-                <Select value={formData.geschlecht} onValueChange={v => setFormData({...formData, geschlecht: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="m">Männlich</SelectItem>
-                    <SelectItem value="w">Weiblich</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <CardContent>
+              <CustomerSelector 
+                formData={formData} 
+                setFormData={setFormData}
+                onSelect={handleLoadCustomer}
+              />
             </CardContent>
           </Card>
 
@@ -425,75 +165,46 @@ export default function KrankenkassenVergleich() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-primary" />
-                Aktuelle Krankenversicherung
+                Aktuelle Versicherung
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <Label>Aktuelle Krankenkasse</Label>
-                <Select value={formData.aktuelle_krankenkasse} onValueChange={v => setFormData({...formData, aktuelle_krankenkasse: v})}>
-                  <SelectTrigger><SelectValue placeholder="Krankenkasse wählen" /></SelectTrigger>
-                  <SelectContent>
-                    {KRANKENKASSEN.map(kk => <SelectItem key={kk} value={kk}>{kk}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <Label>Krankenkasse</Label>
+                <Input 
+                  value={formData.aktuelle_krankenkasse} 
+                  onChange={e => setFormData({...formData, aktuelle_krankenkasse: e.target.value})}
+                  placeholder="z.B. Mutuel, CSS, Helsana"
+                />
+              </div>
+              <div>
+                <Label>Modell</Label>
+                <Input 
+                  value={formData.aktuelles_modell} 
+                  onChange={e => setFormData({...formData, aktuelles_modell: e.target.value})}
+                  placeholder="z.B. Telmed, Hausarzt, Standard"
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Aktuelles Modell</Label>
-                  <Select value={formData.aktuelles_modell} onValueChange={v => setFormData({...formData, aktuelles_modell: v})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(MODELLE).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Label>Franchise</Label>
+                  <Input 
+                    type="number"
+                    value={formData.aktuelle_franchise} 
+                    onChange={e => setFormData({...formData, aktuelle_franchise: e.target.value})}
+                    placeholder="300"
+                  />
                 </div>
                 <div>
-                  <Label>Aktuelle Franchise</Label>
-                  <Select value={formData.aktuelle_franchise.toString()} onValueChange={v => setFormData({...formData, aktuelle_franchise: parseInt(v, 10)})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {franchisen.map(f => <SelectItem key={f} value={f.toString()}>CHF {f}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Label>Prämie (mtl.)</Label>
+                  <Input 
+                    type="number"
+                    step="0.01"
+                    value={formData.aktuelle_praemie} 
+                    onChange={e => setFormData({...formData, aktuelle_praemie: e.target.value})}
+                    placeholder="381.25"
+                  />
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox checked={formData.aktuelle_unfall} onCheckedChange={v => setFormData({...formData, aktuelle_unfall: !!v})} />
-                <Label>Unfallversicherung (NBU)</Label>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calculator className="w-5 h-5 text-primary" />
-                Vergleichsoptionen
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <label className="flex items-center gap-2">
-                  <Checkbox checked={formData.zeige_telmed} onCheckedChange={v => setFormData({...formData, zeige_telmed: !!v})} />
-                  <span className="text-sm">Telmed</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <Checkbox checked={formData.zeige_hausarzt} onCheckedChange={v => setFormData({...formData, zeige_hausarzt: !!v})} />
-                  <span className="text-sm">Hausarzt</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <Checkbox checked={formData.zeige_hmo} onCheckedChange={v => setFormData({...formData, zeige_hmo: !!v})} />
-                  <span className="text-sm">HMO</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <Checkbox checked={formData.zeige_standard} onCheckedChange={v => setFormData({...formData, zeige_standard: !!v})} />
-                  <span className="text-sm">Standard</span>
-                </label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox checked={formData.nur_gleiche_franchise} onCheckedChange={v => setFormData({...formData, nur_gleiche_franchise: !!v})} />
-                <Label className="text-sm">Nur gleiche Franchise</Label>
               </div>
             </CardContent>
           </Card>
@@ -501,147 +212,162 @@ export default function KrankenkassenVergleich() {
           <Button 
             className="w-full" 
             size="lg"
-            onClick={handleVergleich}
-            disabled={loading || !formData.plz || !formData.geburtsdatum || !formData.aktuelle_krankenkasse}
+            onClick={openPrimInfo}
+            disabled={!formData.plz || !formData.geburtsdatum || !formData.aktuelle_krankenkasse}
           >
-            {loading ? 'Berechne...' : 'Vergleich durchführen'}
-            {!loading && <ArrowRight className="w-4 h-4 ml-2" />}
+            Zum BAG-Rechner
+            <ExternalLink className="w-4 h-4 ml-2" />
           </Button>
+
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+            <Info className="w-4 h-4 inline mr-1.5" />
+            Der offizielle BAG-Rechner öffnet sich in einem neuen Tab. Nach dem Vergleich kannst du die Ergebnisse hier speichern.
+          </div>
         </div>
 
         <div className="space-y-4">
-          {vergleichFehler && (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-              <Info className="w-4 h-4 inline mr-1.5" />
-              {vergleichFehler}
-            </div>
-          )}
-          {ergebnisse.length > 0 ? (
-            <>
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingDown className="w-5 h-5 text-emerald-600" />
-                    Vergleichsergebnisse
-                  </CardTitle>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={exportPDF}>
-                      <Download className="w-3.5 h-3.5" /> Vergleich-PDF
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setShowAnalyseErfassung(true)}>
-                      <Save className="w-3.5 h-3.5" /> Analyse erfassen
-                    </Button>
-                  </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-1.5 max-h-[600px] overflow-y-auto">
-                    {ergebnisse.map((e, idx) => (
-                      <div 
-                        key={idx}
-                        className={`flex items-center justify-between p-3 rounded-lg border ${
-                          e.ist_aktuell ? 'bg-blue-50 border-blue-300' :
-                          e.ist_empfohlen ? 'bg-emerald-50 border-emerald-200' :
-                          'bg-white border-slate-100'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="text-center w-10 shrink-0">
-                            {e.ist_aktuell ? (
-                              <Badge className="text-[10px] bg-blue-100 text-blue-700 border-blue-200 px-1 py-0">Aktuell</Badge>
-                            ) : e.ist_empfohlen ? (
-                              <CheckCircle2 className="w-5 h-5 text-emerald-600 mx-auto" />
-                            ) : (
-                              <span className="text-sm font-medium text-muted-foreground">#{e.rang}</span>
-                            )}
-                          </div>
-                          <div>
-                            <p className={`font-semibold text-sm ${e.ist_aktuell ? 'text-blue-900' : ''}`}>
-                              {e.krankenkasse}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {e.modell_label} · Fr. {e.franchise}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="font-bold text-sm">CHF {e.praemie_netto.toFixed(2)}</p>
-                          {!e.ist_aktuell && e.ersparnis_monatlich !== 0 ? (
-                            <p className={`text-xs font-medium ${e.ersparnis_monatlich > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                              {e.ersparnis_monatlich > 0 ? '−' : '+'}CHF {Math.abs(e.ersparnis_monatlich).toFixed(2)}/Mt
-                            </p>
-                          ) : null}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-primary" />
+                Kundendaten
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Name:</span>
+                <span className="text-sm font-medium">{formData.vorname} {formData.nachname || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Geburtsdatum:</span>
+                <span className="text-sm font-medium">{formData.geburtsdatum || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">PLZ:</span>
+                <span className="text-sm font-medium">{formData.plz || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">Kanton:</span>
+                <span className="text-sm font-medium">{formData.kanton || '-'}</span>
+              </div>
+            </CardContent>
+          </Card>
 
-              {kiAnalyse && (
-                <Card className="border-l-4 border-l-primary">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-primary" />
-                      KI-Empfehlung
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <p className="text-sm text-slate-700">{kiAnalyse.empfehlung_text}</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 bg-emerald-50 rounded-lg">
-                        <p className="text-xs text-muted-foreground">Jährliche Ersparnis</p>
-                        <p className="text-lg font-bold text-emerald-700">CHF {kiAnalyse.sparpotenzial.toLocaleString('de-CH')}</p>
-                      </div>
-                      <div className="p-3 bg-blue-50 rounded-lg">
-                        <p className="text-xs text-muted-foreground">Wechsel empfohlen</p>
-                        <p className={`text-lg font-bold ${kiAnalyse.wechsel_empfohlen ? 'text-emerald-700' : 'text-amber-700'}`}>
-                          {kiAnalyse.wechsel_empfohlen ? 'Ja' : 'Nein'}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </>
-          ) : (
-            <Card className="flex flex-col items-center justify-center p-12 text-center">
-              <Calculator className="w-12 h-12 text-muted-foreground/30 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Keine Ergebnisse</h3>
-              <p className="text-muted-foreground">Bitte Daten eingeben und Vergleich starten.</p>
-            </Card>
-          )}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-primary" />
+                So funktioniert's
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">1</div>
+                <p className="text-sm text-muted-foreground">Kundendaten erfassen oder Kunden auswählen</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">2</div>
+                <p className="text-sm text-muted-foreground">Aktuelle Versicherungsdaten eingeben</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">3</div>
+                <p className="text-sm text-muted-foreground">BAG-Rechner öffnet sich (neuer Tab)</p>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shrink-0">4</div>
+                <p className="text-sm text-muted-foreground">Ergebnisse vergleichen und hier speichern</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {showAnalyseErfassung && ergebnisse.length > 0 && (
-        <AnalyseErfassung
-          formData={{ ...formData, customer_id: selectedCustomer?.id, organization_id: selectedCustomer?.organization_id }}
-          ergebnisse={ergebnisse}
-          kiAnalyse={kiAnalyse}
-          onSave={saveAnalyse}
-          onCancel={() => setShowAnalyseErfassung(false)}
-        />
-      )}
-
-      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-        <DialogContent>
+      <Dialog open={showResultDialog} onOpenChange={setShowResultDialog}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Vergleich speichern</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              Vergleichsergebnis speichern
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">Vergleich im Kundendossier speichern?</p>
+          <div className="space-y-4">
             <div className="p-3 bg-slate-50 rounded-lg">
               <p className="text-sm font-medium">{formData.vorname} {formData.nachname}</p>
               <p className="text-xs text-muted-foreground">
-                {kiAnalyse ? `Ersparnis: CHF ${kiAnalyse.sparpotenzial.toLocaleString('de-CH')}/Jahr` : ''}
+                {formData.aktuelle_krankenkasse} → Neue Kasse wählen
               </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Neue Krankenkasse</Label>
+                <Input 
+                  value={resultData.neue_krankenkasse} 
+                  onChange={e => setResultData({...resultData, neue_krankenkasse: e.target.value})}
+                  placeholder="z.B. CSS, Helsana"
+                />
+              </div>
+              <div>
+                <Label>Neues Modell</Label>
+                <Input 
+                  value={resultData.neues_modell} 
+                  onChange={e => setResultData({...resultData, neues_modell: e.target.value})}
+                  placeholder="z.B. Telmed, Hausarzt"
+                />
+              </div>
+              <div>
+                <Label>Neue Franchise</Label>
+                <Input 
+                  type="number"
+                  value={resultData.neue_franchise} 
+                  onChange={e => setResultData({...resultData, neue_franchise: e.target.value})}
+                  placeholder="300"
+                />
+              </div>
+              <div>
+                <Label>Neue Prämie (mtl.)</Label>
+                <Input 
+                  type="number"
+                  step="0.01"
+                  value={resultData.neue_praemie} 
+                  onChange={e => setResultData({...resultData, neue_praemie: e.target.value})}
+                  placeholder="350.00"
+                />
+              </div>
+            </div>
+
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+              <Label className="text-emerald-800">Jährliche Ersparnis</Label>
+              <Input 
+                type="number"
+                step="0.01"
+                value={resultData.ersparnis} 
+                onChange={e => setResultData({...resultData, ersparnis: e.target.value})}
+                className="mt-1 bg-white"
+                placeholder="0.00"
+              />
+              <p className="text-xs text-emerald-700 mt-1">
+                Berechnung: (Alte Prämie - Neue Prämie) × 12
+              </p>
+            </div>
+
+            <div>
+              <Label>Berater-Notizen</Label>
+              <Input 
+                value={resultData.notizen} 
+                onChange={e => setResultData({...resultData, notizen: e.target.value})}
+                placeholder="Optionale Notizen zum Vergleich..."
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSaveDialog(false)}>Abbrechen</Button>
-            <Button onClick={saveVergleich}>Speichern</Button>
+            <Button variant="outline" onClick={() => setShowResultDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button onClick={handleSaveVergleich}>
+              <Save className="w-4 h-4 mr-2" />
+              Vergleich speichern
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
