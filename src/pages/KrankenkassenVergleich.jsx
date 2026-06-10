@@ -128,7 +128,7 @@ export default function KrankenkassenVergleich() {
   const [ergebnisse, setErgebnisse] = useState([]);
   const [kiAnalyse, setKiAnalyse] = useState(null);
   const [bagDaten, setBagDaten] = useState(null);
-  const [loadingDaten, setLoadingDaten] = useState(true);
+  const [loadingDaten, setLoadingDaten] = useState(false);
   const [vergleichFehler, setVergleichFehler] = useState(null);
 
   const alter = formData.geburtsdatum ? 
