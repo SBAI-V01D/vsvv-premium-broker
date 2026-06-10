@@ -96,7 +96,7 @@ function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange, onFollowup, 
       )}
       style={{ gridTemplateColumns: '200px 140px 1fr 100px 100px 100px 160px 110px' }}
     >
-      <div className="py-2.5 px-3 min-w-0" onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}/360`)}>
+      <div className="py-2.5 px-3 min-w-0" onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}`)}>
         <div className="flex items-center gap-1.5 flex-wrap">
           <p className="text-[12px] font-semibold truncate hover:text-primary transition-colors leading-tight">{contract.customer_name || '–'}</p>
           {isVvg && (
@@ -175,10 +175,10 @@ function CockpitRow({ item, onNavigate, onCreateVs, onStatusChange, onFollowup, 
       </div>
       <div className="py-2 px-2 flex items-center gap-1 justify-end" onClick={e => e.stopPropagation()}>
         <button
-          onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}/360`)}
+          onClick={() => contract.customer_id && onNavigate(`/kunden/${contract.customer_id}`)}
           className="text-[9px] px-2 py-1 border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors whitespace-nowrap"
         >
-          <User className="w-2.5 h-2.5 inline mr-0.5" />360°
+          <User className="w-2.5 h-2.5 inline mr-0.5" />Profil
         </button>
         <button
           onClick={() => onFollowup(contract)}
@@ -367,10 +367,10 @@ function VvgPanel({ items, navigate }) {
                   </div>
                   <div className="text-right">
                     <button
-                      onClick={() => contract.customer_id && navigate(`/kunden/${contract.customer_id}/360`)}
+                      onClick={() => contract.customer_id && navigate(`/kunden/${contract.customer_id}`)}
                       className="text-[9px] px-2 py-1 border border-border rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                     >
-                      <User className="w-2.5 h-2.5 inline mr-0.5" />360°
+                      <User className="w-2.5 h-2.5 inline mr-0.5" />Profil
                     </button>
                   </div>
                 </div>
