@@ -129,6 +129,7 @@ export default function KrankenkassenVergleich() {
   const [kiAnalyse, setKiAnalyse] = useState(null);
   const [bagDaten, setBagDaten] = useState(null);
   const [loadingDaten, setLoadingDaten] = useState(true);
+  const [vergleichFehler, setVergleichFehler] = useState(null);
 
   const alter = formData.geburtsdatum ? 
     Math.floor((new Date() - new Date(formData.geburtsdatum)) / (365.25 * 24 * 60 * 60 * 1000)) : null;
@@ -146,14 +147,16 @@ export default function KrankenkassenVergleich() {
     const loadBagDaten = async () => {
       try {
         setLoadingDaten(true);
-        // Lade NUR BAG-Daten für den ausgewählten Kanton 2026
-        const data = await base44.entities.BAGPraemienDaten.filter(
-          { jahr: 2026, aktiv: true, kanton: formData.kanton, altersklasse: altersklasse },
-          '-created_date',
-          1000
-        );
-        console.log(`BAG-Daten geladen für ${formData.kanton}:`, data?.length || 0, 'Datensätze');
-        setBagDaten(data || []);
+        // Lade BAG-Daten aus Supabase via Backend-Funktion
+        const res = await base44.functions.invoke('queryBAGPraemien', {
+          jahr: 2026,
+          kanton: formData.kanton,
+          altersklasse: altersklasse,
+          limit: 5000
+        });
+        const data = res.data?.data || [];
+        console.log(`BAG-Daten geladen für ${formData.kanton}:`, data.length, 'Datensätze');
+        setBagDaten(data);
       } catch (error) {
         console.error('Fehler beim Laden der BAG-Daten:', error.message);
         setBagDaten([]);
@@ -215,6 +218,7 @@ export default function KrankenkassenVergleich() {
     }
 
     setLoading(true);
+    setVergleichFehler(null);
     
     // Aktuelle Prämie berechnen (wird auch in kassenListe-Loop als aktuellePraemieNorm genutzt)
     const aktuellePraemie = berechnePraemie(
@@ -226,10 +230,7 @@ export default function KrankenkassenVergleich() {
     );
 
     if (!aktuellePraemie) {
-      const verfuegbareKassen = [...new Set(bagDaten.map(d => KASSEN_ALIAS[d.krankenkasse] || d.krankenkasse))].join(', ');
-      alert(`Keine BAG-Daten für "${formData.aktuelle_krankenkasse}" (${formData.aktuelles_modell}, CHF ${formData.aktuelle_franchise}) im Kanton ${formData.kanton}.\n\nVerfügbare Kassen: ${verfuegbareKassen}`);
-      setLoading(false);
-      return;
+      setVergleichFehler(null); // Kein Fehler — einfach alle Kassen vergleichen ohne Referenzprämie
     }
 
     const vergleiche = [];
@@ -561,6 +562,12 @@ export default function KrankenkassenVergleich() {
 
         {/* Rechte Spalte: Ergebnisse */}
         <div className="space-y-4">
+          {vergleichFehler && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+              <Info className="w-4 h-4 inline mr-1.5" />
+              {vergleichFehler}
+            </div>
+          )}
           {ergebnisse.length > 0 ? (
             <>
               <Card>
