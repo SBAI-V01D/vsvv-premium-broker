@@ -12,7 +12,7 @@ import {
   CheckCircle2, Building2, User, Info, BarChart2, FolderOpen
 } from 'lucide-react';
 import CustomerSelector from '@/components/krankenkassen/CustomerSelector';
-import OfferList, { nettoPreis, getProduktName, normalizeModel } from '@/components/krankenkassen/OfferList';
+import OfferList, { nettoPreis, getProduktName, normalizeModel, matchesInsurer } from '@/components/krankenkassen/OfferList';
 import VergleichPrintView from '@/components/krankenkassen/VergleichPrintView';
 import VergleichsAnalysenListe from './VergleichsAnalysenListe';
 
@@ -106,13 +106,14 @@ export default function KrankenkassenVergleich() {
       const rawOffers = response.data?.data || response.data?.offers || [];
       if (!rawOffers.length) throw new Error('Keine Daten von der API erhalten');
 
-      // Normalisiere Preis-Feld
-      const mapped = rawOffers.map(o => ({
-        ...o,
-        monthly_premium: o.monthly_premium ?? o.price?.total ?? o.price?.base ?? 0,
-      }));
-      // Dedupliziere: pro Versicherer+Modell nur den GÜNSTIGSTEN Eintrag behalten
-      // (API gibt manchmal mehrere Einträge für verschiedene Prämienzonen derselben PLZ)
+      // Normalisiere Preis-Feld (API gibt Preis in price.total, nicht monthly_premium)
+      const mapped = rawOffers.map(o => {
+        const price = o.price?.total ?? o.price?.base ?? o.monthly_premium ?? 0;
+        return { ...o, monthly_premium: price };
+      }).filter(o => o.monthly_premium > 0); // Einträge ohne Preis ignorieren
+
+      // Dedupliziere: pro Versicherer+Modell nur den GÜNSTIGSTEN behalten
+      // (API gibt manchmal mehrere Einträge für verschiedene Prämienzonen)
       const cheapestByKey = new Map();
       for (const o of mapped) {
         const key = `${o.insurer}|${o.model}`;
@@ -140,27 +141,14 @@ export default function KrankenkassenVergleich() {
   const sortedOffers = [...offers].sort((a, b) => (a.monthly_premium || 0) - (b.monthly_premium || 0));
   const cheapestOffer = sortedOffers[0] || null;
 
-  // Aktuelle Kasse matching — fuzzy match für alle GM-Varianten und API-Namen
-  // z.B. "Mutuel (Groupe Mutuel)" → passt zu "Mutuel Krankenversicherung AG"
-  const _matchesInsurer = (apiInsurer, selectedKasse) => {
-    if (!selectedKasse || !apiInsurer) return false;
-    const api = apiInsurer.toLowerCase();
-    const sel = selectedKasse.toLowerCase();
-    if (api === sel) return true;
-    const firstWord = sel.split(' ')[0];
-    if (api.includes(firstWord)) return true;
-    const apiFirst = api.split(' ')[0];
-    if (sel.includes(apiFirst)) return true;
-    return false;
-  };
   const _currentModellNorm = formData.aktuelles_modell ? normalizeModel(formData.aktuelles_modell) : null;
 
   const _findInList = (list) =>
     list.find(o => {
-      if (!_matchesInsurer(o.insurer, formData.aktuelle_krankenkasse)) return false;
+      if (!matchesInsurer(o.insurer, formData.aktuelle_krankenkasse)) return false;
       if (!_currentModellNorm) return true;
       return normalizeModel(o.model) === _currentModellNorm;
-    }) || list.find(o => _matchesInsurer(o.insurer, formData.aktuelle_krankenkasse));
+    }) || list.find(o => matchesInsurer(o.insurer, formData.aktuelle_krankenkasse));
 
   // currentOffer aus allOffers — Hervorhebung auch wenn Modell-Filter aktiv
   const currentOfferForPrice = _findInList(allOffers);

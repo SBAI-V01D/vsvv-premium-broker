@@ -389,6 +389,36 @@ const PRODUKT_NAMEN = {
 
 const ABZUG_UMWELTABGABE = 5.15;
 
+// Mappt API-Versicherernamen auf schöne Anzeigenamen
+const INSURER_DISPLAY_NAMES = {
+  'Assura-Basis SA': 'Assura',
+  'Atupri Gesundheitsversicherung AG': 'Atupri',
+  'Mutuel Krankenversicherung AG': 'Mutuel (Groupe Mutuel)',
+  'Avenir Krankenversicherung AG': 'Avenir (Groupe Mutuel)',
+  'Philos Krankenversicherung AG': 'Philos (Groupe Mutuel)',
+  'CONCORDIA': 'Concordia',
+  'GALENOS AG': 'Galenos (Visana)',
+  'SLKK': 'SLKK',
+};
+
+export function getDisplayName(insurer) {
+  return INSURER_DISPLAY_NAMES[insurer] || insurer;
+}
+
+// Fuzzy-match ob zwei Versicherernamen zur gleichen Kasse gehören
+export function matchesInsurer(a, b) {
+  if (!a || !b) return false;
+  const al = a.toLowerCase().trim();
+  const bl = b.toLowerCase().trim();
+  if (al === bl) return true;
+  // Prüfe ob ein Name im anderen enthalten (erste Wort reicht)
+  const aFirst = al.split(/[\s(,]/)[0];
+  const bFirst = bl.split(/[\s(,]/)[0];
+  if (aFirst.length > 3 && (al.includes(aFirst) && bl.includes(aFirst))) return true;
+  if (bFirst.length > 3 && (al.includes(bFirst) && bl.includes(bFirst))) return true;
+  return false;
+}
+
 // Normalisiert API-Modell-Key → Kategorie (z.B. 'gp' → 'Hausarzt', 'telmed' → 'Telmed')
 export function normalizeModel(model) {
   if (!model) return 'Standard';
@@ -442,9 +472,8 @@ export default function OfferList({
                 selectedResult?.model === offer.model &&
                 selectedResult?.monthly_premium === offer.monthly_premium;
               const isCurrent = currentOffer &&
-                offer.insurer === currentOffer.insurer &&
-                normalizeModel(offer.model) === normalizeModel(currentOffer.model) &&
-                Math.abs(offer.monthly_premium - currentOffer.monthly_premium) < 0.1;
+                matchesInsurer(offer.insurer, currentOffer.insurer) &&
+                normalizeModel(offer.model) === normalizeModel(currentOffer.model);
               const isCheapest = idx === 0;
               const nettoMonat = nettoPreis(offer.monthly_premium);
               const savings = currentPraemie ? nettoPreis(currentPraemie) - nettoMonat : null;
@@ -472,7 +501,7 @@ export default function OfferList({
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <p className="text-sm font-semibold truncate">{offer.insurer}</p>
+                      <p className="text-sm font-semibold truncate">{getDisplayName(offer.insurer)}</p>
                       {isCheapest && !isCurrent && (
                         <Badge className="text-[10px] px-1.5 py-0 bg-emerald-100 text-emerald-700 border-emerald-200">Günstigste</Badge>
                       )}
