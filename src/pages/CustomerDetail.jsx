@@ -35,7 +35,7 @@ import EmailLink from '@/components/common/EmailLink'
 import CustomerDetailDiagnose from '@/components/customers/CustomerDetailDiagnose'
 
 export default function CustomerDetail() {
-  const { id } = useParams()
+  const { customerId: id } = useParams()
   const navigate = useNavigate()
   const exportRef = useRef(null)
   const { checkCustomerAccess, isAdmin } = useAccessControl()
