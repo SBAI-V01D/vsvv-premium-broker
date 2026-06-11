@@ -143,12 +143,17 @@ export default function KrankenkassenVergleich() {
 
   const _currentModellNorm = formData.aktuelles_modell ? normalizeModel(formData.aktuelles_modell) : null;
 
-  const _findInList = (list) =>
-    list.find(o => {
-      if (!matchesInsurer(o.insurer, formData.aktuelle_krankenkasse)) return false;
-      if (!_currentModellNorm) return true;
-      return normalizeModel(o.model) === _currentModellNorm;
-    }) || list.find(o => matchesInsurer(o.insurer, formData.aktuelle_krankenkasse));
+  const _findInList = (list) => {
+    // 1. Versuche exakten Versicherer+Modell-Match
+    const exactMatch = list.find(o =>
+      matchesInsurer(o.insurer, formData.aktuelle_krankenkasse) &&
+      _currentModellNorm &&
+      normalizeModel(o.model) === _currentModellNorm
+    );
+    if (exactMatch) return exactMatch;
+    // 2. Fallback: nur Versicherer (beliebiges Modell)
+    return list.find(o => matchesInsurer(o.insurer, formData.aktuelle_krankenkasse));
+  };
 
   // currentOffer aus allOffers — Hervorhebung auch wenn Modell-Filter aktiv
   const currentOfferForPrice = _findInList(allOffers);

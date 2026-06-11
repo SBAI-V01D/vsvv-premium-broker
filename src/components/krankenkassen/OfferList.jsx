@@ -465,7 +465,7 @@ export default function OfferList({
         </p>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="max-h-[520px] overflow-y-auto">
+        <div className="max-h-[640px] overflow-y-auto">
           <div className="divide-y divide-border">
             {sortedOffers.map((offer, idx) => {
               const isSelected = selectedResult?.insurer === offer.insurer &&
