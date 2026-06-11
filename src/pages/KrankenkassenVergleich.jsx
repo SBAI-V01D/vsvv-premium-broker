@@ -230,6 +230,7 @@ export default function KrankenkassenVergleich() {
 
   const [isSavingDoc, setIsSavingDoc] = useState(false);
   const [docSaved, setDocSaved] = useState(false);
+  const aktuellRef = useRef(null);
 
   // PDF Druck — öffnet Druckdialog
   const handlePrint = () => {
@@ -550,6 +551,33 @@ export default function KrankenkassenVergleich() {
                     </div>
                   </div>
 
+                  {/* Summary-Banner: aktuelle Kasse sofort sichtbar */}
+                  {currentOffer && currentNet && (
+                    <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border border-amber-200 bg-amber-50">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-amber-600 text-base">🏠</span>
+                        <div className="min-w-0">
+                          <span className="text-xs font-semibold text-amber-800">Ihre aktuelle: </span>
+                          <span className="text-xs font-bold text-amber-900">{formData.aktuelle_krankenkasse}</span>
+                          <span className="text-[11px] text-amber-700 ml-1.5">· {formData.aktuelles_modell} · CHF {currentNet.toFixed(2)}/M.</span>
+                        </div>
+                      </div>
+                      {cheapestNet && currentNet > cheapestNet && (
+                        <div className="shrink-0 text-right">
+                          <span className="text-[11px] font-semibold text-emerald-700">
+                            🏆 Günstigste: CHF {cheapestNet.toFixed(2)}/M. · −CHF {maxErsparnis?.toLocaleString('de-CH')}/J.
+                          </span>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => aktuellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                        className="shrink-0 text-[11px] text-amber-700 hover:text-amber-900 underline font-medium"
+                      >
+                        Zur Kasse ↓
+                      </button>
+                    </div>
+                  )}
+
                   {/* Angebotsliste */}
                   <OfferList
                     offers={offers}
@@ -558,6 +586,7 @@ export default function KrankenkassenVergleich() {
                     selectedResult={selectedResult}
                     onSelect={setSelectedResult}
                     cheapestOffer={cheapestOffer}
+                    aktuellRef={aktuellRef}
                   />
 
                   {/* Auswahl-Bar mit Speichern + Drucken */}

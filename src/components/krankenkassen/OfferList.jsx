@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -446,9 +446,17 @@ export default function OfferList({
   selectedResult,
   onSelect,
   cheapestOffer,
+  aktuellRef,
 }) {
   const sortedOffers = [...offers].sort((a, b) => (a.monthly_premium || 0) - (b.monthly_premium || 0));
   const cheapestPraemie = cheapestOffer?.monthly_premium;
+
+  // Auto-Scroll zur aktuellen Versicherung wenn Liste geladen
+  React.useEffect(() => {
+    if (aktuellRef?.current) {
+      setTimeout(() => aktuellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200);
+    }
+  }, [offers]);
 
   return (
     <Card>
@@ -493,6 +501,7 @@ export default function OfferList({
               return (
                 <button
                   key={`${offer.insurer}-${offer.model}-${offer.monthly_premium}-${idx}`}
+                  ref={isCurrent ? aktuellRef : null}
                   onClick={() => onSelect(isSelected ? null : offer)}
                   className={rowClass}
                 >
