@@ -33,7 +33,7 @@ const ALLE_KRANKENKASSEN = [
   'easy sana (Groupe Mutuel)','AMB Assurance (Groupe Mutuel)',
 ].sort();
 
-const MODELL_OPTIONS = ['Standard', 'Telmed', 'Hausarzt', 'HMO'];
+const MODELL_OPTIONS = ['Standard', 'Hausarzt', 'HMO', 'Telmed'];
 const FRANCHISE_ERWACHSENE = [300, 500, 1000, 1500, 2000, 2500];
 const FRANCHISE_KINDER = [0, 100, 200, 300, 400, 500, 600];
 
@@ -96,15 +96,19 @@ export default function KrankenkassenVergleich() {
     setSelectedResult(null);
     try {
       const age = calcAge(formData.geburtsdatum);
-      const url = `https://api.primai.ch/v1/compare?plz=${formData.plz}&age=${age}&deductible=${formData.aktuelle_franchise}&accident=${formData.unfall}&limit=500`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`API Fehler: ${res.status}`);
-      const data = await res.json();
-      // v1/compare gibt {offers: [{insurer, model, deductible, price: {total}}]}
-      // Normalisierung: monthly_premium aus price.total
+      // Rufe Backend-Proxy auf (yob statt age, korrekte Authentifizierung)
+      const yob = new Date(formData.geburtsdatum).getFullYear();
+      const res = await base44.functions.invoke('queryBAGLive', {
+        plz: formData.plz,
+        yob,
+        deductible: Number(formData.aktuelle_franchise),
+        accident: formData.unfall,
+        limit: 500,
+      });
+      const rawOffers = res.data?.data || res.data?.offers || [];
+      if (!rawOffers.length) throw new Error('Keine Daten von der API erhalten');
       const normalized = {
-        ...data,
-        offers: (data.offers || []).map(o => ({
+        offers: rawOffers.map(o => ({
           ...o,
           monthly_premium: o.monthly_premium ?? o.price?.total ?? o.price?.base ?? 0,
         })),
