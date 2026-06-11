@@ -103,26 +103,35 @@ export default function KrankenkassenVergleich() {
         deductible: Number(formData.aktuelle_franchise),
         accident: formData.unfall,
       });
-      const rawOffers = response.data?.data || response.data?.offers || [];
+      // Robuste Extraktion — unterstützt alle möglichen Response-Strukturen
+      const respData = response.data;
+      const rawOffers = Array.isArray(respData)
+        ? respData
+        : Array.isArray(respData?.data) ? respData.data
+        : Array.isArray(respData?.offers) ? respData.offers
+        : [];
+
       if (!rawOffers.length) throw new Error('Keine Daten von der API erhalten');
 
-      // Normalisiere Preis-Feld (API gibt Preis in price.total, nicht monthly_premium)
+      // Normalisiere Preis-Feld
       const mapped = rawOffers.map(o => {
         const price = o.price?.total ?? o.price?.base ?? o.monthly_premium ?? 0;
         return { ...o, monthly_premium: price };
-      }).filter(o => o.monthly_premium > 0); // Einträge ohne Preis ignorieren
+      }).filter(o => o.monthly_premium > 0 && o.insurer && o.model);
 
       // Dedupliziere: pro Versicherer+Modell nur den GÜNSTIGSTEN behalten
-      // (API gibt manchmal mehrere Einträge für verschiedene Prämienzonen)
       const cheapestByKey = new Map();
       for (const o of mapped) {
-        const key = `${o.insurer}|${o.model}`;
+        const key = `${o.insurer}|||${o.model}`;
         const existing = cheapestByKey.get(key);
         if (!existing || o.monthly_premium < existing.monthly_premium) {
           cheapestByKey.set(key, o);
         }
       }
-      setVergleichResults({ offers: Array.from(cheapestByKey.values()) });
+      const deduped = Array.from(cheapestByKey.values());
+      console.log('[KKV] rawOffers:', rawOffers.length, '→ deduped:', deduped.length,
+        '| Versicherer:', [...new Set(deduped.map(o => o.insurer))].sort().join(', '));
+      setVergleichResults({ offers: deduped });
     } catch (err) {
       setApiError('Vergleich konnte nicht geladen werden: ' + err.message);
     } finally {
