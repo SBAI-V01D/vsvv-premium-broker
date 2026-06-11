@@ -53,6 +53,8 @@ export default function KrankenkassenVergleich() {
     plz: '', wohnort: '', kanton: '',
     aktuelle_krankenkasse: '', aktuelles_modell: '', aktuelle_franchise: '', unfall: false,
   });
+  // Mehrfach-Modell-Filter: welche Modelle sollen in den Ergebnissen angezeigt werden
+  const [filterModelle, setFilterModelle] = useState(['Standard', 'Telmed', 'Hausarzt', 'HMO']);
 
   const [vergleichResults, setVergleichResults] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -108,7 +110,11 @@ export default function KrankenkassenVergleich() {
     }
   };
 
-  const offers = vergleichResults?.offers || [];
+  const allOffers = vergleichResults?.offers || [];
+  // Modell-Filter anwenden (case-insensitive)
+  const offers = filterModelle.length === 4
+    ? allOffers
+    : allOffers.filter(o => filterModelle.some(m => o.model?.toLowerCase() === m.toLowerCase()));
   const sortedOffers = [...offers].sort((a, b) => (a.monthly_premium || 0) - (b.monthly_premium || 0));
   const cheapestOffer = sortedOffers[0] || null;
 
@@ -286,11 +292,37 @@ export default function KrankenkassenVergleich() {
                   </div>
 
                   <div>
-                    <Label className="text-xs">Modell</Label>
+                    <Label className="text-xs">Aktuelles Modell</Label>
                     <Select value={formData.aktuelles_modell} onValueChange={v => setFormData(p => ({ ...p, aktuelles_modell: v }))}>
                       <SelectTrigger className="mt-1 h-9 text-sm"><SelectValue placeholder="Modell wählen" /></SelectTrigger>
                       <SelectContent>{MODELL_OPTIONS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
                     </Select>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs mb-2 block">Modelle im Vergleich anzeigen</Label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {MODELL_OPTIONS.map(m => {
+                        const checked = filterModelle.includes(m);
+                        return (
+                          <label key={m} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border cursor-pointer text-xs font-medium transition-colors ${
+                            checked ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-white border-border text-muted-foreground hover:bg-muted/40'
+                          }`}>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => setFilterModelle(prev =>
+                                checked
+                                  ? prev.length > 1 ? prev.filter(x => x !== m) : prev // mind. 1 muss aktiv bleiben
+                                  : [...prev, m]
+                              )}
+                              className="w-3 h-3 accent-primary"
+                            />
+                            {m}
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div>
@@ -385,6 +417,9 @@ export default function KrankenkassenVergleich() {
                     <div className="p-3 rounded-xl border bg-blue-50 border-blue-200 text-center">
                       <p className="text-[10px] text-blue-600 font-semibold uppercase tracking-wide">Angebote</p>
                       <p className="text-2xl font-bold text-blue-800">{offers.length}</p>
+                      {filterModelle.length < 4 && (
+                        <p className="text-[9px] text-blue-500 mt-0.5">{filterModelle.join(', ')}</p>
+                      )}
                     </div>
                     {/* Aktuelle Prämie */}
                     <div className="p-3 rounded-xl border bg-amber-50 border-amber-200 text-center">

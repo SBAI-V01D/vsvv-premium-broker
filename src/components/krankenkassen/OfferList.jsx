@@ -88,7 +88,26 @@ const PRODUKT_NAMEN = {
   },
   'Mutuel Krankenversicherung AG': {
     'Standard': 'Primaflex (freie Arztwahl)',
-    'Hausarzt': 'PrimaCare / OptiMed',
+    'Hausarzt': 'PrimaCare',
+    'Telmed': 'SanaTel',
+    'HMO': 'OptiMed',
+  },
+  // Groupe Mutuel Varianten (API liefert verschiedene Insurer-Namen)
+  'Avenir': {
+    'Standard': 'Primaflex (freie Arztwahl)',
+    'Hausarzt': 'PrimaCare',
+    'Telmed': 'SanaTel',
+    'HMO': 'OptiMed',
+  },
+  'Mutuel Assurances': {
+    'Standard': 'Primaflex (freie Arztwahl)',
+    'Hausarzt': 'PrimaCare',
+    'Telmed': 'SanaTel',
+    'HMO': 'OptiMed',
+  },
+  'Philos': {
+    'Standard': 'Primaflex (freie Arztwahl)',
+    'Hausarzt': 'PrimaCare',
     'Telmed': 'SanaTel',
     'HMO': 'OptiMed',
   },

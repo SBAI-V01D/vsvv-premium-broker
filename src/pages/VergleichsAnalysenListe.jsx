@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
-import { TrendingDown, CheckCircle2, X, BarChart2, Loader2 } from 'lucide-react';
+import { TrendingDown, CheckCircle2, X, BarChart2, Loader2, Trash2 } from 'lucide-react';
 
 function fmt(n) { return n != null ? `CHF ${Number(n).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '–'; }
 function fmtJ(n) { return n != null ? `CHF ${Math.round(n).toLocaleString('de-CH')}` : '–'; }
@@ -18,6 +18,7 @@ const STATUS_CONFIG = {
 export default function VergleichsAnalysenListe() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [togglingId, setTogglingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: analysen = [], isLoading } = useQuery({
@@ -27,6 +28,17 @@ export default function VergleichsAnalysenListe() {
   });
 
   const filtered = filterStatus === 'all' ? analysen : analysen.filter(a => a.status === filterStatus);
+
+  const handleDelete = async (analyse) => {
+    if (!window.confirm(`Offerte von ${analyse.persoenliche_daten?.nachname || analyse.customer_name || 'diesem Kunden'} wirklich löschen?`)) return;
+    setDeletingId(analyse.id);
+    try {
+      await base44.entities.VergleichsAnalyse.delete(analyse.id);
+      queryClient.invalidateQueries({ queryKey: ['vergleichs-analysen'] });
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handleToggleAbgeschlossen = async (analyse) => {
     const newStatus = analyse.status === 'umgesetzt' ? 'beratung_erfolgt' : 'umgesetzt';
@@ -107,7 +119,7 @@ export default function VergleichsAnalysenListe() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
-                    {['Datum', 'Name', 'Ort', 'Aktuell', 'Empfehlung', 'Ersparnis/J.', 'Status', 'Abgeschlossen'].map(h => (
+                    {['Datum', 'Name', 'Ort', 'Aktuell', 'Empfehlung', 'Ersparnis/J.', 'Status', 'Abgeschlossen', ''].map(h => (
                       <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>
                     ))}
                   </tr>
@@ -171,6 +183,19 @@ export default function VergleichsAnalysenListe() {
                                 ? <><CheckCircle2 className="w-3 h-3" />Ja</>
                                 : <><X className="w-3 h-3" />Nein</>
                             }
+                          </button>
+                        </td>
+                        {/* Löschen */}
+                        <td className="px-4 py-2.5 text-center">
+                          <button
+                            onClick={() => handleDelete(a)}
+                            disabled={deletingId === a.id}
+                            title="Offerte löschen"
+                            className="inline-flex items-center justify-center w-7 h-7 rounded text-muted-foreground hover:text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            {deletingId === a.id
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : <Trash2 className="w-3.5 h-3.5" />}
                           </button>
                         </td>
                       </tr>
