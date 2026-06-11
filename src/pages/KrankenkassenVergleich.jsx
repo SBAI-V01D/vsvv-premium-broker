@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Search, X, Loader2, TrendingDown, RefreshCw, Printer, Save,
-  CheckCircle2, Building2, User, Info, BarChart2
+  CheckCircle2, Building2, User, Info, BarChart2, FolderOpen
 } from 'lucide-react';
 import CustomerSelector from '@/components/krankenkassen/CustomerSelector';
 import OfferList, { nettoPreis, getProduktName, normalizeModel } from '@/components/krankenkassen/OfferList';
@@ -190,7 +190,10 @@ export default function KrankenkassenVergleich() {
     }
   }, [selectedResult, isSaving, formData, currentNet, selectedNet, ersparnisJahr, ersparnisMonat, selectedCustomer, queryClient]);
 
-  // PDF Druck
+  const [isSavingDoc, setIsSavingDoc] = useState(false);
+  const [docSaved, setDocSaved] = useState(false);
+
+  // PDF Druck — öffnet Druckdialog
   const handlePrint = () => {
     if (!printRef.current) return;
     const win = window.open('', '_blank');
@@ -203,6 +206,45 @@ export default function KrankenkassenVergleich() {
     win.focus();
     setTimeout(() => { win.print(); win.close(); }, 300);
   };
+
+  // PDF als HTML-Dokument in Document-Entity des Kunden speichern
+  const handleSaveDocument = useCallback(async () => {
+    if (!printRef.current || !selectedCustomer?.id || isSavingDoc) return;
+    setIsSavingDoc(true);
+    setDocSaved(false);
+    try {
+      const user = await base44.auth.me();
+      const htmlContent = `
+        <html><head><title>KK-Vergleich</title>
+        <style>body{margin:20px;font-family:Arial,sans-serif;font-size:12px;} @media print{body{-webkit-print-color-adjust:exact;}}</style>
+        </head><body>${printRef.current.innerHTML}</body></html>
+      `;
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const file = new File([blob], `KK-Vergleich_${formData.nachname || selectedCustomer.last_name}_${new Date().toISOString().split('T')[0]}.html`, { type: 'text/html' });
+
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+
+      const docName = `KK-Vergleich ${formData.vorname || selectedCustomer.first_name} ${formData.nachname || selectedCustomer.last_name} · ${new Date().toLocaleDateString('de-CH')}`;
+      await base44.entities.Document.create({
+        customer_id: selectedCustomer.id,
+        customer_name: `${selectedCustomer.first_name} ${selectedCustomer.last_name}`,
+        name: docName,
+        file_url,
+        category: 'correspondence',
+        uploaded_by: user.email,
+        uploaded_at: new Date().toISOString(),
+        notes: `Krankenkassenvergleich OKP 2026 — ${formData.aktuelle_krankenkasse || '–'} → ${selectedResult?.insurer || '–'}`,
+        access_level: 'assigned_advisors_only',
+      });
+
+      setDocSaved(true);
+      setTimeout(() => setDocSaved(false), 3000);
+    } catch (err) {
+      alert('Fehler beim Speichern als Dokument: ' + err.message);
+    } finally {
+      setIsSavingDoc(false);
+    }
+  }, [printRef, selectedCustomer, formData, selectedResult, isSavingDoc]);
 
   const handleTestDaten = () => {
     setFormData({
@@ -493,10 +535,24 @@ export default function KrankenkassenVergleich() {
                             )}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Button variant="outline" size="sm" onClick={handlePrint} className="gap-1.5">
                             <Printer className="w-3.5 h-3.5" />PDF drucken
                           </Button>
+                          {selectedCustomer?.id && (
+                            <Button
+                              variant="outline" size="sm"
+                              onClick={handleSaveDocument}
+                              disabled={isSavingDoc}
+                              className={`gap-1.5 ${docSaved ? 'border-emerald-400 text-emerald-700 bg-emerald-50' : ''}`}
+                            >
+                              {isSavingDoc
+                                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Speichert...</>
+                                : docSaved
+                                  ? <><CheckCircle2 className="w-3.5 h-3.5" />Gespeichert</>
+                                  : <><FolderOpen className="w-3.5 h-3.5" />In Dokumente</>}
+                            </Button>
+                          )}
                           <Button size="sm" onClick={handleSave} disabled={isSaving} id="save-btn" className="gap-1.5">
                             {isSaving
                               ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Speichert...</>
