@@ -379,43 +379,49 @@ export default function KrankenkassenVergleich() {
 
               {vergleichResults && !isLoading && (
                 <>
-                  {/* Summary KPIs */}
-                  <div className="grid grid-cols-3 gap-3">
+                  {/* Summary KPIs — 4 Kacheln */}
+                  <div className="grid grid-cols-4 gap-2">
+                    {/* Angebote */}
                     <div className="p-3 rounded-xl border bg-blue-50 border-blue-200 text-center">
-                      <p className="text-[11px] text-blue-600 font-medium">Angebote</p>
-                      <p className="text-xl font-bold text-blue-800">{offers.length}</p>
+                      <p className="text-[10px] text-blue-600 font-semibold uppercase tracking-wide">Angebote</p>
+                      <p className="text-2xl font-bold text-blue-800">{offers.length}</p>
                     </div>
+                    {/* Aktuelle Prämie */}
+                    <div className="p-3 rounded-xl border bg-amber-50 border-amber-200 text-center">
+                      <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wide">Aktuell/M.</p>
+                      <p className="text-base font-bold text-amber-800">
+                        {currentNet ? `CHF ${currentNet.toFixed(2)}` : <span className="text-sm text-amber-500">–</span>}
+                      </p>
+                    </div>
+                    {/* Günstigste Prämie */}
                     <div className="p-3 rounded-xl border bg-emerald-50 border-emerald-200 text-center">
-                      <p className="text-[11px] text-emerald-600 font-medium">Günstigste Netto</p>
-                      <p className="text-lg font-bold text-emerald-800">
+                      <p className="text-[10px] text-emerald-600 font-semibold uppercase tracking-wide">Günstigste/M.</p>
+                      <p className="text-base font-bold text-emerald-800">
                         {cheapestNet ? `CHF ${cheapestNet.toFixed(2)}` : '–'}
                       </p>
                     </div>
+                    {/* Max. Ersparnis / Auswahl-Ersparnis */}
                     <div className={`p-3 rounded-xl border text-center ${
                       ersparnisJahr !== null
-                        ? ersparnisJahr >= 0
-                          ? 'bg-emerald-50 border-emerald-200'
-                          : 'bg-red-50 border-red-200'
-                        : maxErsparnis !== null
-                          ? 'bg-emerald-50 border-emerald-200'
-                          : 'bg-slate-50 border-slate-200'
+                        ? ersparnisJahr >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'
+                        : 'bg-emerald-50 border-emerald-200'
                     }`}>
-                      <p className={`text-[11px] font-medium ${
+                      <p className={`text-[10px] font-semibold uppercase tracking-wide ${
                         ersparnisJahr !== null
                           ? ersparnisJahr >= 0 ? 'text-emerald-600' : 'text-red-600'
                           : 'text-emerald-600'
                       }`}>
-                        {ersparnisJahr !== null ? 'Ersparnis Auswahl/J.' : 'Max. Ersparnis/J.'}
+                        {ersparnisJahr !== null ? 'Ersparnis/J.' : 'Max. Ers./J.'}
                       </p>
-                      <p className={`text-lg font-bold ${
+                      <p className={`text-base font-bold ${
                         ersparnisJahr !== null
                           ? ersparnisJahr >= 0 ? 'text-emerald-800' : 'text-red-700'
                           : 'text-emerald-800'
                       }`}>
                         {ersparnisJahr !== null
-                          ? `${ersparnisJahr >= 0 ? '+' : '−'}CHF ${Math.abs(ersparnisJahr).toLocaleString('de-CH')}`
+                          ? `${ersparnisJahr >= 0 ? '−' : '+'}CHF ${Math.abs(ersparnisJahr).toLocaleString('de-CH')}`
                           : maxErsparnis !== null
-                            ? `+CHF ${maxErsparnis.toLocaleString('de-CH')}`
+                            ? `−CHF ${maxErsparnis.toLocaleString('de-CH')}`
                             : '–'
                         }
                       </p>

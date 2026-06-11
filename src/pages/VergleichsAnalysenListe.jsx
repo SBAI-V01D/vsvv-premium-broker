@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { TrendingDown, CheckCircle2, X, BarChart2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { TrendingDown, CheckCircle2, X, BarChart2, Loader2 } from 'lucide-react';
 
 function fmt(n) { return n != null ? `CHF ${Number(n).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '–'; }
 function fmtJ(n) { return n != null ? `CHF ${Math.round(n).toLocaleString('de-CH')}` : '–'; }
@@ -18,14 +17,27 @@ const STATUS_CONFIG = {
 
 export default function VergleichsAnalysenListe() {
   const [filterStatus, setFilterStatus] = useState('all');
+  const [togglingId, setTogglingId] = useState(null);
+  const queryClient = useQueryClient();
 
   const { data: analysen = [], isLoading } = useQuery({
     queryKey: ['vergleichs-analysen'],
     queryFn: () => base44.entities.VergleichsAnalyse.list('-created_date', 200),
-    staleTime: 60 * 1000,
+    staleTime: 30 * 1000,
   });
 
   const filtered = filterStatus === 'all' ? analysen : analysen.filter(a => a.status === filterStatus);
+
+  const handleToggleAbgeschlossen = async (analyse) => {
+    const newStatus = analyse.status === 'umgesetzt' ? 'beratung_erfolgt' : 'umgesetzt';
+    setTogglingId(analyse.id);
+    try {
+      await base44.entities.VergleichsAnalyse.update(analyse.id, { status: newStatus });
+      queryClient.invalidateQueries({ queryKey: ['vergleichs-analysen'] });
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   // Statistiken
   const total = analysen.length;
@@ -143,9 +155,23 @@ export default function VergleichsAnalysenListe() {
                           </span>
                         </td>
                         <td className="px-4 py-2.5 text-center">
-                          {abgeschlossen
-                            ? <CheckCircle2 className="w-4 h-4 text-emerald-600 mx-auto" />
-                            : <X className="w-4 h-4 text-muted-foreground mx-auto" />}
+                          <button
+                            onClick={() => handleToggleAbgeschlossen(a)}
+                            disabled={togglingId === a.id}
+                            title={abgeschlossen ? 'Als offen markieren' : 'Als abgeschlossen markieren'}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all ${
+                              abgeschlossen
+                                ? 'bg-emerald-100 text-emerald-700 border-emerald-300 hover:bg-emerald-200'
+                                : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200'
+                            }`}
+                          >
+                            {togglingId === a.id
+                              ? <Loader2 className="w-3 h-3 animate-spin" />
+                              : abgeschlossen
+                                ? <><CheckCircle2 className="w-3 h-3" />Ja</>
+                                : <><X className="w-3 h-3" />Nein</>
+                            }
+                          </button>
                         </td>
                       </tr>
                     );
