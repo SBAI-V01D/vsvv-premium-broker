@@ -105,12 +105,20 @@ export default function KrankenkassenVergleich() {
       });
       const rawOffers = response.data?.data || response.data?.offers || [];
       if (!rawOffers.length) throw new Error('Keine Daten von der API erhalten');
-      setVergleichResults({
-        offers: rawOffers.map(o => ({
-          ...o,
-          monthly_premium: o.monthly_premium ?? o.price?.total ?? o.price?.base ?? 0,
-        })),
+
+      // Normalisiere Preis-Feld und dedupliziere (API gibt manchmal Duplikate zurück)
+      const mapped = rawOffers.map(o => ({
+        ...o,
+        monthly_premium: o.monthly_premium ?? o.price?.total ?? o.price?.base ?? 0,
+      }));
+      const seen = new Set();
+      const deduped = mapped.filter(o => {
+        const key = `${o.insurer}|${o.model}|${o.deductible}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
       });
+      setVergleichResults({ offers: deduped });
     } catch (err) {
       setApiError('Vergleich konnte nicht geladen werden: ' + err.message);
     } finally {
@@ -119,16 +127,13 @@ export default function KrankenkassenVergleich() {
   };
 
   const allOffers = vergleichResults?.offers || [];
-  const selectedFranchise = Number(formData.aktuelle_franchise) || 0;
 
-  // Filtere nach gewählter Franchise (API gibt alle Franchisen zurück)
-  const offersForFranchise = allOffers.filter(o => Number(o.deductible) === selectedFranchise);
-
+  // Die API gibt immer nur die angefragte Franchise zurück — kein Extra-Filter nötig.
   // Modell-Filter: normalisiere API-Keys und filtere direkt nach Kategorie
   const ALL_FILTER_KEYS = ['Standard', 'Hausarzt', 'HMO', 'Telmed'];
   const offers = filterModelle.length === ALL_FILTER_KEYS.length
-    ? offersForFranchise
-    : offersForFranchise.filter(o => filterModelle.includes(normalizeModel(o.model)));
+    ? allOffers
+    : allOffers.filter(o => filterModelle.includes(normalizeModel(o.model)));
   const sortedOffers = [...offers].sort((a, b) => (a.monthly_premium || 0) - (b.monthly_premium || 0));
   const cheapestOffer = sortedOffers[0] || null;
 
@@ -138,12 +143,9 @@ export default function KrankenkassenVergleich() {
     if (!selectedKasse || !apiInsurer) return false;
     const api = apiInsurer.toLowerCase();
     const sel = selectedKasse.toLowerCase();
-    // Exakt
     if (api === sel) return true;
-    // API-Name enthält erstes Wort der Auswahl
     const firstWord = sel.split(' ')[0];
     if (api.includes(firstWord)) return true;
-    // Auswahl enthält erstes Wort des API-Namens
     const apiFirst = api.split(' ')[0];
     if (sel.includes(apiFirst)) return true;
     return false;
@@ -157,8 +159,8 @@ export default function KrankenkassenVergleich() {
       return normalizeModel(o.model) === _currentModellNorm;
     }) || list.find(o => _matchesInsurer(o.insurer, formData.aktuelle_krankenkasse));
 
-  // currentOffer immer aus offersForFranchise — Hervorhebung funktioniert auch wenn Modell-Filter aktiv
-  const currentOfferForPrice = _findInList(offersForFranchise);
+  // currentOffer aus allOffers — Hervorhebung auch wenn Modell-Filter aktiv
+  const currentOfferForPrice = _findInList(allOffers);
   const currentOffer = currentOfferForPrice;
   const currentPraemie = currentOfferForPrice?.monthly_premium;
   const currentNet = currentPraemie ? nettoPreis(currentPraemie) : null;
