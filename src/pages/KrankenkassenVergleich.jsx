@@ -88,7 +88,7 @@ export default function KrankenkassenVergleich() {
 
   const canCompare = !!(formData.plz && formData.geburtsdatum && formData.aktuelle_franchise);
 
-  // PrimAI API — offizielle BAG-Daten
+  // PrimAI API — offizielle BAG-Daten via Backend-Proxy (yob-Parameter)
   const handleVergleich = async () => {
     if (!canCompare) return;
     setIsLoading(true);
@@ -96,13 +96,14 @@ export default function KrankenkassenVergleich() {
     setVergleichResults(null);
     setSelectedResult(null);
     try {
-      // Direkt PrimAI API — age Parameter (wie der Test bestätigt hat)
-      const age = calcAge(formData.geburtsdatum);
-      const url = `https://api.primai.ch/v1/compare?plz=${encodeURIComponent(formData.plz)}&age=${age}&deductible=${formData.aktuelle_franchise}&accident=${formData.unfall}&limit=500`;
-      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-      if (!res.ok) throw new Error(`API Fehler: ${res.status}`);
-      const data = await res.json();
-      const rawOffers = data.offers || data.data || [];
+      const yob = new Date(formData.geburtsdatum).getFullYear();
+      const response = await base44.functions.invoke('queryBAGLive', {
+        plz: formData.plz,
+        yob,
+        deductible: Number(formData.aktuelle_franchise),
+        accident: formData.unfall,
+      });
+      const rawOffers = response.data?.data || response.data?.offers || [];
       if (!rawOffers.length) throw new Error('Keine Daten von der API erhalten');
       setVergleichResults({
         offers: rawOffers.map(o => ({
