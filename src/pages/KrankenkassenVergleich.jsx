@@ -119,33 +119,46 @@ export default function KrankenkassenVergleich() {
   };
 
   const allOffers = vergleichResults?.offers || [];
+  const selectedFranchise = Number(formData.aktuelle_franchise) || 0;
+
+  // Filtere nach gewählter Franchise (API gibt alle Franchisen zurück)
+  const offersForFranchise = allOffers.filter(o => Number(o.deductible) === selectedFranchise);
 
   // Modell-Filter: normalisiere API-Keys und filtere direkt nach Kategorie
   const ALL_FILTER_KEYS = ['Standard', 'Hausarzt', 'HMO', 'Telmed'];
   const offers = filterModelle.length === ALL_FILTER_KEYS.length
-    ? allOffers
-    : allOffers.filter(o => filterModelle.includes(normalizeModel(o.model)));
+    ? offersForFranchise
+    : offersForFranchise.filter(o => filterModelle.includes(normalizeModel(o.model)));
   const sortedOffers = [...offers].sort((a, b) => (a.monthly_premium || 0) - (b.monthly_premium || 0));
   const cheapestOffer = sortedOffers[0] || null;
 
-  // Aktuelle Kasse matching — suche in allOffers für Preis, aber in offers für Hervorhebung
-  // Suche zuerst mit Modell-Match, dann nur Kasse
-  const _currentKasseKey = formData.aktuelle_krankenkasse?.split(' ')[0]?.toLowerCase();
+  // Aktuelle Kasse matching — fuzzy match für alle GM-Varianten und API-Namen
+  // z.B. "Mutuel (Groupe Mutuel)" → passt zu "Mutuel Krankenversicherung AG"
+  const _matchesInsurer = (apiInsurer, selectedKasse) => {
+    if (!selectedKasse || !apiInsurer) return false;
+    const api = apiInsurer.toLowerCase();
+    const sel = selectedKasse.toLowerCase();
+    // Exakt
+    if (api === sel) return true;
+    // API-Name enthält erstes Wort der Auswahl
+    const firstWord = sel.split(' ')[0];
+    if (api.includes(firstWord)) return true;
+    // Auswahl enthält erstes Wort des API-Namens
+    const apiFirst = api.split(' ')[0];
+    if (sel.includes(apiFirst)) return true;
+    return false;
+  };
   const _currentModellNorm = formData.aktuelles_modell ? normalizeModel(formData.aktuelles_modell) : null;
 
   const _findInList = (list) =>
     list.find(o => {
-      if (!_currentKasseKey) return false;
-      const insurerMatch = o.insurer?.toLowerCase().includes(_currentKasseKey);
-      if (!insurerMatch) return false;
+      if (!_matchesInsurer(o.insurer, formData.aktuelle_krankenkasse)) return false;
       if (!_currentModellNorm) return true;
       return normalizeModel(o.model) === _currentModellNorm;
-    }) || list.find(o =>
-      _currentKasseKey && o.insurer?.toLowerCase().includes(_currentKasseKey)
-    );
+    }) || list.find(o => _matchesInsurer(o.insurer, formData.aktuelle_krankenkasse));
 
-  // currentOffer immer aus allOffers — Hervorhebung funktioniert auch wenn Modell im Filter aktiv
-  const currentOfferForPrice = _findInList(allOffers);
+  // currentOffer immer aus offersForFranchise — Hervorhebung funktioniert auch wenn Modell-Filter aktiv
+  const currentOfferForPrice = _findInList(offersForFranchise);
   const currentOffer = currentOfferForPrice;
   const currentPraemie = currentOfferForPrice?.monthly_premium;
   const currentNet = currentPraemie ? nettoPreis(currentPraemie) : null;
