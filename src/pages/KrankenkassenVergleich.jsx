@@ -97,6 +97,7 @@ export default function KrankenkassenVergleich() {
     setSelectedResult(null);
     try {
       // Direkt PrimAI API — age Parameter (wie der Test bestätigt hat)
+      const age = calcAge(formData.geburtsdatum);
       const url = `https://api.primai.ch/v1/compare?plz=${encodeURIComponent(formData.plz)}&age=${age}&deductible=${formData.aktuelle_franchise}&accident=${formData.unfall}&limit=500`;
       const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
       if (!res.ok) throw new Error(`API Fehler: ${res.status}`);
