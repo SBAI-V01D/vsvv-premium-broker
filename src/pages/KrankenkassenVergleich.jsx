@@ -20,7 +20,7 @@ const FILTER_MODELLE_OPTIONS = [
   { key: 'Standard', label: 'Standard', desc: 'Freie Arztwahl' },
   { key: 'Hausarzt', label: 'Hausarzt', desc: 'inkl. GP, Managed Care' },
   { key: 'HMO', label: 'HMO', desc: 'Gruppenpraxis' },
-  { key: 'Weitere', label: 'Weitere', desc: 'Telmed u.a.' },
+  { key: 'Telmed', label: 'Telmed', desc: 'Telemedizin' },
 ];
 
 const ALLE_KRANKENKASSEN = [
@@ -33,6 +33,7 @@ const ALLE_KRANKENKASSEN = [
   'easy sana (Groupe Mutuel)','AMB Assurance (Groupe Mutuel)',
 ].sort();
 
+// Muss identisch zu FILTER_MODELLE_OPTIONS keys sein
 const MODELL_OPTIONS = ['Standard', 'Hausarzt', 'HMO', 'Telmed'];
 const FRANCHISE_ERWACHSENE = [300, 500, 1000, 1500, 2000, 2500];
 const FRANCHISE_KINDER = [0, 100, 200, 300, 400, 500, 600];
@@ -61,7 +62,7 @@ export default function KrankenkassenVergleich() {
     aktuelle_krankenkasse: '', aktuelles_modell: '', aktuelle_franchise: '', unfall: false,
   });
   // Mehrfach-Modell-Filter: Standard/Hausarzt/HMO/Weitere (Weitere = Telmed + unbekannte Keys)
-  const [filterModelle, setFilterModelle] = useState(['Standard', 'Hausarzt', 'HMO', 'Weitere']);
+  const [filterModelle, setFilterModelle] = useState(['Standard', 'Hausarzt', 'HMO', 'Telmed']);
 
   const [vergleichResults, setVergleichResults] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -95,25 +96,19 @@ export default function KrankenkassenVergleich() {
     setVergleichResults(null);
     setSelectedResult(null);
     try {
-      const age = calcAge(formData.geburtsdatum);
-      // Rufe Backend-Proxy auf (yob statt age, korrekte Authentifizierung)
-      const yob = new Date(formData.geburtsdatum).getFullYear();
-      const res = await base44.functions.invoke('queryBAGLive', {
-        plz: formData.plz,
-        yob,
-        deductible: Number(formData.aktuelle_franchise),
-        accident: formData.unfall,
-        limit: 500,
-      });
-      const rawOffers = res.data?.data || res.data?.offers || [];
+      // Direkt PrimAI API — age Parameter (wie der Test bestätigt hat)
+      const url = `https://api.primai.ch/v1/compare?plz=${encodeURIComponent(formData.plz)}&age=${age}&deductible=${formData.aktuelle_franchise}&accident=${formData.unfall}&limit=500`;
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error(`API Fehler: ${res.status}`);
+      const data = await res.json();
+      const rawOffers = data.offers || data.data || [];
       if (!rawOffers.length) throw new Error('Keine Daten von der API erhalten');
-      const normalized = {
+      setVergleichResults({
         offers: rawOffers.map(o => ({
           ...o,
           monthly_premium: o.monthly_premium ?? o.price?.total ?? o.price?.base ?? 0,
         })),
-      };
-      setVergleichResults(normalized);
+      });
     } catch (err) {
       setApiError('Vergleich konnte nicht geladen werden: ' + err.message);
     } finally {
@@ -123,19 +118,11 @@ export default function KrankenkassenVergleich() {
 
   const allOffers = vergleichResults?.offers || [];
 
-  // Modell-Filter: normalisiere API-Keys vor dem Vergleich
-  // 'Weitere' = Telmed + alle unbekannten Keys
-  // Alle 4 aktiv = kein Filter nötig
-  const KNOWN_MAIN_CATS = ['Standard', 'Hausarzt', 'HMO'];
-  const ALL_FILTER_KEYS = ['Standard', 'Hausarzt', 'HMO', 'Weitere'];
+  // Modell-Filter: normalisiere API-Keys und filtere direkt nach Kategorie
+  const ALL_FILTER_KEYS = ['Standard', 'Hausarzt', 'HMO', 'Telmed'];
   const offers = filterModelle.length === ALL_FILTER_KEYS.length
     ? allOffers
-    : allOffers.filter(o => {
-        const norm = normalizeModel(o.model);
-        // «Weitere» = Telmed + alles nicht in Hauptkategorien
-        if (filterModelle.includes('Weitere') && !KNOWN_MAIN_CATS.includes(norm)) return true;
-        return filterModelle.some(m => KNOWN_MAIN_CATS.includes(m) && norm === m);
-      });
+    : allOffers.filter(o => filterModelle.includes(normalizeModel(o.model)));
   const sortedOffers = [...offers].sort((a, b) => (a.monthly_premium || 0) - (b.monthly_premium || 0));
   const cheapestOffer = sortedOffers[0] || null;
 
@@ -155,10 +142,9 @@ export default function KrankenkassenVergleich() {
       _currentKasseKey && o.insurer?.toLowerCase().includes(_currentKasseKey)
     );
 
-  // currentOffer für Preis/KPI: aus allOffers (auch wenn gefiltert)
+  // currentOffer immer aus allOffers — Hervorhebung funktioniert auch wenn Modell im Filter aktiv
   const currentOfferForPrice = _findInList(allOffers);
-  // currentOffer für Hervorhebung in Liste: aus gefilterter offers
-  const currentOffer = _findInList(offers) || currentOfferForPrice;
+  const currentOffer = currentOfferForPrice;
   const currentPraemie = currentOfferForPrice?.monthly_premium;
   const currentNet = currentPraemie ? nettoPreis(currentPraemie) : null;
   // ausgangslage-Prämie für Speichern immer aus allOffers
