@@ -38,6 +38,14 @@ const GM = {
   'HMO': 'OptiMed',
 };
 
+// Atupri Produkt-Mapping
+const ATUPRI = {
+  'Standard': 'FlexCare (freie Arztwahl)',
+  'Hausarzt': 'CareMed',
+  'Telmed': 'TelFirst',
+  'HMO': 'SmartCare',
+};
+
 const PRODUKT_NAMEN = {
   // ── CSS ──────────────────────────────────────────────────────────────
   'CSS': {
@@ -240,7 +248,7 @@ const PRODUKT_NAMEN = {
     'Hausarzt': 'EGK Care',
     'Telmed': 'EGK Telmed',
   },
-  // ── Groupe Mutuel (alle Varianten identisch) ──────────────────────────
+  // ── Groupe Mutuel (alle Varianten identisch — API gibt "Mutuel Krankenversicherung AG" etc.)
   'Mutuel': GM,
   'Mutuel (Groupe Mutuel)': GM,
   'Mutuel Krankenversicherung AG': GM,
@@ -331,6 +339,35 @@ const PRODUKT_NAMEN = {
   },
   // ── Steffisburg ───────────────────────────────────────────────────────
   'Krankenkasse Steffisburg': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'Telmed',
+  },
+  // ── Atupri (API-Name) ─────────────────────────────────────────────────
+  'Atupri Gesundheitsversicherung AG': ATUPRI,
+  // ── CONCORDIA (API-Name gross) ────────────────────────────────────────
+  'CONCORDIA': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'myDoc',
+    'HMO': 'HMO',
+    'Telmed': 'Telmed',
+  },
+  // ── GALENOS (API-Name) ─────────────────────────────────────────────────
+  'GALENOS AG': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Managed Care',
+    'Telmed': 'Tel Doc',
+    'HMO': 'Combi Care',
+  },
+  // ── sana24 (API-Name ohne "(Visana)") ─────────────────────────────────
+  'sana24': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Managed Care',
+    'Telmed': 'Tel Care',
+    'HMO': 'Med Direct',
+  },
+  // ── vita surselva ─────────────────────────────────────────────────────
+  'vita surselva': {
     'Standard': 'Freie Arztwahl',
     'Hausarzt': 'Hausarzt',
     'Telmed': 'Telmed',

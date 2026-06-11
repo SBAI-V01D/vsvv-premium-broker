@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { plz, yob, deductible, accident, limit = 200, all_deductibles = false } = await req.json();
+    const { plz, yob, deductible, accident, limit = 500, all_deductibles = false } = await req.json();
 
     if (!plz || !yob || deductible === undefined) {
       return Response.json({ error: 'plz, yob und deductible sind Pflichtfelder' }, { status: 400 });
@@ -43,9 +43,9 @@ Deno.serve(async (req) => {
 
       if (res.ok) {
         const data = await res.json();
-        if (data.offers) {
-          allOffers.push(...data.offers);
-        }
+        // PrimAI API gibt offers entweder direkt als Array, oder in data.offers / data.data
+        const items = Array.isArray(data) ? data : (data.offers || data.data || []);
+        allOffers.push(...items);
       } else {
         const errText = await res.text();
         console.error('PrimAI API error for deductible', ded, res.status, errText);
