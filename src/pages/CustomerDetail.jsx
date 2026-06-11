@@ -67,7 +67,7 @@ export default function CustomerDetail() {
     queryKey: ['customer', id],
     queryFn: () => base44.entities.Customer.filter({ id }, null, 1).then(r => r?.[0]),
     enabled: !!id,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 0,
   })
 
   // Track customer load time
@@ -111,7 +111,7 @@ export default function CustomerDetail() {
     queryKey: ['contracts', id],
     queryFn: () => base44.entities.Contract.filter({ customer_id: id, archived: false }),
     enabled: !!id,
-    staleTime: 3 * 60 * 1000,
+    staleTime: 0,
   })
 
   useEffect(() => { if (contractsSuccess && id) markLoaded('contractsLoaded') }, [contractsSuccess, id])
@@ -120,7 +120,7 @@ export default function CustomerDetail() {
     queryKey: ['applications', id],
     queryFn: () => base44.entities.Application.filter({ customer_id: id }),
     enabled: !!id,
-    staleTime: 3 * 60 * 1000,
+    staleTime: 0,
   })
 
   useEffect(() => { if (applicationsSuccess && id) markLoaded('applicationsLoaded') }, [applicationsSuccess, id])
@@ -129,14 +129,14 @@ export default function CustomerDetail() {
     queryKey: ['messages', id],
     queryFn: () => base44.entities.Message.filter({ customer_id: id }),
     enabled: !!id,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
   })
 
   const { data: relatedDocuments = [], isSuccess: documentsSuccess } = useQuery({
     queryKey: ['documents', id],
     queryFn: () => base44.entities.Document.filter({ customer_id: id }),
     enabled: !!id,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
   })
 
   useEffect(() => { if (documentsSuccess && id) markLoaded('documentsLoaded') }, [documentsSuccess, id])
@@ -184,12 +184,24 @@ export default function CustomerDetail() {
     }
   }
 
-  // Familienmitglieder: nur aus allCustomers (lazy geladen wenn Formular geöffnet)
-  // Bei Bedarf: separate Query für Familie-Tab
-  const familyMembers = allCustomers.filter(c => c.id === primaryCustomerId || c.primary_customer_id === primaryCustomerId)
+  // Familienmitglieder: direkte Query, unabhängig von allCustomers
+  const { data: familyMembersRaw = [] } = useQuery({
+    queryKey: ['family', primaryCustomerId],
+    queryFn: async () => {
+      if (!primaryCustomerId) return []
+      const [primary, members] = await Promise.all([
+        base44.entities.Customer.filter({ id: primaryCustomerId }, null, 1),
+        base44.entities.Customer.filter({ primary_customer_id: primaryCustomerId }),
+      ])
+      return [...(primary || []), ...(members || [])].filter((c, i, a) => a.findIndex(x => x.id === c.id) === i)
+    },
+    enabled: !!primaryCustomerId,
+    staleTime: 0,
+  })
+  const familyMembers = familyMembersRaw.length > 0 ? familyMembersRaw : (customer ? [customer] : [])
   const householdMembers = familyMembers
   const primaryCustomer = familyMembers.find(c => c.id === primaryCustomerId) || customer
-  // Verträge: nur direkte Kundenverträge (householdContracts entfernt für Performance)
+  // Verträge: nur direkte Kundenverträge
   const allHouseholdContracts = relatedContracts
 
   const downloadPDFMutation = useMutation({
@@ -218,19 +230,24 @@ export default function CustomerDetail() {
 
   const createAppMutation = useMutation({
     mutationFn: (data) => base44.entities.Application.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['applications', id] }); setShowAppForm(false); setEditingApp(null) },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['applications', id] })
+      setShowAppForm(false); setEditingApp(null)
+    },
   })
 
   const updateAppMutation = useMutation({
     mutationFn: ({ id: aid, data }) => base44.entities.Application.update(aid, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['applications', id] }); setShowAppForm(false); setEditingApp(null) },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['applications', id] })
+      setShowAppForm(false); setEditingApp(null)
+    },
   })
 
   const updateContractMutation = useMutation({
     mutationFn: ({ id: cid, data }) => base44.entities.Contract.update(cid, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contracts', id] })
-      queryClient.invalidateQueries({ queryKey: ['household-contracts', id] })
       setEditingContract(null)
     },
   })
