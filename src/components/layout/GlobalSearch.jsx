@@ -11,7 +11,7 @@ export default function GlobalSearch({ collapsed, light = false }) {
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef = useRef(null);
-  const dropdownRef = useRef(null);
+  const containerRef = useRef(null);
 
   const { data: customers = [] } = useQuery({
     queryKey: ['sidebar_customers_slim'],
@@ -92,7 +92,7 @@ export default function GlobalSearch({ collapsed, light = false }) {
 
   useEffect(() => {
     const handler = (e) => {
-      if (!dropdownRef.current?.contains(e.target) && !inputRef.current?.contains(e.target)) {
+      if (!containerRef.current?.contains(e.target)) {
         setOpen(false);
       }
     };
@@ -147,7 +147,7 @@ export default function GlobalSearch({ collapsed, light = false }) {
   const showDropdown = open && query.length >= 3 && hasResults !== undefined;
 
   return (
-    <div className={cn('relative', light ? '' : 'px-3 py-2')} ref={dropdownRef}>
+    <div className={cn('relative', light ? '' : 'px-3 py-2')} ref={containerRef}>
       <div className={cn(
         'flex items-center gap-2 rounded-xl px-3 py-2 transition-all',
         light
