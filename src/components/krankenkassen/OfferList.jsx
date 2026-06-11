@@ -26,8 +26,8 @@ export const MODEL_ALIAS_MAP = {
   // HMO
   'hmo': 'HMO',
   'group_practice': 'HMO',
-  // Andere (als Standard behandeln)
-  'other': 'Standard',
+  // Andere — als eigene Kategorie belassen (fällt unter «Weitere»)
+  'other': 'other',
 };
 
 // Groupe Mutuel Produkt-Mapping (gilt für alle GM-Varianten)

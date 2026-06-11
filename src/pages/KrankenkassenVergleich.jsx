@@ -16,6 +16,13 @@ import OfferList, { nettoPreis, getProduktName, normalizeModel } from '@/compone
 import VergleichPrintView from '@/components/krankenkassen/VergleichPrintView';
 import VergleichsAnalysenListe from './VergleichsAnalysenListe';
 
+const FILTER_MODELLE_OPTIONS = [
+  { key: 'Standard', label: 'Standard', desc: 'Freie Arztwahl' },
+  { key: 'Hausarzt', label: 'Hausarzt', desc: 'inkl. GP, Managed Care' },
+  { key: 'HMO', label: 'HMO', desc: 'Gruppenpraxis' },
+  { key: 'Weitere', label: 'Weitere', desc: 'Telmed u.a.' },
+];
+
 const ALLE_KRANKENKASSEN = [
   'Agrisano','Aquilana','Assura','Atupri','Avenir (Groupe Mutuel)','CMVEO','Concordia',
   'CSS','Curaulta','EGK','Einsiedler Krankenkasse','Galenos (Visana)',
@@ -53,8 +60,8 @@ export default function KrankenkassenVergleich() {
     plz: '', wohnort: '', kanton: '',
     aktuelle_krankenkasse: '', aktuelles_modell: '', aktuelle_franchise: '', unfall: false,
   });
-  // Mehrfach-Modell-Filter: welche Modelle sollen in den Ergebnissen angezeigt werden
-  const [filterModelle, setFilterModelle] = useState(['Standard', 'Telmed', 'Hausarzt', 'HMO']);
+  // Mehrfach-Modell-Filter: Standard/Hausarzt/HMO/Weitere (Weitere = Telmed + unbekannte Keys)
+  const [filterModelle, setFilterModelle] = useState(['Standard', 'Hausarzt', 'HMO', 'Weitere']);
 
   const [vergleichResults, setVergleichResults] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -111,10 +118,20 @@ export default function KrankenkassenVergleich() {
   };
 
   const allOffers = vergleichResults?.offers || [];
-  // Modell-Filter anwenden (case-insensitive)
-  const offers = filterModelle.length === 4
+
+  // Modell-Filter: normalisiere API-Keys vor dem Vergleich
+  // 'Weitere' = Telmed + alle unbekannten Keys
+  // Alle 4 aktiv = kein Filter nötig
+  const KNOWN_MAIN_CATS = ['Standard', 'Hausarzt', 'HMO'];
+  const ALL_FILTER_KEYS = ['Standard', 'Hausarzt', 'HMO', 'Weitere'];
+  const offers = filterModelle.length === ALL_FILTER_KEYS.length
     ? allOffers
-    : allOffers.filter(o => filterModelle.some(m => o.model?.toLowerCase() === m.toLowerCase()));
+    : allOffers.filter(o => {
+        const norm = normalizeModel(o.model);
+        // «Weitere» = Telmed + alles nicht in Hauptkategorien
+        if (filterModelle.includes('Weitere') && !KNOWN_MAIN_CATS.includes(norm)) return true;
+        return filterModelle.some(m => KNOWN_MAIN_CATS.includes(m) && norm === m);
+      });
   const sortedOffers = [...offers].sort((a, b) => (a.monthly_premium || 0) - (b.monthly_premium || 0));
   const cheapestOffer = sortedOffers[0] || null;
 
@@ -348,23 +365,26 @@ export default function KrankenkassenVergleich() {
                   <div>
                     <Label className="text-xs mb-2 block">Modelle im Vergleich anzeigen</Label>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {MODELL_OPTIONS.map(m => {
-                        const checked = filterModelle.includes(m);
+                      {FILTER_MODELLE_OPTIONS.map(({ key, label, desc }) => {
+                        const checked = filterModelle.includes(key);
                         return (
-                          <label key={m} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border cursor-pointer text-xs font-medium transition-colors ${
-                            checked ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-white border-border text-muted-foreground hover:bg-muted/40'
+                          <label key={key} className={`flex flex-col gap-0.5 px-2.5 py-1.5 rounded-lg border cursor-pointer transition-colors ${
+                            checked ? 'bg-primary/10 border-primary/30' : 'bg-white border-border hover:bg-muted/40'
                           }`}>
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => setFilterModelle(prev =>
-                                checked
-                                  ? prev.length > 1 ? prev.filter(x => x !== m) : prev // mind. 1 muss aktiv bleiben
-                                  : [...prev, m]
-                              )}
-                              className="w-3 h-3 accent-primary"
-                            />
-                            {m}
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => setFilterModelle(prev =>
+                                  checked
+                                    ? prev.length > 1 ? prev.filter(x => x !== key) : prev
+                                    : [...prev, key]
+                                )}
+                                className="w-3 h-3 accent-primary shrink-0"
+                              />
+                              <span className={`text-xs font-semibold ${checked ? 'text-primary' : 'text-foreground'}`}>{label}</span>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground pl-4 leading-tight">{desc}</span>
                           </label>
                         );
                       })}
@@ -463,7 +483,7 @@ export default function KrankenkassenVergleich() {
                     <div className="p-3 rounded-xl border bg-blue-50 border-blue-200 text-center">
                       <p className="text-[10px] text-blue-600 font-semibold uppercase tracking-wide">Angebote</p>
                       <p className="text-2xl font-bold text-blue-800">{offers.length}</p>
-                      {filterModelle.length < 4 && (
+                      {filterModelle.length < ALL_FILTER_KEYS.length && (
                         <p className="text-[9px] text-blue-500 mt-0.5">{filterModelle.join(', ')}</p>
                       )}
                     </div>
