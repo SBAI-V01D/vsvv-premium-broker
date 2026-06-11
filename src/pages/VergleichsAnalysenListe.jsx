@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent } from '@/components/ui/card';
-import { TrendingDown, CheckCircle2, X, BarChart2, Loader2, Trash2 } from 'lucide-react';
+import { TrendingDown, CheckCircle2, X, BarChart2, Loader2, Trash2, Pencil } from 'lucide-react';
 
 function fmt(n) { return n != null ? `CHF ${Number(n).toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '–'; }
 function fmtJ(n) { return n != null ? `CHF ${Math.round(n).toLocaleString('de-CH')}` : '–'; }
@@ -19,6 +19,8 @@ export default function VergleichsAnalysenListe() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [togglingId, setTogglingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [editingWahlId, setEditingWahlId] = useState(null);
+  const [wahlDraft, setWahlDraft] = useState('');
   const queryClient = useQueryClient();
 
   const { data: analysen = [], isLoading } = useQuery({
@@ -38,6 +40,14 @@ export default function VergleichsAnalysenListe() {
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const handleSaveWahl = async (analyse) => {
+    await base44.entities.VergleichsAnalyse.update(analyse.id, {
+      beratungsergebnis: { ...analyse.beratungsergebnis, abschluss_wahl: wahlDraft },
+    });
+    queryClient.invalidateQueries({ queryKey: ['vergleichs-analysen'] });
+    setEditingWahlId(null);
   };
 
   const handleToggleAbgeschlossen = async (analyse) => {
@@ -119,7 +129,7 @@ export default function VergleichsAnalysenListe() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
-                    {['Datum', 'Name', 'Ort', 'Aktuell', 'Empfehlung', 'Ersparnis/J.', 'Status', 'Abgeschlossen', ''].map(h => (
+                    {['Datum', 'Name', 'Ort', 'Aktuell', 'Empfehlung', 'Abschluss-Wahl', 'Ersparnis/J.', 'Status', 'Abgeschlossen', ''].map(h => (
                       <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>
                     ))}
                   </tr>
@@ -154,8 +164,37 @@ export default function VergleichsAnalysenListe() {
                             <p className="text-muted-foreground">{fmt(a.empfehlung.praemie_empfohlen)}/M.</p>
                           )}
                         </td>
+                        {/* Abschluss-Wahl */}
+                        <td className="px-4 py-2.5 text-xs min-w-[130px]">
+                          {editingWahlId === a.id ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                autoFocus
+                                value={wahlDraft}
+                                onChange={e => setWahlDraft(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') handleSaveWahl(a); if (e.key === 'Escape') setEditingWahlId(null); }}
+                                className="w-full border border-primary rounded px-1.5 py-0.5 text-xs focus:outline-none"
+                                placeholder="Kasse / Produkt..."
+                              />
+                              <button onClick={() => handleSaveWahl(a)} className="text-emerald-600 hover:text-emerald-700 shrink-0">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => setEditingWahlId(null)} className="text-muted-foreground hover:text-foreground shrink-0">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 group cursor-pointer"
+                              onClick={() => { setEditingWahlId(a.id); setWahlDraft(a.beratungsergebnis?.abschluss_wahl || ''); }}>
+                              <span className={a.beratungsergebnis?.abschluss_wahl ? 'font-medium text-foreground' : 'text-muted-foreground italic'}>
+                                {a.beratungsergebnis?.abschluss_wahl || 'Nicht erfasst'}
+                              </span>
+                              <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
+                            </div>
+                          )}
+                        </td>
                         <td className="px-4 py-2.5 text-xs font-bold whitespace-nowrap">
-                          {ers != null ? (
+                         {ers != null ? (
                             <span className={ers >= 0 ? 'text-emerald-600' : 'text-red-500'}>
                               {ers >= 0 ? '+' : ''}{fmtJ(ers)}/J.
                             </span>
