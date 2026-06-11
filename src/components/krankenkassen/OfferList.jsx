@@ -398,7 +398,11 @@ const INSURER_DISPLAY_NAMES = {
   'Philos Krankenversicherung AG': 'Philos (Groupe Mutuel)',
   'CONCORDIA': 'Concordia',
   'GALENOS AG': 'Galenos (Visana)',
-  'SLKK': 'SLKK',
+  'sana24': 'sana24 (Visana)',
+  'sana24 AG': 'sana24 (Visana)',
+  'vita surselva': 'Vita Surselva',
+  'Sumiswalder': 'Sumiswalder KK',
+  'rhenusana': 'Rhenusana',
 };
 
 export function getDisplayName(insurer) {
@@ -471,9 +475,9 @@ export default function OfferList({
               const isSelected = selectedResult?.insurer === offer.insurer &&
                 selectedResult?.model === offer.model &&
                 selectedResult?.monthly_premium === offer.monthly_premium;
+              // isCurrent = Angebot gehört zur aktuellen Kasse (Versicherer-Match reicht, Modell egal)
               const isCurrent = currentOffer &&
-                matchesInsurer(offer.insurer, currentOffer.insurer) &&
-                normalizeModel(offer.model) === normalizeModel(currentOffer.model);
+                matchesInsurer(offer.insurer, currentOffer.insurer);
               const isCheapest = idx === 0;
               const nettoMonat = nettoPreis(offer.monthly_premium);
               const savings = currentPraemie ? nettoPreis(currentPraemie) - nettoMonat : null;
