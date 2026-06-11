@@ -130,7 +130,7 @@ export default function VergleichsAnalysenListe() {
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
                     {['Datum', 'Name', 'Ort', 'Aktuell', 'Empfehlung', 'Abschluss-Wahl', 'Ersparnis/J.', 'Status', 'Abgeschlossen', ''].map(h => (
-                      <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>
+                      <th key={h} className="px-3 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -145,27 +145,27 @@ export default function VergleichsAnalysenListe() {
 
                     return (
                       <tr key={a.id} className="hover:bg-muted/20 transition-colors">
-                        <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">
+                        <td className="px-3 py-2 text-[11px] text-muted-foreground whitespace-nowrap">
                           {a.analyse_datum ? new Date(a.analyse_datum).toLocaleDateString('de-CH') : '–'}
                         </td>
-                        <td className="px-4 py-2.5 font-medium whitespace-nowrap">
+                        <td className="px-3 py-2 text-[11px] font-medium whitespace-nowrap">
                           {a.persoenliche_daten?.nachname || ''}{a.persoenliche_daten?.vorname ? `, ${a.persoenliche_daten.vorname}` : a.customer_name || '–'}
                         </td>
-                        <td className="px-4 py-2.5 text-xs text-muted-foreground">{ort}</td>
-                        <td className="px-4 py-2.5 text-xs">
+                        <td className="px-3 py-2 text-[11px] text-muted-foreground">{ort}</td>
+                        <td className="px-3 py-2 text-[11px]">
                           <p className="font-medium">{a.ausgangslage?.krankenkasse || '–'}</p>
                           {a.ausgangslage?.praemie_aktuell > 0 && (
                             <p className="text-muted-foreground">{fmt(a.ausgangslage.praemie_aktuell)}/M.</p>
                           )}
                         </td>
-                        <td className="px-4 py-2.5 text-xs">
+                        <td className="px-3 py-2 text-[11px]">
                           <p className="font-medium">{a.empfehlung?.empfohlene_krankenkasse || '–'}</p>
                           {a.empfehlung?.praemie_empfohlen > 0 && (
                             <p className="text-muted-foreground">{fmt(a.empfehlung.praemie_empfohlen)}/M.</p>
                           )}
                         </td>
                         {/* Abschluss-Wahl */}
-                        <td className="px-4 py-2.5 text-xs min-w-[130px]">
+                        <td className="px-3 py-2 text-[11px] min-w-[120px]">
                           {editingWahlId === a.id ? (
                             <div className="flex items-center gap-1">
                               <input
@@ -193,19 +193,19 @@ export default function VergleichsAnalysenListe() {
                             </div>
                           )}
                         </td>
-                        <td className="px-4 py-2.5 text-xs font-bold whitespace-nowrap">
+                        <td className="px-3 py-2 text-[11px] font-bold whitespace-nowrap">
                          {ers != null ? (
-                            <span className={ers >= 0 ? 'text-emerald-600' : 'text-red-500'}>
-                              {ers >= 0 ? '+' : ''}{fmtJ(ers)}/J.
-                            </span>
-                          ) : '–'}
+                           <span className={ers >= 0 ? 'text-emerald-600' : 'text-red-500'}>
+                             {ers >= 0 ? '+' : ''}{fmtJ(ers)}/J.
+                           </span>
+                         ) : '–'}
                         </td>
-                        <td className="px-4 py-2.5">
-                          <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded border ${statusCfg.color}`}>
-                            {statusCfg.label}
-                          </span>
+                        <td className="px-3 py-2">
+                         <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded border ${statusCfg.color}`}>
+                           {statusCfg.label}
+                         </span>
                         </td>
-                        <td className="px-4 py-2.5 text-center">
+                        <td className="px-3 py-2 text-center">
                           <button
                             onClick={() => handleToggleAbgeschlossen(a)}
                             disabled={togglingId === a.id}
@@ -225,7 +225,7 @@ export default function VergleichsAnalysenListe() {
                           </button>
                         </td>
                         {/* Löschen */}
-                        <td className="px-4 py-2.5 text-center">
+                        <td className="px-3 py-2 text-center">
                           <button
                             onClick={() => handleDelete(a)}
                             disabled={deletingId === a.id}
