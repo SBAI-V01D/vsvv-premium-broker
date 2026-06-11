@@ -26,8 +26,8 @@ export const MODEL_ALIAS_MAP = {
   // HMO
   'hmo': 'HMO',
   'group_practice': 'HMO',
-  // Andere — als eigene Kategorie belassen (fällt unter «Weitere»)
-  'other': 'other',
+  // Andere — als Hausarzt behandeln (BAG-API gibt 'other' für Managed-Care/Hausarzt-Varianten)
+  'other': 'Hausarzt',
 };
 
 // Groupe Mutuel Produkt-Mapping (gilt für alle GM-Varianten)

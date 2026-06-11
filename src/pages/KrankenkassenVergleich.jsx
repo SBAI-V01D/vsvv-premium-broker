@@ -135,21 +135,30 @@ export default function KrankenkassenVergleich() {
   const sortedOffers = [...offers].sort((a, b) => (a.monthly_premium || 0) - (b.monthly_premium || 0));
   const cheapestOffer = sortedOffers[0] || null;
 
-  // Aktuelle Kasse aus Ergebnissen matching
-  // Normalisiert sowohl API-Modell-Keys (z.B. 'gp', 'telmed') als auch Freitext-Eingabe
+  // Aktuelle Kasse matching — suche in allOffers für Preis, aber in offers für Hervorhebung
+  // Suche zuerst mit Modell-Match, dann nur Kasse
   const _currentKasseKey = formData.aktuelle_krankenkasse?.split(' ')[0]?.toLowerCase();
   const _currentModellNorm = formData.aktuelles_modell ? normalizeModel(formData.aktuelles_modell) : null;
-  const currentOffer = allOffers.find(o => {
-    if (!_currentKasseKey) return false;
-    const insurerMatch = o.insurer?.toLowerCase().includes(_currentKasseKey);
-    if (!insurerMatch) return false;
-    if (!_currentModellNorm) return true;
-    return normalizeModel(o.model) === _currentModellNorm;
-  }) || allOffers.find(o =>
-    _currentKasseKey && o.insurer?.toLowerCase().includes(_currentKasseKey)
-  );
-  const currentPraemie = currentOffer?.monthly_premium;
+
+  const _findInList = (list) =>
+    list.find(o => {
+      if (!_currentKasseKey) return false;
+      const insurerMatch = o.insurer?.toLowerCase().includes(_currentKasseKey);
+      if (!insurerMatch) return false;
+      if (!_currentModellNorm) return true;
+      return normalizeModel(o.model) === _currentModellNorm;
+    }) || list.find(o =>
+      _currentKasseKey && o.insurer?.toLowerCase().includes(_currentKasseKey)
+    );
+
+  // currentOffer für Preis/KPI: aus allOffers (auch wenn gefiltert)
+  const currentOfferForPrice = _findInList(allOffers);
+  // currentOffer für Hervorhebung in Liste: aus gefilterter offers
+  const currentOffer = _findInList(offers) || currentOfferForPrice;
+  const currentPraemie = currentOfferForPrice?.monthly_premium;
   const currentNet = currentPraemie ? nettoPreis(currentPraemie) : null;
+  // ausgangslage-Prämie für Speichern immer aus allOffers
+  const currentNetForSave = currentOfferForPrice ? nettoPreis(currentOfferForPrice.monthly_premium) : currentNet;
   const selectedNet = selectedResult ? nettoPreis(selectedResult.monthly_premium) : null;
   const cheapestNet = cheapestOffer ? nettoPreis(cheapestOffer.monthly_premium) : null;
 
@@ -184,7 +193,7 @@ export default function KrankenkassenVergleich() {
           krankenkasse: formData.aktuelle_krankenkasse,
           modell: formData.aktuelles_modell,
           franchise: Number(formData.aktuelle_franchise) || 0,
-          praemie_aktuell: currentNet || 0,
+          praemie_aktuell: currentNetForSave || 0,
         },
         empfehlung: {
           empfohlene_krankenkasse: selectedResult.insurer,
