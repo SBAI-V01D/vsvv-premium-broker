@@ -106,19 +106,22 @@ export default function KrankenkassenVergleich() {
       const rawOffers = response.data?.data || response.data?.offers || [];
       if (!rawOffers.length) throw new Error('Keine Daten von der API erhalten');
 
-      // Normalisiere Preis-Feld und dedupliziere (API gibt manchmal Duplikate zurück)
+      // Normalisiere Preis-Feld
       const mapped = rawOffers.map(o => ({
         ...o,
         monthly_premium: o.monthly_premium ?? o.price?.total ?? o.price?.base ?? 0,
       }));
-      const seen = new Set();
-      const deduped = mapped.filter(o => {
-        const key = `${o.insurer}|${o.model}|${o.deductible}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-      setVergleichResults({ offers: deduped });
+      // Dedupliziere: pro Versicherer+Modell nur den GÜNSTIGSTEN Eintrag behalten
+      // (API gibt manchmal mehrere Einträge für verschiedene Prämienzonen derselben PLZ)
+      const cheapestByKey = new Map();
+      for (const o of mapped) {
+        const key = `${o.insurer}|${o.model}`;
+        const existing = cheapestByKey.get(key);
+        if (!existing || o.monthly_premium < existing.monthly_premium) {
+          cheapestByKey.set(key, o);
+        }
+      }
+      setVergleichResults({ offers: Array.from(cheapestByKey.values()) });
     } catch (err) {
       setApiError('Vergleich konnte nicht geladen werden: ' + err.message);
     } finally {
