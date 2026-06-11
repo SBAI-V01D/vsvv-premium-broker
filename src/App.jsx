@@ -51,6 +51,7 @@ import Ausschreibungen from './pages/Ausschreibungen'
 import AusschreibungDetail from './pages/AusschreibungDetail'
 import VersichererDBPage from './pages/VersichererDBPage'
 import KrankenkassenVergleich from './pages/KrankenkassenVergleich'
+import VergleichsAnalysenListe from './pages/VergleichsAnalysenListe'
 import TestKrankenkassenVergleich from './pages/TestKrankenkassenVergleich'
 import ComplianceSchreiben from './pages/ComplianceSchreiben'
 import ChatExport from './pages/ChatExport'
@@ -153,6 +154,7 @@ const AuthenticatedApp = () => {
         <Route path="/ausschreibungen/:id" element={<AusschreibungDetail />} />
         <Route path="/ausschreibungen/versicherer" element={<VersichererDBPage />} />
         <Route path="/krankenkassen-vergleich" element={<KrankenkassenVergleich />} />
+        <Route path="/vergleichs-analysen" element={<VergleichsAnalysenListe />} />
         <Route path="/test/kkv" element={<TestKrankenkassenVergleich />} />
         <Route path="/compliance-schreiben" element={<ComplianceSchreiben />} />
         <Route path="/chat-export" element={<ChatExport />} />
