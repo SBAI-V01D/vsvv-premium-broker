@@ -3,113 +3,157 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Offizielle BAG-Produktnamen je Versicherer + Modellkategorie
-// Quelle: krankenversicherung.ch / BAG priminfo 2026 — verifizierte offizielle Bezeichnungen
+// Quelle: BAG priminfo 2026 / krankenversicherung.ch — verifizierte offizielle Bezeichnungen
+// HINWEIS: Die PrimAI API liefert Modell-Keys wie 'standard', 'telmed', 'gp', 'hmo', 'other'
+// Diese werden via MODEL_ALIAS_MAP auf die Standard-Kategorien normalisiert.
+
+// Normalisiert API-Modell-Keys → Standard-Kategorie
+export const MODEL_ALIAS_MAP = {
+  // Standard / freie Arztwahl
+  'standard': 'Standard',
+  'free_choice': 'Standard',
+  'freie_arztwahl': 'Standard',
+  // Telmed
+  'telmed': 'Telmed',
+  'phone_first': 'Telmed',
+  'telemedicine': 'Telmed',
+  'tel': 'Telmed',
+  // Hausarzt / GP
+  'gp': 'Hausarzt',
+  'hausarzt': 'Hausarzt',
+  'family_doctor': 'Hausarzt',
+  'managed_care': 'Hausarzt',
+  // HMO
+  'hmo': 'HMO',
+  'group_practice': 'HMO',
+  // Andere (als Standard behandeln)
+  'other': 'Standard',
+};
+
+// Groupe Mutuel Produkt-Mapping (gilt für alle GM-Varianten)
+const GM = {
+  'Standard': 'Primaflex (freie Arztwahl)',
+  'Hausarzt': 'PrimaCare',
+  'Telmed': 'SanaTel',
+  'HMO': 'OptiMed',
+};
+
 const PRODUKT_NAMEN = {
+  // ── CSS ──────────────────────────────────────────────────────────────
   'CSS': {
     'Standard': 'CSS Gesundheit (freie Arztwahl)',
     'Hausarzt': 'Hausarzt Profit',
     'Telmed': 'TelMed',
     'HMO': 'Multimed',
   },
+  'CSS Kranken-Versicherung AG': {
+    'Standard': 'CSS Gesundheit (freie Arztwahl)',
+    'Hausarzt': 'Hausarzt Profit',
+    'Telmed': 'TelMed',
+    'HMO': 'Multimed',
+  },
+  // ── Helsana ──────────────────────────────────────────────────────────
   'Helsana': {
     'Standard': 'Freie Arztwahl',
     'Hausarzt': 'BeneFit PLUS Hausarzt',
     'Telmed': 'BeneFit PLUS Telmed',
     'HMO': 'Premed',
   },
+  'Helsana Versicherungen AG': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'BeneFit PLUS Hausarzt',
+    'Telmed': 'BeneFit PLUS Telmed',
+    'HMO': 'Premed',
+  },
+  // ── SWICA ────────────────────────────────────────────────────────────
   'SWICA': {
-    'Standard': 'Multichoise (freie Arztwahl)',
-    'Hausarzt': 'Hausarzt / Bestcare',
+    'Standard': 'SWICA (freie Arztwahl)',
+    'Hausarzt': 'BENECASA / Hausarzt',
     'Telmed': 'Telmed',
     'HMO': 'Medica / Santé',
   },
+  'SWICA Krankenversicherung AG': {
+    'Standard': 'SWICA (freie Arztwahl)',
+    'Hausarzt': 'BENECASA / Hausarzt',
+    'Telmed': 'Telmed',
+    'HMO': 'Medica / Santé',
+  },
+  // ── Sanitas ──────────────────────────────────────────────────────────
   'Sanitas': {
     'Standard': 'Freie Arztwahl',
     'Hausarzt': 'Hausarztmodell',
     'Telmed': 'CallMed',
     'HMO': 'Netmed',
   },
+  'Sanitas Krankenversicherung AG': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Hausarztmodell',
+    'Telmed': 'CallMed',
+    'HMO': 'Netmed',
+  },
+  // ── Concordia ────────────────────────────────────────────────────────
   'Concordia': {
     'Standard': 'Freie Arztwahl',
-    'Hausarzt': 'smartDoc / myDoc',
+    'Hausarzt': 'myDoc',
     'HMO': 'HMO',
     'Telmed': 'Telmed',
   },
   'CONCORDIA': {
     'Standard': 'Freie Arztwahl',
-    'Hausarzt': 'smartDoc / myDoc',
+    'Hausarzt': 'myDoc',
     'HMO': 'HMO',
     'Telmed': 'Telmed',
   },
+  'Concordia Kranken- und Unfallversicherung AG': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'myDoc',
+    'HMO': 'HMO',
+    'Telmed': 'Telmed',
+  },
+  // ── Visana ───────────────────────────────────────────────────────────
   'Visana': {
     'Standard': 'Freie Arztwahl',
-    'Hausarzt': 'Managed Care / Combi Care',
+    'Hausarzt': 'Managed Care',
     'Telmed': 'Tel Care / Tel Doc',
     'HMO': 'MedDirect',
   },
-  'Atupri Gesundheitsversicherung AG': {
-    'Standard': 'Freie Arztwahl (FlexCare)',
-    'Hausarzt': 'CareMed',
-    'Telmed': 'TelFirst',
-    'HMO': 'SmartCare / HMO',
-  },
-  'Assura-Basis SA': {
-    'Standard': 'Qualimed (freie Arztwahl)',
-    'Hausarzt': 'Hausarzt',
-    'Telmed': 'Femina Vita / Qualimed Telemed',
-    'HMO': 'Gesundheitsnetz',
-  },
-  'KPT': {
-    'Standard': 'win.easy (freie Arztwahl)',
-    'Hausarzt': 'Hausarzt / win.win',
-    'Telmed': 'win.plus',
-    'HMO': 'win.smart',
-  },
-  'Aquilana': {
+  'Visana Versicherungen AG': {
     'Standard': 'Freie Arztwahl',
-    'Telmed': 'Smartmed',
-    'Hausarzt': 'Casamed',
+    'Hausarzt': 'Managed Care',
+    'Telmed': 'Tel Care / Tel Doc',
+    'HMO': 'MedDirect',
   },
-  'ÖKK': {
-    'Standard': 'Freie Arztwahl (Select)',
-    'Hausarzt': 'Hausarzt',
-    'Telmed': 'Telemedizin',
-    'HMO': 'HMO / Casamed 24',
-  },
-  'Agrisano': {
-    'Standard': 'AGRIsmart (freie Arztwahl)',
-    'Hausarzt': 'AGRIcontact',
-    'Telmed': 'AGRIeco',
-  },
-  'EGK': {
+  // ── sana24 (Visana-Gruppe) ────────────────────────────────────────────
+  'sana24': {
     'Standard': 'Freie Arztwahl',
-    'Hausarzt': 'EGK Care',
-    'Telmed': 'EGK Telmed',
+    'Hausarzt': 'Managed Care',
+    'Telmed': 'Tel Care / Tel Doc',
+    'HMO': 'Med Direct',
   },
-  'Mutuel Krankenversicherung AG': {
-    'Standard': 'Primaflex (freie Arztwahl)',
-    'Hausarzt': 'PrimaCare',
-    'Telmed': 'SanaTel',
-    'HMO': 'OptiMed',
+  'sana24 (Visana)': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Managed Care',
+    'Telmed': 'Tel Care / Tel Doc',
+    'HMO': 'Med Direct',
   },
-  // Groupe Mutuel Varianten (API liefert verschiedene Insurer-Namen)
-  'Avenir': {
-    'Standard': 'Primaflex (freie Arztwahl)',
-    'Hausarzt': 'PrimaCare',
-    'Telmed': 'SanaTel',
-    'HMO': 'OptiMed',
+  'sana24 AG': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Managed Care',
+    'Telmed': 'Tel Care / Tel Doc',
+    'HMO': 'Med Direct',
   },
-  'Mutuel Assurances': {
-    'Standard': 'Primaflex (freie Arztwahl)',
-    'Hausarzt': 'PrimaCare',
-    'Telmed': 'SanaTel',
-    'HMO': 'OptiMed',
+  // ── Galenos (Visana-Gruppe) ───────────────────────────────────────────
+  'Galenos': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Managed Care',
+    'Telmed': 'Tel Doc',
+    'HMO': 'Combi Care',
   },
-  'Philos': {
-    'Standard': 'Primaflex (freie Arztwahl)',
-    'Hausarzt': 'PrimaCare',
-    'Telmed': 'SanaTel',
-    'HMO': 'OptiMed',
+  'Galenos (Visana)': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Managed Care',
+    'Telmed': 'Tel Doc',
+    'HMO': 'Combi Care',
   },
   'GALENOS AG': {
     'Standard': 'Freie Arztwahl',
@@ -117,40 +161,207 @@ const PRODUKT_NAMEN = {
     'Telmed': 'Tel Doc',
     'HMO': 'Combi Care',
   },
+  // ── Atupri ───────────────────────────────────────────────────────────
+  'Atupri': {
+    'Standard': 'FlexCare (freie Arztwahl)',
+    'Hausarzt': 'CareMed',
+    'Telmed': 'TelFirst',
+    'HMO': 'SmartCare',
+  },
+  'Atupri Gesundheitsversicherung AG': {
+    'Standard': 'FlexCare (freie Arztwahl)',
+    'Hausarzt': 'CareMed',
+    'Telmed': 'TelFirst',
+    'HMO': 'SmartCare',
+  },
+  // ── Assura ───────────────────────────────────────────────────────────
+  'Assura': {
+    'Standard': 'Qualimed (freie Arztwahl)',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'Qualimed Telemed',
+    'HMO': 'Gesundheitsnetz',
+  },
+  'Assura-Basis SA': {
+    'Standard': 'Qualimed (freie Arztwahl)',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'Qualimed Telemed',
+    'HMO': 'Gesundheitsnetz',
+  },
+  // ── KPT ──────────────────────────────────────────────────────────────
+  'KPT': {
+    'Standard': 'win.easy (freie Arztwahl)',
+    'Hausarzt': 'win.win',
+    'Telmed': 'win.plus',
+    'HMO': 'win.smart',
+  },
+  'KPT Krankenkasse AG': {
+    'Standard': 'win.easy (freie Arztwahl)',
+    'Hausarzt': 'win.win',
+    'Telmed': 'win.plus',
+    'HMO': 'win.smart',
+  },
+  // ── Aquilana ─────────────────────────────────────────────────────────
+  'Aquilana': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Casamed',
+    'Telmed': 'Smartmed',
+  },
+  'Aquilana Versicherungen': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Casamed',
+    'Telmed': 'Smartmed',
+  },
+  // ── ÖKK ──────────────────────────────────────────────────────────────
+  'ÖKK': {
+    'Standard': 'Select (freie Arztwahl)',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'Telemedizin',
+    'HMO': 'HMO / Casamed 24',
+  },
+  // ── Agrisano ─────────────────────────────────────────────────────────
+  'Agrisano': {
+    'Standard': 'AGRIsmart (freie Arztwahl)',
+    'Hausarzt': 'AGRIcontact',
+    'Telmed': 'AGRIeco',
+  },
+  'Agrisano Krankenkasse AG': {
+    'Standard': 'AGRIsmart (freie Arztwahl)',
+    'Hausarzt': 'AGRIcontact',
+    'Telmed': 'AGRIeco',
+  },
+  // ── EGK ──────────────────────────────────────────────────────────────
+  'EGK': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'EGK Care',
+    'Telmed': 'EGK Telmed',
+  },
+  'EGK-Gesundheitskasse': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'EGK Care',
+    'Telmed': 'EGK Telmed',
+  },
+  // ── Groupe Mutuel (alle Varianten identisch) ──────────────────────────
+  'Mutuel': GM,
+  'Mutuel (Groupe Mutuel)': GM,
+  'Mutuel Krankenversicherung AG': GM,
+  'Mutuel Assurances': GM,
+  'easy sana (Groupe Mutuel)': GM,
+  'AMB Assurance (Groupe Mutuel)': GM,
+  'Avenir': GM,
+  'Avenir (Groupe Mutuel)': GM,
+  'Avenir Krankenversicherung AG': GM,
+  'Philos': GM,
+  'Philos (Groupe Mutuel)': GM,
+  'Philos Krankenversicherung AG': GM,
+  'easy sana': GM,
+  'AMB': GM,
+  'Groupe Mutuel': GM,
+  // ── Vivao Sympany ────────────────────────────────────────────────────
+  'Vivao Sympany': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'FlexHelp 24',
+    'HMO': 'HMO',
+  },
+  'Vivao Sympany AG': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'FlexHelp 24',
+    'HMO': 'HMO',
+  },
+  // ── Sumiswalder ───────────────────────────────────────────────────────
   'Sumiswalder': {
     'Standard': 'Freie Arztwahl',
     'Hausarzt': 'Hausarzt',
     'Telmed': 'Telmed',
   },
-  'Avenir Krankenversicherung AG': {
-    'Standard': 'Primaflex (freie Arztwahl)',
-    'Hausarzt': 'PrimaCare / OptiMed',
-    'Telmed': 'SanaTel',
-  },
-  'Vivao Sympany': {
+  'Sumiswalder Krankenkasse': {
     'Standard': 'Freie Arztwahl',
     'Hausarzt': 'Hausarzt',
-    'Telmed': 'FlexHelp 24 / Callmed 24',
+    'Telmed': 'Telmed',
+  },
+  // ── Sodalis ───────────────────────────────────────────────────────────
+  'sodalis': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'Telmed',
     'HMO': 'HMO',
   },
-  'sana24': {
+  // ── SLKK ───────────────────────────────────────────────────────────
+  'SLKK': {
     'Standard': 'Freie Arztwahl',
-    'Hausarzt': 'Managed Care / Combi Care',
-    'Telmed': 'Tel Care / Tel Doc',
-    'HMO': 'Med Direct',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'Telmed',
   },
-  'Galenos': {
+  // ── rhenusana ─────────────────────────────────────────────────────────
+  'rhenusana': {
     'Standard': 'Freie Arztwahl',
-    'Hausarzt': 'Managed Care',
-    'Telmed': 'Tel Doc',
-    'HMO': 'Combi Care',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'Telmed',
+  },
+  // ── Einsiedler ────────────────────────────────────────────────────────
+  'Einsiedler Krankenkasse': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'Telmed',
+  },
+  // ── Krankenkasse Wädenswil ────────────────────────────────────────────
+  'Krankenkasse Wädenswil': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'Telmed',
+  },
+  // ── Krankenkasse Birchmeier ───────────────────────────────────────────
+  'Krankenkasse Birchmeier': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'Telmed',
+  },
+  // ── Glarner ───────────────────────────────────────────────────────────
+  'Glarner Krankenversicherung': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'Telmed',
+  },
+  // ── Luzerner Hinterland ───────────────────────────────────────────────
+  'Krankenkasse Luzerner Hinterland': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'Telmed',
+  },
+  // ── Steffisburg ───────────────────────────────────────────────────────
+  'Krankenkasse Steffisburg': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'Telmed',
+  },
+  // ── Curaulta ──────────────────────────────────────────────────────────
+  'Curaulta': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'Telmed',
+    'HMO': 'HMO',
+  },
+  // ── CMVEO ─────────────────────────────────────────────────────────────
+  'CMVEO': {
+    'Standard': 'Freie Arztwahl',
+    'Hausarzt': 'Hausarzt',
+    'Telmed': 'Telmed',
   },
 };
 
 const ABZUG_UMWELTABGABE = 5.15;
 
+// Normalisiert API-Modell-Key → Kategorie (z.B. 'gp' → 'Hausarzt', 'telmed' → 'Telmed')
+export function normalizeModel(model) {
+  if (!model) return 'Standard';
+  return MODEL_ALIAS_MAP[model.toLowerCase()] || model;
+}
+
 export function getProduktName(insurer, model) {
-  return PRODUKT_NAMEN[insurer]?.[model] || model;
+  const normalized = normalizeModel(model);
+  // Exakten Treffer versuchen, dann normalisierten
+  return PRODUKT_NAMEN[insurer]?.[normalized] || PRODUKT_NAMEN[insurer]?.[model] || normalized || model;
 }
 
 export function nettoPreis(bruttoPreis) {
@@ -195,7 +406,7 @@ export default function OfferList({
                 selectedResult?.monthly_premium === offer.monthly_premium;
               const isCurrent = currentOffer &&
                 offer.insurer === currentOffer.insurer &&
-                offer.model === currentOffer.model &&
+                normalizeModel(offer.model) === normalizeModel(currentOffer.model) &&
                 Math.abs(offer.monthly_premium - currentOffer.monthly_premium) < 0.1;
               const isCheapest = idx === 0;
               const nettoMonat = nettoPreis(offer.monthly_premium);

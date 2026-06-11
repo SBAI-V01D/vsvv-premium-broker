@@ -12,7 +12,7 @@ import {
   CheckCircle2, Building2, User, Info, BarChart2
 } from 'lucide-react';
 import CustomerSelector from '@/components/krankenkassen/CustomerSelector';
-import OfferList, { nettoPreis, getProduktName } from '@/components/krankenkassen/OfferList';
+import OfferList, { nettoPreis, getProduktName, normalizeModel } from '@/components/krankenkassen/OfferList';
 import VergleichPrintView from '@/components/krankenkassen/VergleichPrintView';
 import VergleichsAnalysenListe from './VergleichsAnalysenListe';
 
@@ -119,13 +119,17 @@ export default function KrankenkassenVergleich() {
   const cheapestOffer = sortedOffers[0] || null;
 
   // Aktuelle Kasse aus Ergebnissen matching
-  const currentOffer = offers.find(o =>
-    formData.aktuelle_krankenkasse &&
-    o.insurer?.toLowerCase().includes(formData.aktuelle_krankenkasse.split(' ')[0].toLowerCase()) &&
-    (!formData.aktuelles_modell || o.model?.toLowerCase() === formData.aktuelles_modell.toLowerCase())
-  ) || offers.find(o =>
-    formData.aktuelle_krankenkasse &&
-    o.insurer?.toLowerCase().includes(formData.aktuelle_krankenkasse.split(' ')[0].toLowerCase())
+  // Normalisiert sowohl API-Modell-Keys (z.B. 'gp', 'telmed') als auch Freitext-Eingabe
+  const _currentKasseKey = formData.aktuelle_krankenkasse?.split(' ')[0]?.toLowerCase();
+  const _currentModellNorm = formData.aktuelles_modell ? normalizeModel(formData.aktuelles_modell) : null;
+  const currentOffer = allOffers.find(o => {
+    if (!_currentKasseKey) return false;
+    const insurerMatch = o.insurer?.toLowerCase().includes(_currentKasseKey);
+    if (!insurerMatch) return false;
+    if (!_currentModellNorm) return true;
+    return normalizeModel(o.model) === _currentModellNorm;
+  }) || allOffers.find(o =>
+    _currentKasseKey && o.insurer?.toLowerCase().includes(_currentKasseKey)
   );
   const currentPraemie = currentOffer?.monthly_premium;
   const currentNet = currentPraemie ? nettoPreis(currentPraemie) : null;
