@@ -119,15 +119,16 @@ export default function KrankenkassenVergleich() {
         return { ...o, monthly_premium: price };
       }).filter(o => o.monthly_premium > 0 && o.insurer && o.model);
 
-      // Dedupliziere NUR exakte Duplikate (gleicher Versicherer + Modell + Preis)
-      // Verschiedene Preise beim gleichen Modell = verschiedene Produkte → ALLE behalten
-      const seen = new Set();
-      const deduped = mapped.filter(o => {
-        const key = `${o.insurer}|||${o.model}|||${o.monthly_premium}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
+      // Pro Versicherer+Modell nur das GÜNSTIGSTE Angebot behalten (verschiedene Regionen)
+      const cheapestMap = new Map();
+      for (const o of mapped) {
+        const key = `${o.insurer}|||${o.model}`;
+        const existing = cheapestMap.get(key);
+        if (!existing || o.monthly_premium < existing.monthly_premium) {
+          cheapestMap.set(key, o);
+        }
+      }
+      const deduped = Array.from(cheapestMap.values());
 
       console.log('[KKV] rawOffers:', rawOffers.length, '→ nach Dedup (exakt):', deduped.length);
       // Debug: alle Einträge vor Filter
