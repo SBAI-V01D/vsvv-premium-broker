@@ -141,35 +141,47 @@ export default function KrankenkassenVergleich() {
 
   const allOffers = vergleichResults?.offers || [];
 
-  // Die API gibt immer nur die angefragte Franchise zurück — kein Extra-Filter nötig.
-  // Modell-Filter: normalisiere API-Keys und filtere direkt nach Kategorie
+  // Modell-Filter + Sortierung — einmalig, hier in der Page-Komponente
   const ALL_FILTER_KEYS = ['Standard', 'Hausarzt', 'HMO', 'Telmed'];
-  const offers = filterModelle.length === ALL_FILTER_KEYS.length
+  const filteredOffers = filterModelle.length === ALL_FILTER_KEYS.length
     ? allOffers
     : allOffers.filter(o => filterModelle.includes(normalizeModel(o.model)));
-  const sortedOffers = [...offers].sort((a, b) => (a.monthly_premium || 0) - (b.monthly_premium || 0));
-  const cheapestOffer = sortedOffers[0] || null;
+
+  // Sortierung nach Preis — das ist die EINZIGE Sortierung (OfferList sortiert nicht mehr)
+  const offers = [...filteredOffers].sort((a, b) => (a.monthly_premium || 0) - (b.monthly_premium || 0));
+  const cheapestOffer = offers[0] || null;
+
+  // Debug: Reihenfolge unmittelbar vor dem Render
+  if (offers.length > 0) {
+    console.log('[KKV] RENDER-REIHENFOLGE (Top 5):',
+      offers.slice(0, 5).map((o, i) => `${i+1}. ${o.insurer} (${normalizeModel(o.model)}) = CHF ${o.monthly_premium?.toFixed(2)}`).join(' | ')
+    );
+  }
 
   const _currentModellNorm = formData.aktuelles_modell ? normalizeModel(formData.aktuelles_modell) : null;
 
-  const _findInList = (list) => {
-    // 1. Versuche exakten Versicherer+Modell-Match
-    const exactMatch = list.find(o =>
+  // Suche aktuelle Kasse in allOffers (Modell-Filter berücksichtigt für Preis-Anzeige nicht)
+  const currentOfferForPrice = (() => {
+    const exactMatch = allOffers.find(o =>
       matchesInsurer(o.insurer, formData.aktuelle_krankenkasse) &&
       _currentModellNorm &&
       normalizeModel(o.model) === _currentModellNorm
     );
     if (exactMatch) return exactMatch;
-    // 2. Fallback: nur Versicherer (beliebiges Modell)
-    return list.find(o => matchesInsurer(o.insurer, formData.aktuelle_krankenkasse));
-  };
+    return allOffers.find(o => matchesInsurer(o.insurer, formData.aktuelle_krankenkasse));
+  })();
 
-  // currentOffer aus allOffers — Hervorhebung auch wenn Modell-Filter aktiv
-  const currentOfferForPrice = _findInList(allOffers);
+  // Debug: isCurrent-Nachweis
+  if (formData.aktuelle_krankenkasse && allOffers.length > 0) {
+    console.log('[KKV] isCurrent-Check: aktuelle_krankenkasse =', formData.aktuelle_krankenkasse,
+      '| found =', currentOfferForPrice?.insurer || 'NICHT GEFUNDEN',
+      '| model =', currentOfferForPrice?.model || '–'
+    );
+  }
+
   const currentOffer = currentOfferForPrice;
   const currentPraemie = currentOfferForPrice?.monthly_premium;
   const currentNet = currentPraemie ? nettoPreis(currentPraemie) : null;
-  // ausgangslage-Prämie für Speichern immer aus allOffers
   const currentNetForSave = currentOfferForPrice ? nettoPreis(currentOfferForPrice.monthly_premium) : currentNet;
   const selectedNet = selectedResult ? nettoPreis(selectedResult.monthly_premium) : null;
   const cheapestNet = cheapestOffer ? nettoPreis(cheapestOffer.monthly_premium) : null;
@@ -551,36 +563,61 @@ export default function KrankenkassenVergleich() {
                     </div>
                   </div>
 
-                  {/* Summary-Banner: aktuelle Kasse sofort sichtbar */}
-                  {currentOffer && currentNet && (
-                    <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border border-amber-200 bg-amber-50">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-amber-600 text-base">🏠</span>
-                        <div className="min-w-0">
-                          <span className="text-xs font-semibold text-amber-800">Ihre aktuelle: </span>
-                          <span className="text-xs font-bold text-amber-900">{formData.aktuelle_krankenkasse}</span>
-                          <span className="text-[11px] text-amber-700 ml-1.5">· {formData.aktuelles_modell} · CHF {currentNet.toFixed(2)}/M.</span>
-                        </div>
+                  {/* Summary-Banner */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Aktuelle Versicherung */}
+                    <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">🏠</span>
+                        <span className="text-xs font-bold text-amber-700 uppercase tracking-wide">Aktuelle Versicherung</span>
                       </div>
-                      {cheapestNet && currentNet > cheapestNet && (
-                        <div className="shrink-0 text-right">
-                          <span className="text-[11px] font-semibold text-emerald-700">
-                            🏆 Günstigste: CHF {cheapestNet.toFixed(2)}/M. · −CHF {maxErsparnis?.toLocaleString('de-CH')}/J.
-                          </span>
-                        </div>
+                      <p className="text-lg font-bold text-amber-900 leading-tight">
+                        {formData.aktuelle_krankenkasse || '–'}
+                      </p>
+                      {formData.aktuelles_modell && (
+                        <p className="text-sm text-amber-700 mt-0.5">{formData.aktuelles_modell}</p>
                       )}
-                      <button
-                        onClick={() => aktuellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-                        className="shrink-0 text-[11px] text-amber-700 hover:text-amber-900 underline font-medium"
-                      >
-                        Zur Kasse ↓
-                      </button>
+                      <p className="text-2xl font-extrabold text-amber-900 mt-2">
+                        {currentNet ? `CHF ${currentNet.toFixed(2)}` : '–'}
+                        <span className="text-sm font-normal text-amber-700 ml-1">/ Monat</span>
+                      </p>
+                      {currentNet && (
+                        <button
+                          onClick={() => aktuellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                          className="mt-2 text-[11px] text-amber-600 hover:text-amber-900 underline font-medium"
+                        >
+                          In Liste anzeigen ↓
+                        </button>
+                      )}
                     </div>
-                  )}
+                    {/* Günstigste Alternative */}
+                    <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">🏆</span>
+                        <span className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Günstigste Alternative</span>
+                      </div>
+                      <p className="text-lg font-bold text-emerald-900 leading-tight">
+                        {cheapestOffer ? (cheapestOffer.insurer) : '–'}
+                      </p>
+                      {cheapestOffer && (
+                        <p className="text-sm text-emerald-700 mt-0.5">{normalizeModel(cheapestOffer.model)}</p>
+                      )}
+                      <p className="text-2xl font-extrabold text-emerald-900 mt-2">
+                        {cheapestNet ? `CHF ${cheapestNet.toFixed(2)}` : '–'}
+                        <span className="text-sm font-normal text-emerald-700 ml-1">/ Monat</span>
+                      </p>
+                      {maxErsparnis !== null && maxErsparnis > 0 && (
+                        <p className="text-sm font-bold text-emerald-700 mt-1">
+                          Ersparnis CHF {maxErsparnis.toLocaleString('de-CH')} pro Jahr
+                        </p>
+                      )}
+                    </div>
+                  </div>
 
-                  {/* Angebotsliste */}
+                  {/* Angebotsliste — offers ist bereits sortiert */}
                   <OfferList
                     offers={offers}
+                    currentKasseInput={formData.aktuelle_krankenkasse}
                     currentOffer={currentOffer}
                     currentPraemie={currentPraemie}
                     selectedResult={selectedResult}

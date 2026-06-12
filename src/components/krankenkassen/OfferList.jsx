@@ -440,7 +440,8 @@ export function nettoPreis(bruttoPreis) {
 }
 
 export default function OfferList({
-  offers,
+  offers,           // bereits sortiert von KrankenkassenVergleich
+  currentKasseInput, // raw user input z.B. "Mutuel (Groupe Mutuel)"
   currentOffer,
   currentPraemie,
   selectedResult,
@@ -448,13 +449,14 @@ export default function OfferList({
   cheapestOffer,
   aktuellRef,
 }) {
-  const sortedOffers = [...offers].sort((a, b) => (a.monthly_premium || 0) - (b.monthly_premium || 0));
+  // KEINE eigene Sortierung — offers kommen bereits sortiert rein
+  const sortedOffers = offers;
   const cheapestPraemie = cheapestOffer?.monthly_premium;
 
   // Auto-Scroll zur aktuellen Versicherung wenn Liste geladen
   React.useEffect(() => {
     if (aktuellRef?.current) {
-      setTimeout(() => aktuellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200);
+      setTimeout(() => aktuellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350);
     }
   }, [offers]);
 
@@ -483,9 +485,16 @@ export default function OfferList({
               const isSelected = selectedResult?.insurer === offer.insurer &&
                 selectedResult?.model === offer.model &&
                 selectedResult?.monthly_premium === offer.monthly_premium;
-              // isCurrent = Angebot gehört zur aktuellen Kasse (Versicherer-Match reicht, Modell egal)
-              const isCurrent = currentOffer &&
-                matchesInsurer(offer.insurer, currentOffer.insurer);
+              // isCurrent: direkt gegen User-Input matchen (robuster als Umweg über currentOffer.insurer)
+              const isCurrent = currentKasseInput
+                ? matchesInsurer(offer.insurer, currentKasseInput)
+                : currentOffer
+                  ? matchesInsurer(offer.insurer, currentOffer.insurer)
+                  : false;
+              // Debug-Log für ersten Fund
+              if (isCurrent) {
+                console.log('[OfferList] isCurrent=true:', offer.insurer, '| model:', normalizeModel(offer.model), '| CHF', offer.monthly_premium?.toFixed(2));
+              }
               const isCheapest = idx === 0;
               const nettoMonat = nettoPreis(offer.monthly_premium);
               const savings = currentPraemie ? nettoPreis(currentPraemie) - nettoMonat : null;
