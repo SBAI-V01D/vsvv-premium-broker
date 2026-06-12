@@ -165,6 +165,14 @@ export default function KrankenkassenVergleich() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(weitereModelle)]);
 
+  // Wenn aktuelles Modell ein "Weitere"-Modell ist, sicherstellen dass es immer im Filter ist
+  useEffect(() => {
+    if (!_currentModellNorm) return;
+    if (ALL_STANDARD_MODELS.includes(_currentModellNorm)) return;
+    // aktuelles Modell ist kein Standard → in Filter eintragen
+    setFilterModelle(prev => prev.includes(_currentModellNorm) ? prev : [...prev, _currentModellNorm]);
+  }, [_currentModellNorm]);
+
   // Alle aktiven Filter-Keys inkl. Weitere
   const allActiveFilterKeys = [...ALL_STANDARD_MODELS, ...weitereModelle];
 
@@ -203,6 +211,9 @@ export default function KrankenkassenVergleich() {
     );
     return idx === -1 ? null : idx + 1;
   }, [offers, currentOfferForPrice, formData.aktuelle_krankenkasse, _currentModellNorm]);
+
+  // Ist das aktuelle Modell in der gefilterten Liste sichtbar (oder ausgefiltert)?
+  const currentModellInFilter = _currentModellNorm ? filterModelle.includes(_currentModellNorm) : true;
   const currentNetForSave = currentOfferForPrice ? nettoPreis(currentOfferForPrice.monthly_premium) : currentNet;
   const selectedNet = selectedResult ? nettoPreis(selectedResult.monthly_premium) : null;
   const cheapestNet = cheapestOffer ? nettoPreis(cheapestOffer.monthly_premium) : null;
@@ -566,32 +577,52 @@ export default function KrankenkassenVergleich() {
                 <>
                   {/* Ergebnis-Banner: Aktuelle Kasse vs. Empfehlung */}
                   <div className="grid grid-cols-2 gap-3">
-                    {/* Aktuelle Situation */}
-                    <div className="p-4 rounded-xl border-2 border-amber-300 bg-amber-50">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-amber-600 mb-1">Aktuelle Kasse</p>
-                      <p className="text-base font-bold text-amber-900 leading-tight">
+                    {/* Aktuelle Situation — Farbe je nach Status */}
+                    <div className={`p-4 rounded-xl border-2 ${
+                      !currentNet
+                        ? 'border-slate-300 bg-slate-50'
+                        : currentKasseRang !== null
+                          ? 'border-amber-300 bg-amber-50'
+                          : !currentModellInFilter
+                            ? 'border-orange-300 bg-orange-50'
+                            : 'border-amber-300 bg-amber-50'
+                    }`}>
+                      <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${
+                        !currentNet ? 'text-slate-500' : currentKasseRang !== null ? 'text-amber-600' : 'text-orange-600'
+                      }`}>Aktuelle Kasse</p>
+                      <p className={`text-base font-bold leading-tight ${
+                        !currentNet ? 'text-slate-700' : currentKasseRang !== null ? 'text-amber-900' : 'text-orange-900'
+                      }`}>
                         {formData.aktuelle_krankenkasse || '–'}
                       </p>
-                      <p className="text-xs text-amber-700 mt-0.5">
+                      <p className={`text-xs mt-0.5 ${
+                        !currentNet ? 'text-slate-500' : currentKasseRang !== null ? 'text-amber-700' : 'text-orange-700'
+                      }`}>
                         {formData.aktuelles_modell || '–'} · Franchise CHF {formData.aktuelle_franchise || '–'}
                       </p>
-                      <p className="text-xl font-extrabold text-amber-800 mt-2">
-                        {currentNet ? `CHF ${currentNet.toFixed(2)}/M.` : <span className="text-sm text-amber-500">Nicht in Region verfügbar</span>}
+                      <p className={`text-xl font-extrabold mt-2 ${
+                        !currentNet ? 'text-slate-500' : currentKasseRang !== null ? 'text-amber-800' : 'text-orange-800'
+                      }`}>
+                        {currentNet ? `CHF ${currentNet.toFixed(2)}/M.` : <span className="text-sm">Nicht in Region verfügbar</span>}
                       </p>
                       {currentKasseRang !== null ? (
                         <p className="text-[11px] text-amber-600 mt-1">
                           → Rang <strong>{currentKasseRang}</strong> von {offers.length} in der Liste ↓
                         </p>
+                      ) : currentNet && !currentModellInFilter ? (
+                        <p className="text-[11px] mt-1 text-orange-600 font-semibold">
+                          ⚠ Modell «{formData.aktuelles_modell}» im Filter nicht aktiv → Preis aus allen Daten
+                        </p>
                       ) : currentNet ? (
                         <p className="text-[11px] text-amber-500 mt-1">
-                          Aktuelles Modell nicht in Filterliste — Preis aus allen Angeboten
+                          Modell «{formData.aktuelles_modell}» nicht in Vergleichsliste
                         </p>
                       ) : allOffers.some(o => matchesInsurer(o.insurer, formData.aktuelle_krankenkasse)) ? (
-                        <p className="text-[11px] text-amber-500 mt-1">
-                          Modell «{formData.aktuelles_modell}» für {formData.aktuelle_krankenkasse} in PLZ {formData.plz} nicht verfügbar
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          Modell «{formData.aktuelles_modell}» in PLZ {formData.plz} nicht verfügbar
                         </p>
                       ) : (
-                        <p className="text-[11px] text-amber-500 mt-1">
+                        <p className="text-[11px] text-slate-500 mt-1">
                           {formData.aktuelle_krankenkasse} nicht in BAG-Daten für PLZ {formData.plz}
                         </p>
                       )}

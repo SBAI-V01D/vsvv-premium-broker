@@ -561,13 +561,9 @@ export default function OfferList({
               const isSelected = selectedResult?.insurer === offer.insurer &&
                 selectedResult?.model === offer.model &&
                 selectedResult?.monthly_premium === offer.monthly_premium;
-              // isCurrent: Kasse stimmt überein UND es ist der erste Treffer dieser Kasse
-              const matchesCurrent = currentKasseInput
-                ? matchesInsurer(offer.insurer, currentKasseInput)
-                : currentOffer
-                  ? matchesInsurer(offer.insurer, currentOffer.insurer)
-                  : false;
-              const isCurrent = matchesCurrent && idx === firstCurrentIdx;
+              // isCurrent: Index stimmt mit dem berechneten firstCurrentIdx überein
+              // firstCurrentIdx bevorzugt bereits Kasse+Modell-Match, sonst ersten Kasse-Treffer
+              const isCurrent = idx === firstCurrentIdx && firstCurrentIdx !== -1;
               const isCheapest = idx === 0;
               const nettoMonat = nettoPreis(offer.monthly_premium);
               const savings = currentPraemie ? nettoPreis(currentPraemie) - nettoMonat : null;
@@ -577,10 +573,15 @@ export default function OfferList({
               const baseProduktName = getProduktName(offer.insurer, offer.model);
               const produktName = variantN > 1 ? `${baseProduktName} (Var. ${variantN})` : baseProduktName;
 
+              // Ist das aktuelle Modell ein Nicht-Standard-Modell (z.B. "Weitere")?
+              const isWeiteres = isCurrent && currentModellNorm && !['Standard','Hausarzt','HMO','Telmed'].includes(currentModellNorm);
+
               // Styling — klare visuelle Hierarchie
               let rowClass = 'w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ';
-              if (isSelected && isCurrent) rowClass += 'bg-amber-50 border-l-4 border-l-amber-500 ring-1 ring-amber-300 ';
+              if (isSelected && isCurrent && isWeiteres) rowClass += 'bg-violet-50 border-l-4 border-l-violet-500 ring-1 ring-violet-300 ';
+              else if (isSelected && isCurrent) rowClass += 'bg-amber-50 border-l-4 border-l-amber-500 ring-1 ring-amber-300 ';
               else if (isSelected) rowClass += 'bg-primary/5 border-l-4 border-l-primary ';
+              else if (isCurrent && isWeiteres) rowClass += 'bg-violet-50 border-l-4 border-l-violet-500 ';
               else if (isCurrent) rowClass += 'bg-amber-50 border-l-4 border-l-amber-500 ';
               else rowClass += 'hover:bg-muted/40 ';
 
@@ -595,38 +596,52 @@ export default function OfferList({
                     className={rowClass + 'w-full'}
                   >
                     {/* Rang */}
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0
-                      ${isCurrent ? 'bg-amber-300 text-amber-900 ring-2 ring-amber-400' : isSelected ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                      isCurrent && isWeiteres ? 'bg-violet-300 text-violet-900 ring-2 ring-violet-400'
+                      : isCurrent ? 'bg-amber-300 text-amber-900 ring-2 ring-amber-400'
+                      : isSelected ? 'bg-primary/20 text-primary'
+                      : 'bg-muted text-muted-foreground'
+                    }`}>
                       {idx + 1}
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <p className={`text-sm font-semibold truncate ${isCurrent ? 'text-amber-900' : ''}`}>
+                        <p className={`text-sm font-semibold truncate ${
+                          isCurrent && isWeiteres ? 'text-violet-900' : isCurrent ? 'text-amber-900' : ''
+                        }`}>
                           {getDisplayName(offer.insurer)}
                         </p>
-                        {isCurrent && (
+                        {isCurrent && isWeiteres && (
+                          <Badge className="text-[10px] px-2 py-0.5 bg-violet-200 text-violet-800 border-violet-400 font-bold">
+                            ● Aktuell · Weitere
+                          </Badge>
+                        )}
+                        {isCurrent && !isWeiteres && (
                           <Badge className="text-[10px] px-2 py-0.5 bg-amber-200 text-amber-800 border-amber-400 font-bold">
                             ● Aktuell
                           </Badge>
                         )}
-                        {isCheapest && !isCurrent && (
-                          <Badge className="text-[10px] px-1.5 py-0 bg-emerald-100 text-emerald-700 border-emerald-200">Günstigste</Badge>
-                        )}
-                        {isCheapest && isCurrent && (
+                        {isCheapest && (
                           <Badge className="text-[10px] px-1.5 py-0 bg-emerald-100 text-emerald-700 border-emerald-200">Günstigste</Badge>
                         )}
                         {isSelected && (
                           <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">Ausgewählt</Badge>
                         )}
                       </div>
-                      <p className={`text-xs ${isCurrent ? 'text-amber-700 font-medium' : 'text-muted-foreground'}`}>{produktName}</p>
+                      <p className={`text-xs font-medium ${
+                        isCurrent && isWeiteres ? 'text-violet-700'
+                        : isCurrent ? 'text-amber-700'
+                        : 'text-muted-foreground'
+                      }`}>{produktName}</p>
                     </div>
 
                     {/* Preis + Ersparnis */}
                     <div className="text-right shrink-0 min-w-[120px]">
-                      <p className={`text-sm font-bold ${isCurrent ? 'text-amber-900' : ''}`}>
+                      <p className={`text-sm font-bold ${
+                        isCurrent && isWeiteres ? 'text-violet-900' : isCurrent ? 'text-amber-900' : ''
+                      }`}>
                         CHF {nettoMonat.toFixed(2)}/M.
                       </p>
                       {savingsYear !== null && savingsYear > 0 && (
@@ -636,7 +651,7 @@ export default function OfferList({
                         <p className="text-xs text-red-500 font-semibold">+CHF {Math.abs(savingsYear).toLocaleString('de-CH')}/J. teurer</p>
                       )}
                       {isCurrent && savingsYear === 0 && currentPraemie && (
-                        <p className="text-xs text-amber-600">aktuelle Prämie</p>
+                        <p className={`text-xs ${isWeiteres ? 'text-violet-600' : 'text-amber-600'}`}>aktuelle Prämie</p>
                       )}
                     </div>
                   </button>
