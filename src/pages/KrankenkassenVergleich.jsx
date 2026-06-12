@@ -154,7 +154,7 @@ export default function KrankenkassenVergleich() {
     return [...found].sort();
   }, [allOffers]);
 
-  // Neue Weitere-Modelle automatisch in filterModelle aktivieren
+  // Neue Weitere-Modelle automatisch in filterModelle aktivieren sobald API-Daten geladen
   useEffect(() => {
     if (weitereModelle.length === 0) return;
     setFilterModelle(prev => {
@@ -162,7 +162,8 @@ export default function KrankenkassenVergleich() {
       if (toAdd.length === 0) return prev;
       return [...prev, ...toAdd];
     });
-  }, [weitereModelle.join(',')]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(weitereModelle)]);
 
   // Alle aktiven Filter-Keys inkl. Weitere
   const allActiveFilterKeys = [...ALL_STANDARD_MODELS, ...weitereModelle];
@@ -596,6 +597,7 @@ export default function KrankenkassenVergleich() {
                   <OfferList
                     offers={offers}
                     currentKasseInput={formData.aktuelle_krankenkasse}
+                    currentModellInput={formData.aktuelles_modell}
                     currentOffer={currentOffer}
                     currentPraemie={currentPraemie}
                     selectedResult={selectedResult}

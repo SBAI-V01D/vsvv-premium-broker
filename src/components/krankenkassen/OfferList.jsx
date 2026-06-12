@@ -462,15 +462,16 @@ export function nettoPreis(bruttoPreis) {
 }
 
 export default function OfferList({
-  offers,           // bereits sortiert von KrankenkassenVergleich
+  offers,            // bereits sortiert von KrankenkassenVergleich
   currentKasseInput, // raw user input z.B. "Mutuel (Groupe Mutuel)"
+  currentModellInput, // raw user input z.B. "Hausarzt"
   currentOffer,
   currentPraemie,
   selectedResult,
   onSelect,
   cheapestOffer,
   aktuellRef,
-  onScrollToAktuellReady, // callback(fn) — übergibt scroll-Funktion an Parent
+  onScrollToAktuellReady,
 }) {
   // KEINE eigene Sortierung — offers kommen bereits sortiert rein
   const sortedOffers = offers;
@@ -498,13 +499,29 @@ export default function OfferList({
 
 
 
-  // Ersten isCurrent-Index vorberechnen für den ref
+  // Normalisiertes Modell des Kunden — aus direktem Input (zuverlässiger als aus currentOffer.model)
+  const currentModellNorm = currentModellInput
+    ? normalizeModel(currentModellInput)
+    : currentOffer ? normalizeModel(currentOffer.model) : null;
+
+  // firstCurrentIdx: Index des Eintrags der zur aktuellen Kasse + aktuellem Modell passt
+  // Fallback: erster Kasse-Treffer
   const firstCurrentIdx = React.useMemo(() => {
     if (!currentKasseInput && !currentOffer) return -1;
-    return sortedOffers.findIndex(o =>
-      currentKasseInput ? matchesInsurer(o.insurer, currentKasseInput) : matchesInsurer(o.insurer, currentOffer.insurer)
-    );
-  }, [sortedOffers, currentKasseInput, currentOffer]);
+    const matchKasse = (o) => currentKasseInput
+      ? matchesInsurer(o.insurer, currentKasseInput)
+      : matchesInsurer(o.insurer, currentOffer.insurer);
+
+    // 1. Kasse + Modell
+    if (currentModellNorm) {
+      const exactIdx = sortedOffers.findIndex(o =>
+        matchKasse(o) && normalizeModel(o.model) === currentModellNorm
+      );
+      if (exactIdx !== -1) return exactIdx;
+    }
+    // 2. Fallback: nur Kasse
+    return sortedOffers.findIndex(o => matchKasse(o));
+  }, [sortedOffers, currentKasseInput, currentOffer, currentModellNorm]);
 
   // Zähler pro Insurer+Modell für Produktvarianten-Label (z.B. "Variante 2")
   const variantCounters = React.useMemo(() => {
