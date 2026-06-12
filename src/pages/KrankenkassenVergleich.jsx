@@ -251,8 +251,9 @@ export default function KrankenkassenVergleich() {
           praemie_aktuell: currentNetForSave || 0,
         },
         empfehlung: {
-          empfohlene_krankenkasse: selectedResult.insurer,
+          empfohlene_krankenkasse: getDisplayName(selectedResult.insurer),
           empfohlenes_modell: getProduktName(selectedResult.insurer, selectedResult.model),
+          empfohlenes_modell_kategorie: normalizeModel(selectedResult.model),
           empfohlene_franchise: selectedResult.deductible || Number(formData.aktuelle_franchise),
           praemie_empfohlen: selectedNet,
           ersparnis_jaehrlich: ersparnisJahr || 0,

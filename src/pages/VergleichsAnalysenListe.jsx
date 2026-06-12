@@ -153,16 +153,22 @@ export default function VergleichsAnalysenListe() {
                         </td>
                         <td className="px-3 py-2 text-[11px] text-muted-foreground">{ort}</td>
                         <td className="px-3 py-2 text-[11px]">
-                          <p className="font-medium">{a.ausgangslage?.krankenkasse || '–'}</p>
-                          {a.ausgangslage?.praemie_aktuell > 0 && (
-                            <p className="text-muted-foreground">{fmt(a.ausgangslage.praemie_aktuell)}/M.</p>
-                          )}
+                         <p className="font-medium">{a.ausgangslage?.krankenkasse || '–'}</p>
+                         {a.ausgangslage?.modell && (
+                           <p className="text-muted-foreground text-[10px]">{a.ausgangslage.modell}</p>
+                         )}
+                         {a.ausgangslage?.praemie_aktuell > 0 && (
+                           <p className="text-muted-foreground">{fmt(a.ausgangslage.praemie_aktuell)}/M.</p>
+                         )}
                         </td>
                         <td className="px-3 py-2 text-[11px]">
-                          <p className="font-medium">{a.empfehlung?.empfohlene_krankenkasse || '–'}</p>
-                          {a.empfehlung?.praemie_empfohlen > 0 && (
-                            <p className="text-muted-foreground">{fmt(a.empfehlung.praemie_empfohlen)}/M.</p>
-                          )}
+                         <p className="font-medium">{a.empfehlung?.empfohlene_krankenkasse || '–'}</p>
+                         {a.empfehlung?.empfohlenes_modell && (
+                           <p className="text-muted-foreground text-[10px]">{a.empfehlung.empfohlenes_modell}</p>
+                         )}
+                         {a.empfehlung?.praemie_empfohlen > 0 && (
+                           <p className="text-muted-foreground">{fmt(a.empfehlung.praemie_empfohlen)}/M.</p>
+                         )}
                         </td>
                         {/* Abschluss-Wahl */}
                         <td className="px-3 py-2 text-[11px] min-w-[120px]">
