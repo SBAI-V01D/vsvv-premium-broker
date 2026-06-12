@@ -229,7 +229,7 @@ export default function KrankenkassenVergleich() {
     setIsSaving(true);
     try {
       const user = await base44.auth.me();
-      const organizationId = selectedCustomer?.organization_id || user.data?.organization_id;
+      const organizationId = selectedCustomer?.organization_id || user?.organization_id || user?.data?.organization_id || 'default';
       await base44.entities.VergleichsAnalyse.create({
         customer_id: selectedCustomer?.id,
         customer_name: `${formData.vorname} ${formData.nachname}`.trim() || selectedCustomer?.first_name,
@@ -262,9 +262,8 @@ export default function KrankenkassenVergleich() {
         status: 'beratung_erfolgt',
       });
       queryClient.invalidateQueries({ queryKey: ['vergleichs-analysen'] });
-      // Kleines visuelles Feedback
-      const btn = document.getElementById('save-btn');
-      if (btn) { btn.textContent = '✓ Gespeichert'; setTimeout(() => { if (btn) btn.textContent = ''; }, 2000); }
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       alert('Fehler beim Speichern: ' + error.message);
     } finally {
@@ -274,6 +273,7 @@ export default function KrankenkassenVergleich() {
 
   const [isSavingDoc, setIsSavingDoc] = useState(false);
   const [docSaved, setDocSaved] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const aktuellRef = useRef(null);
 
   // PDF Druck — öffnet Druckdialog
@@ -699,10 +699,13 @@ export default function KrankenkassenVergleich() {
                                   : <><FolderOpen className="w-3.5 h-3.5" />In Dokumente</>}
                             </Button>
                           )}
-                          <Button size="sm" onClick={handleSave} disabled={isSaving} id="save-btn" className="gap-1.5">
+                          <Button size="sm" onClick={handleSave} disabled={isSaving}
+                            className={`gap-1.5 ${saveSuccess ? 'bg-emerald-600 hover:bg-emerald-700 border-emerald-700' : ''}`}>
                             {isSaving
                               ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Speichert...</>
-                              : <><Save className="w-3.5 h-3.5" />Speichern</>}
+                              : saveSuccess
+                                ? <><CheckCircle2 className="w-3.5 h-3.5" />In Auswertung gespeichert</>
+                                : <><Save className="w-3.5 h-3.5" />In Auswertung speichern</>}
                           </Button>
                         </div>
                       </div>

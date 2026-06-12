@@ -154,8 +154,10 @@ export default function VergleichsAnalysenListe() {
                         <td className="px-3 py-2 text-[11px] text-muted-foreground">{ort}</td>
                         <td className="px-3 py-2 text-[11px]">
                          <p className="font-medium">{a.ausgangslage?.krankenkasse || '–'}</p>
-                         {a.ausgangslage?.modell && (
-                           <p className="text-muted-foreground text-[10px]">{a.ausgangslage.modell}</p>
+                         {(a.ausgangslage?.modell || a.ausgangslage?.franchise) && (
+                           <p className="text-muted-foreground text-[10px]">
+                             {[a.ausgangslage.modell, a.ausgangslage.franchise ? `CHF ${a.ausgangslage.franchise}` : null].filter(Boolean).join(' · ')}
+                           </p>
                          )}
                          {a.ausgangslage?.praemie_aktuell > 0 && (
                            <p className="text-muted-foreground">{fmt(a.ausgangslage.praemie_aktuell)}/M.</p>
@@ -163,8 +165,10 @@ export default function VergleichsAnalysenListe() {
                         </td>
                         <td className="px-3 py-2 text-[11px]">
                          <p className="font-medium">{a.empfehlung?.empfohlene_krankenkasse || '–'}</p>
-                         {a.empfehlung?.empfohlenes_modell && (
-                           <p className="text-muted-foreground text-[10px]">{a.empfehlung.empfohlenes_modell}</p>
+                         {(a.empfehlung?.empfohlenes_modell || a.empfehlung?.empfohlene_franchise) && (
+                           <p className="text-muted-foreground text-[10px]">
+                             {[a.empfehlung.empfohlenes_modell, a.empfehlung.empfohlene_franchise ? `CHF ${a.empfehlung.empfohlene_franchise}` : null].filter(Boolean).join(' · ')}
+                           </p>
                          )}
                          {a.empfehlung?.praemie_empfohlen > 0 && (
                            <p className="text-muted-foreground">{fmt(a.empfehlung.praemie_empfohlen)}/M.</p>
