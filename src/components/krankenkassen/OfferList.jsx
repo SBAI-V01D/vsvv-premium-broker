@@ -477,12 +477,8 @@ export default function OfferList({
     if (onScrollToAktuellReady) onScrollToAktuellReady(scrollToAktuell);
   }, [scrollToAktuell, onScrollToAktuellReady]);
 
-  // Auto-Scroll nach Laden
-  React.useEffect(() => {
-    if (offers.length > 0) {
-      setTimeout(scrollToAktuell, 400);
-    }
-  }, [offers]);
+  // Kein Auto-Scroll — Liste beginnt immer bei Rang 1 (günstigstes Angebot)
+  // Aktueller Eintrag ist via Amber-Highlight visuell erkennbar beim Scrollen
 
   // Debug-Log: Vor-Filter Nachweis
   React.useEffect(() => {
