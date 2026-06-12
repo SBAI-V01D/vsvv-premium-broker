@@ -15,6 +15,7 @@ import CustomerSelector from '@/components/krankenkassen/CustomerSelector';
 import OfferList, { nettoPreis, getProduktName, getDisplayName, normalizeModel, matchesInsurer } from '@/components/krankenkassen/OfferList';
 import VergleichPrintView from '@/components/krankenkassen/VergleichPrintView';
 import VergleichsAnalysenListe from './VergleichsAnalysenListe';
+import { getModelsForKasse, ALL_STANDARD_MODELS } from '@/lib/kkvConfig';
 
 const FILTER_MODELLE_OPTIONS = [
   { key: 'Standard', label: 'Standard', desc: 'Freie Arztwahl' },
@@ -61,7 +62,6 @@ export default function KrankenkassenVergleich() {
     plz: '4055', wohnort: 'Basel', kanton: 'BS',
     aktuelle_krankenkasse: 'Mutuel (Groupe Mutuel)', aktuelles_modell: 'Telmed', aktuelle_franchise: '300', unfall: false,
   });
-  // Mehrfach-Modell-Filter: Standard/Hausarzt/HMO/Weitere (Weitere = Telmed + unbekannte Keys)
   const [filterModelle, setFilterModelle] = useState(['Standard', 'Hausarzt', 'HMO', 'Telmed']);
 
   const [vergleichResults, setVergleichResults] = useState(null);
@@ -143,9 +143,21 @@ export default function KrankenkassenVergleich() {
 
   const allOffers = vergleichResults?.offers || [];
 
-  // Modell-Filter + Sortierung — einmalig, hier in der Page-Komponente
-  const ALL_FILTER_KEYS = ['Standard', 'Hausarzt', 'HMO', 'Telmed'];
-  const filteredOffers = filterModelle.length === ALL_FILTER_KEYS.length
+  // "Weitere" Modelle = API-Keys die nicht in Standard-4 fallen
+  const weitereModelle = React.useMemo(() => {
+    const found = new Set();
+    allOffers.forEach(o => {
+      const norm = normalizeModel(o.model);
+      if (!ALL_STANDARD_MODELS.includes(norm)) found.add(norm);
+    });
+    return [...found].sort();
+  }, [allOffers]);
+
+  // Alle aktiven Filter-Keys inkl. Weitere
+  const allActiveFilterKeys = [...ALL_STANDARD_MODELS, ...weitereModelle];
+
+  // Modell-Filter
+  const filteredOffers = filterModelle.length === allActiveFilterKeys.length
     ? allOffers
     : allOffers.filter(o => filterModelle.includes(normalizeModel(o.model)));
 
@@ -353,7 +365,17 @@ export default function KrankenkassenVergleich() {
                         <div className="absolute top-full left-0 right-0 mt-1 z-50 max-h-48 overflow-y-auto rounded-md border bg-popover shadow-lg">
                           {filteredKassen.map(k => (
                             <button key={k} type="button"
-                              onMouseDown={() => { setFormData(p => ({ ...p, aktuelle_krankenkasse: k })); setKasseSearch(''); setShowKasseDropdown(false); }}
+                              onMouseDown={() => {
+                                const availableModels = getModelsForKasse(k);
+                                setFormData(p => ({
+                                  ...p,
+                                  aktuelle_krankenkasse: k,
+                                  // Modell beibehalten wenn gültig, sonst erstes verfügbares
+                                  aktuelles_modell: availableModels.includes(p.aktuelles_modell) ? p.aktuelles_modell : availableModels[0],
+                                }));
+                                setKasseSearch('');
+                                setShowKasseDropdown(false);
+                              }}
                               className="w-full px-3 py-2 text-left text-sm hover:bg-accent">{k}</button>
                           ))}
                           {filteredKassen.length === 0 && <p className="px-3 py-2 text-sm text-muted-foreground">Keine gefunden</p>}
@@ -364,10 +386,22 @@ export default function KrankenkassenVergleich() {
 
                   <div>
                     <Label className="text-xs">Aktuelles Modell</Label>
-                    <Select value={formData.aktuelles_modell} onValueChange={v => setFormData(p => ({ ...p, aktuelles_modell: v }))}>
+                    <Select
+                      value={formData.aktuelles_modell}
+                      onValueChange={v => setFormData(p => ({ ...p, aktuelles_modell: v }))}
+                    >
                       <SelectTrigger className="mt-1 h-9 text-sm"><SelectValue placeholder="Modell wählen" /></SelectTrigger>
-                      <SelectContent>{MODELL_OPTIONS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                      <SelectContent>
+                        {getModelsForKasse(formData.aktuelle_krankenkasse).map(m => (
+                          <SelectItem key={m} value={m}>{m}</SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
+                    {formData.aktuelle_krankenkasse && (
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Verfügbare Modelle für {formData.aktuelle_krankenkasse}
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -384,9 +418,7 @@ export default function KrankenkassenVergleich() {
                                 type="checkbox"
                                 checked={checked}
                                 onChange={() => setFilterModelle(prev =>
-                                  checked
-                                    ? prev.length > 1 ? prev.filter(x => x !== key) : prev
-                                    : [...prev, key]
+                                  checked ? (prev.length > 1 ? prev.filter(x => x !== key) : prev) : [...prev, key]
                                 )}
                                 className="w-3 h-3 accent-primary shrink-0"
                               />
@@ -396,7 +428,32 @@ export default function KrankenkassenVergleich() {
                           </label>
                         );
                       })}
+                      {/* Dynamische "Weitere Modelle" aus API */}
+                      {weitereModelle.map(key => {
+                        const checked = filterModelle.includes(key);
+                        return (
+                          <label key={key} className={`flex flex-col gap-0.5 px-2.5 py-1.5 rounded-lg border cursor-pointer transition-colors ${
+                            checked ? 'bg-violet-50 border-violet-300' : 'bg-white border-border hover:bg-muted/40'
+                          }`}>
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => setFilterModelle(prev =>
+                                  checked ? (prev.length > 1 ? prev.filter(x => x !== key) : prev) : [...prev, key]
+                                )}
+                                className="w-3 h-3 accent-primary shrink-0"
+                              />
+                              <span className={`text-xs font-semibold ${checked ? 'text-violet-700' : 'text-foreground'}`}>{key}</span>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground pl-4 leading-tight">Weiteres Modell</span>
+                          </label>
+                        );
+                      })}
                     </div>
+                    {weitereModelle.length === 0 && vergleichResults && (
+                      <p className="text-[10px] text-muted-foreground mt-1">Keine weiteren Modelle in diesen Resultaten</p>
+                    )}
                   </div>
 
                   <div>
