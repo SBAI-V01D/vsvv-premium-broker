@@ -57,9 +57,9 @@ export default function KrankenkassenVergleich() {
   const printRef = useRef(null);
 
   const [formData, setFormData] = useState({
-    vorname: '', nachname: '', geburtsdatum: '',
-    plz: '', wohnort: '', kanton: '',
-    aktuelle_krankenkasse: '', aktuelles_modell: '', aktuelle_franchise: '', unfall: false,
+    vorname: 'Peter Martin', nachname: 'Adam', geburtsdatum: '1968-10-07',
+    plz: '4055', wohnort: 'Basel', kanton: 'BS',
+    aktuelle_krankenkasse: 'Mutuel (Groupe Mutuel)', aktuelles_modell: 'Telmed', aktuelle_franchise: '300', unfall: false,
   });
   // Mehrfach-Modell-Filter: Standard/Hausarzt/HMO/Weitere (Weitere = Telmed + unbekannte Keys)
   const [filterModelle, setFilterModelle] = useState(['Standard', 'Hausarzt', 'HMO', 'Telmed']);
@@ -306,15 +306,7 @@ export default function KrankenkassenVergleich() {
     }
   }, [printRef, selectedCustomer, formData, selectedResult, isSavingDoc]);
 
-  const handleTestDaten = () => {
-    setFormData({
-      vorname: 'Peter', nachname: 'Adam', geburtsdatum: '1968-10-07',
-      plz: '4304', wohnort: 'Giebenach', kanton: 'BL',
-      aktuelle_krankenkasse: 'Mutuel (Groupe Mutuel)',
-      aktuelles_modell: 'Telmed', aktuelle_franchise: '300', unfall: false,
-    });
-    setVergleichResults(null);
-  };
+
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-4">
@@ -329,19 +321,14 @@ export default function KrankenkassenVergleich() {
               Nettoprämien — offiziell BAG-Daten (priminfo.admin.ch)
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <TabsList>
-              <TabsTrigger value="vergleich" className="flex items-center gap-1.5">
-                <TrendingDown className="w-3.5 h-3.5" />Vergleich
-              </TabsTrigger>
-              <TabsTrigger value="auswertung" className="flex items-center gap-1.5">
-                <BarChart2 className="w-3.5 h-3.5" />Auswertung
-              </TabsTrigger>
-            </TabsList>
-            <Button variant="outline" size="sm" onClick={handleTestDaten} className="text-xs">
-              🧪 Test
-            </Button>
-          </div>
+          <TabsList>
+            <TabsTrigger value="vergleich" className="flex items-center gap-1.5">
+              <TrendingDown className="w-3.5 h-3.5" />Vergleich
+            </TabsTrigger>
+            <TabsTrigger value="auswertung" className="flex items-center gap-1.5">
+              <BarChart2 className="w-3.5 h-3.5" />Auswertung
+            </TabsTrigger>
+          </TabsList>
         </div>
 
         <TabsContent value="vergleich" className="mt-0">
