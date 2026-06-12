@@ -12,7 +12,7 @@ import {
   CheckCircle2, Building2, User, Info, BarChart2, FolderOpen
 } from 'lucide-react';
 import CustomerSelector from '@/components/krankenkassen/CustomerSelector';
-import OfferList, { nettoPreis, getProduktName, normalizeModel, matchesInsurer } from '@/components/krankenkassen/OfferList';
+import OfferList, { nettoPreis, getProduktName, getDisplayName, normalizeModel, matchesInsurer } from '@/components/krankenkassen/OfferList';
 import VergleichPrintView from '@/components/krankenkassen/VergleichPrintView';
 import VergleichsAnalysenListe from './VergleichsAnalysenListe';
 
@@ -157,11 +157,13 @@ export default function KrankenkassenVergleich() {
   const offers = [...filteredOffers].sort((a, b) => (a.monthly_premium || 0) - (b.monthly_premium || 0));
   const cheapestOffer = offers[0] || null;
 
-  // Debug: Reihenfolge unmittelbar vor dem Render
+  // Debug: vollständige Liste unmittelbar vor dem Render
   if (offers.length > 0) {
-    console.log('[KKV] RENDER-REIHENFOLGE (Top 5):',
-      offers.slice(0, 5).map((o, i) => `${i+1}. ${o.insurer} (${normalizeModel(o.model)}) = CHF ${o.monthly_premium?.toFixed(2)}`).join(' | ')
-    );
+    console.log(`[KKV PAGE→OfferList] Übergebe ${offers.length} offers:`);
+    offers.forEach((o, i) => {
+      const norm = normalizeModel(o.model);
+      console.log(`  PAGE[${i+1}] ${o.insurer} | model="${o.model}" → norm="${norm}" | CHF ${o.monthly_premium?.toFixed(2)}`);
+    });
   }
 
   const _currentModellNorm = formData.aktuelles_modell ? normalizeModel(formData.aktuelles_modell) : null;
@@ -517,55 +519,42 @@ export default function KrankenkassenVergleich() {
 
               {vergleichResults && !isLoading && (
                 <>
-                  {/* Summary KPIs — 4 Kacheln */}
-                  <div className="grid grid-cols-4 gap-2">
-                    {/* Angebote */}
-                    <div className="p-3 rounded-xl border bg-blue-50 border-blue-200 text-center">
-                      <p className="text-[10px] text-blue-600 font-semibold uppercase tracking-wide">Angebote</p>
-                      <p className="text-2xl font-bold text-blue-800">{offers.length}</p>
-                      {filterModelle.length < ALL_FILTER_KEYS.length && (
-                        <p className="text-[9px] text-blue-500 mt-0.5">{filterModelle.join(', ')}</p>
+                  {/* Ergebnis-Banner: Aktuelle Kasse vs. Empfehlung */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Aktuelle Situation */}
+                    <div className="p-4 rounded-xl border-2 border-amber-300 bg-amber-50">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-amber-600 mb-1">Aktuelle Kasse</p>
+                      <p className="text-base font-bold text-amber-900 leading-tight">
+                        {formData.aktuelle_krankenkasse || '–'}
+                      </p>
+                      <p className="text-xs text-amber-700 mt-0.5">
+                        {formData.aktuelles_modell || '–'} · Franchise CHF {formData.aktuelle_franchise || '–'}
+                      </p>
+                      <p className="text-xl font-extrabold text-amber-800 mt-2">
+                        {currentNet ? `CHF ${currentNet.toFixed(2)}/M.` : <span className="text-sm text-amber-500">Prämie nicht gefunden</span>}
+                      </p>
+                    </div>
+                    {/* Günstigste Empfehlung */}
+                    <div className="p-4 rounded-xl border-2 border-emerald-300 bg-emerald-50">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-1">
+                        {selectedResult ? 'Ausgewählt' : 'Günstigstes Angebot'}
+                      </p>
+                      <p className="text-base font-bold text-emerald-900 leading-tight">
+                        {selectedResult ? getDisplayName(selectedResult.insurer) : cheapestOffer ? getDisplayName(cheapestOffer.insurer) : '–'}
+                      </p>
+                      <p className="text-xs text-emerald-700 mt-0.5">
+                        {selectedResult ? getProduktName(selectedResult.insurer, selectedResult.model) : cheapestOffer ? getProduktName(cheapestOffer.insurer, cheapestOffer.model) : '–'}
+                      </p>
+                      <p className="text-xl font-extrabold text-emerald-800 mt-2">
+                        {selectedNet ? `CHF ${selectedNet.toFixed(2)}/M.` : cheapestNet ? `CHF ${cheapestNet.toFixed(2)}/M.` : '–'}
+                      </p>
+                      {(ersparnisJahr !== null || maxErsparnis !== null) && (
+                        <p className={`text-xs font-bold mt-1 ${ersparnisJahr !== null ? (ersparnisJahr >= 0 ? 'text-emerald-700' : 'text-red-600') : 'text-emerald-700'}`}>
+                          {ersparnisJahr !== null
+                            ? `${ersparnisJahr >= 0 ? '−' : '+'}CHF ${Math.abs(ersparnisJahr).toLocaleString('de-CH')}/Jahr`
+                            : maxErsparnis !== null ? `−CHF ${maxErsparnis.toLocaleString('de-CH')}/Jahr möglich` : ''}
+                        </p>
                       )}
-                    </div>
-                    {/* Aktuelle Prämie */}
-                    <div className="p-3 rounded-xl border bg-amber-50 border-amber-200 text-center">
-                      <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wide">Aktuell/M.</p>
-                      <p className="text-base font-bold text-amber-800">
-                        {currentNet ? `CHF ${currentNet.toFixed(2)}` : <span className="text-sm text-amber-500">–</span>}
-                      </p>
-                    </div>
-                    {/* Günstigste Prämie */}
-                    <div className="p-3 rounded-xl border bg-emerald-50 border-emerald-200 text-center">
-                      <p className="text-[10px] text-emerald-600 font-semibold uppercase tracking-wide">Günstigste/M.</p>
-                      <p className="text-base font-bold text-emerald-800">
-                        {cheapestNet ? `CHF ${cheapestNet.toFixed(2)}` : '–'}
-                      </p>
-                    </div>
-                    {/* Max. Ersparnis / Auswahl-Ersparnis */}
-                    <div className={`p-3 rounded-xl border text-center ${
-                      ersparnisJahr !== null
-                        ? ersparnisJahr >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'
-                        : 'bg-emerald-50 border-emerald-200'
-                    }`}>
-                      <p className={`text-[10px] font-semibold uppercase tracking-wide ${
-                        ersparnisJahr !== null
-                          ? ersparnisJahr >= 0 ? 'text-emerald-600' : 'text-red-600'
-                          : 'text-emerald-600'
-                      }`}>
-                        {ersparnisJahr !== null ? 'Ersparnis/J.' : 'Max. Ers./J.'}
-                      </p>
-                      <p className={`text-base font-bold ${
-                        ersparnisJahr !== null
-                          ? ersparnisJahr >= 0 ? 'text-emerald-800' : 'text-red-700'
-                          : 'text-emerald-800'
-                      }`}>
-                        {ersparnisJahr !== null
-                          ? `${ersparnisJahr >= 0 ? '−' : '+'}CHF ${Math.abs(ersparnisJahr).toLocaleString('de-CH')}`
-                          : maxErsparnis !== null
-                            ? `−CHF ${maxErsparnis.toLocaleString('de-CH')}`
-                            : '–'
-                        }
-                      </p>
                     </div>
                   </div>
 

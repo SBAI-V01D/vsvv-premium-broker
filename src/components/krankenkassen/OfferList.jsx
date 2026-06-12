@@ -431,8 +431,14 @@ export function normalizeModel(model) {
 
 export function getProduktName(insurer, model) {
   const normalized = normalizeModel(model);
-  // Exakten Treffer versuchen, dann normalisierten
-  return PRODUKT_NAMEN[insurer]?.[normalized] || PRODUKT_NAMEN[insurer]?.[model] || normalized || model;
+  // 1. Exakter API-Name
+  if (PRODUKT_NAMEN[insurer]?.[normalized]) return PRODUKT_NAMEN[insurer][normalized];
+  if (PRODUKT_NAMEN[insurer]?.[model]) return PRODUKT_NAMEN[insurer][model];
+  // 2. Display-Name (z.B. API gibt "Mutuel Krankenversicherung AG", Mapping unter "Mutuel (Groupe Mutuel)")
+  const displayName = INSURER_DISPLAY_NAMES[insurer];
+  if (displayName && PRODUKT_NAMEN[displayName]?.[normalized]) return PRODUKT_NAMEN[displayName][normalized];
+  if (displayName && PRODUKT_NAMEN[displayName]?.[model]) return PRODUKT_NAMEN[displayName][model];
+  return normalized || model;
 }
 
 export function nettoPreis(bruttoPreis) {
@@ -488,6 +494,16 @@ export default function OfferList({
         console.log(`  ${i+1}. ${o.insurer} | model="${o.model}" → "${norm}" | Netto CHF ${netto}`);
       });
     }
+  }, [offers]);
+
+  // Vollständiges Render-Logging unmittelbar vor JSX
+  React.useEffect(() => {
+    console.log(`[OfferList RENDER INPUT] ${offers.length} offers übergeben:`);
+    offers.forEach((o, i) => {
+      const norm = normalizeModel(o.model);
+      console.log(`  RENDER[${i+1}] ${o.insurer} | model="${o.model}" → norm="${norm}" | CHF ${o.monthly_premium}`);
+    });
+    console.log(`[OfferList RENDER OUTPUT] Alle ${offers.length} werden gerendert (kein interner Filter)`);
   }, [offers]);
 
   // Ersten isCurrent-Index vorberechnen für den ref
