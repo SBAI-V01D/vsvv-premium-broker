@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -145,7 +145,7 @@ export default function KrankenkassenVergleich() {
 
   // "Weitere" Modelle = normalisierte Modelle die nicht in den Standard-4 sind
   // z.B. 'other' → 'Weitere' (PrimaFlex/Sanatel bei Groupe Mutuel)
-  const weitereModelle = React.useMemo(() => {
+  const weitereModelle = useMemo(() => {
     const found = new Set();
     allOffers.forEach(o => {
       const norm = normalizeModel(o.model);
@@ -193,6 +193,16 @@ export default function KrankenkassenVergleich() {
   const currentOffer = currentOfferForPrice;
   const currentPraemie = currentOfferForPrice?.monthly_premium;
   const currentNet = currentPraemie ? nettoPreis(currentPraemie) : null;
+
+  // Rang der aktuellen Kasse in der gefilterten, sortierten Liste
+  const currentKasseRang = useMemo(() => {
+    if (!currentOfferForPrice) return null;
+    const idx = offers.findIndex(o =>
+      matchesInsurer(o.insurer, formData.aktuelle_krankenkasse) &&
+      (_currentModellNorm ? normalizeModel(o.model) === _currentModellNorm : true)
+    );
+    return idx === -1 ? null : idx + 1;
+  }, [offers, currentOfferForPrice, formData.aktuelle_krankenkasse, _currentModellNorm]);
   const currentNetForSave = currentOfferForPrice ? nettoPreis(currentOfferForPrice.monthly_premium) : currentNet;
   const selectedNet = selectedResult ? nettoPreis(selectedResult.monthly_premium) : null;
   const cheapestNet = cheapestOffer ? nettoPreis(cheapestOffer.monthly_premium) : null;
@@ -566,8 +576,21 @@ export default function KrankenkassenVergleich() {
                         {formData.aktuelles_modell || '–'} · Franchise CHF {formData.aktuelle_franchise || '–'}
                       </p>
                       <p className="text-xl font-extrabold text-amber-800 mt-2">
-                        {currentNet ? `CHF ${currentNet.toFixed(2)}/M.` : <span className="text-sm text-amber-500">Prämie nicht gefunden</span>}
+                        {currentNet ? `CHF ${currentNet.toFixed(2)}/M.` : <span className="text-sm text-amber-500">Nicht in Region verfügbar</span>}
                       </p>
+                      {currentKasseRang !== null ? (
+                        <p className="text-[11px] text-amber-600 mt-1">
+                          → Rang <strong>{currentKasseRang}</strong> von {offers.length} in der Liste ↓
+                        </p>
+                      ) : currentNet ? (
+                        <p className="text-[11px] text-amber-500 mt-1">
+                          Modell wird in der gefilterten Liste nicht gezeigt
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-amber-500 mt-1">
+                          {formData.aktuelle_krankenkasse} bietet {formData.aktuelles_modell} nicht in PLZ {formData.plz} an
+                        </p>
+                      )}
                     </div>
                     {/* Günstigste Empfehlung */}
                     <div className="p-4 rounded-xl border-2 border-emerald-300 bg-emerald-50">
