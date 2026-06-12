@@ -165,11 +165,12 @@ export default function KrankenkassenVergleich() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(weitereModelle)]);
 
+  const _currentModellNorm = formData.aktuelles_modell ? normalizeModel(formData.aktuelles_modell) : null;
+
   // Wenn aktuelles Modell ein "Weitere"-Modell ist, sicherstellen dass es immer im Filter ist
   useEffect(() => {
     if (!_currentModellNorm) return;
     if (ALL_STANDARD_MODELS.includes(_currentModellNorm)) return;
-    // aktuelles Modell ist kein Standard → in Filter eintragen
     setFilterModelle(prev => prev.includes(_currentModellNorm) ? prev : [...prev, _currentModellNorm]);
   }, [_currentModellNorm]);
 
@@ -184,8 +185,6 @@ export default function KrankenkassenVergleich() {
   // Sortierung nach Preis — das ist die EINZIGE Sortierung (OfferList sortiert nicht mehr)
   const offers = [...filteredOffers].sort((a, b) => (a.monthly_premium || 0) - (b.monthly_premium || 0));
   const cheapestOffer = offers[0] || null;
-
-  const _currentModellNorm = formData.aktuelles_modell ? normalizeModel(formData.aktuelles_modell) : null;
 
   // Suche aktuelle Kasse in allOffers (Modell-Filter berücksichtigt für Preis-Anzeige nicht)
   const currentOfferForPrice = (() => {
