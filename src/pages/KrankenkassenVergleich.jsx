@@ -119,24 +119,19 @@ export default function KrankenkassenVergleich() {
         return { ...o, monthly_premium: price };
       }).filter(o => o.monthly_premium > 0 && o.insurer && o.model);
 
-      // Pro Versicherer+Modell nur das GÜNSTIGSTE Angebot behalten (verschiedene Regionen)
-      const cheapestMap = new Map();
+      // Dedup: gleicher Insurer + Modell + exakt gleicher Preis = regionales Duplikat → nur einmal.
+      // Verschiedener Preis bei gleichem Insurer+Modell = verschiedenes Produkt → beide behalten.
+      const seenKeys = new Set();
+      const deduped = [];
       for (const o of mapped) {
-        const key = `${o.insurer}|||${o.model}`;
-        const existing = cheapestMap.get(key);
-        if (!existing || o.monthly_premium < existing.monthly_premium) {
-          cheapestMap.set(key, o);
+        const key = `${o.insurer}|||${o.model}|||${o.monthly_premium}`;
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          deduped.push(o);
         }
       }
-      const deduped = Array.from(cheapestMap.values());
 
-      console.log('[KKV] rawOffers:', rawOffers.length, '→ nach Dedup (exakt):', deduped.length);
-      // Debug: alle Einträge vor Filter
-      deduped.forEach((o, i) => {
-        const netto = (o.monthly_premium - 5.15).toFixed(2);
-        const modelNorm = normalizeModel(o.model);
-        console.log(`[KKV PRE-FILTER] ${i+1}. ${o.insurer} | model="${o.model}" | norm="${modelNorm}" | brutto=${o.monthly_premium} | netto=${netto}`);
-      });
+
 
       setVergleichResults({ offers: deduped });
     } catch (err) {
@@ -158,15 +153,6 @@ export default function KrankenkassenVergleich() {
   const offers = [...filteredOffers].sort((a, b) => (a.monthly_premium || 0) - (b.monthly_premium || 0));
   const cheapestOffer = offers[0] || null;
 
-  // Debug: vollständige Liste unmittelbar vor dem Render
-  if (offers.length > 0) {
-    console.log(`[KKV PAGE→OfferList] Übergebe ${offers.length} offers:`);
-    offers.forEach((o, i) => {
-      const norm = normalizeModel(o.model);
-      console.log(`  PAGE[${i+1}] ${o.insurer} | model="${o.model}" → norm="${norm}" | CHF ${o.monthly_premium?.toFixed(2)}`);
-    });
-  }
-
   const _currentModellNorm = formData.aktuelles_modell ? normalizeModel(formData.aktuelles_modell) : null;
 
   // Suche aktuelle Kasse in allOffers (Modell-Filter berücksichtigt für Preis-Anzeige nicht)
@@ -179,14 +165,6 @@ export default function KrankenkassenVergleich() {
     if (exactMatch) return exactMatch;
     return allOffers.find(o => matchesInsurer(o.insurer, formData.aktuelle_krankenkasse));
   })();
-
-  // Debug: isCurrent-Nachweis
-  if (formData.aktuelle_krankenkasse && allOffers.length > 0) {
-    console.log('[KKV] isCurrent-Check: aktuelle_krankenkasse =', formData.aktuelle_krankenkasse,
-      '| found =', currentOfferForPrice?.insurer || 'NICHT GEFUNDEN',
-      '| model =', currentOfferForPrice?.model || '–'
-    );
-  }
 
   const currentOffer = currentOfferForPrice;
   const currentPraemie = currentOfferForPrice?.monthly_premium;

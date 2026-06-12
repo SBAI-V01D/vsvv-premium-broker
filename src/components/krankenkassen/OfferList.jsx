@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -61,15 +61,16 @@ const PRODUKT_NAMEN = {
     'HMO': 'Multimed',
   },
   // ── Helsana ──────────────────────────────────────────────────────────
+  // API liefert mehrere Hausarzt-Einträge: günstiger = Flexmed R1, teurer = Hausarzt R1
   'Helsana': {
     'Standard': 'Freie Arztwahl',
-    'Hausarzt': 'BeneFit PLUS Hausarzt',
+    'Hausarzt': 'BeneFit PLUS Hausarzt / Flexmed',
     'Telmed': 'BeneFit PLUS Telmed',
     'HMO': 'Premed',
   },
   'Helsana Versicherungen AG': {
     'Standard': 'Freie Arztwahl',
-    'Hausarzt': 'BeneFit PLUS Hausarzt',
+    'Hausarzt': 'BeneFit PLUS Hausarzt / Flexmed',
     'Telmed': 'BeneFit PLUS Telmed',
     'HMO': 'Premed',
   },
@@ -183,14 +184,15 @@ const PRODUKT_NAMEN = {
     'HMO': 'SmartCare',
   },
   // ── Assura ───────────────────────────────────────────────────────────
+  // API liefert mehrere Standard-Einträge: günstiger = Qualimed, teurer = Hausspital
   'Assura': {
-    'Standard': 'Qualimed (freie Arztwahl)',
+    'Standard': 'Qualimed / Hausspital',
     'Hausarzt': 'Hausarzt',
     'Telmed': 'Qualimed Telemed',
     'HMO': 'Gesundheitsnetz',
   },
   'Assura-Basis SA': {
-    'Standard': 'Qualimed (freie Arztwahl)',
+    'Standard': 'Qualimed / Hausspital',
     'Hausarzt': 'Hausarzt',
     'Telmed': 'Qualimed Telemed',
     'HMO': 'Gesundheitsnetz',
@@ -480,27 +482,7 @@ export default function OfferList({
   // Kein Auto-Scroll — Liste beginnt immer bei Rang 1 (günstigstes Angebot)
   // Aktueller Eintrag ist via Amber-Highlight visuell erkennbar beim Scrollen
 
-  // Debug-Log: Vor-Filter Nachweis
-  React.useEffect(() => {
-    if (offers.length > 0) {
-      console.log(`[OfferList] NACH MODELL-FILTER: ${offers.length} Angebote`);
-      offers.forEach((o, i) => {
-        const netto = nettoPreis(o.monthly_premium).toFixed(2);
-        const norm = normalizeModel(o.model);
-        console.log(`  ${i+1}. ${o.insurer} | model="${o.model}" → "${norm}" | Netto CHF ${netto}`);
-      });
-    }
-  }, [offers]);
 
-  // Vollständiges Render-Logging unmittelbar vor JSX
-  React.useEffect(() => {
-    console.log(`[OfferList RENDER INPUT] ${offers.length} offers übergeben:`);
-    offers.forEach((o, i) => {
-      const norm = normalizeModel(o.model);
-      console.log(`  RENDER[${i+1}] ${o.insurer} | model="${o.model}" → norm="${norm}" | CHF ${o.monthly_premium}`);
-    });
-    console.log(`[OfferList RENDER OUTPUT] Alle ${offers.length} werden gerendert (kein interner Filter)`);
-  }, [offers]);
 
   // Ersten isCurrent-Index vorberechnen für den ref
   const firstCurrentIdx = React.useMemo(() => {
@@ -509,6 +491,19 @@ export default function OfferList({
       currentKasseInput ? matchesInsurer(o.insurer, currentKasseInput) : matchesInsurer(o.insurer, currentOffer.insurer)
     );
   }, [sortedOffers, currentKasseInput, currentOffer]);
+
+  // Zähler pro Insurer+Modell für Produktvarianten-Label (z.B. "Variante 2")
+  const variantCounters = React.useMemo(() => {
+    const counters = new Map();
+    const result = [];
+    for (const o of sortedOffers) {
+      const key = `${o.insurer}|||${o.model}`;
+      const n = (counters.get(key) || 0) + 1;
+      counters.set(key, n);
+      result.push(n);
+    }
+    return result;
+  }, [sortedOffers]);
 
   return (
     <Card>
@@ -535,16 +530,21 @@ export default function OfferList({
               const isSelected = selectedResult?.insurer === offer.insurer &&
                 selectedResult?.model === offer.model &&
                 selectedResult?.monthly_premium === offer.monthly_premium;
-              const isCurrent = currentKasseInput
+              // isCurrent: Kasse stimmt überein UND es ist der erste Treffer dieser Kasse
+              const matchesCurrent = currentKasseInput
                 ? matchesInsurer(offer.insurer, currentKasseInput)
                 : currentOffer
                   ? matchesInsurer(offer.insurer, currentOffer.insurer)
                   : false;
+              const isCurrent = matchesCurrent && idx === firstCurrentIdx;
               const isCheapest = idx === 0;
               const nettoMonat = nettoPreis(offer.monthly_premium);
               const savings = currentPraemie ? nettoPreis(currentPraemie) - nettoMonat : null;
               const savingsYear = savings !== null ? Math.round(savings * 12) : null;
-              const produktName = getProduktName(offer.insurer, offer.model);
+              // Produktname: bei mehreren Varianten gleicher Kasse+Modell Variante-Nummer anzeigen
+              const variantN = variantCounters[idx];
+              const baseProduktName = getProduktName(offer.insurer, offer.model);
+              const produktName = variantN > 1 ? `${baseProduktName} (Var. ${variantN})` : baseProduktName;
 
               // Styling — klare visuelle Hierarchie
               let rowClass = 'w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ';
