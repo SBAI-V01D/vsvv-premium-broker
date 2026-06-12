@@ -119,19 +119,19 @@ export default function KrankenkassenVergleich() {
         return { ...o, monthly_premium: price };
       }).filter(o => o.monthly_premium > 0 && o.insurer && o.model);
 
-      // Dedup: gleicher Insurer + Modell + exakt gleicher Preis = regionales Duplikat → nur einmal.
-      // Verschiedener Preis bei gleichem Insurer+Modell = verschiedenes Produkt → beide behalten.
+      // Dedup: Nur exakte regionale Duplikate entfernen (gleicher Insurer + Modell + Preis + Franchise).
+      // WICHTIG: Helsana liefert z.B. "Hausarzt" zweimal mit identischem Preis (Flexmed R1 + Hausarzt R1)
+      // → beide behalten! Rangnummer unterscheidet sie visuell.
+      // Regionale Duplikate (z.B. verschiedene Regionen mit identischem Insurer+Modell+Preis) werden entfernt.
       const seenKeys = new Set();
       const deduped = [];
       for (const o of mapped) {
-        const key = `${o.insurer}|||${o.model}|||${o.monthly_premium}`;
+        const key = `${o.insurer}|||${o.model}|||${o.monthly_premium}|||${o.deductible}`;
         if (!seenKeys.has(key)) {
           seenKeys.add(key);
           deduped.push(o);
         }
       }
-
-
 
       setVergleichResults({ offers: deduped });
     } catch (err) {
@@ -584,11 +584,15 @@ export default function KrankenkassenVergleich() {
                         </p>
                       ) : currentNet ? (
                         <p className="text-[11px] text-amber-500 mt-1">
-                          Modell wird in der gefilterten Liste nicht gezeigt
+                          Aktuelles Modell nicht in Filterliste — Preis aus allen Angeboten
+                        </p>
+                      ) : allOffers.some(o => matchesInsurer(o.insurer, formData.aktuelle_krankenkasse)) ? (
+                        <p className="text-[11px] text-amber-500 mt-1">
+                          Modell «{formData.aktuelles_modell}» für {formData.aktuelle_krankenkasse} in PLZ {formData.plz} nicht verfügbar
                         </p>
                       ) : (
                         <p className="text-[11px] text-amber-500 mt-1">
-                          {formData.aktuelle_krankenkasse} bietet {formData.aktuelles_modell} nicht in PLZ {formData.plz} an
+                          {formData.aktuelle_krankenkasse} nicht in BAG-Daten für PLZ {formData.plz}
                         </p>
                       )}
                     </div>
