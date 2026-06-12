@@ -143,7 +143,8 @@ export default function KrankenkassenVergleich() {
 
   const allOffers = vergleichResults?.offers || [];
 
-  // "Weitere" Modelle = API-Keys die nicht in Standard-4 fallen
+  // "Weitere" Modelle = normalisierte Modelle die nicht in den Standard-4 sind
+  // z.B. 'other' → 'Weitere' (PrimaFlex/Sanatel bei Groupe Mutuel)
   const weitereModelle = React.useMemo(() => {
     const found = new Set();
     allOffers.forEach(o => {
@@ -152,6 +153,16 @@ export default function KrankenkassenVergleich() {
     });
     return [...found].sort();
   }, [allOffers]);
+
+  // Neue Weitere-Modelle automatisch in filterModelle aktivieren
+  useEffect(() => {
+    if (weitereModelle.length === 0) return;
+    setFilterModelle(prev => {
+      const toAdd = weitereModelle.filter(m => !prev.includes(m));
+      if (toAdd.length === 0) return prev;
+      return [...prev, ...toAdd];
+    });
+  }, [weitereModelle.join(',')]);
 
   // Alle aktiven Filter-Keys inkl. Weitere
   const allActiveFilterKeys = [...ALL_STANDARD_MODELS, ...weitereModelle];

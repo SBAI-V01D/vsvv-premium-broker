@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 // Diese werden via MODEL_ALIAS_MAP auf die Standard-Kategorien normalisiert.
 
 // Normalisiert API-Modell-Keys → Standard-Kategorie
+// WICHTIG: 'other' wird NICHT mehr zu 'Hausarzt' — stattdessen als eigenes Modell behalten
+// damit PrimaFlex, Sanatel etc. als "Weitere Modelle" erscheinen
 export const MODEL_ALIAS_MAP = {
   // Standard / freie Arztwahl
   'standard': 'Standard',
@@ -18,7 +20,7 @@ export const MODEL_ALIAS_MAP = {
   'phone_first': 'Telmed',
   'telemedicine': 'Telmed',
   'tel': 'Telmed',
-  // Hausarzt / GP
+  // Hausarzt / GP — nur explizite Hausarzt-Keys
   'gp': 'Hausarzt',
   'hausarzt': 'Hausarzt',
   'family_doctor': 'Hausarzt',
@@ -26,16 +28,22 @@ export const MODEL_ALIAS_MAP = {
   // HMO
   'hmo': 'HMO',
   'group_practice': 'HMO',
-  // Andere — als Hausarzt behandeln (BAG-API gibt 'other' für Managed-Care/Hausarzt-Varianten)
-  'other': 'Hausarzt',
+  // 'other' wird NICHT gemappt → bleibt als "other" → erscheint als "Weitere Modelle"
 };
 
 // Groupe Mutuel Produkt-Mapping (gilt für alle GM-Varianten)
+// Quelle: priminfo.ch 2026
+// Standard = Grundversicherung (freie Arztwahl)
+// Hausarzt = PrimaCare
+// HMO = OptiMed
+// Telmed = SanaTel (nicht bei allen GM-Gesellschaften verfügbar)
+// Weitere = PrimaFlex, Sanatel (API liefert diese als 'other')
 const GM = {
-  'Standard': 'Primaflex (freie Arztwahl)',
+  'Standard': 'Grundversicherung (freie Arztwahl)',
   'Hausarzt': 'PrimaCare',
-  'Telmed': 'SanaTel',
   'HMO': 'OptiMed',
+  'Telmed': 'SanaTel',
+  'Weitere': 'PrimaFlex / Sanatel',
 };
 
 // Atupri Produkt-Mapping
@@ -256,15 +264,15 @@ const PRODUKT_NAMEN = {
   'Mutuel Krankenversicherung AG': GM,
   'Mutuel Assurances': GM,
   'easy sana (Groupe Mutuel)': GM,
+  'easy sana': GM,
   'AMB Assurance (Groupe Mutuel)': GM,
+  'AMB': GM,
   'Avenir': GM,
   'Avenir (Groupe Mutuel)': GM,
   'Avenir Krankenversicherung AG': GM,
   'Philos': GM,
   'Philos (Groupe Mutuel)': GM,
   'Philos Krankenversicherung AG': GM,
-  'easy sana': GM,
-  'AMB': GM,
   'Groupe Mutuel': GM,
   // ── Vivao Sympany ────────────────────────────────────────────────────
   'Vivao Sympany': {
@@ -428,7 +436,13 @@ export function matchesInsurer(a, b) {
 // Normalisiert API-Modell-Key → Kategorie (z.B. 'gp' → 'Hausarzt', 'telmed' → 'Telmed')
 export function normalizeModel(model) {
   if (!model) return 'Standard';
-  return MODEL_ALIAS_MAP[model.toLowerCase()] || model;
+  const mapped = MODEL_ALIAS_MAP[model.toLowerCase()];
+  if (mapped) return mapped;
+  // Unbekannte Modelle: originalen Wert kapitalisiert zurückgeben (z.B. 'other' → 'Weitere')
+  // 'other' ist der API-Key für Groupe Mutuel PrimaFlex/Sanatel und ähnliche Sondermodelle
+  if (model.toLowerCase() === 'other') return 'Weitere';
+  // Sonstige: Original-Key mit Grossbuchstabe
+  return model.charAt(0).toUpperCase() + model.slice(1);
 }
 
 export function getProduktName(insurer, model) {
