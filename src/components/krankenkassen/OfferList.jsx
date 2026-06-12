@@ -478,13 +478,33 @@ export default function OfferList({
     }
   }, [offers]);
 
+  // Debug-Log: Vor-Filter Nachweis
+  React.useEffect(() => {
+    if (offers.length > 0) {
+      console.log(`[OfferList] NACH MODELL-FILTER: ${offers.length} Angebote`);
+      offers.forEach((o, i) => {
+        const netto = nettoPreis(o.monthly_premium).toFixed(2);
+        const norm = normalizeModel(o.model);
+        console.log(`  ${i+1}. ${o.insurer} | model="${o.model}" → "${norm}" | Netto CHF ${netto}`);
+      });
+    }
+  }, [offers]);
+
+  // Ersten isCurrent-Index vorberechnen für den ref
+  const firstCurrentIdx = React.useMemo(() => {
+    if (!currentKasseInput && !currentOffer) return -1;
+    return sortedOffers.findIndex(o =>
+      currentKasseInput ? matchesInsurer(o.insurer, currentKasseInput) : matchesInsurer(o.insurer, currentOffer.insurer)
+    );
+  }, [sortedOffers, currentKasseInput, currentOffer]);
+
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center justify-between">
           <span>Alle Angebote</span>
           <div className="flex items-center gap-3">
-            {selectedResult && cheapestOffer && (
+            {cheapestOffer && (
               <span className="text-xs text-muted-foreground font-normal">
                 Günstigste: <span className="font-semibold text-emerald-700">CHF {nettoPreis(cheapestPraemie).toFixed(2)}</span>
               </span>
@@ -497,78 +517,87 @@ export default function OfferList({
         </p>
       </CardHeader>
       <CardContent className="p-0">
-        <div ref={scrollContainerRef} className="max-h-[640px] overflow-y-auto">
+        <div ref={scrollContainerRef} className="max-h-[680px] overflow-y-auto">
           <div className="divide-y divide-border">
             {sortedOffers.map((offer, idx) => {
               const isSelected = selectedResult?.insurer === offer.insurer &&
                 selectedResult?.model === offer.model &&
                 selectedResult?.monthly_premium === offer.monthly_premium;
-              // isCurrent: direkt gegen User-Input matchen (robuster als Umweg über currentOffer.insurer)
               const isCurrent = currentKasseInput
                 ? matchesInsurer(offer.insurer, currentKasseInput)
                 : currentOffer
                   ? matchesInsurer(offer.insurer, currentOffer.insurer)
                   : false;
-              // Debug-Log für ersten Fund
-              if (isCurrent) {
-                console.log('[OfferList] isCurrent=true:', offer.insurer, '| model:', normalizeModel(offer.model), '| CHF', offer.monthly_premium?.toFixed(2));
-              }
               const isCheapest = idx === 0;
               const nettoMonat = nettoPreis(offer.monthly_premium);
               const savings = currentPraemie ? nettoPreis(currentPraemie) - nettoMonat : null;
               const savingsYear = savings !== null ? Math.round(savings * 12) : null;
               const produktName = getProduktName(offer.insurer, offer.model);
 
-              // Hintergrund-Styling
-              let rowClass = 'w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ';
-              if (isSelected) rowClass += 'bg-primary/8 border-l-4 border-l-primary ';
-              else if (isCurrent) rowClass += 'bg-amber-50 border-l-4 border-l-amber-400 ';
+              // Styling — klare visuelle Hierarchie
+              let rowClass = 'w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ';
+              if (isSelected && isCurrent) rowClass += 'bg-amber-50 border-l-4 border-l-amber-500 ring-1 ring-amber-300 ';
+              else if (isSelected) rowClass += 'bg-primary/5 border-l-4 border-l-primary ';
+              else if (isCurrent) rowClass += 'bg-amber-50 border-l-4 border-l-amber-500 ';
               else rowClass += 'hover:bg-muted/40 ';
 
               return (
-                <button
+                <div
                   key={`${offer.insurer}-${offer.model}-${offer.monthly_premium}-${idx}`}
-                  ref={isCurrent ? aktuellRef : null}
-                  onClick={() => onSelect(isSelected ? null : offer)}
-                  className={rowClass}
+                  ref={idx === firstCurrentIdx ? aktuellRef : null}
+                  className={isCurrent ? 'relative' : ''}
                 >
-                  {/* Rang */}
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0
-                    ${isCurrent ? 'bg-amber-200 text-amber-800' : isSelected ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                    {idx + 1}
-                  </div>
+                  <button
+                    onClick={() => onSelect(isSelected ? null : offer)}
+                    className={rowClass + 'w-full'}
+                  >
+                    {/* Rang */}
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0
+                      ${isCurrent ? 'bg-amber-300 text-amber-900 ring-2 ring-amber-400' : isSelected ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                      {idx + 1}
+                    </div>
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <p className="text-sm font-semibold truncate">{getDisplayName(offer.insurer)}</p>
-                      {isCheapest && !isCurrent && (
-                        <Badge className="text-[10px] px-1.5 py-0 bg-emerald-100 text-emerald-700 border-emerald-200">Günstigste</Badge>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className={`text-sm font-semibold truncate ${isCurrent ? 'text-amber-900' : ''}`}>
+                          {getDisplayName(offer.insurer)}
+                        </p>
+                        {isCurrent && (
+                          <Badge className="text-[10px] px-2 py-0.5 bg-amber-200 text-amber-800 border-amber-400 font-bold">
+                            ● Aktuell
+                          </Badge>
+                        )}
+                        {isCheapest && !isCurrent && (
+                          <Badge className="text-[10px] px-1.5 py-0 bg-emerald-100 text-emerald-700 border-emerald-200">Günstigste</Badge>
+                        )}
+                        {isCheapest && isCurrent && (
+                          <Badge className="text-[10px] px-1.5 py-0 bg-emerald-100 text-emerald-700 border-emerald-200">Günstigste</Badge>
+                        )}
+                        {isSelected && (
+                          <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">Ausgewählt</Badge>
+                        )}
+                      </div>
+                      <p className={`text-xs ${isCurrent ? 'text-amber-700 font-medium' : 'text-muted-foreground'}`}>{produktName}</p>
+                    </div>
+
+                    {/* Preis + Ersparnis */}
+                    <div className="text-right shrink-0 min-w-[120px]">
+                      <p className={`text-sm font-bold ${isCurrent ? 'text-amber-900' : ''}`}>
+                        CHF {nettoMonat.toFixed(2)}/M.
+                      </p>
+                      {savingsYear !== null && savingsYear > 0 && (
+                        <p className="text-xs text-emerald-600 font-semibold">−CHF {savingsYear.toLocaleString('de-CH')}/J.</p>
                       )}
-                      {isCurrent && (
-                        <Badge className="text-[10px] px-1.5 py-0 bg-amber-100 text-amber-700 border-amber-300">Aktuell</Badge>
+                      {savingsYear !== null && savingsYear < 0 && (
+                        <p className="text-xs text-red-500 font-semibold">+CHF {Math.abs(savingsYear).toLocaleString('de-CH')}/J. teurer</p>
                       )}
-                      {isSelected && (
-                        <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">Ausgewählt</Badge>
+                      {isCurrent && savingsYear === 0 && currentPraemie && (
+                        <p className="text-xs text-amber-600">aktuelle Prämie</p>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{produktName}</p>
-                  </div>
-
-                  {/* Preis + Ersparnis */}
-                  <div className="text-right shrink-0 min-w-[110px]">
-                    <p className="text-sm font-bold">CHF {nettoMonat.toFixed(2)}/M.</p>
-                    {savingsYear !== null && savingsYear > 0 && (
-                      <p className="text-xs text-emerald-600 font-semibold">−CHF {savingsYear.toLocaleString('de-CH')}/J.</p>
-                    )}
-                    {savingsYear !== null && savingsYear < 0 && (
-                      <p className="text-xs text-red-500 font-semibold">+CHF {Math.abs(savingsYear).toLocaleString('de-CH')}/J. teurer</p>
-                    )}
-                    {savingsYear === 0 && currentPraemie && (
-                      <p className="text-xs text-muted-foreground">gleiche Prämie</p>
-                    )}
-                  </div>
-                </button>
+                  </button>
+                </div>
               );
             })}
           </div>

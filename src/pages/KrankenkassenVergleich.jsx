@@ -119,18 +119,24 @@ export default function KrankenkassenVergleich() {
         return { ...o, monthly_premium: price };
       }).filter(o => o.monthly_premium > 0 && o.insurer && o.model);
 
-      // Dedupliziere: pro Versicherer+Modell nur den GÜNSTIGSTEN behalten
-      const cheapestByKey = new Map();
-      for (const o of mapped) {
-        const key = `${o.insurer}|||${o.model}`;
-        const existing = cheapestByKey.get(key);
-        if (!existing || o.monthly_premium < existing.monthly_premium) {
-          cheapestByKey.set(key, o);
-        }
-      }
-      const deduped = Array.from(cheapestByKey.values());
-      console.log('[KKV] rawOffers:', rawOffers.length, '→ deduped:', deduped.length,
-        '| Versicherer:', [...new Set(deduped.map(o => o.insurer))].sort().join(', '));
+      // Dedupliziere NUR exakte Duplikate (gleicher Versicherer + Modell + Preis)
+      // Verschiedene Preise beim gleichen Modell = verschiedene Produkte → ALLE behalten
+      const seen = new Set();
+      const deduped = mapped.filter(o => {
+        const key = `${o.insurer}|||${o.model}|||${o.monthly_premium}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      console.log('[KKV] rawOffers:', rawOffers.length, '→ nach Dedup (exakt):', deduped.length);
+      // Debug: alle Einträge vor Filter
+      deduped.forEach((o, i) => {
+        const netto = (o.monthly_premium - 5.15).toFixed(2);
+        const modelNorm = normalizeModel(o.model);
+        console.log(`[KKV PRE-FILTER] ${i+1}. ${o.insurer} | model="${o.model}" | norm="${modelNorm}" | brutto=${o.monthly_premium} | netto=${netto}`);
+      });
+
       setVergleichResults({ offers: deduped });
     } catch (err) {
       setApiError('Vergleich konnte nicht geladen werden: ' + err.message);
@@ -243,7 +249,6 @@ export default function KrankenkassenVergleich() {
   const [isSavingDoc, setIsSavingDoc] = useState(false);
   const [docSaved, setDocSaved] = useState(false);
   const aktuellRef = useRef(null);
-  const scrollToAktuellFnRef = useRef(null);
 
   // PDF Druck — öffnet Druckdialog
   const handlePrint = () => {
@@ -564,57 +569,6 @@ export default function KrankenkassenVergleich() {
                     </div>
                   </div>
 
-                  {/* Summary-Banner */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Aktuelle Versicherung */}
-                    <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xl">🏠</span>
-                        <span className="text-xs font-bold text-amber-700 uppercase tracking-wide">Aktuelle Versicherung</span>
-                      </div>
-                      <p className="text-lg font-bold text-amber-900 leading-tight">
-                        {formData.aktuelle_krankenkasse || '–'}
-                      </p>
-                      {formData.aktuelles_modell && (
-                        <p className="text-sm text-amber-700 mt-0.5">{formData.aktuelles_modell}</p>
-                      )}
-                      <p className="text-2xl font-extrabold text-amber-900 mt-2">
-                        {currentNet ? `CHF ${currentNet.toFixed(2)}` : '–'}
-                        <span className="text-sm font-normal text-amber-700 ml-1">/ Monat</span>
-                      </p>
-                      {currentNet && (
-                        <button
-                          onClick={() => scrollToAktuellFnRef.current?.()}
-                          className="mt-2 text-[11px] text-amber-600 hover:text-amber-900 underline font-medium"
-                        >
-                          In Liste anzeigen ↓
-                        </button>
-                      )}
-                    </div>
-                    {/* Günstigste Alternative */}
-                    <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xl">🏆</span>
-                        <span className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Günstigste Alternative</span>
-                      </div>
-                      <p className="text-lg font-bold text-emerald-900 leading-tight">
-                        {cheapestOffer ? (cheapestOffer.insurer) : '–'}
-                      </p>
-                      {cheapestOffer && (
-                        <p className="text-sm text-emerald-700 mt-0.5">{normalizeModel(cheapestOffer.model)}</p>
-                      )}
-                      <p className="text-2xl font-extrabold text-emerald-900 mt-2">
-                        {cheapestNet ? `CHF ${cheapestNet.toFixed(2)}` : '–'}
-                        <span className="text-sm font-normal text-emerald-700 ml-1">/ Monat</span>
-                      </p>
-                      {maxErsparnis !== null && maxErsparnis > 0 && (
-                        <p className="text-sm font-bold text-emerald-700 mt-1">
-                          Ersparnis CHF {maxErsparnis.toLocaleString('de-CH')} pro Jahr
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
                   {/* Angebotsliste — offers ist bereits sortiert */}
                   <OfferList
                     offers={offers}
@@ -625,7 +579,7 @@ export default function KrankenkassenVergleich() {
                     onSelect={setSelectedResult}
                     cheapestOffer={cheapestOffer}
                     aktuellRef={aktuellRef}
-                    onScrollToAktuellReady={(fn) => { scrollToAktuellFnRef.current = fn; }}
+                    onScrollToAktuellReady={null}
                   />
 
                   {/* Auswahl-Bar mit Speichern + Drucken */}
