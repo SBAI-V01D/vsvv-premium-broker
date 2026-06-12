@@ -448,15 +448,33 @@ export default function OfferList({
   onSelect,
   cheapestOffer,
   aktuellRef,
+  onScrollToAktuellReady, // callback(fn) — übergibt scroll-Funktion an Parent
 }) {
   // KEINE eigene Sortierung — offers kommen bereits sortiert rein
   const sortedOffers = offers;
   const cheapestPraemie = cheapestOffer?.monthly_premium;
+  const scrollContainerRef = React.useRef(null);
 
-  // Auto-Scroll zur aktuellen Versicherung wenn Liste geladen
+  // Scroll-Helfer: scrollt den internen Container zum aktuellen Eintrag
+  const scrollToAktuell = React.useCallback(() => {
+    if (!aktuellRef?.current || !scrollContainerRef.current) return;
+    const container = scrollContainerRef.current;
+    const el = aktuellRef.current;
+    const elTop = el.offsetTop;
+    const elHeight = el.offsetHeight;
+    const containerHeight = container.clientHeight;
+    container.scrollTo({ top: elTop - containerHeight / 2 + elHeight / 2, behavior: 'smooth' });
+  }, [aktuellRef]);
+
+  // Scroll-Funktion an Parent weitergeben (für Banner-Button)
   React.useEffect(() => {
-    if (aktuellRef?.current) {
-      setTimeout(() => aktuellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 350);
+    if (onScrollToAktuellReady) onScrollToAktuellReady(scrollToAktuell);
+  }, [scrollToAktuell, onScrollToAktuellReady]);
+
+  // Auto-Scroll nach Laden
+  React.useEffect(() => {
+    if (offers.length > 0) {
+      setTimeout(scrollToAktuell, 400);
     }
   }, [offers]);
 
@@ -479,7 +497,7 @@ export default function OfferList({
         </p>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="max-h-[640px] overflow-y-auto">
+        <div ref={scrollContainerRef} className="max-h-[640px] overflow-y-auto">
           <div className="divide-y divide-border">
             {sortedOffers.map((offer, idx) => {
               const isSelected = selectedResult?.insurer === offer.insurer &&

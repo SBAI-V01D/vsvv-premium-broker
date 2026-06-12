@@ -243,6 +243,7 @@ export default function KrankenkassenVergleich() {
   const [isSavingDoc, setIsSavingDoc] = useState(false);
   const [docSaved, setDocSaved] = useState(false);
   const aktuellRef = useRef(null);
+  const scrollToAktuellFnRef = useRef(null);
 
   // PDF Druck — öffnet Druckdialog
   const handlePrint = () => {
@@ -583,7 +584,7 @@ export default function KrankenkassenVergleich() {
                       </p>
                       {currentNet && (
                         <button
-                          onClick={() => aktuellRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                          onClick={() => scrollToAktuellFnRef.current?.()}
                           className="mt-2 text-[11px] text-amber-600 hover:text-amber-900 underline font-medium"
                         >
                           In Liste anzeigen ↓
@@ -624,6 +625,7 @@ export default function KrankenkassenVergleich() {
                     onSelect={setSelectedResult}
                     cheapestOffer={cheapestOffer}
                     aktuellRef={aktuellRef}
+                    onScrollToAktuellReady={(fn) => { scrollToAktuellFnRef.current = fn; }}
                   />
 
                   {/* Auswahl-Bar mit Speichern + Drucken */}
