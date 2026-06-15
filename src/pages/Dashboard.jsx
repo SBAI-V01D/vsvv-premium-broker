@@ -93,8 +93,13 @@ export default function Dashboard() {
   const { data: contracts = [] } = useQuery({
     queryKey: ['dashboard_contracts'],
     queryFn: async () => {
-      const res = await base44.functions.invoke('getAllContractsForDashboard', {})
-      return res.data?.data || res.data || []
+      try {
+        const res = await base44.functions.invoke('getAllContractsForDashboard', {})
+        const result = res.data?.data || res.data || []
+        return Array.isArray(result) ? result : []
+      } catch {
+        return []
+      }
     },
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
