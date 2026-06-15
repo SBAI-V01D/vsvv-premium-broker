@@ -14,7 +14,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { plz, yob, deductible, accident, limit = 500, all_deductibles = false } = await req.json();
+    let body = {};
+    try { body = await req.json(); } catch { body = {}; }
+    const { plz, yob, deductible, accident, limit = 500, all_deductibles = false } = body;
 
     if (!plz || !yob || deductible === undefined) {
       return Response.json({ error: 'plz, yob und deductible sind Pflichtfelder' }, { status: 400 });
