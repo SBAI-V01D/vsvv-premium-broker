@@ -78,13 +78,19 @@ export default function ArchiveDownload() {
     setDownloading(prev => new Set([...prev, chunk.chunk]));
     try {
       const res = await fetch(url);
-      const blob = await res.blob();
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text = await res.text();
+      // Validate it's valid JSON before offering download
+      JSON.parse(text);
+      const blob = new Blob([text], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = `BAGPraemienDaten_chunk${String(chunk.chunk).padStart(2,'0')}.json`;
       a.click();
       URL.revokeObjectURL(a.href);
       setDone(prev => new Set([...prev, chunk.chunk]));
+    } catch (err) {
+      alert(`Chunk ${chunk.chunk} konnte nicht heruntergeladen werden: ${err.message}`);
     } finally {
       setDownloading(prev => { const s = new Set(prev); s.delete(chunk.chunk); return s; });
     }
