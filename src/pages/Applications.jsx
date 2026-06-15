@@ -51,7 +51,7 @@ export default function Applications() {
 
   const { data: applications = [] } = useQuery({
     queryKey: ['applications'],
-    queryFn: () => base44.entities.Application.filter({ archived: false }, '-created_date', 300),
+    queryFn: () => base44.entities.Application.list('-created_date', 500),
     staleTime: 2 * 60 * 1000,
   })
 
@@ -105,7 +105,7 @@ export default function Applications() {
   const approvedApps = applications.filter(a => ACCEPTED_KEYS.includes(getStatus(a)))
 
   // Tab split
-  const pendingApps = applications.filter(a => !ARCHIVED_KEYS.includes(getStatus(a)))
+  const pendingApps = applications.filter(a => !a.archived && !ARCHIVED_KEYS.includes(getStatus(a)))
   const archivedApps = applications.filter(a => ARCHIVED_KEYS.includes(getStatus(a)))
   const closureRate = activeApps.length > 0
     ? ((approvedApps.length / activeApps.length) * 100).toFixed(1)
