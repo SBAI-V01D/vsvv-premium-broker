@@ -5,15 +5,20 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        inter: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        inter:   ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        display: ['"DM Serif Display"', 'Georgia', 'serif'],
+        ui:      ['Inter', '-apple-system', 'sans-serif'],
       },
       borderRadius: {
-        sm:   'calc(var(--radius) - 4px)',
-        md:   'calc(var(--radius) - 2px)',
-        lg:   'var(--radius)',
-        xl:   'calc(var(--radius) + 4px)',
-        '2xl':'calc(var(--radius) + 10px)',
-        '3xl':'calc(var(--radius) + 16px)',
+        sm:         'calc(var(--radius) - 4px)',
+        md:         'calc(var(--radius) - 2px)',
+        lg:         'var(--radius)',
+        xl:         'calc(var(--radius) + 4px)',
+        '2xl':      'calc(var(--radius) + 10px)',
+        '3xl':      'calc(var(--radius) + 16px)',
+        'nexus-sm': '6px',
+        'nexus-md': '8px',
+        'nexus-lg': '10px',
       },
       colors: {
         background:  'hsl(var(--background))',
@@ -67,12 +72,23 @@ module.exports = {
           ring:                'hsl(var(--sidebar-ring))',
         },
         gold: {
-          DEFAULT: 'hsl(var(--gold))',
-          light:   'hsl(var(--gold-light))',
+          DEFAULT: '#C9A84C',
+          light:   '#FBF3E0',
+          dark:    '#9A7320',
         },
         navy: {
-          DEFAULT: 'hsl(var(--navy))',
-          light:   'hsl(var(--navy-light))',
+          DEFAULT: '#1B2B4A',
+          hover:   '#243760',
+          light:   '#EAF0FB',
+        },
+        app: {
+          bg:      '#F0F2F5',
+          surface: '#FFFFFF',
+          hover:   '#E8EBF2',
+        },
+        border: {
+          subtle:  '#DDE1EA',
+          light:   '#E4E8F0',
         },
       },
       boxShadow: {
