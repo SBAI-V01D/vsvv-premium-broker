@@ -197,7 +197,7 @@
     font-family: var(--font-display-serif);
     @apply text-3xl tracking-tight;
     font-weight: 400;
-    color: hsl(var(--text-display));
+    color: #1B2B4A;
     line-height: 1.15;
     letter-spacing: -0.02em;
   }

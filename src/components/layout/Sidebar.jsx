@@ -12,6 +12,25 @@ import { base44 } from '@/api/base44Client';
 import { resolveRole, ROLE_LABELS } from '@/lib/rbac';
 import GlobalSearch from './GlobalSearch';
 
+/* ── Design Tokens (alle Hex, ein Ort) ─────────────────────────── */
+const T = {
+  bg:          '#F0F2F5',   // App-Grau — identisch mit Hauptfläche
+  border:      '#E2E6EC',   // subtile Trennlinie
+  navy:        '#1B2B4A',   // Primärfarbe
+  navyMid:     '#2E4270',   // etwas heller
+  gold:        '#C9A84C',   // Gold-Akzent
+  goldLight:   '#FBF3E0',   // Gold-Hintergrund aktives Item
+  itemFg:      '#3D5070',   // Nav-Label normal
+  itemFgMuted: '#7A90B0',   // Gruppen-Label
+  itemHover:   '#E8EDF5',   // Hover-Hintergrund
+  activeStripe:'#C9A84C',   // Gold-Stripe links aktives Item
+  activeBg:    '#FFFFFF',   // weiss — aktives Item
+  activeFg:    '#1B2B4A',   // Navy-Text aktives Item
+  badgeWarn:   '#D97706',   // amber
+  badgePrim:   '#1B2B4A',   // navy
+  footerFg:    '#5A7090',
+};
+
 function useSidebarBadges() {
   const [badges, setBadges] = useState({});
   useEffect(() => {
@@ -67,12 +86,11 @@ const navGroups = [
       { label: 'Kundenübersicht',  icon: Users,       path: '/kunden' },
       { label: 'Verkaufschancen',  icon: TrendingUp,  path: '/verkaufschancen', color: 'primary' },
       { label: 'Leads',            icon: UserPlus,    path: '/leads',           color: 'warning' },
-      { label: 'Krankenkassenvergleich', icon: Shield,      path: '/krankenkassen-vergleich' },
+      { label: 'Krankenkassenvergleich', icon: Shield, path: '/krankenkassen-vergleich' },
       { label: 'Beratungsdossiers',icon: BookOpen,    path: '/beratungsdossier' },
       { label: 'Kundenportal',     icon: ExternalLink, path: '/portal', external: true },
     ],
   },
-
   {
     label: 'Ausschreibungen',
     items: [
@@ -101,7 +119,7 @@ const navGroups = [
     label: 'Enterprise',
     items: [
       { label: 'Berater & Partner',     icon: Briefcase, path: '/berater-organisation' },
-      { label: 'Team & Zugriffsrechte', icon: Lock,   path: '/admin/team-zugriffsrechte', adminOnly: true },
+      { label: 'Team & Zugriffsrechte', icon: Lock,      path: '/admin/team-zugriffsrechte', adminOnly: true },
       { label: 'Admin Dashboard',       icon: Shield,    path: '/admin/enterprise-control-center', adminOnly: true },
     ],
   },
@@ -130,32 +148,40 @@ export default function Sidebar({ onNavigate }) {
         collapsed ? 'w-[60px]' : 'w-[248px]'
       )}
       style={{
-        background: 'linear-gradient(180deg, hsl(220,36%,17%) 0%, hsl(220,36%,20%) 100%)',
-        border: '1px solid rgba(255,255,255,0.04)',
-        boxShadow: '2px 0 24px 0 rgba(59,130,246,0.08), 4px 0 12px 0 rgba(0,0,0,0.06)',
+        background: T.bg,
+        border: `1px solid ${T.border}`,
+        boxShadow: '0 2px 16px 0 rgba(27,43,74,0.07), 0 1px 4px 0 rgba(27,43,74,0.04)',
       }}
     >
       {/* ── Header ─────────────────────────────── */}
-      <div className={cn(
-        'flex items-center h-[58px] border-b border-[hsl(var(--border-subtle))]/50 flex-shrink-0',
-        collapsed ? 'justify-center' : 'gap-3 px-4'
-      )}>
-        <div className="w-7 h-7 rounded-[8px] bg-[hsl(var(--primary))] flex items-center justify-center flex-shrink-0 shadow-sm">
+      <div
+        className={cn(
+          'flex items-center h-[58px] flex-shrink-0',
+          collapsed ? 'justify-center' : 'gap-3 px-4'
+        )}
+        style={{ borderBottom: `1px solid ${T.border}` }}
+      >
+        <div
+          className="w-7 h-7 rounded-[8px] flex items-center justify-center flex-shrink-0 shadow-sm"
+          style={{ background: T.navy }}
+        >
           <User className="w-3.5 h-3.5 text-white" />
         </div>
         {!collapsed && currentUser && (
           <div className="min-w-0">
-            <p className="text-[13px] font-bold text-[hsl(var(--primary))] tracking-tight leading-none truncate">
+            <p className="text-[13px] font-bold tracking-tight leading-none truncate" style={{ color: T.navy }}>
               {currentUser.full_name || currentUser.email}
             </p>
-            <p className="text-[8px] text-[hsl(var(--text-subtle))] font-medium tracking-[0.14em] uppercase mt-0.5">
+            <p className="text-[10px] font-medium tracking-[0.10em] uppercase mt-0.5" style={{ color: T.itemFgMuted }}>
               {roleLabel || 'Swiss Premium Broker'}
             </p>
           </div>
         )}
         {!collapsed && !currentUser && (
           <div className="min-w-0">
-            <p className="text-[13px] font-bold text-[hsl(var(--primary))] tracking-tight leading-none">Swiss Premium Broker</p>
+            <p className="text-[13px] font-bold tracking-tight leading-none" style={{ color: T.navy }}>
+              Swiss Premium Broker
+            </p>
           </div>
         )}
       </div>
@@ -165,14 +191,17 @@ export default function Sidebar({ onNavigate }) {
         {navGroups.map((group) => (
           <div key={group.label} className="mb-0.5">
             {!collapsed ? (
-              <p className="px-4 pt-5 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-[hsl(var(--sidebar-label))] select-none">
+              <p
+                className="px-4 pt-5 pb-1.5 text-[10px] font-bold uppercase tracking-widest select-none"
+                style={{ color: T.itemFgMuted }}
+              >
                 {group.label}
               </p>
             ) : (
-              <div className="mx-3 my-3 h-px bg-[hsl(var(--border-subtle))]/50" />
+              <div className="mx-3 my-3 h-px" style={{ background: T.border }} />
             )}
 
-            <div className={cn('space-y-0.5', collapsed ? 'px-2' : 'px-2')}>
+            <div className={cn('space-y-0.5', 'px-2')}>
               {group.items
                 .filter(item => !item.adminOnly || isAdmin)
                 .map((item) => {
@@ -192,19 +221,21 @@ export default function Sidebar({ onNavigate }) {
                         className={cn(
                           'relative flex items-center rounded-xl transition-all duration-200 group',
                           collapsed ? 'justify-center h-9 w-9 mx-auto' : 'gap-2.5 px-3 py-[8px]',
-                          'text-[hsl(var(--sidebar-item-fg))] hover:bg-[hsl(var(--sidebar-item-hover))] hover:text-[hsl(var(--sidebar-item-fg-active))]'
                         )}
+                        style={{ color: T.itemFg }}
+                        onMouseEnter={e => e.currentTarget.style.background = T.itemHover}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >
                         <item.icon
                           className={cn(
                             'flex-shrink-0 transition-colors duration-200',
                             collapsed ? 'w-[17px] h-[17px]' : 'w-[14px] h-[14px]',
-                            'text-[hsl(var(--sidebar-item-icon))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]'
                           )}
                           strokeWidth={1.8}
+                          style={{ color: T.itemFgMuted }}
                         />
                         {!collapsed && (
-                          <span className="text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em] text-[hsl(var(--sidebar-item-fg))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]">
+                          <span className="text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em]" style={{ color: T.itemFg }}>
                             {item.label}
                           </span>
                         )}
@@ -221,42 +252,57 @@ export default function Sidebar({ onNavigate }) {
                         className={cn(
                           'relative flex items-center rounded-xl transition-all duration-200 group',
                           collapsed ? 'justify-center h-9 w-9 mx-auto' : 'gap-2.5 px-3 py-[8px]',
-                          isActive
-                            ? 'bg-[hsl(var(--primary))] shadow-sm'
-                            : 'text-[hsl(var(--sidebar-item-fg))] hover:bg-[hsl(var(--sidebar-item-hover))] hover:text-[hsl(var(--sidebar-item-fg-active))]'
                         )}
+                        style={isActive
+                          ? { background: T.activeBg, boxShadow: '0 1px 4px 0 rgba(27,43,74,0.08)' }
+                          : { color: T.itemFg }
+                        }
+                        onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = T.itemHover; }}
+                        onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
                       >
+                        {/* Gold-Stripe links für aktives Item */}
                         {isActive && !collapsed && (
-                          <span className="absolute left-0 w-[3px] h-5 rounded-r-full bg-white" />
+                          <span
+                            className="absolute left-0 w-[3px] h-5 rounded-r-full"
+                            style={{ background: T.gold }}
+                          />
                         )}
                         <item.icon
                           className={cn(
                             'flex-shrink-0 transition-colors duration-200',
                             collapsed ? 'w-[17px] h-[17px]' : 'w-[14px] h-[14px]',
-                            isActive ? 'text-white' : 'text-[hsl(var(--sidebar-item-icon))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]'
                           )}
                           strokeWidth={isActive ? 2.2 : 1.8}
+                          style={{ color: isActive ? T.navy : T.itemFgMuted }}
                         />
                         {!collapsed && (
-                          <span className={cn(
-                            'text-[12.5px] font-medium truncate flex-1 tracking-[-0.005em]',
-                            isActive ? 'text-white font-semibold' : 'text-[hsl(var(--sidebar-item-fg))] group-hover:text-[hsl(var(--sidebar-item-fg-active))]'
-                          )}>
+                          <span
+                            className="text-[12.5px] truncate flex-1 tracking-[-0.005em]"
+                            style={{
+                              color: isActive ? T.activeFg : T.itemFg,
+                              fontWeight: isActive ? 600 : 500,
+                            }}
+                          >
                             {item.label}
                           </span>
                         )}
                         {badges[item.path] && (
-                          <span className={cn(
-                            'text-[9px] font-bold rounded-full flex items-center justify-center flex-shrink-0 leading-none',
-                            collapsed
-                              ? 'absolute top-0.5 right-0.5 min-w-[13px] h-[13px] px-[3px]'
-                              : 'min-w-[16px] h-[16px] px-[4px]',
-                            isActive
-                              ? 'bg-white text-[hsl(var(--primary))]'
-                              : item.color === 'primary'
-                                ? 'bg-[hsl(var(--primary))] text-white'
-                                : 'bg-[hsl(var(--warning))] text-white'
-                          )}>
+                          <span
+                            className={cn(
+                              'text-[9px] font-bold rounded-full flex items-center justify-center flex-shrink-0 leading-none',
+                              collapsed
+                                ? 'absolute top-0.5 right-0.5 min-w-[13px] h-[13px] px-[3px]'
+                                : 'min-w-[16px] h-[16px] px-[4px]',
+                            )}
+                            style={{
+                              background: isActive
+                                ? T.gold
+                                : item.color === 'primary'
+                                  ? T.badgePrim
+                                  : T.badgeWarn,
+                              color: '#fff',
+                            }}
+                          >
                             {badges[item.path]}
                           </span>
                         )}
@@ -271,17 +317,23 @@ export default function Sidebar({ onNavigate }) {
       </nav>
 
       {/* ── Footer ────────────────────────────────────────────────────── */}
-      <div className={cn(
-        'border-t border-[hsl(var(--border-subtle))]/50 flex items-center pb-3 pt-2',
-        collapsed ? 'flex-col gap-1 px-1' : 'gap-1 px-1'
-      )}>
+      <div
+        className={cn(
+          'flex items-center pb-3 pt-2',
+          collapsed ? 'flex-col gap-1 px-1' : 'gap-1 px-1'
+        )}
+        style={{ borderTop: `1px solid ${T.border}` }}
+      >
         <button
           onClick={() => base44.auth.logout()}
           title="Abmelden"
           className={cn(
-            'flex items-center gap-2 rounded-xl text-[12px] font-medium text-[hsl(var(--sidebar-item-fg))] hover:text-[hsl(var(--sidebar-item-fg-active))] hover:bg-[hsl(var(--sidebar-item-hover))] transition-all duration-200',
+            'flex items-center gap-2 rounded-xl text-[12px] font-medium transition-all duration-200',
             collapsed ? 'justify-center h-9 w-9 mx-auto' : 'flex-1 px-3 py-2'
           )}
+          style={{ color: T.footerFg }}
+          onMouseEnter={e => e.currentTarget.style.background = T.itemHover}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
           <LogOut className="w-[14px] h-[14px] flex-shrink-0 opacity-70" strokeWidth={1.8} />
           {!collapsed && <span>Abmelden</span>}
@@ -289,8 +341,11 @@ export default function Sidebar({ onNavigate }) {
 
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex items-center justify-center h-9 w-9 rounded-xl text-[hsl(var(--sidebar-item-fg))] hover:text-[hsl(var(--sidebar-item-fg-active))] hover:bg-[hsl(var(--sidebar-item-hover))] transition-all duration-200 flex-shrink-0"
+          className="flex items-center justify-center h-9 w-9 rounded-xl transition-all duration-200 flex-shrink-0"
+          style={{ color: T.footerFg }}
           title={collapsed ? 'Erweitern' : 'Einklappen'}
+          onMouseEnter={e => e.currentTarget.style.background = T.itemHover}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
         >
           {collapsed
             ? <ChevronRight className="w-3.5 h-3.5" />
