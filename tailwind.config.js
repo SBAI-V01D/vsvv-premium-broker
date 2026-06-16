@@ -66,6 +66,14 @@ module.exports = {
           border:              'hsl(var(--sidebar-border))',
           ring:                'hsl(var(--sidebar-ring))',
         },
+        gold: {
+          DEFAULT: 'hsl(var(--gold))',
+          light:   'hsl(var(--gold-light))',
+        },
+        navy: {
+          DEFAULT: 'hsl(var(--navy))',
+          light:   'hsl(var(--navy-light))',
+        },
       },
       boxShadow: {
         'xs':     '0 1px 2px 0 rgb(15 23 42 / 0.05)',
