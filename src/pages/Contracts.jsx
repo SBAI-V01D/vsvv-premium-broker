@@ -41,13 +41,21 @@ export default function Contracts() {
 
   const { data: contracts = [] } = useQuery({
     queryKey: ['contracts'],
-    queryFn: () => base44.entities.Contract.filter({ archived: false }, '-created_date', 500),
+    // ⚠️ Nie { archived: false } als API-Filter — null/undefined-Felder werden ausgeschlossen.
+    // Client-seitig filtern mit !c.archived
+    queryFn: async () => {
+      const all = await base44.entities.Contract.list('-created_date', 500)
+      return all.filter(c => !c.archived)
+    },
     staleTime: 2 * 60 * 1000,
   })
 
   const { data: customers = [] } = useQuery({
     queryKey: ['customers'],
-    queryFn: () => base44.entities.Customer.filter({ archived: false }, '-created_date', 500),
+    queryFn: async () => {
+      const all = await base44.entities.Customer.list('-created_date', 500)
+      return all.filter(c => !c.archived)
+    },
     staleTime: 5 * 60 * 1000,
   })
 

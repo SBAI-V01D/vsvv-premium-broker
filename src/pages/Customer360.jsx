@@ -70,6 +70,10 @@ export default function Customer360() {
   const [editingDoc, setEditingDoc] = useState(null)
 
   // ── Data ─────────────────────────────────────────────────────────────────
+  // ⚠️  ACHTUNG: Niemals { archived: false } als API-Filter verwenden!
+  //    Datensätze ohne gesetztes 'archived'-Feld (null/undefined) werden dann
+  //    NICHT zurückgegeben. Immer ohne archived-Filter laden und client-seitig
+  //    mit !c.archived filtern. Diese Regel gilt für ALLE Queries in dieser Datei.
   const { data: customer, isLoading, error } = useQuery({
     queryKey: ['customer', customerId],
     queryFn: async () => {
