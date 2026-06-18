@@ -307,7 +307,7 @@ export default function Sidebar({ onNavigate }) {
                           </span>
                         )}
                       </Link>
-                      {isKundenItem && <GlobalSearch collapsed={collapsed} />}
+
                     </React.Fragment>
                   );
                 })}
