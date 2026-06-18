@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     let isFamilyMember = false;
 
     if (customerAction === 'use_existing' || customerAction === 'manual_search') {
-      // Bestehender Kunde
+      // Bestehender Kunde (use_existing = KI-Vorschlag, manual_search = manuelle Suche)
       if (!customerId) return Response.json({ error: 'customerId fehlt für use_existing' }, { status: 400 });
       const customers = await base44.asServiceRole.entities.Customer.filter({ id: customerId });
       if (!customers.length) return Response.json({ error: 'Kunde nicht gefunden' }, { status: 404 });
