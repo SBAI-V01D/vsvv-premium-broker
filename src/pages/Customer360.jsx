@@ -15,7 +15,7 @@ import { StandardModal, KpiCard, EmptyState } from '@/components/shared'
 import {
   ArrowLeft, Phone, Mail, MapPin, Plus, FileText, TrendingUp,
   CheckCircle2, Clock, Download, Shield, Pencil, Calendar, Tag,
-  Building2, Edit, ChevronDown, ChevronUp, AlertTriangle, XCircle, CreditCard
+  Building2, Edit, ChevronDown, ChevronUp, AlertTriangle, XCircle, CreditCard, Pen
 } from 'lucide-react'
 import StatusBadge from '@/components/status/StatusBadge'
 import DateQualityBadge from '@/components/contracts/DateQualityBadge'
@@ -30,6 +30,7 @@ import EditableField from '@/components/shared/EditableField'
 import CustomerForm from '@/components/customers/CustomerForm'
 import BrokerWorkflowBar from '@/components/customers/BrokerWorkflowBar'
 import DocumentUploadDialog from '@/components/documents/DocumentUploadDialog'
+import DocumentEditDialog from '@/components/documents/DocumentEditDialog'
 import { parseISO, differenceInDays } from 'date-fns'
 
 const NEXT_STEP = {
@@ -66,6 +67,7 @@ export default function Customer360() {
   const [expandedContractDocs, setExpandedContractDocs] = useState(null)
   const [expandedCancellation, setExpandedCancellation] = useState(null)
   const [showDocUpload, setShowDocUpload] = useState(false)
+  const [editingDoc, setEditingDoc] = useState(null)
 
   // ── Data ─────────────────────────────────────────────────────────────────
   const { data: customer, isLoading, error } = useQuery({
@@ -875,8 +877,22 @@ export default function Customer360() {
                   <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{doc.name}</p>
-                    <p className="text-xs text-muted-foreground">{CATEGORY_LABEL[doc.category] || doc.category}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <p className="text-xs text-muted-foreground">{CATEGORY_LABEL[doc.category] || doc.category}</p>
+                      {doc.customer_name && doc.customer_name !== `${customer.first_name} ${customer.last_name}` && (
+                        <span className="text-[10px] px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full">
+                          {doc.customer_name}
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  <button
+                    onClick={() => setEditingDoc(doc)}
+                    className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    title="Dokument bearbeiten / Zuweisung ändern"
+                  >
+                    <Pen className="w-3.5 h-3.5" />
+                  </button>
                   {doc.file_url && (
                     <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
@@ -964,6 +980,14 @@ export default function Customer360() {
           setShowDocUpload(false)
         }}
       />
+
+      {editingDoc && (
+        <DocumentEditDialog
+          document={editingDoc}
+          open={!!editingDoc}
+          onOpenChange={(o) => { if (!o) setEditingDoc(null) }}
+        />
+      )}
 
       {selectedVs && (
         <StandardModal

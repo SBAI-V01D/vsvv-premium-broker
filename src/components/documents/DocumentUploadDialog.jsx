@@ -141,11 +141,14 @@ export default function DocumentUploadDialog({ open, onOpenChange, onSuccess, pr
       setUploadProgress(60)
 
       if (uploadMode === 'antrag') {
+        // Schnell-Klassifizierung per Dateiname: wenn "police" im Namen → als anlage/contract vormerken
+        const lowerName = (form.name || '').toLowerCase()
+        const looksLikePolice = lowerName.includes('police') || lowerName.includes('vertrag') || lowerName.includes('polic')
         const doc = await base44.entities.Document.create({
           name: form.name,
           file_url,
-          category: 'application',
-          doc_type: 'antrag',
+          category: looksLikePolice ? 'contract' : 'application',
+          doc_type: looksLikePolice ? 'anlage' : 'antrag',
           classification_status: 'ausstehend',
           notes: form.notes || undefined,
           uploaded_by: 'broker',

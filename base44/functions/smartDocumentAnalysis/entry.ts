@@ -183,6 +183,8 @@ WICHTIG: Obiges ist nur Beispielstruktur. Extrahiere die echten Daten aus dem Do
 
     return Response.json({
       success: true,
+      detected_doc_type: normalizedSubtype === 'police' ? 'anlage' : (normalizedSubtype === 'neuantrag' || normalizedSubtype === 'aenderungsantrag' ? 'antrag' : 'anlage'),
+      detected_category: normalizedSubtype === 'police' ? 'contract' : (normalizedSubtype === 'neuantrag' || normalizedSubtype === 'aenderungsantrag' ? 'application' : 'other'),
       extracted: {
         document_subtype: normalizedSubtype, document_confidence: extracted.document_confidence || 0.8, summary: extracted.summary || null,
         policy_holder_first_name: extracted.policy_holder_first_name || null, policy_holder_last_name: extracted.policy_holder_last_name || null,

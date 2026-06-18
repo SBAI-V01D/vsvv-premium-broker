@@ -115,6 +115,14 @@ export default function Documents() {
         document_type: doc.category || doc.doc_type || 'police',
       })
       if (res.data?.success) {
+        // KI hat doc_type erkannt → Dokument direkt aktualisieren
+        if (res.data.detected_doc_type && res.data.detected_doc_type !== doc.doc_type) {
+          base44.entities.Document.update(doc.id, {
+            doc_type: res.data.detected_doc_type,
+            category: res.data.detected_category || doc.category,
+            classification_status: 'klassifiziert',
+          }).catch(() => {})
+        }
         setSmartReviewDoc(doc)
         setSmartReviewResult(res.data)
       } else {
