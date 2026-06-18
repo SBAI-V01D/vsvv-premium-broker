@@ -46,6 +46,7 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
   const [selectedCustomerId, setSelectedCustomerId] = useState(customerMatches?.[0]?.customer?.id || null)
   const [selectedPrimaryId, setSelectedPrimaryId] = useState(matchedPrimaryCustomer?.id || null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [manualSearchQuery, setManualSearchQuery] = useState('')
   const [selectedPolicyIndex, setSelectedPolicyIndex] = useState(0)
   const [done, setDone] = useState(false)
   const [activePolicies, setActivePolicies] = useState(extracted?.policies || [])
@@ -137,13 +138,29 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
     return `${c.first_name} ${c.last_name} ${c.customer_number || ''}`.toLowerCase().includes(searchQuery.toLowerCase())
   })
 
+  // Für manuelle Kundensuche (Option D)
+  const extractedName = extracted?.insured_is_different
+    ? `${extracted?.insured_first_name || ''} ${extracted?.insured_last_name || ''}`.trim()
+    : `${extracted?.policy_holder_first_name || ''} ${extracted?.policy_holder_last_name || ''}`.trim()
+
+  const manualFilteredCustomers = (availablePrimaryCustomers || []).filter(c => {
+    if (!manualSearchQuery) {
+      // Zeige Kunden mit ähnlichem Namen als Vorschlag
+      if (!extractedName) return false
+      const nameParts = extractedName.toLowerCase().split(' ')
+      const fullName = `${c.first_name} ${c.last_name}`.toLowerCase()
+      return nameParts.some(part => part.length > 2 && fullName.includes(part))
+    }
+    return `${c.first_name} ${c.last_name} ${c.customer_number || ''}`.toLowerCase().includes(manualSearchQuery.toLowerCase())
+  }).slice(0, 10)
+
   const handleSubmit = () => {
     const selectedPolicy = policies[selectedPolicyIndex] || {}
     createMutation.mutate({
       documentId: document.id,
       documentSubtype: documentType,
       customerAction,
-      customerId: customerAction === 'use_existing' ? selectedCustomerId : undefined,
+      customerId: (customerAction === 'use_existing' || customerAction === 'manual_search') ? selectedCustomerId : undefined,
       primaryCustomerId: customerAction === 'create_family_member' ? selectedPrimaryId : undefined,
       newCustomerData: ['create_primary', 'create_family_member'].includes(customerAction) ? newCustomerData : undefined,
       applicationData: {
@@ -208,6 +225,7 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
   if (step === 0) {
     const canProceed = (
       (customerAction === 'use_existing' && selectedCustomerId) ||
+      (customerAction === 'manual_search' && selectedCustomerId) ||
       (customerAction === 'create_family_member' && selectedPrimaryId && newCustomerData.first_name && newCustomerData.last_name) ||
       (customerAction === 'create_primary' && (
         newCustomerData.customer_type === 'business'
@@ -280,7 +298,99 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
             <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wide">Oder manuell zuweisen</p>
           )}
 
-          {/* Option B: Familienmitglied */}
+          {/* Option B: Bestehender Kunde (manuelle Suche) */}
+          <button
+            type="button"
+            onClick={() => { setCustomerAction('manual_search'); setManualSearchQuery('') }}
+            className={cn(
+              'w-full text-left p-3 rounded-lg border-2 transition-all',
+              customerAction === 'manual_search'
+                ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                : 'border-blue-200 bg-blue-50 hover:bg-blue-100'
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-blue-600 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-sm text-blue-800">Bestehender Kunde</p>
+                <p className="text-xs text-blue-700">Kunden manuell suchen — wenn KI-Zuweisung nicht korrekt ist</p>
+              </div>
+              {customerAction === 'manual_search' && <CheckCircle2 className="w-5 h-5 text-primary ml-auto flex-shrink-0" />}
+            </div>
+          </button>
+
+          {/* Manuelle Kundensuche */}
+          {customerAction === 'manual_search' && (
+            <div className="pl-3 border-l-2 border-blue-300 space-y-2">
+              {/* Ähnliche Namen als Schnellauswahl */}
+              {manualFilteredCustomers.length > 0 && !manualSearchQuery && (
+                <div className="space-y-1">
+                  <p className="text-[10px] text-blue-700 font-semibold uppercase tracking-wide">
+                    Kunden mit ähnlichem Namen ({extractedName})
+                  </p>
+                  {manualFilteredCustomers.map(c => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setSelectedCustomerId(c.id)}
+                      className={cn('w-full text-left p-2.5 rounded-lg border text-sm transition-all',
+                        selectedCustomerId === c.id && customerAction === 'manual_search'
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary/20 font-semibold'
+                          : 'border-blue-200 bg-blue-50/50 hover:bg-blue-100'
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        {c.is_family_member
+                          ? <Users className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                          : <User className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                        }
+                        <span>{c.first_name} {c.last_name}</span>
+                        {c.customer_number && <span className="text-xs text-muted-foreground">({c.customer_number})</span>}
+                        {c.is_family_member && <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full">FM</span>}
+                        {selectedCustomerId === c.id && customerAction === 'manual_search' && <CheckCircle2 className="w-4 h-4 text-primary ml-auto" />}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Name oder Kundennummer suchen..."
+                  value={manualSearchQuery}
+                  onChange={e => setManualSearchQuery(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+              {manualSearchQuery && (
+                <div className="max-h-40 overflow-y-auto space-y-1 border rounded-lg p-1.5 bg-background">
+                  {manualFilteredCustomers.map(c => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setSelectedCustomerId(c.id)}
+                      className={cn('w-full text-left p-2 rounded text-sm transition-all flex items-center gap-2',
+                        selectedCustomerId === c.id && customerAction === 'manual_search' ? 'bg-primary/10 font-semibold' : 'hover:bg-muted/60'
+                      )}
+                    >
+                      {c.is_family_member
+                        ? <Users className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                        : <User className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                      }
+                      <span>{c.first_name} {c.last_name}</span>
+                      {c.customer_number && <span className="text-xs text-muted-foreground">({c.customer_number})</span>}
+                      {selectedCustomerId === c.id && customerAction === 'manual_search' && <CheckCircle2 className="w-4 h-4 text-primary ml-auto" />}
+                    </button>
+                  ))}
+                  {manualFilteredCustomers.length === 0 && (
+                    <p className="text-xs text-center text-muted-foreground py-2">Keine Ergebnisse</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Option C: Familienmitglied */}
           <button
             type="button"
             onClick={() => { setCustomerAction('create_family_member'); setSearchQuery('') }}
@@ -680,6 +790,9 @@ export default function SmartDocumentReview({ document, documentType, analysisRe
     if (customerAction === 'use_existing') {
       const match = customerMatches?.find(m => m.customer.id === selectedCustomerId)
       customerLabel = `${match?.customer.first_name} ${match?.customer.last_name} (bestehend)`
+    } else if (customerAction === 'manual_search') {
+      const c = availablePrimaryCustomers?.find(c => c.id === selectedCustomerId)
+      customerLabel = c ? `${c.first_name} ${c.last_name} (manuell gewählt)` : 'Bestehender Kunde'
     } else if (customerAction === 'create_family_member') {
       const primary = availablePrimaryCustomers?.find(c => c.id === selectedPrimaryId) || matchedPrimaryCustomer
       customerLabel = `${newCustomerData.first_name} ${newCustomerData.last_name} (FM bei ${primary?.first_name} ${primary?.last_name})`
