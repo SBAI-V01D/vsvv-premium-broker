@@ -81,7 +81,10 @@ export default function Customer360() {
 
   const { data: contracts = [] } = useQuery({
     queryKey: ['360-contracts', customerId],
-    queryFn: () => base44.entities.Contract.filter({ customer_id: customerId, archived: false }),
+    queryFn: async () => {
+      const all = await base44.entities.Contract.filter({ customer_id: customerId })
+      return all.filter(c => !c.archived)
+    },
   })
 
   const { data: verkaufschancen = [] } = useQuery({
@@ -105,9 +108,18 @@ export default function Customer360() {
       const members = await base44.entities.Customer.filter({ primary_customer_id: customerId })
       if (!members.length) return []
       const results = await Promise.all(
-        members.map(m => base44.entities.Contract.filter({ customer_id: m.id, archived: false }))
+        members.map(m => base44.entities.Contract.filter({ customer_id: m.id }))
       )
-      return results.flat()
+      return results.flat().filter(c => !c.archived)
+    },
+    enabled: !!customerId,
+  })
+
+  const { data: applications = [] } = useQuery({
+    queryKey: ['360-applications', customerId],
+    queryFn: async () => {
+      const all = await base44.entities.Application.filter({ customer_id: customerId })
+      return all.filter(a => !a.archived).sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
     },
     enabled: !!customerId,
   })
@@ -248,7 +260,8 @@ export default function Customer360() {
     { id: 'overview',        label: 'Übersicht',     badge: null },
     { id: 'verkaufschancen', label: 'Chancen',       badge: metrics.openVs.length || null },
     { id: 'crossselling',   label: 'Cross-Selling',  badge: null },
-    { id: 'vertraege',      label: 'Verträge',       badge: metrics.active.length || null },
+    { id: 'vertraege',      label: 'Verträge',       badge: allHouseholdContracts.length || null },
+    { id: 'antraege',       label: 'Anträge',        badge: applications.length || null },
     { id: 'aufgaben',       label: 'Aufgaben',       badge: metrics.openTasks.length || null },
     { id: 'dokumente',      label: 'Dokumente',      badge: documents.length || null },
   ]
@@ -792,6 +805,60 @@ export default function Customer360() {
           </div>
         )}
 
+        {/* ── ANTRÄGE ──────────────────────────────────────────────────── */}
+        {activeSection === 'antraege' && (
+          <div className="space-y-2">
+            <p className="text-sm font-bold">{applications.length} Antrag/Anträge</p>
+            {applications.length === 0 ? (
+              <EmptyState icon={FileText} title="Keine Anträge" description="Noch keine Anträge für diesen Kunden." />
+            ) : applications.map(app => {
+              const statusColors = {
+                new: 'bg-blue-100 text-blue-700',
+                in_progress: 'bg-amber-100 text-amber-700',
+                waiting: 'bg-slate-100 text-slate-600',
+                approved: 'bg-green-100 text-green-700',
+                rejected: 'bg-red-100 text-red-700',
+              }
+              const statusLabels = {
+                new: 'Neu', in_progress: 'In Bearbeitung', waiting: 'Wartend',
+                approved: 'Genehmigt', rejected: 'Abgelehnt', archived: 'Archiviert',
+              }
+              return (
+                <Card key={app.id}>
+                  <CardContent className="p-3 flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <FileText className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold truncate">{app.insurer || '–'}</p>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${statusColors[app.status] || 'bg-slate-100 text-slate-600'}`}>
+                          {app.custom_status || statusLabels[app.status] || app.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {app.sparte || app.insurance_type || '–'}
+                        {app.product ? ` · ${app.product}` : ''}
+                        {app.policy_number ? ` · ${app.policy_number}` : ''}
+                      </p>
+                      {(app.estimated_premium_yearly || app.estimated_premium_monthly) && (
+                        <p className="text-xs font-semibold text-emerald-700 mt-0.5">
+                          {app.estimated_premium_yearly
+                            ? `CHF ${app.estimated_premium_yearly.toLocaleString('de-CH')}/J`
+                            : `CHF ${app.estimated_premium_monthly.toLocaleString('de-CH')}/M`}
+                        </p>
+                      )}
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Erstellt: {new Date(app.created_date).toLocaleDateString('de-CH')}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        )}
+
         {/* ── AUFGABEN ─────────────────────────────────────────────────── */}
         {activeSection === 'aufgaben' && (
           <div className="space-y-3">
@@ -976,7 +1043,7 @@ export default function Customer360() {
         onOpenChange={setShowDocUpload}
         preselectedCustomerId={customerId}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['documents-all'] })
+          queryClient.invalidateQueries({ queryKey: ['documents', customerId] })
           setShowDocUpload(false)
         }}
       />
@@ -1002,7 +1069,7 @@ export default function Customer360() {
             verkaufschance={selectedVs}
             customer={customer}
             onClose={() => setSelectedVsId(null)}
-            onUpdated={() => queryClient.invalidateQueries({ queryKey: ['verkaufschancen', customerId] })}
+            onUpdated={() => queryClient.invalidateQueries({ queryKey: ['360-vs', customerId] })}
           />
         </StandardModal>
       )}
