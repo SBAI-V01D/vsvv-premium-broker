@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     let resolvedCustomerName = null;
     let isFamilyMember = false;
 
-    if (customerAction === 'use_existing') {
+    if (customerAction === 'use_existing' || customerAction === 'manual_search') {
       // Bestehender Kunde
       if (!customerId) return Response.json({ error: 'customerId fehlt für use_existing' }, { status: 400 });
       const customers = await base44.asServiceRole.entities.Customer.filter({ id: customerId });
