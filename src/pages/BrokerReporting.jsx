@@ -35,7 +35,11 @@ const fmtVal = (v) => {
 const ENTITIES = [
   {
     id: 'customers', label: 'Kunden', icon: Users, adminOnly: false,
-    fetch: () => base44.entities.Customer.filter({ archived: false }, '-updated_date', 1000),
+    // ⚠️ NIEMALS { archived: false } als API-Filter verwenden — Datensätze ohne 'archived'-Feld werden dann nicht zurückgegeben!
+    fetch: async () => {
+      const all = await base44.entities.Customer.list('-updated_date', 2000);
+      return all.filter(c => !c.archived);
+    },
     fields: [
       { id: 'customer_number', label: 'Kundennummer' },
       { id: 'last_name',       label: 'Nachname' },
@@ -58,7 +62,11 @@ const ENTITIES = [
   },
   {
     id: 'contracts', label: 'Verträge', icon: FileText, adminOnly: false,
-    fetch: () => base44.entities.Contract.filter({ archived: false }, '-created_date', 1000),
+    // ⚠️ NIEMALS { archived: false } als API-Filter verwenden — Datensätze ohne 'archived'-Feld werden dann nicht zurückgegeben!
+    fetch: async () => {
+      const all = await base44.entities.Contract.list('-created_date', 2000);
+      return all.filter(c => !c.archived);
+    },
     fields: [
       { id: 'policy_number',    label: 'Police-Nummer' },
       { id: 'customer_name',    label: 'Kunde' },
