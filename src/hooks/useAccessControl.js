@@ -69,7 +69,7 @@ export function useAccessControl() {
       }
       const result = await base44.functions.invoke('getUserVisibleData', {
         entityType: 'Customer',
-        limit: 100,
+        limit: 5000,
       });
       return result.data?.data || [];
     },
@@ -86,7 +86,7 @@ export function useAccessControl() {
       }
       const result = await base44.functions.invoke('getUserVisibleData', {
         entityType: 'Contract',
-        limit: 100,
+        limit: 5000,
       });
       return result.data?.data || [];
     },
